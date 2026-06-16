@@ -1,0 +1,164 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agro_backend"
+version = "0.0.1"
+description = "AgroGuardian V2 backend (FastAPI hexagonal monolith)"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "Proprietary" }
+authors = [{ name = "AgroGuardian" }]
+
+# Production dependencies. Pinned to floors that work together as of v1.2 of the roadmap.
+# Note: razorpay SDK is intentionally absent - it is a Phase 14 (post-pilot) dependency only.
+dependencies = [
+  "fastapi>=0.115,<0.116",
+  "uvicorn[standard]>=0.32,<0.33",
+  "pydantic>=2.5,<3",
+  "pydantic-settings>=2.5,<3",
+  "sqlalchemy[asyncio]>=2.0,<2.1",
+  "asyncpg>=0.30,<0.31",
+  # Sync driver for Alembic migrations (DATABASE_URL_SYNC = postgresql://...).
+  "psycopg2-binary>=2.9,<3",
+  "alembic>=1.13,<2",
+  "structlog>=24.4,<25",
+  "httpx>=0.27,<0.28",
+  "paho-mqtt>=2.1,<3",
+  "anthropic>=0.39,<0.50",
+  "sentence-transformers>=3.0,<4",
+  "chromadb>=0.5,<0.6",
+  "apscheduler>=3.10,<4",
+  "prometheus-client>=0.21,<0.22",
+  "passlib[argon2]>=1.7,<2",
+  "bcrypt>=4.2,<5",
+  "python-jose[cryptography]>=3.3,<4",
+  "firebase-admin>=6.5,<7",
+  "sentry-sdk[fastapi]>=2.18,<3",
+  "slowapi>=0.1.9,<0.2",
+  "sentinelhub>=3.10,<4",
+  "earthaccess>=0.10,<0.15",
+  "shapely>=2.0,<3",
+  "geoalchemy2>=0.15,<0.18",
+  "rasterio>=1.3,<2",
+  "xarray>=2024.9,<2025.10",
+  "numpy>=1.26,<3",
+  "jinja2>=3.1,<4",
+  "boto3>=1.35,<2",
+  "b2sdk>=2.5,<3",
+  "cryptography>=43,<46",
+  "email-validator>=2.2,<3",
+  # Windows ships zoneinfo without the tzdata DB; Linux uses /usr/share/zoneinfo.
+  "tzdata; sys_platform == 'win32'",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3,<9",
+  "pytest-asyncio>=0.24,<0.30",
+  "pytest-cov>=5,<7",
+  "testcontainers[postgres]>=4.8,<5",
+  "ruff>=0.7,<0.10",
+  "mypy>=1.13,<2",
+  "respx>=0.21,<0.22",
+  "hypothesis>=6.115,<7",
+  "types-passlib",
+  "types-python-jose",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+exclude = ["tests*", "scripts*", "alembic*", "deploy*", "rules*", "firmware*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-q --strict-markers --strict-config"
+filterwarnings = [
+  "ignore::DeprecationWarning:passlib.*",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+omit = [
+  "app/main.py",
+  "app/infra/persistence/models/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 80
+exclude_lines = [
+  "pragma: no cover",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = ["alembic/versions", "firmware"]
+
+[tool.ruff.lint]
+select = [
+  "E",    # pycodestyle errors
+  "W",    # pycodestyle warnings
+  "F",    # pyflakes
+  "I",    # isort
+  "B",    # bugbear
+  "UP",   # pyupgrade
+  "ASYNC",
+  "SIM",
+  "RUF",
+  "N",
+  "TID",
+]
+ignore = [
+  "E501",  # line length already enforced via formatter
+  "B008",  # FastAPI Depends() in defaults is idiomatic
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = ["B011", "N802", "N803", "N806"]
+"alembic/env.py" = ["E402"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+no_implicit_optional = true
+plugins = ["pydantic.mypy"]
+exclude = [
+  "alembic/versions",
+  "build",
+  "dist",
+  "firmware",
+]
+
+[[tool.mypy.overrides]]
+module = [
+  "paho.mqtt.*",
+  "sentinelhub.*",
+  "earthaccess.*",
+  "rasterio.*",
+  "chromadb.*",
+  "sentence_transformers.*",
+  "firebase_admin.*",
+  "apscheduler.*",
+  "geoalchemy2.*",
+  "b2sdk.*",
+]
+ignore_missing_imports = true
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true

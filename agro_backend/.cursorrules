@@ -1,0 +1,63 @@
+You are working on AgroGuardian V2 - a precision agriculture platform built
+with FastAPI + self-hosted Postgres 15 + React Native + Streamlit + Claude
+(Sonnet 4.6 + Haiku 4.5). The architecture is hexagonal (ports-and-adapters);
+domain logic has zero framework imports.
+
+Strict rules:
+1. Python 3.12. Async SQLAlchemy 2.0 only (mapped_column, Mapped[]).
+   pydantic v2 only (no class Config:, no @validator).
+2. All timestamps are TIMESTAMPTZ in DB and timezone-aware datetime in Python.
+3. Money fields are NUMERIC(12,2) and Decimal in Python. Never float.
+4. Never silently swallow exceptions. Log with structlog and re-raise or
+   convert to a domain exception.
+5. Every API endpoint has an OpenAPI summary, a response_model, and at
+   least one test covering 200 + auth.
+6. Never invent column names. The 21-table schema + the 14 v3 additional
+   tables in Part 2.2 of the roadmap are authoritative.
+7. Multi-tenancy: every tenant-scoped table has tenant_id UUID NOT NULL
+   with RLS enabled.
+8. Marathi strings live in i18n files (mr.json) or rule JSON files.
+   Never hard-coded in Python or JSX.
+9. No print(). Use structlog.
+10. No TODOs in production code. If something is incomplete, raise
+    NotImplementedError with a clear message.
+11. Maintain consistency with the AgroGuardian final roadmap that was
+    pasted at the top of the chat.
+12. Domain layer (app/domain/) imports ONLY stdlib + numpy + shapely +
+    Decimal/datetime. NEVER fastapi, sqlalchemy, anthropic, etc.
+13. Application layer (app/application/) imports domain + ports
+    (Protocols). NEVER infra/.
+14. Infra layer implements ports. Use cases call ports, not concrete classes.
+15. Explain the code you generate in 5-15 lines after the diff.
+16. When asked to modify an existing file, MODIFY it - don't rewrite from
+    scratch and don't duplicate imports.
+17. When in doubt, ask before generating large outputs.
+18. Migrations are always reversible. Every Alembic file has a downgrade.
+19. Tests use fixtures, not real network calls. External APIs (Anthropic,
+    Meta WA, FCM, NASA, Copernicus) are stubbed via respx or mocks.
+20. ARM64 + amd64 Docker images required. CI checks with
+    docker buildx build --platform linux/amd64,linux/arm64.
+21. LLM model selection is via ModelRole (PRIMARY=Sonnet, TRIAGE=Haiku),
+    not by model name. Never hardcode 'claude-sonnet-4-6' in use cases.
+22. Razorpay SDK is NOT a pilot dependency. subscriptions_billing exists
+    but is empty. Pilot tenant uses tier='pilot_internal'.
+23. SMS adapter exists as a Protocol only. Pilot uses WhatsApp for both
+    advisory and OTP.
+24. OTP codes are NEVER logged, even in error paths. Last-4 of phone only
+    in any log.
+25. Never reference AWS-specific managed services in code: no Cognito, no
+    SES, no Lambda, no SNS/SQS, no RDS, no CloudWatch, no Secrets Manager,
+    no DynamoDB, no Route 53, no ALB/NLB, no IAM Identity Center, no Step
+    Functions, no EventBridge. The provider-neutral equivalent is already
+    in the stack - check Part 0.5 Rule 2 of the roadmap.
+26. boto3 / aioboto3 are ALLOWED but ONLY against Cloudflare R2 and
+    Backblaze B2 (S3-compatible endpoints). Always configure via
+    R2_ENDPOINT_URL / B2_ENDPOINT_URL env vars; never hardcode
+    `s3.amazonaws.com`. Backups also use b2sdk natively against B2.
+27. Caddy uses sslip.io hostnames during the prototype phase. Generate
+    the IP-substituted Caddyfile via the `make caddyfile-prod` target,
+    never by hand. When a real domain is purchased later, the same
+    target accepts a DOMAIN argument and regenerates.
+28. Code quality is non-negotiable even on the Fast Path (Part 0.6).
+    The fast path reduces scope, not standards. Every file gets tests,
+    type annotations, audit log triggers, and reversible migrations.

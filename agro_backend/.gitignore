@@ -1,0 +1,84 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+*.egg
+.installed.cfg
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.cover
+nosetests.xml
+
+# Virtual envs
+.venv/
+venv/
+env/
+ENV/
+
+# Secrets (NEVER commit any real secret)
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+!OTA_SIGNING_PUBLIC_KEY_PEM_baked_into_firmware.example
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Local data + caches
+/data/
+/local-data/
+*.db
+*.sqlite
+*.sqlite3
+chroma_data/
+pgdata/
+mosquitto_data/
+mosquitto_log/
+
+# Frontend (RN/Expo + Streamlit)
+node_modules/
+.expo/
+.expo-shared/
+web-build/
+dist/
+.cache/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Firmware build artifacts
+.pio/
+.pioenvs/
+.piolibdeps/
+firmware/**/build/
+firmware/**/.pio/
+
+# Generated TypeScript types
+agro_app/src/api/types.gen.ts
+!agro_app/src/api/.gitkeep
+
+# CI/coverage outputs
+junit.xml
+coverage/
+
+# OS junk
+.DS_Store
+*.log

@@ -1,0 +1,138 @@
+name: ci
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  lint:
+    name: Lint + Types
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agro_backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install -e ".[dev]"
+
+      - name: Ruff (lint)
+        run: ruff check .
+
+      - name: Ruff (format check)
+        run: ruff format --check .
+
+      - name: mypy
+        run: mypy app/
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agro_backend
+    services:
+      postgres:
+        image: postgis/postgis:15-3.4
+        env:
+          POSTGRES_USER: agro
+          POSTGRES_PASSWORD: ci-password
+          POSTGRES_DB: agro
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U agro -d agro"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      APP_ENV: test
+      AUTH_JWT_SECRET: test-jwt-secret-32-bytes-of-noise!!
+      POSTGRES_PASSWORD: ci-password
+      MQTT_BROKER_PASSWORD: ci-password
+      DATABASE_URL: postgresql+asyncpg://agro:ci-password@localhost:5432/agro
+      DATABASE_URL_SYNC: postgresql://agro:ci-password@localhost:5432/agro
+      APP_GIT_SHA: ${{ github.sha }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install system deps for native wheels
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgdal-dev gdal-bin libgeos-dev libproj-dev
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install -e ".[dev]"
+
+      - name: Wait for Postgres
+        run: |
+          for i in $(seq 1 30); do
+            if pg_isready -h localhost -p 5432 -U agro -d agro; then exit 0; fi
+            sleep 2
+          done
+          echo "Postgres did not become ready" >&2
+          exit 1
+
+      - name: Run migrations (Phase 0 stub - no-op until Phase 1)
+        run: alembic upgrade head || true
+
+      - name: Pytest with coverage gate
+        run: pytest -q --cov=app --cov-report=xml --cov-fail-under=80
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-${{ github.sha }}
+          path: agro_backend/coverage.xml
+          if-no-files-found: ignore
+
+  build-multiarch:
+    name: Multi-arch Docker build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: agro_backend
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build (amd64 + arm64)
+        uses: docker/build-push-action@v6
+        with:
+          context: agro_backend
+          file: agro_backend/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: agro-backend:ci
