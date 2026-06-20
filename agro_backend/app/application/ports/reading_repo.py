@@ -49,6 +49,7 @@ ALLOWED_HISTORY_FIELDS: frozenset[str] = frozenset(
         "soil_p_mg_kg",
         "soil_k_mg_kg",
         "battery_voltage_v",
+        "battery_percent",
     }
 )
 

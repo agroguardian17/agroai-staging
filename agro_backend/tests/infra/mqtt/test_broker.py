@@ -1,0 +1,378 @@
+"""Unit tests for :class:`~app.infra.mqtt.broker.IngestBroker`.
+
+
+Replaces paho-mqtt connection + the parse/ingest functions with fakes so
+the tests run without a real broker. Verifies:
+
+
+* Lifecycle: start/stop is idempotent; can be called from asyncio.
+* Drain loop classifies exceptions into the right metric labels.
+* Queue full drops with the right reason.
+* Topic-template helper folds concrete topics to the metric template.
+"""
+
+
+from __future__ import annotations
+
+import asyncio
+import uuid
+from datetime import UTC, datetime
+from typing import Any, cast
+from unittest.mock import MagicMock
+
+import pytest
+
+from app.application.ingest_telemetry import IngestDeps, IngestResult
+from app.domain.sensor import Reading, TransmissionType
+from app.infra.mqtt.broker import (
+    MAX_QUEUE,
+    QOS_AT_LEAST_ONCE,
+    TELEMETRY_TOPIC_FILTER,
+    BrokerSettings,
+    IngestBroker,
+    _topic_template,
+)
+from app.infra.mqtt.schemas import (
+    TelemetryIn,
+    TopicParseError,
+    UnknownTopicKindError,
+)
+from app.lib import metrics
+
+
+# ---------------------------------------------------------------------------
+# Fakes
+# ---------------------------------------------------------------------------
+def _reading() -> Reading:
+    return Reading(
+        tenant_id=uuid.UUID("11111111-1111-1111-1111-111111111111"),
+        farmer_id=uuid.UUID("22222222-2222-2222-2222-222222222222"),
+        farm_id=uuid.UUID("33333333-3333-3333-3333-333333333333"),
+        plot_id="P1",
+        node_id="N1",
+        recorded_at=datetime(2026, 5, 1, 12, 0, tzinfo=UTC),
+        received_at_master=datetime(2026, 5, 1, 12, 0, 5, tzinfo=UTC),
+        transmission_type=TransmissionType.LORA,
+    )
+
+
+
+
+class _StubModel:
+    """Stand-in for TelemetryIn whose to_domain returns our fixture Reading."""
+
+
+    def to_domain(self) -> Reading:
+        return _reading()
+
+
+
+
+def _ok_parse(topic: str, raw: bytes) -> _StubModel:
+    return _StubModel()
+
+
+
+
+async def _ok_ingest(reading: Reading, deps: IngestDeps) -> IngestResult:
+    return IngestResult(reading_id=1, validation_warn=False, flags={})
+
+
+
+
+async def _duplicate_ingest(reading: Reading, deps: IngestDeps) -> IngestResult:
+    return IngestResult(reading_id=None, validation_warn=False, flags={})
+
+
+
+
+# ---------------------------------------------------------------------------
+# Shared helpers
+# ---------------------------------------------------------------------------
+def _empty_deps() -> IngestDeps:
+    # We never actually exercise these in unit tests - the parse/ingest
+    # fakes short-circuit before any port is called.
+    return IngestDeps(reading_repo=MagicMock(), event_bus=MagicMock())
+
+
+
+
+def _settings() -> BrokerSettings:
+    return BrokerSettings(host="localhost", port=1883)
+
+
+
+
+@pytest.fixture(autouse=True)
+def _reset_metrics() -> None:
+    # Prometheus counters accumulate across tests in the same process.
+    # We can't truly reset them but each test asserts on a *delta* below.
+    pass
+
+
+
+
+def _dropped_count(reason: str) -> float:
+    # prometheus_client exposes ._value.get() on Counters; for a labeled
+    # counter we grab the child first.
+    return cast(float, metrics.ingest_dropped_total.labels(reason=reason)._value.get())
+
+
+
+
+def _received_count(topic_template: str) -> float:
+    return cast(float, metrics.ingest_received_total.labels(topic=topic_template)._value.get())
+
+
+
+
+# ===========================================================================
+# Topic template helper
+# ===========================================================================
+def test_topic_template_folds_telemetry_topics() -> None:
+    assert _topic_template("agro/v2/pilot/F_001/N_001/telemetry") == "agro/v2/+/+/+/telemetry"
+
+
+
+
+def test_topic_template_handles_other_shapes() -> None:
+    assert _topic_template("garbage") == "other"
+    assert _topic_template("agro/v1/pilot/x/y/telemetry") == "other"
+
+
+
+
+# ===========================================================================
+# Drain loop - happy path
+# ===========================================================================
+async def test_drain_loop_dispatches_to_ingest_fn() -> None:
+    ingested: list[Reading] = []
+
+
+    async def capture_ingest(reading: Reading, _deps: IngestDeps) -> IngestResult:
+        ingested.append(reading)
+        return IngestResult(reading_id=1, validation_warn=False, flags={})
+
+
+    broker = IngestBroker(
+        _settings(),
+        _empty_deps(),
+        parse_fn=_ok_parse,
+        ingest_fn=capture_ingest,
+        max_queue=4,
+    )
+
+
+    # Bypass paho - directly set up the asyncio plumbing.
+    broker._loop = asyncio.get_running_loop()
+    broker._queue = asyncio.Queue(maxsize=4)
+    task = asyncio.create_task(broker._drain())
+
+
+    received_before = _received_count("agro/v2/+/+/+/telemetry")
+    broker._enqueue("agro/v2/pilot/F/N/telemetry", b"{}")
+    await asyncio.sleep(0.1)
+
+
+    assert len(ingested) == 1
+    received_after = _received_count("agro/v2/+/+/+/telemetry")
+    assert received_after == pytest.approx(received_before + 1)
+
+
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+
+
+
+# ===========================================================================
+# Drain loop - duplicate handling
+# ===========================================================================
+async def test_drain_loop_marks_duplicate_drops() -> None:
+    broker = IngestBroker(
+        _settings(),
+        _empty_deps(),
+        parse_fn=_ok_parse,
+        ingest_fn=_duplicate_ingest,
+        max_queue=4,
+    )
+    broker._loop = asyncio.get_running_loop()
+    broker._queue = asyncio.Queue(maxsize=4)
+    task = asyncio.create_task(broker._drain())
+
+
+    before = _dropped_count("duplicate")
+    broker._enqueue("agro/v2/pilot/F/N/telemetry", b"{}")
+    await asyncio.sleep(0.1)
+    after = _dropped_count("duplicate")
+    assert after == pytest.approx(before + 1)
+
+
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+
+
+
+# ===========================================================================
+# Drain loop - exception classification
+# ===========================================================================
+async def _run_one_message_through_drain(parse_fn: Any, ingest_fn: Any = _ok_ingest) -> None:
+    broker = IngestBroker(
+        _settings(),
+        _empty_deps(),
+        parse_fn=parse_fn,
+        ingest_fn=ingest_fn,
+        max_queue=4,
+    )
+    broker._loop = asyncio.get_running_loop()
+    broker._queue = asyncio.Queue(maxsize=4)
+    task = asyncio.create_task(broker._drain())
+    broker._enqueue("agro/v2/pilot/F/N/telemetry", b"{}")
+    await asyncio.sleep(0.1)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+
+
+
+async def test_topic_parse_error_increments_topic_parse_label() -> None:
+    def bad_topic(_t: str, _r: bytes) -> _StubModel:
+        raise TopicParseError("bad topic")
+
+
+    before = _dropped_count("topic_parse")
+    await _run_one_message_through_drain(bad_topic)
+    after = _dropped_count("topic_parse")
+    assert after == pytest.approx(before + 1)
+
+
+
+
+async def test_unknown_kind_error_increments_unknown_topic_kind_label() -> None:
+    def unknown(_t: str, _r: bytes) -> _StubModel:
+        raise UnknownTopicKindError("weather not yet supported")
+
+
+    before = _dropped_count("unknown_topic_kind")
+    await _run_one_message_through_drain(unknown)
+    after = _dropped_count("unknown_topic_kind")
+    assert after == pytest.approx(before + 1)
+
+
+
+
+async def test_validation_error_increments_validation_label() -> None:
+    def invalid(_t: str, _r: bytes) -> _StubModel:
+        # Provoke a real ValidationError by passing junk into TelemetryIn.
+        # (Easier than building a fake ValidationError, which pydantic guards.)
+        TelemetryIn.model_validate({"$schema": "agro-guardian/telemetry/v2"})
+        raise AssertionError  # unreachable
+
+
+    before = _dropped_count("validation")
+    await _run_one_message_through_drain(invalid)
+    after = _dropped_count("validation")
+    assert after == pytest.approx(before + 1)
+
+
+
+
+async def test_parse_error_via_value_error_increments_parse_error_label() -> None:
+    def value_err(_t: str, _r: bytes) -> _StubModel:
+        raise ValueError("garbage payload")
+
+
+    before = _dropped_count("parse_error")
+    await _run_one_message_through_drain(value_err)
+    after = _dropped_count("parse_error")
+    assert after == pytest.approx(before + 1)
+
+
+
+
+async def test_unexpected_error_increments_unexpected_label() -> None:
+    def boom(_t: str, _r: bytes) -> _StubModel:
+        raise RuntimeError("infra meltdown")
+
+
+    before = _dropped_count("unexpected")
+    await _run_one_message_through_drain(boom)
+    after = _dropped_count("unexpected")
+    assert after == pytest.approx(before + 1)
+
+
+
+
+# ===========================================================================
+# Queue-full handling
+# ===========================================================================
+async def test_enqueue_drops_when_queue_full() -> None:
+    broker = IngestBroker(
+        _settings(),
+        _empty_deps(),
+        parse_fn=_ok_parse,
+        ingest_fn=_ok_ingest,
+        max_queue=1,
+    )
+    broker._loop = asyncio.get_running_loop()
+    broker._queue = asyncio.Queue(maxsize=1)
+
+
+    before = _dropped_count("queue_full")
+    broker._enqueue("agro/v2/p/f/n/telemetry", b"a")
+    # Queue is now full; second enqueue without a drain in between must drop.
+    broker._enqueue("agro/v2/p/f/n/telemetry", b"b")
+    after = _dropped_count("queue_full")
+    assert after == pytest.approx(before + 1)
+
+
+
+
+# ===========================================================================
+# Lifecycle guards
+# ===========================================================================
+async def test_start_raises_when_already_started() -> None:
+    broker = IngestBroker(_settings(), _empty_deps())
+    # We can't actually .start() without a real broker, but the duplicate-
+    # start check fires on the second call's first line ("if self._client
+    # is not None"). Simulate the "already started" state by injecting.
+    broker._client = MagicMock()
+    with pytest.raises(RuntimeError, match="already started"):
+        await broker.start()
+
+
+
+
+async def test_stop_is_idempotent() -> None:
+    broker = IngestBroker(_settings(), _empty_deps())
+    # Fresh broker; stop() should be a no-op (everything is None).
+    await broker.stop()
+    await broker.stop()
+
+
+
+
+# ===========================================================================
+# Constants - protect against accidental edits
+# ===========================================================================
+def test_telemetry_topic_filter_uses_multilevel_wildcards() -> None:
+    assert TELEMETRY_TOPIC_FILTER == "agro/v2/+/+/+/telemetry"
+
+
+
+
+def test_qos_default_is_at_least_once() -> None:
+    assert QOS_AT_LEAST_ONCE == 1
+
+
+
+
+def test_max_queue_is_a_reasonable_size() -> None:
+    # Floor: 1000 messages of buffer. Ceiling: 100k would mean we're
+    # papering over a real slow-consumer problem. Sanity-check the
+    # constant doesn't drift wildly.
+    assert 1000 <= MAX_QUEUE <= 100_000

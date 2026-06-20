@@ -214,6 +214,7 @@ def test_allowed_history_fields_is_frozen_and_covers_numeric_columns() -> None:
         "soil_p_mg_kg",
         "soil_k_mg_kg",
         "battery_voltage_v",
+        "battery_percent",
     }
     assert expected == ALLOWED_HISTORY_FIELDS
     assert isinstance(ALLOWED_HISTORY_FIELDS, frozenset)
