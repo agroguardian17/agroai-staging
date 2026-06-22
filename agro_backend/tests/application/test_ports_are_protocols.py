@@ -25,8 +25,11 @@ from typing import Any, get_type_hints
 import pytest
 
 
+from app.application.ports.ai_suggestion_repo import AiSuggestionRepo
 from app.application.ports.alert_repo import AlertRepo
 from app.application.ports.auth_session_repo import AuthSessionRepo
+from app.application.ports.chat_model import ChatModel
+from app.application.ports.crop_season_repo import CropSeasonRepo
 from app.application.ports.event_bus import (
     EVENT_ALERT_CREATED,
     EVENT_ALERT_DISPATCHED,
@@ -49,8 +52,11 @@ from app.domain.sensor import Reading, TransmissionType
 
 
 ALL_PORTS = (
+    AiSuggestionRepo,
     AlertRepo,
     AuthSessionRepo,
+    ChatModel,
+    CropSeasonRepo,
     EventBus,
     FarmerRepo,
     OtpRepo,
@@ -144,9 +150,13 @@ class _FakeAlertRepo:
     async def resolve(self, alert_id: int, notes: str | None = None) -> None:
         return None
 
+
     async def list_for_plot(self, plot_id: str, limit: int = 50) -> list:
         return []
 
+
+    async def find_by_id(self, alert_id: int):
+        return None
 
 
 
@@ -225,6 +235,10 @@ def test_port_method_hints_resolve(port_cls: type) -> None:
 #    Any change requires a deliberate review here.
 # ---------------------------------------------------------------------------
 def test_allowed_history_fields_is_frozen_and_covers_numeric_columns() -> None:
+    # The exact set is the column allowlist for the validation gates'
+    # field interpolation - any change is a deliberate review event.
+    # battery_percent was added so the stuck-value gate can flag a fuel
+    # gauge that's frozen at 100% (a common BMS failure mode).
     expected = {
         "soil_moisture_1_pct",
         "soil_moisture_2_pct",

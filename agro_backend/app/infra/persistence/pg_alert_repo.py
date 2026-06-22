@@ -1,44 +1,42 @@
 """Postgres adapter for :class:`~app.application.ports.alert_repo.AlertRepo`.
 
-
 Inserts into ``alerts_notifications`` with ``dispatch_status='pending'``
 (server default per migration 0002 + schema decisions §11d) so the Round 7
 notification dispatcher picks the row up. Cooldown queries select only
 ``triggered_at`` - the dispatch decision needs nothing more.
 """
 
-
 from __future__ import annotations
-
 
 from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-
-from app.application.ports.alert_repo import PlotAlertView
+from app.application.ports.alert_repo import AlertFull, PlotAlertView
 from app.domain.alert import AlertCandidate, AlertType, Severity
-
-
 
 
 def _decimal_to_float(v: Decimal | None) -> float | None:
     return None if v is None else float(v)
 
 
+def _float_to_decimal(v: float | int | None) -> Decimal | None:
+    """Storage Double -> domain Decimal (via str to dodge float artefacts)."""
+    if v is None:
+        return None
+    if isinstance(v, Decimal):
+        return v
+    return Decimal(str(v))
 
 
 class PgAlertRepo:
     """Concrete :class:`AlertRepo` against Postgres."""
 
-
     def __init__(self, sessionmaker: async_sessionmaker[AsyncSession]) -> None:
         self._sm = sessionmaker
-
 
     # ------------------------------------------------------------------
     async def create(self, candidate: AlertCandidate) -> int:
@@ -73,7 +71,6 @@ class PgAlertRepo:
             await session.commit()
         return int(row.alert_id)
 
-
     # ------------------------------------------------------------------
     async def last_triggered_at(self, plot_id: str, alert_type: AlertType) -> datetime | None:
         # alerts_notifications doesn't have a plot_id FK (the table is
@@ -93,7 +90,6 @@ class PgAlertRepo:
             row = res.first()
         return row.last_at if row is not None else None
 
-
     # ------------------------------------------------------------------
     async def resolve(self, alert_id: int, notes: str | None = None) -> None:
         stmt = text(
@@ -109,6 +105,40 @@ class PgAlertRepo:
             await session.execute(stmt, {"alert_id": alert_id, "notes": notes})
             await session.commit()
 
+    # ------------------------------------------------------------------
+    async def find_by_id(self, alert_id: int) -> AlertFull | None:
+        stmt = text(
+            """
+            SELECT
+                alert_id, tenant_id, farm_id, farmer_id, device_id,
+                alert_type, severity, alert_message_marathi,
+                alert_value, alert_threshold,
+                triggered_at, resolved, resolved_at
+            FROM alerts_notifications
+            WHERE alert_id = :aid
+            LIMIT 1
+            """
+        )
+        async with self._sm() as session:
+            res = await session.execute(stmt, {"aid": alert_id})
+            row = res.first()
+        if row is None:
+            return None
+        return AlertFull(
+            alert_id=int(row.alert_id),
+            tenant_id=row.tenant_id,
+            farm_id=row.farm_id,
+            farmer_id=row.farmer_id,
+            device_id=row.device_id,
+            alert_type=AlertType(row.alert_type),
+            severity=Severity(row.severity),
+            alert_message_marathi=row.alert_message_marathi,
+            alert_value=_float_to_decimal(row.alert_value),
+            alert_threshold=_float_to_decimal(row.alert_threshold),
+            triggered_at=row.triggered_at,
+            resolved=bool(row.resolved) if row.resolved is not None else False,
+            resolved_at=row.resolved_at,
+        )
 
     # ------------------------------------------------------------------
     async def list_for_plot(self, plot_id: str, limit: int = 50) -> list[PlotAlertView]:
@@ -141,8 +171,6 @@ class PgAlertRepo:
             )
             for r in rows
         ]
-
-
 
 
 __all__ = ["PgAlertRepo"]
