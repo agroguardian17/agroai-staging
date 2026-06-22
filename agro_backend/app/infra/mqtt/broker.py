@@ -35,6 +35,7 @@ not ours to silently retry.
 
 from __future__ import annotations
 
+
 import asyncio
 import contextlib
 import logging
@@ -42,19 +43,21 @@ import ssl
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
+
 import paho.mqtt.client as mqtt
 import structlog
 from pydantic import ValidationError
 
-from app.application.ingest_telemetry import IngestDeps, IngestResult
-from app.application.ingest_telemetry import execute as ingest_execute
-from app.domain.sensor import Reading
+
+from app.application.process_reading import ProcessReadingDeps
+from app.application.process_reading import execute as process_execute
 from app.infra.mqtt.schemas import (
     TopicParseError,
     UnknownTopicKindError,
     parse_inbound,
 )
 from app.lib import metrics
+
 
 log = structlog.get_logger(__name__)
 
@@ -123,12 +126,15 @@ class IngestBroker:
     def __init__(
         self,
         broker_settings: BrokerSettings,
-        deps: IngestDeps,
+        deps: ProcessReadingDeps,
         *,
-        # Test seam: allow callers to inject a fake parser/ingestor for
+        # Test seam: allow callers to inject a fake parser/processor for
         # unit tests. Production callers always use the module defaults.
+        # ``ingest_fn`` keeps its historical name (Round 7) for backward
+        # compatibility but now defaults to ``process_reading.execute`` —
+        # which calls ``ingest_telemetry`` then ``evaluate_rules``.
         parse_fn: Callable[[str, bytes], object] = parse_inbound,
-        ingest_fn: Callable[[Reading, IngestDeps], Awaitable[IngestResult]] = ingest_execute,
+        ingest_fn: Callable[[object, ProcessReadingDeps], Awaitable[object]] = process_execute,
         max_queue: int = MAX_QUEUE,
     ) -> None:
         self._settings = broker_settings
@@ -158,7 +164,7 @@ class IngestBroker:
         client = mqtt.Client(
             client_id=self._settings.client_id,
             protocol=mqtt.MQTTv5,
-            callback_api_version=mqtt.CallbackAPIVersion.VERSION2,  # type: ignore[attr-defined]
+            callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
         )
         if self._settings.username:
             client.username_pw_set(self._settings.username, self._settings.password)
@@ -292,8 +298,22 @@ class IngestBroker:
                 model = self._parse_fn(topic, raw)
                 reading = model.to_domain()  # type: ignore[attr-defined]
                 result = await self._ingest_fn(reading, self._deps)
-                if result.reading_id is None:
+                if result.reading_id is None:  # type: ignore[attr-defined]
                     metrics.ingest_dropped_total.labels(reason="duplicate").inc()
+                else:
+                    # Rule-engine accounting. Only fires when the use case
+                    # actually ran rule evaluation (ProcessReadingResult);
+                    # tests injecting an IngestResult-shaped stub don't
+                    # have a ``.rules`` attribute and are skipped here.
+                    rules = getattr(result, "rules", None)
+                    if rules is not None:
+                        metrics.rule_evaluations_total.inc()
+                        if rules.hits:
+                            metrics.rule_hits_total.inc(rules.hits)
+                        if rules.created:
+                            metrics.alerts_created_total.inc(rules.created)
+                        if rules.cooldown_suppressed:
+                            metrics.alerts_cooldown_suppressed_total.inc(rules.cooldown_suppressed)
             except TopicParseError:
                 metrics.ingest_dropped_total.labels(reason="topic_parse").inc()
                 log.warning("ingest_broker.topic_parse_error", topic=topic)

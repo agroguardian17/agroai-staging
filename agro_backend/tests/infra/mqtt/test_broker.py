@@ -14,15 +14,20 @@ the tests run without a real broker. Verifies:
 
 from __future__ import annotations
 
+
 import asyncio
 import uuid
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any
 from unittest.mock import MagicMock
+
 
 import pytest
 
+
+from app.application.evaluate_rules import EvaluateRulesDeps, EvaluateRulesResult
 from app.application.ingest_telemetry import IngestDeps, IngestResult
+from app.application.process_reading import ProcessReadingDeps, ProcessReadingResult
 from app.domain.sensor import Reading, TransmissionType
 from app.infra.mqtt.broker import (
     MAX_QUEUE,
@@ -38,6 +43,8 @@ from app.infra.mqtt.schemas import (
     UnknownTopicKindError,
 )
 from app.lib import metrics
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -74,14 +81,20 @@ def _ok_parse(topic: str, raw: bytes) -> _StubModel:
 
 
 
-async def _ok_ingest(reading: Reading, deps: IngestDeps) -> IngestResult:
-    return IngestResult(reading_id=1, validation_warn=False, flags={})
+async def _ok_ingest(reading: Reading, deps: ProcessReadingDeps) -> ProcessReadingResult:
+    return ProcessReadingResult(
+        ingest=IngestResult(reading_id=1, validation_warn=False, flags={}),
+        rules=EvaluateRulesResult(hits=0, created=0, cooldown_suppressed=0),
+    )
 
 
 
 
-async def _duplicate_ingest(reading: Reading, deps: IngestDeps) -> IngestResult:
-    return IngestResult(reading_id=None, validation_warn=False, flags={})
+async def _duplicate_ingest(reading: Reading, deps: ProcessReadingDeps) -> ProcessReadingResult:
+    return ProcessReadingResult(
+        ingest=IngestResult(reading_id=None, validation_warn=False, flags={}),
+        rules=None,
+    )
 
 
 
@@ -89,10 +102,13 @@ async def _duplicate_ingest(reading: Reading, deps: IngestDeps) -> IngestResult:
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
-def _empty_deps() -> IngestDeps:
+def _empty_deps() -> ProcessReadingDeps:
     # We never actually exercise these in unit tests - the parse/ingest
     # fakes short-circuit before any port is called.
-    return IngestDeps(reading_repo=MagicMock(), event_bus=MagicMock())
+    return ProcessReadingDeps(
+        ingest_deps=IngestDeps(reading_repo=MagicMock(), event_bus=MagicMock()),
+        evaluate_deps=EvaluateRulesDeps(alert_repo=MagicMock(), event_bus=MagicMock()),
+    )
 
 
 
@@ -115,13 +131,31 @@ def _reset_metrics() -> None:
 def _dropped_count(reason: str) -> float:
     # prometheus_client exposes ._value.get() on Counters; for a labeled
     # counter we grab the child first.
-    return cast(float, metrics.ingest_dropped_total.labels(reason=reason)._value.get())
+    return metrics.ingest_dropped_total.labels(reason=reason)._value.get()
 
 
 
 
 def _received_count(topic_template: str) -> float:
-    return cast(float, metrics.ingest_received_total.labels(topic=topic_template)._value.get())
+    return metrics.ingest_received_total.labels(topic=topic_template)._value.get()
+
+
+
+
+def _rule_eval_count() -> float:
+    return metrics.rule_evaluations_total._value.get()
+
+
+
+
+def _alerts_created_count() -> float:
+    return metrics.alerts_created_total._value.get()
+
+
+
+
+def _cooldown_count() -> float:
+    return metrics.alerts_cooldown_suppressed_total._value.get()
 
 
 
@@ -149,9 +183,12 @@ async def test_drain_loop_dispatches_to_ingest_fn() -> None:
     ingested: list[Reading] = []
 
 
-    async def capture_ingest(reading: Reading, _deps: IngestDeps) -> IngestResult:
+    async def capture_ingest(reading: Reading, _deps: ProcessReadingDeps) -> ProcessReadingResult:
         ingested.append(reading)
-        return IngestResult(reading_id=1, validation_warn=False, flags={})
+        return ProcessReadingResult(
+            ingest=IngestResult(reading_id=1, validation_warn=False, flags={}),
+            rules=EvaluateRulesResult(hits=0, created=0, cooldown_suppressed=0),
+        )
 
 
     broker = IngestBroker(
@@ -294,6 +331,45 @@ async def test_parse_error_via_value_error_increments_parse_error_label() -> Non
 
 
 
+async def test_drain_loop_increments_rule_metrics_for_fresh_insert() -> None:
+    async def fired_ingest(_r: Reading, _d: ProcessReadingDeps) -> ProcessReadingResult:
+        return ProcessReadingResult(
+            ingest=IngestResult(reading_id=42, validation_warn=False, flags={}),
+            rules=EvaluateRulesResult(hits=2, created=1, cooldown_suppressed=1),
+        )
+
+
+    broker = IngestBroker(
+        _settings(),
+        _empty_deps(),
+        parse_fn=_ok_parse,
+        ingest_fn=fired_ingest,
+        max_queue=4,
+    )
+    broker._loop = asyncio.get_running_loop()
+    broker._queue = asyncio.Queue(maxsize=4)
+    task = asyncio.create_task(broker._drain())
+
+
+    eval_before = _rule_eval_count()
+    created_before = _alerts_created_count()
+    cooldown_before = _cooldown_count()
+    broker._enqueue("agro/v2/pilot/F/N/telemetry", b"{}")
+    await asyncio.sleep(0.1)
+
+
+    assert _rule_eval_count() == pytest.approx(eval_before + 1)
+    assert _alerts_created_count() == pytest.approx(created_before + 1)
+    assert _cooldown_count() == pytest.approx(cooldown_before + 1)
+
+
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+
+
+
 async def test_unexpected_error_increments_unexpected_label() -> None:
     def boom(_t: str, _r: bytes) -> _StubModel:
         raise RuntimeError("infra meltdown")
@@ -340,7 +416,7 @@ async def test_start_raises_when_already_started() -> None:
     # We can't actually .start() without a real broker, but the duplicate-
     # start check fires on the second call's first line ("if self._client
     # is not None"). Simulate the "already started" state by injecting.
-    broker._client = MagicMock()
+    broker._client = MagicMock()  # type: ignore[assignment]
     with pytest.raises(RuntimeError, match="already started"):
         await broker.start()
 
