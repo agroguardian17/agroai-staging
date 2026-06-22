@@ -1,5 +1,6 @@
 """FastAPI application factory.
 
+
 Phase 0 deliverables:
 - ``GET /api/v1/health`` returns ``{status, version, commit, env}``.
 - ``GET /api/v1/ready`` checks DB + MQTT + Chroma reachability (Phase 0
@@ -11,12 +12,15 @@ Phase 0 deliverables:
   - the seam is already in place.
 """
 
+
 from __future__ import annotations
+
 
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
+
 
 import structlog
 from fastapi import FastAPI, Request, Response
@@ -24,21 +28,30 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
+
 from app.config import get_settings
+from app.infra.http import auth as auth_routes
 from app.infra.http import health
+from app.infra.http import plots as plot_routes
+from app.infra.http.deps import shutdown_engine
 from app.lib import metrics
 from app.lib.logging import configure_logging
+
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
+
 log = structlog.get_logger(__name__)
+
+
 
 
 # ----- Lifespan ----------------------------------------------------------
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Process-wide startup/shutdown.
+
 
     Phase 0 keeps this minimal; later phases register the MQTT broker,
     APScheduler, and ChromaDB reindex hook here. Order matters - configure
@@ -56,7 +69,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        await shutdown_engine()
         log.info("app.shutdown")
+
+
 
 
 def _init_sentry(settings: Any) -> None:
@@ -67,6 +83,7 @@ def _init_sentry(settings: Any) -> None:
     from sentry_sdk.integrations.asyncio import AsyncioIntegration
     from sentry_sdk.integrations.fastapi import FastApiIntegration
     from sentry_sdk.integrations.starlette import StarletteIntegration
+
 
     sentry_sdk.init(
         dsn=settings.SENTRY_DSN,
@@ -83,6 +100,8 @@ def _init_sentry(settings: Any) -> None:
     )
 
 
+
+
 # ----- App factory -------------------------------------------------------
 def create_app() -> FastAPI:
     settings = get_settings()
@@ -96,6 +115,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -106,17 +126,26 @@ def create_app() -> FastAPI:
     if settings.trusted_hosts != ["*"]:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
 
+
     app.middleware("http")(_metrics_middleware)
+
 
     # Routers
     app.include_router(health.router, prefix="/api/v1", tags=["health"])
+    app.include_router(auth_routes.router)
+    app.include_router(auth_routes.me_router)
+    app.include_router(plot_routes.router)
+
 
     # Prometheus exposition. In production, Caddy gates this to Tailscale only.
     @app.get("/metrics", include_in_schema=False)
     async def metrics_endpoint() -> Response:
         return Response(content=generate_latest(metrics.REGISTRY), media_type=CONTENT_TYPE_LATEST)
 
+
     return app
+
+
 
 
 async def _metrics_middleware(
@@ -142,8 +171,12 @@ async def _metrics_middleware(
         ).observe(elapsed)
 
 
+
+
 # Module-level instance for uvicorn / Coolify.
 app: FastAPI = create_app()
+
+
 
 
 __all__ = ["app", "create_app"]

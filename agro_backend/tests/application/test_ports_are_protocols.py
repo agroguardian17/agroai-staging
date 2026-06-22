@@ -15,14 +15,18 @@ duck-typing contract the hexagon depends on.
 
 from __future__ import annotations
 
+
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, get_type_hints
 
+
 import pytest
 
+
 from app.application.ports.alert_repo import AlertRepo
+from app.application.ports.auth_session_repo import AuthSessionRepo
 from app.application.ports.event_bus import (
     EVENT_ALERT_CREATED,
     EVENT_ALERT_DISPATCHED,
@@ -33,13 +37,28 @@ from app.application.ports.event_bus import (
     EVENT_TELEMETRY_INGESTED,
     EventBus,
 )
+from app.application.ports.farmer_repo import FarmerRepo
+from app.application.ports.otp_repo import OtpRepo
 from app.application.ports.plot_repo import PlotRepo
 from app.application.ports.reading_repo import ALLOWED_HISTORY_FIELDS, ReadingRepo
+from app.application.ports.token_issuer import TokenIssuer
+from app.application.ports.whatsapp_sender import WhatsappSender
 from app.domain.alert import AlertCandidate, AlertType, Severity
 from app.domain.plot import DataTier, Plot, PlotStatus
 from app.domain.sensor import Reading, TransmissionType
 
-ALL_PORTS = (AlertRepo, EventBus, PlotRepo, ReadingRepo)
+
+ALL_PORTS = (
+    AlertRepo,
+    AuthSessionRepo,
+    EventBus,
+    FarmerRepo,
+    OtpRepo,
+    PlotRepo,
+    ReadingRepo,
+    TokenIssuer,
+    WhatsappSender,
+)
 
 
 
@@ -124,6 +143,10 @@ class _FakeAlertRepo:
 
     async def resolve(self, alert_id: int, notes: str | None = None) -> None:
         return None
+
+    async def list_for_plot(self, plot_id: str, limit: int = 50) -> list:
+        return []
+
 
 
 

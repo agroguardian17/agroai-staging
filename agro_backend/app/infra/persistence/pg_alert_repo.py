@@ -10,14 +10,20 @@ notification dispatcher picks the row up. Cooldown queries select only
 
 from __future__ import annotations
 
+
 from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.domain.alert import AlertCandidate, AlertType
+
+from app.application.ports.alert_repo import PlotAlertView
+from app.domain.alert import AlertCandidate, AlertType, Severity
+
+
 
 
 def _decimal_to_float(v: Decimal | None) -> float | None:
@@ -102,6 +108,39 @@ class PgAlertRepo:
         async with self._sm() as session:
             await session.execute(stmt, {"alert_id": alert_id, "notes": notes})
             await session.commit()
+
+
+    # ------------------------------------------------------------------
+    async def list_for_plot(self, plot_id: str, limit: int = 50) -> list[PlotAlertView]:
+        stmt = text(
+            """
+            SELECT
+                a.alert_id, a.alert_type, a.severity, a.alert_message_marathi,
+                a.triggered_at, a.resolved, a.resolved_at, a.device_id, a.farmer_id
+            FROM alerts_notifications a
+            JOIN plots p ON p.node_id = a.device_id
+            WHERE p.plot_id = :plot_id
+            ORDER BY a.triggered_at DESC
+            LIMIT :limit
+            """
+        )
+        async with self._sm() as session:
+            res = await session.execute(stmt, {"plot_id": plot_id, "limit": limit})
+            rows = res.all()
+        return [
+            PlotAlertView(
+                alert_id=int(r.alert_id),
+                alert_type=AlertType(r.alert_type),
+                severity=Severity(r.severity),
+                alert_message_marathi=r.alert_message_marathi,
+                triggered_at=r.triggered_at,
+                resolved=bool(r.resolved) if r.resolved is not None else False,
+                resolved_at=r.resolved_at,
+                device_id=r.device_id,
+                farmer_id=r.farmer_id,
+            )
+            for r in rows
+        ]
 
 
 

@@ -14,10 +14,40 @@ row. Keeps the port surface area minimal.
 
 from __future__ import annotations
 
+
+import uuid
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Protocol, runtime_checkable
 
-from app.domain.alert import AlertCandidate, AlertType
+
+from app.domain.alert import AlertCandidate, AlertType, Severity
+
+
+
+
+@dataclass(frozen=True, slots=True)
+class PlotAlertView:
+    """Read-side projection of an alert row. The shape /plots/{id}/alerts returns.
+
+
+    Defined here in the port file (not in domain) because it's a
+    presentation concern: which columns we expose to the HTTP layer.
+    Domain entities stay free of HTTP/serialization concerns.
+    """
+
+
+    alert_id: int
+    alert_type: AlertType
+    severity: Severity
+    alert_message_marathi: str
+    triggered_at: datetime
+    resolved: bool
+    resolved_at: datetime | None
+    device_id: str | None
+    farmer_id: uuid.UUID
+
+
 
 
 @runtime_checkable
@@ -61,6 +91,16 @@ class AlertRepo(Protocol):
         ...
 
 
+    async def list_for_plot(self, plot_id: str, limit: int = 50) -> list[PlotAlertView]:
+        """Recent alerts visible on the /plots/{id}/alerts endpoint.
 
 
-__all__ = ["AlertRepo"]
+        Most-recent first. The join is alerts_notifications.device_id ->
+        plots.node_id, so satellite-only plots (with no node) return [].
+        """
+        ...
+
+
+
+
+__all__ = ["AlertRepo", "PlotAlertView"]
