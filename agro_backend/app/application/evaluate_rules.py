@@ -18,6 +18,17 @@ the persistence + event-bus side effects. The engine itself stays
 pure; the cooldown lookup and write happens here.
 
 
+CALIBRATION_MODE short-circuit
+------------------------------
+When ``deps.calibration_mode`` is ``True`` the use case returns a
+zero-count result immediately without touching metrics, rules, repo, or
+bus. This is the "hardware bench" flag: during initial sensor dial-in
+the probes emit unrealistic values that would otherwise trigger every
+rule on every reading and spam the dashboard/WhatsApp/push. Flip the
+flag off (via the ``CALIBRATION_MODE`` env var) once the sensors are
+producing sane values.
+
+
 PURE w.r.t. imports: stdlib + ports + domain only. No infra imports.
 The application-purity AST test enforces this.
 """
@@ -44,13 +55,17 @@ from app.domain.sensor import Reading
 
 @dataclass(frozen=True, slots=True)
 class EvaluateRulesDeps:
-    """Ports + the active RuleSet.
+    """Ports + the active RuleSet + calibration flag.
 
 
     ``ruleset`` defaults to the pilot set; tests can pin a smaller set
     to keep their assertions focused. ``metrics_context`` likewise
     defaults to the standard MetricsContext; future per-plot crop-stage
     awareness will pass a richer one constructed from the CropSeason.
+
+
+    ``calibration_mode`` short-circuits execute() when True. Wired from
+    ``Settings.CALIBRATION_MODE`` in :mod:`app.jobs.ingest_startup`.
     """
 
 
@@ -58,6 +73,7 @@ class EvaluateRulesDeps:
     event_bus: EventBus
     ruleset: RuleSet = PILOT_RULESET
     metrics_context: MetricsContext = field(default_factory=MetricsContext)
+    calibration_mode: bool = False
 
 
 
@@ -81,6 +97,11 @@ async def execute(
     now: datetime,
 ) -> EvaluateRulesResult:
     """Run the pipeline; return how many alerts were created vs suppressed."""
+    if deps.calibration_mode:
+        # Bench mode: rules are disabled. No metrics, no repo, no bus.
+        # Ingest still persists the row (that's what we want to inspect).
+        return EvaluateRulesResult(hits=0, created=0, cooldown_suppressed=0)
+
     metrics = compute(reading, deps.metrics_context)
     hits = evaluate_to_hits(reading, metrics, deps.ruleset)
 
@@ -167,7 +188,7 @@ async def _publish_alert_created(
     hit: RuleHit,
     reading: Reading,
 ) -> None:
-    """Publish IDs only (Roadmap §1.3 — never full domain objects).
+    """Publish IDs only (Roadmap 1.3 - never full domain objects).
 
 
     The dispatcher (Phase 7) will re-fetch the alert by id when it

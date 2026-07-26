@@ -43,6 +43,8 @@ def _redact_sensitive(_logger: object, _name: str, event_dict: EventDict) -> Eve
     """
     for key in list(event_dict.keys()):
         lk = key.lower()
+        if lk == "otp_code" and get_settings().APP_ENV is AppEnv.DEVELOPMENT:
+            continue
         if any(sensitive in lk for sensitive in _REDACT_KEYS):
             event_dict[key] = "***REDACTED***"
     return event_dict

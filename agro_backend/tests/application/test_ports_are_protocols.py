@@ -1,29 +1,23 @@
 """Tests that every application port is a runtime-checkable Protocol.
 
-
 The hexagon relies on Protocols (PEP 544) so use cases can substitute fakes
 for the concrete adapters in tests. ``isinstance(x, SomePort)`` must work
 without ``x`` inheriting from ``SomePort`` - that's the whole point of
 ``@runtime_checkable``.
-
 
 These tests also guard against accidental regressions to ABCs or concrete
 base classes, which would force adapter classes to inherit and break the
 duck-typing contract the hexagon depends on.
 """
 
-
 from __future__ import annotations
-
 
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, get_type_hints
 
-
 import pytest
-
 
 from app.application.ports.ai_suggestion_repo import AiSuggestionRepo
 from app.application.ports.alert_repo import AlertRepo
@@ -50,7 +44,6 @@ from app.domain.alert import AlertCandidate, AlertType, Severity
 from app.domain.plot import DataTier, Plot, PlotStatus
 from app.domain.sensor import Reading, TransmissionType
 
-
 ALL_PORTS = (
     AiSuggestionRepo,
     AlertRepo,
@@ -65,8 +58,6 @@ ALL_PORTS = (
     TokenIssuer,
     WhatsappSender,
 )
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -84,8 +75,6 @@ def test_port_is_runtime_checkable_protocol(port_cls: type) -> None:
     )
 
 
-
-
 # ---------------------------------------------------------------------------
 # 2. A duck-typed fake passes isinstance() against the Protocol.
 #    This is the canonical hexagon use case: tests construct a fake without
@@ -94,71 +83,63 @@ def test_port_is_runtime_checkable_protocol(port_cls: type) -> None:
 class _FakeReadingRepo:
     """Smallest possible fake satisfying ReadingRepo - no inheritance."""
 
-
     async def save(self, reading: Reading) -> int | None:
         return 1
-
 
     async def latest_for_plot(self, plot_id: str, limit: int) -> list[Reading]:
         return []
 
-
     async def recent_for_node(self, node_id: str, since: datetime) -> list[Reading]:
         return []
-
 
     async def history_for_stuck_check(
         self, node_id: str, field: str, minutes: int
     ) -> list[Decimal | None]:
         return []
 
-
     async def history_for_mad_check(self, node_id: str, field: str, hours: int) -> list[Decimal]:
         return []
-
-
 
 
 class _FakePlotRepo:
     async def find(self, plot_id: str) -> Plot | None:
         return None
 
-
     async def for_farmer(self, farmer_id: uuid.UUID) -> list[Plot]:
         return []
-
 
     async def for_tenant(self, tenant_id: uuid.UUID) -> list[Plot]:
         return []
 
-
     async def update_data_tier(self, plot_id: str, tier: DataTier) -> None:
         return None
-
-
 
 
 class _FakeAlertRepo:
     async def create(self, candidate: AlertCandidate) -> int:
         return 1
 
-
     async def last_triggered_at(self, plot_id: str, alert_type: AlertType) -> datetime | None:
         return None
-
 
     async def resolve(self, alert_id: int, notes: str | None = None) -> None:
         return None
 
-
     async def list_for_plot(self, plot_id: str, limit: int = 50) -> list:
         return []
-
 
     async def find_by_id(self, alert_id: int):
         return None
 
-
+    async def list_for_tenant(
+        self,
+        tenant_id: uuid.UUID,
+        *,
+        only_unresolved: bool = True,
+        severity_filter=None,
+        limit: int = 100,
+    ) -> list:
+        return []
 
 
 class _FakeEventBus:
@@ -166,30 +147,20 @@ class _FakeEventBus:
         return None
 
 
-
-
 def test_fake_reading_repo_satisfies_protocol() -> None:
     assert isinstance(_FakeReadingRepo(), ReadingRepo)
-
-
 
 
 def test_fake_plot_repo_satisfies_protocol() -> None:
     assert isinstance(_FakePlotRepo(), PlotRepo)
 
 
-
-
 def test_fake_alert_repo_satisfies_protocol() -> None:
     assert isinstance(_FakeAlertRepo(), AlertRepo)
 
 
-
-
 def test_fake_event_bus_satisfies_protocol() -> None:
     assert isinstance(_FakeEventBus(), EventBus)
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -201,14 +172,10 @@ class _IncompleteReadingRepo:
         return None
 
 
-
-
 def test_incomplete_fake_does_not_satisfy_protocol() -> None:
     # runtime_checkable Protocols only verify method *presence* (not signatures).
     # Missing ``latest_for_plot`` etc. -> isinstance returns False.
     assert not isinstance(_IncompleteReadingRepo(), ReadingRepo)
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -226,8 +193,6 @@ def test_port_method_hints_resolve(port_cls: type) -> None:
             continue
         # Will raise if any annotation is an unresolved forward ref.
         get_type_hints(attr)
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -257,8 +222,6 @@ def test_allowed_history_fields_is_frozen_and_covers_numeric_columns() -> None:
     assert isinstance(ALLOWED_HISTORY_FIELDS, frozenset)
 
 
-
-
 # ---------------------------------------------------------------------------
 # 6. Event-name constants must be unique and stable.
 #    These strings travel between producers/consumers; a typo or rename
@@ -278,8 +241,6 @@ def test_event_name_constants_are_unique() -> None:
     assert len(names) == 7
 
 
-
-
 def test_event_name_strings_match_docstring_convention() -> None:
     # All event names are dotted lower_snake_case ``noun.verb`` pairs.
     # If a future event uses dashes or upper-case, surfacing it here
@@ -296,8 +257,6 @@ def test_event_name_strings_match_docstring_convention() -> None:
         assert "." in name, f"{name!r} must follow noun.verb convention"
         assert name == name.lower(), f"{name!r} must be lowercase"
         assert " " not in name, f"{name!r} must not contain spaces"
-
-
 
 
 # ---------------------------------------------------------------------------

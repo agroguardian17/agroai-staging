@@ -141,6 +141,58 @@ class PgAlertRepo:
         )
 
     # ------------------------------------------------------------------
+    async def list_for_tenant(
+        self,
+        tenant_id,
+        *,
+        only_unresolved: bool = True,
+        severity_filter=None,
+        limit: int = 100,
+    ):
+        conditions = ["a.tenant_id = :tid"]
+        params: dict[str, object] = {"tid": tenant_id, "limit": limit}
+        if only_unresolved:
+            conditions.append("(a.resolved IS NULL OR a.resolved = FALSE)")
+        if severity_filter is not None:
+            conditions.append("a.severity = :sev")
+            params["sev"] = severity_filter.value
+        where = " AND ".join(conditions)
+        stmt = text(
+            f"""
+            SELECT
+                a.alert_id, a.tenant_id, a.farm_id, a.farmer_id, a.device_id,
+                a.alert_type, a.severity, a.alert_message_marathi,
+                a.alert_value, a.alert_threshold,
+                a.triggered_at, a.resolved, a.resolved_at
+            FROM alerts_notifications a
+            WHERE {where}
+            ORDER BY a.triggered_at DESC
+            LIMIT :limit
+            """
+        )
+        async with self._sm() as session:
+            res = await session.execute(stmt, params)
+            rows = res.all()
+        return [
+            AlertFull(
+                alert_id=int(r.alert_id),
+                tenant_id=r.tenant_id,
+                farm_id=r.farm_id,
+                farmer_id=r.farmer_id,
+                device_id=r.device_id,
+                alert_type=AlertType(r.alert_type),
+                severity=Severity(r.severity),
+                alert_message_marathi=r.alert_message_marathi,
+                alert_value=_float_to_decimal(r.alert_value),
+                alert_threshold=_float_to_decimal(r.alert_threshold),
+                triggered_at=r.triggered_at,
+                resolved=bool(r.resolved) if r.resolved is not None else False,
+                resolved_at=r.resolved_at,
+            )
+            for r in rows
+        ]
+
+    # ------------------------------------------------------------------
     async def list_for_plot(self, plot_id: str, limit: int = 50) -> list[PlotAlertView]:
         stmt = text(
             """

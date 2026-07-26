@@ -102,7 +102,7 @@ ifdef DOMAIN
 	@echo "Rendering Caddyfile for domain: $(DOMAIN)"
 	@sed \
 		-e "s/api-IP-WITH-DASHES.sslip.io/api.$(DOMAIN)/g" \
-		-e "s/mqtt-IP-WITH-DASHES.sslip.io/mqtt.$(DOMAIN)/g" \
+		-e "s/mqtts-IP-WITH-DASHES.sslip.io/mqtts.$(DOMAIN)/g" \
 		-e "s/dashboard-IP-WITH-DASHES.sslip.io/dashboard.$(DOMAIN)/g" \
 		-e "s/metrics-IP-WITH-DASHES.sslip.io/metrics.$(DOMAIN)/g" \
 		$(CADDY_TEMPLATE) > $(CADDY_PROD)

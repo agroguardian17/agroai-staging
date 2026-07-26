@@ -184,7 +184,14 @@ class IngestBroker:
         mqtt_paho_logger.setLevel(logging.WARNING)
 
 
-        client.connect(self._settings.host, self._settings.port, self._settings.keepalive_seconds)
+        # Schedule the first connection without resolving the broker hostname on
+        # the FastAPI startup path. The paho network thread will keep retrying
+        # if Mosquitto is temporarily absent during local development.
+        client.connect_async(
+            self._settings.host,
+            self._settings.port,
+            self._settings.keepalive_seconds,
+        )
         # Background thread runs the network loop; on_message fires from there.
         client.loop_start()
         self._client = client

@@ -29,6 +29,7 @@ from app.application.evaluate_rules import EvaluateRulesDeps, EvaluateRulesResul
 from app.application.ingest_telemetry import IngestDeps, IngestResult
 from app.application.process_reading import ProcessReadingDeps, ProcessReadingResult
 from app.domain.sensor import Reading, TransmissionType
+from app.infra.mqtt import broker as broker_module
 from app.infra.mqtt.broker import (
     MAX_QUEUE,
     QOS_AT_LEAST_ONCE,
@@ -411,6 +412,51 @@ async def test_enqueue_drops_when_queue_full() -> None:
 # ===========================================================================
 # Lifecycle guards
 # ===========================================================================
+async def test_start_schedules_nonblocking_connection(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeClient:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            self.connect_async_args: tuple[str, int, int] | None = None
+            self.loop_started = False
+            self.loop_stopped = False
+            self.disconnected = False
+
+        def username_pw_set(self, username: str, password: str | None) -> None:
+            self.username = username
+            self.password = password
+
+        def tls_set_context(self, ctx: object) -> None:
+            self.tls_context = ctx
+
+        def connect(self, *args: object, **kwargs: object) -> None:
+            raise AssertionError("start() must not block on client.connect()")
+
+        def connect_async(self, host: str, port: int, keepalive: int) -> None:
+            self.connect_async_args = (host, port, keepalive)
+
+        def loop_start(self) -> None:
+            self.loop_started = True
+
+        def loop_stop(self) -> None:
+            self.loop_stopped = True
+
+        def disconnect(self) -> None:
+            self.disconnected = True
+
+    monkeypatch.setattr(broker_module.mqtt, "Client", FakeClient)
+
+    broker = IngestBroker(BrokerSettings(host="mosquitto", port=1883), _empty_deps())
+    await broker.start()
+
+    client = broker._client
+    assert isinstance(client, FakeClient)
+    assert client.connect_async_args == ("mosquitto", 1883, 60)
+    assert client.loop_started is True
+
+    await broker.stop()
+    assert client.loop_stopped is True
+    assert client.disconnected is True
+
+
 async def test_start_raises_when_already_started() -> None:
     broker = IngestBroker(_settings(), _empty_deps())
     # We can't actually .start() without a real broker, but the duplicate-

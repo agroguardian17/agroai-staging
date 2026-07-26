@@ -1,26 +1,22 @@
 """Read API: /plots, /plots/{id}, /plots/{id}/readings, /plots/{id}/alerts.
 
-
 All endpoints require a valid access token. The current farmer (from
 the JWT claim) is the visibility scope: a farmer can see only their
 own plots. Admins are stubbed for Round 8 - the for_tenant path is
 wired but only the FARMER role currently uses it.
 """
 
-
 from __future__ import annotations
-
 
 import uuid
 from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, Any
 
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
-
+from app.application.ports.ai_suggestion_repo import AiSuggestionRepo
 from app.application.ports.alert_repo import AlertRepo
 from app.application.ports.plot_repo import PlotRepo
 from app.application.ports.reading_repo import ReadingRepo
@@ -29,15 +25,13 @@ from app.domain.plot import Plot
 from app.domain.sensor import Reading
 from app.infra.http.deps import (
     ClaimsDep,
+    get_ai_suggestion_repo,
     get_alert_repo,
     get_plot_repo,
     get_reading_repo,
 )
 
-
 router = APIRouter(prefix="/api/v1/plots", tags=["plots"])
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -56,7 +50,6 @@ class PlotResponse(BaseModel):
     plot_status: str
     irrigation_valve_id: str
 
-
     @classmethod
     def from_domain(cls, p: Plot) -> PlotResponse:
         return cls(
@@ -74,8 +67,6 @@ class PlotResponse(BaseModel):
         )
 
 
-
-
 class ReadingResponse(BaseModel):
     reading_id: int | None = None
     recorded_at: datetime
@@ -88,7 +79,6 @@ class ReadingResponse(BaseModel):
     cadence_mode: str | None
     validation_warn: bool
     low_battery_flag: bool
-
 
     @classmethod
     def from_domain(cls, r: Reading) -> ReadingResponse:
@@ -106,8 +96,6 @@ class ReadingResponse(BaseModel):
         )
 
 
-
-
 class AlertResponse(BaseModel):
     alert_id: int
     alert_type: str
@@ -116,7 +104,6 @@ class AlertResponse(BaseModel):
     triggered_at: datetime
     resolved: bool
     resolved_at: datetime | None
-
 
     @classmethod
     def from_view(cls, v: Any) -> AlertResponse:
@@ -129,8 +116,6 @@ class AlertResponse(BaseModel):
             resolved=v.resolved,
             resolved_at=v.resolved_at,
         )
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -152,8 +137,6 @@ async def _load_plot_or_403(
     return p
 
 
-
-
 # ---------------------------------------------------------------------------
 # GET /plots
 # ---------------------------------------------------------------------------
@@ -169,8 +152,6 @@ async def list_plots(
     return [PlotResponse.from_domain(p) for p in plots]
 
 
-
-
 # ---------------------------------------------------------------------------
 # GET /plots/{plot_id}
 # ---------------------------------------------------------------------------
@@ -182,8 +163,6 @@ async def get_plot(
 ) -> PlotResponse:
     p = await _load_plot_or_403(plot_id, claims, plot_repo)
     return PlotResponse.from_domain(p)
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -206,8 +185,6 @@ async def get_plot_readings(
     return [ReadingResponse.from_domain(r) for r in readings]
 
 
-
-
 # ---------------------------------------------------------------------------
 # GET /plots/{plot_id}/alerts?limit=50
 # ---------------------------------------------------------------------------
@@ -228,6 +205,47 @@ async def get_plot_alerts(
     return [AlertResponse.from_view(v) for v in views]
 
 
+# ---------------------------------------------------------------------------
+# GET /plots/{plot_id}/suggestions
+# ---------------------------------------------------------------------------
+class SuggestionResponse(BaseModel):
+    suggestion_id: uuid.UUID
+    generated_at: datetime
+    suggestion_type: str
+    full_message_marathi: str
+    ai_model_version: str
+    tokens_used: int | None
+    crop_age_days: int | None
+    crop_stage: str | None
+
+
+@router.get(
+    "/{plot_id}/suggestions",
+    response_model=list[SuggestionResponse],
+    summary="AI advisories generated for this plot, newest first.",
+)
+async def get_plot_suggestions(
+    plot_id: str,
+    claims: ClaimsDep,
+    plot_repo: Annotated[PlotRepo, Depends(get_plot_repo)],
+    suggestion_repo: Annotated[AiSuggestionRepo, Depends(get_ai_suggestion_repo)],
+    limit: int = Query(default=50, ge=1, le=200),
+) -> list[SuggestionResponse]:
+    await _load_plot_or_403(plot_id, claims, plot_repo)
+    rows = await suggestion_repo.list_for_plot(plot_id, limit)
+    return [
+        SuggestionResponse(
+            suggestion_id=s.suggestion_id,
+            generated_at=s.generated_at,
+            suggestion_type=s.suggestion_type,
+            full_message_marathi=s.full_message_marathi,
+            ai_model_version=s.ai_model_version,
+            tokens_used=s.tokens_used,
+            crop_age_days=s.crop_age_days,
+            crop_stage=s.crop_stage,
+        )
+        for s in rows
+    ]
 
 
 __all__ = ["router"]

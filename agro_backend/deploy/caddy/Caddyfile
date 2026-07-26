@@ -15,6 +15,19 @@
     email ops@example.com
     # Use Let's Encrypt staging while testing to avoid rate limits:
     # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+
+    # MQTT is raw TCP, not HTTP. The production image includes caddy-l4 so
+    # this listener can terminate TLS and proxy the decrypted MQTT stream to
+    # Mosquitto's authenticated internal listener on port 1883.
+    layer4 {
+        mqtts-IP-WITH-DASHES.sslip.io:8883 {
+            @mqtt tls sni mqtts-IP-WITH-DASHES.sslip.io
+            route @mqtt {
+                tls
+                proxy mosquitto:1883
+            }
+        }
+    }
 }
 
 # ----- API ---------------------------------------------------------------
@@ -52,9 +65,11 @@ api-IP-WITH-DASHES.sslip.io {
     }
 }
 
-# ----- MQTT (port 8883) --------------------------------------------------
-mqtt-IP-WITH-DASHES.sslip.io:8883 {
-    reverse_proxy mosquitto:8883
+# ----- MQTT certificate subject -----------------------------------------
+# This HTTP site block gives Caddy's certificate automation a subject for
+# the Layer-4 TLS listener above. MQTT clients still connect to :8883.
+mqtts-IP-WITH-DASHES.sslip.io {
+    respond "AgroGuardian MQTT endpoint" 404
 }
 
 # ----- Streamlit dashboard ----------------------------------------------

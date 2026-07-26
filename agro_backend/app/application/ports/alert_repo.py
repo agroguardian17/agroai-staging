@@ -116,5 +116,21 @@ class AlertRepo(Protocol):
         """
         ...
 
+    async def list_for_tenant(
+        self,
+        tenant_id: uuid.UUID,
+        *,
+        only_unresolved: bool = True,
+        severity_filter: Severity | None = None,
+        limit: int = 100,
+    ) -> list[AlertFull]:
+        """Tenant-wide alert queue for the Round-12 ops dashboard.
+
+        Filters: ``only_unresolved`` (resolved=false), and an optional
+        severity. Returns newest first. Used by the agronomist queue
+        page; a future RLS-aware variant will scope by user role.
+        """
+        ...
+
 
 __all__ = ["AlertFull", "AlertRepo", "PlotAlertView"]

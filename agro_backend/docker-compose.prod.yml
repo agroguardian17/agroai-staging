@@ -11,7 +11,10 @@ name: agro-prod
 
 services:
   caddy:
-    image: caddy:2.8-alpine
+    build:
+      context: ./deploy/caddy
+      dockerfile: Dockerfile
+    image: agro-caddy-l4:staging
     container_name: agro_caddy
     restart: always
     cap_add: [NET_BIND_SERVICE]
@@ -20,7 +23,8 @@ services:
       - "443:443"
       - "8883:8883"
     volumes:
-      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Render deploy/caddy/Caddyfile.prod with `make caddyfile-prod` first.
+      - ./deploy/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
@@ -51,7 +55,7 @@ services:
     container_name: agro_mosquitto
     restart: always
     volumes:
-      - ./deploy/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./deploy/mosquitto/mosquitto.prod.conf:/mosquitto/config/mosquitto.conf:ro
       - ./deploy/mosquitto/passwd:/mosquitto/config/passwd:ro
       - ./deploy/mosquitto/acl:/mosquitto/config/acl:ro
       - mosquitto_data:/mosquitto/data
@@ -80,7 +84,7 @@ services:
     env_file:
       - .env
     environment:
-      APP_ENV: production
+      APP_ENV: ${APP_ENV:-production}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agro}
       DATABASE_URL_SYNC: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agro}
       MQTT_BROKER_HOST: mosquitto

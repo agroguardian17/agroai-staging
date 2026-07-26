@@ -48,5 +48,12 @@ class AiSuggestionRepo(Protocol):
 
     async def find_by_id(self, suggestion_id: uuid.UUID) -> AiSuggestion | None: ...
 
+    async def list_for_plot(self, plot_id: str, limit: int = 50) -> list[AiSuggestion]:
+        """Recent advisories for one plot, newest first.
+
+        Powers the dashboard's plot-detail page (Round 12).
+        """
+        ...
+
 
 __all__ = ["AiSuggestion", "AiSuggestionRepo"]

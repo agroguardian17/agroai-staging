@@ -91,6 +91,13 @@ class Settings(BaseSettings):
     MQTT_USE_TLS: bool = False
     MQTT_QUEUE_MAXSIZE: int = 5000
 
+    # ---- Hardware bench flags -----------------------------------------------
+    # When True, evaluate_rules.execute short-circuits (no alerts fire, no
+    # events publish). Use during initial sensor calibration so unrealistic
+    # readings don't spam the dashboard/WhatsApp/push channels. Flip to False
+    # once the sensors are dialed in and the ruleset should engage.
+    CALIBRATION_MODE: bool = False
+
     # ---- ChromaDB -----------------------------------------------------------
     CHROMA_HOST: str = "localhost"
     CHROMA_PORT: int = 8001

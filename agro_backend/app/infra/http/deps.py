@@ -1,28 +1,23 @@
 """FastAPI dependency providers.
 
-
 Centralized so route handlers stay focused on request/response shapes
 and tests can override single dependencies via ``app.dependency_overrides``.
-
 
 The wiring is intentionally simple: each provider builds a fresh
 adapter on demand, sharing only the long-lived async engine. There is
 no DI container; FastAPI's ``Depends()`` is enough for our scale.
 """
 
-
 from __future__ import annotations
-
 
 import uuid
 from typing import Annotated
-
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
-
+from app.application.ports.ai_suggestion_repo import AiSuggestionRepo
 from app.application.ports.alert_repo import AlertRepo
 from app.application.ports.auth_session_repo import AuthSessionRepo
 from app.application.ports.farmer_repo import FarmerRepo
@@ -35,6 +30,7 @@ from app.config import AppEnv, Settings, get_settings
 from app.domain.auth import AccessClaims
 from app.infra.auth.jwt_issuer import JwtIssuer, JwtSettings
 from app.infra.persistence.engine import make_async_engine, make_sessionmaker
+from app.infra.persistence.pg_ai_suggestion_repo import PgAiSuggestionRepo
 from app.infra.persistence.pg_alert_repo import PgAlertRepo
 from app.infra.persistence.pg_auth_session_repo import PgAuthSessionRepo
 from app.infra.persistence.pg_farmer_repo import PgFarmerRepo
@@ -47,14 +43,11 @@ from app.infra.whatsapp.meta_cloud_sender import (
     MetaCloudWhatsappSender,
 )
 
-
 # ---------------------------------------------------------------------------
 # Singletons. Created lazily on first request; the app lifespan disposes them.
 # ---------------------------------------------------------------------------
 _engine: AsyncEngine | None = None
 _sessionmaker: async_sessionmaker | None = None
-
-
 
 
 def _ensure_engine(settings: Settings) -> async_sessionmaker:
@@ -69,8 +62,6 @@ def _ensure_engine(settings: Settings) -> async_sessionmaker:
     return _sessionmaker
 
 
-
-
 async def shutdown_engine() -> None:
     """Lifespan hook - dispose the shared engine on app shutdown."""
     global _engine, _sessionmaker
@@ -80,61 +71,45 @@ async def shutdown_engine() -> None:
     _sessionmaker = None
 
 
-
-
 # ---------------------------------------------------------------------------
 # Repo + sender + token-issuer providers
 # ---------------------------------------------------------------------------
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
 
-
-
 def get_sessionmaker(settings: SettingsDep) -> async_sessionmaker:
     return _ensure_engine(settings)
 
 
-
-
 SessionmakerDep = Annotated[async_sessionmaker, Depends(get_sessionmaker)]
-
-
 
 
 def get_farmer_repo(sm: SessionmakerDep) -> FarmerRepo:
     return PgFarmerRepo(sm)
 
 
-
-
 def get_otp_repo(sm: SessionmakerDep) -> OtpRepo:
     return PgOtpRepo(sm)
-
-
 
 
 def get_auth_session_repo(sm: SessionmakerDep) -> AuthSessionRepo:
     return PgAuthSessionRepo(sm)
 
 
-
-
 def get_plot_repo(sm: SessionmakerDep) -> PlotRepo:
     return PgPlotRepo(sm)
-
-
 
 
 def get_reading_repo(sm: SessionmakerDep) -> ReadingRepo:
     return PgReadingRepo(sm)
 
 
-
-
 def get_alert_repo(sm: SessionmakerDep) -> AlertRepo:
     return PgAlertRepo(sm)
 
 
+def get_ai_suggestion_repo(sm: SessionmakerDep) -> AiSuggestionRepo:
+    return PgAiSuggestionRepo(sm)
 
 
 def get_token_issuer(settings: SettingsDep) -> TokenIssuer:
@@ -149,11 +124,8 @@ def get_token_issuer(settings: SettingsDep) -> TokenIssuer:
     )
 
 
-
-
 def get_whatsapp_sender(settings: SettingsDep) -> WhatsappSender:
     """Pick the right adapter based on env.
-
 
     Dev/test default to log-only (no Meta dependency). Production uses
     the real Meta adapter; the config validator refuses to boot without
@@ -174,14 +146,10 @@ def get_whatsapp_sender(settings: SettingsDep) -> WhatsappSender:
     return LogOnlyWhatsappSender()
 
 
-
-
 # ---------------------------------------------------------------------------
 # Auth: extract + verify the bearer token, return the access claims.
 # ---------------------------------------------------------------------------
 _bearer = HTTPBearer(auto_error=False)
-
-
 
 
 def get_current_claims(
@@ -205,11 +173,7 @@ def get_current_claims(
         ) from exc
 
 
-
-
 ClaimsDep = Annotated[AccessClaims, Depends(get_current_claims)]
-
-
 
 
 def get_current_farmer_id(claims: ClaimsDep) -> uuid.UUID:
@@ -217,12 +181,11 @@ def get_current_farmer_id(claims: ClaimsDep) -> uuid.UUID:
     return claims.subject
 
 
-
-
 __all__ = [
     "ClaimsDep",
     "SessionmakerDep",
     "SettingsDep",
+    "get_ai_suggestion_repo",
     "get_alert_repo",
     "get_auth_session_repo",
     "get_current_claims",

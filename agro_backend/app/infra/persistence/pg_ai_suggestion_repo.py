@@ -88,5 +88,16 @@ class PgAiSuggestionRepo:
             row = res.first()
         return None if row is None else _row_to_suggestion(row)
 
+    async def list_for_plot(self, plot_id: str, limit: int = 50) -> list[AiSuggestion]:
+        stmt = text(
+            f"SELECT {_SELECT_COLS} FROM ai_suggestions "
+            "WHERE plot_id = :plot_id "
+            "ORDER BY generated_at DESC LIMIT :limit"
+        )
+        async with self._sm() as session:
+            res = await session.execute(stmt, {"plot_id": plot_id, "limit": limit})
+            rows = res.all()
+        return [_row_to_suggestion(r) for r in rows]
+
 
 __all__ = ["PgAiSuggestionRepo"]
