@@ -27,7 +27,8 @@ Mint a JWT once via the API (the OTP flow lives in the backend at
 `/api/v1/auth/send_otp` + `/api/v1/auth/verify_otp`):
 
 ```bash
-# 1. Trigger an OTP. The code prints to the uvicorn log in dev (LogOnlyChatModel).
+# 1. Trigger an OTP. The code prints to the app log in development
+#    (LogOnlyWhatsappSender only; never use that sender in production).
 curl -X POST http://localhost:8000/api/v1/auth/send_otp \
   -H "Content-Type: application/json" \
   -d '{"phone":"+91XXXXXXXXXX"}'
@@ -66,15 +67,17 @@ three pages.
 - **API 401** — the access token has expired (default 15 minutes).
   Re-run `/auth/verify_otp` (or `/auth/refresh` with the refresh
   token) and re-export.
-- **Empty pages** — no data yet. Run the synthetic Sub Node from
-  Round 7 (`python scripts/dev/fake_main_node.py ...`) to seed
-  readings + alerts + advisories.
+- **Empty pages** — no data yet. Run `scripts/dev/fake_main_node.py` to seed
+  readings. Alerts are created only when a fresh reading matches a pilot rule
+  and `CALIBRATION_MODE=false`. Persisted AI suggestions require separate
+  advisory-worker wiring; the current MQTT startup path does not create them
+  automatically.
 
 ## What this round does NOT yet do
 
-- **Live tail.** The dashboard fetches on page load + reruns; there's
-  no WebSocket push. Polling every ~5s is good enough for the pilot;
-  a future round can add SSE.
+- **Live tail.** The dashboard fetches on page load + reruns; there is no
+  WebSocket push or automatic polling. Refresh the Streamlit page to see new
+  data; a future round can add SSE.
 - **Acknowledge (vs resolve).** Round 12 only ships Resolve. An
   "Acknowledged but not closed" state would need a new column on
   `alerts_notifications`.

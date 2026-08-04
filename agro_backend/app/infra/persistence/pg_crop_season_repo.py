@@ -47,5 +47,20 @@ class PgCropSeasonRepo:
             row = res.first()
         return None if row is None else _row_to_view(row)
 
+    async def list_active_by_crop(self, crop_name_english: str):
+        """All active seasons for a given crop, newest sowing_date first.
+
+        Used by the daily ginger advisory job to iterate every ginger plot
+        across every tenant in a single query.
+        """
+        stmt = text(
+            f"SELECT {_SELECT_COLS} FROM crop_seasons "
+            "WHERE crop_name_english = :crop AND season_status = 'active' "
+            "ORDER BY sowing_date DESC"
+        )
+        async with self._sm() as session:
+            res = await session.execute(stmt, {"crop": crop_name_english})
+            return [_row_to_view(r) for r in res.all()]
+
 
 __all__ = ["PgCropSeasonRepo"]

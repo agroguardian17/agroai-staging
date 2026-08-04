@@ -3,17 +3,14 @@
 
 from __future__ import annotations
 
-
 import httpx
 import pytest
 import respx
-
 
 from app.infra.whatsapp.meta_cloud_sender import (
     MetaCloudSettings,
     MetaCloudWhatsappSender,
 )
-
 
 PHONE_ID = "1234567890"
 URL = f"https://graph.facebook.com/v20.0/{PHONE_ID}/messages"

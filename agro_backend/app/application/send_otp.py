@@ -23,11 +23,9 @@ out via WhatsApp (or to the server log in dev mode).
 
 from __future__ import annotations
 
-
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
-
 
 from app.application.ports.farmer_repo import FarmerRepo
 from app.application.ports.otp_repo import OtpRepo
@@ -41,7 +39,6 @@ from app.domain.auth import (
     mask_phone,
     otp_expires_at,
 )
-
 
 # ---------------------------------------------------------------------------
 # Errors - the use case raises domain-shaped errors; HTTP layer translates.

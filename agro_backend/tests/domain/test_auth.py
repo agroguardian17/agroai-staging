@@ -3,14 +3,11 @@
 
 from __future__ import annotations
 
-
 import random
 import uuid
 from datetime import UTC, datetime, timedelta
 
-
 import pytest
-
 
 from app.domain.auth import (
     OTP_CODE_LENGTH,
@@ -28,8 +25,6 @@ from app.domain.auth import (
     otp_expires_at,
     verify_otp_code,
 )
-
-
 
 
 # ===========================================================================

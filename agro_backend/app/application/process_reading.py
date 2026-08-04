@@ -29,15 +29,11 @@ The split between this composer and the two use cases is deliberate:
 
 from __future__ import annotations
 
-
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-
 from app.application import evaluate_rules, ingest_telemetry
 from app.domain.sensor import Reading
-
-
 
 
 @dataclass(frozen=True, slots=True)

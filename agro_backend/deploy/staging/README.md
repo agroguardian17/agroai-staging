@@ -1,6 +1,6 @@
-# AgroGuardian Staging Deploy — Trimmed Round 15
+# AgroGuardian Staging Deploy — direct Lightsail runbook
 
-> **Purpose:** stand up a Lightsail Mumbai VPS quickly so hardware has a real endpoint to publish to. No Coolify, no domain, no backups yet — that's full Round 15.
+> **Purpose:** stand up the current direct Lightsail VPS path so hardware has a real endpoint to publish to. Coolify is optional and is not required for the pilot.
 > **Runtime:** ~40 minutes end-to-end.
 > **Prereqs:** AWS account, Anthropic API key (optional for the pure ingest test).
 
@@ -25,8 +25,13 @@
 SSH in:
 
 ```bash
-ssh -i ~/.ssh/agro_lightsail.pem ubuntu@<STATIC_IP>
+ssh -i <PATH_TO_LIGHTSAIL_PRIVATE_KEY> ubuntu@<STATIC_IP>
 ```
+
+The private key must be the key selected for this Lightsail region/instance;
+the filename alone does not prove that it is the right key. A
+`Permission denied (publickey)` error is an SSH key/user/instance problem, not
+an application problem. Keep the private key outside the repository.
 
 Base packages + Docker + UFW:
 
@@ -78,11 +83,14 @@ MQTT_BROKER_HOST=mosquitto
 MQTT_BROKER_PORT=1883
 MQTT_BROKER_USER=main-node-001
 MQTT_BROKER_PASSWORD=<generated>
-MQTT_USE_TLS=true
+MQTT_USE_TLS=false
 MQTT_TLS_CA_PATH=/etc/ssl/certs/ca-certificates.crt
 
 # Hardware bench: rules OFF until sensors are calibrated
 CALIBRATION_MODE=true
+
+# Required by docker-compose.prod.yml even if Grafana is not being used yet.
+GRAFANA_ADMIN_PASSWORD=<generated>
 
 # Anthropic is not required for this staging ingest test.
 # ANTHROPIC_API_KEY=
@@ -93,6 +101,9 @@ CALIBRATION_MODE=true
 ```bash
 make caddyfile-prod IP=<STATIC_IP>
 ```
+
+Run this after `cd ~/agro_backend`; running `make` from `~` has no matching
+target because the Makefile is inside the repository.
 
 This produces `deploy/caddy/Caddyfile.prod` with `api-<IP_DASHES>.sslip.io` and `mqtts-<IP_DASHES>.sslip.io` hosts. sslip.io serves those hostnames as A-records to `<STATIC_IP>` automatically — no DNS registrar needed.
 
@@ -109,7 +120,7 @@ You should see:
 
 ```
 {"event":"app.startup","env":"staging","calibration_mode":true, ...}
-{"event":"ingest_startup.started","host":"mosquitto","port":8883,"tls":true, ...}
+{"event":"ingest_startup.started","host":"mosquitto","port":1883,"tls":false, ...}
 {"event":"ingest_broker.started", ...}
 {"event":"ingest_broker.subscribed","topic":"agro/v2/+/+/+/telemetry","qos":1}
 ```
@@ -126,14 +137,50 @@ docker compose -f docker-compose.prod.yml exec -e PILOT_PHONE=+91XXXXXXXXXX \
 
 Save the Main Node ID (`AGR-MN-0001`) and Sub Node IDs (`AGR-SN-0001`, `AGR-SN-0002`) that get printed.
 
-## Step 7 — Provision the Main Node's MQTT credential (2 min)
+## Step 7 — Provision the Main Node's MQTT credential (5 min)
+
+Choose one new random password and use that same value in three places:
+
+1. `MQTT_BROKER_PASSWORD` in the VPS `.env`;
+2. the Mosquitto bcrypt password entry; and
+3. the Main Node firmware configuration.
+
+Do not reuse a password copied from an old `.env`, chat, or terminal transcript.
+The running production broker mounts `passwd` and `acl` read-only, so a direct
+`docker exec mosquitto_passwd ...` command fails. Use the disposable utility
+container from the host:
 
 ```bash
-./scripts/dev/provision_mqtt_credential.sh main-node-001 <STRONG_PASSWORD>
+cd ~/agro_backend
+MQTT_PASSWORD="$(openssl rand -hex 24)"
+sudo install -m 644 /dev/null deploy/mosquitto/passwd
+sudo install -m 644 /dev/null deploy/mosquitto/acl
+
+docker run --rm \
+  -v "$PWD/deploy/mosquitto:/mosquitto/config" \
+  eclipse-mosquitto:2.0.18 \
+  mosquitto_passwd -b -c /mosquitto/config/passwd \
+  main-node-001 "$MQTT_PASSWORD"
+
+sudo chown 1883:1883 deploy/mosquitto/passwd deploy/mosquitto/acl
+sudo chmod 600 deploy/mosquitto/passwd
+sudo chmod 700 deploy/mosquitto/acl
+sudo sed -i "s/^MQTT_BROKER_PASSWORD=.*/MQTT_BROKER_PASSWORD=$MQTT_PASSWORD/" .env
+
 docker compose -f docker-compose.prod.yml restart mosquitto
+docker compose -f docker-compose.prod.yml up -d --force-recreate app
 ```
 
-The same password goes into `.env` as `MQTT_BROKER_PASSWORD` **and** into the Main Node firmware's config. The backend and firmware use the *same* credential — the backend is a subscriber, the firmware is a publisher, but Mosquitto's ACL grants read+write on `agro/v2/#` to the shared user for simplicity in staging.
+Ensure `deploy/mosquitto/acl` contains:
+
+```text
+user main-node-001
+topic readwrite agro/v2/#
+```
+
+Keep `MQTT_PASSWORD` in a password manager and do not paste it into shared
+logs. The script in `scripts/dev/` is convenient for a writable development
+checkout, but the commands above are the reliable production procedure.
 
 ## Step 8 — Smoke test (5 min)
 
@@ -168,6 +215,11 @@ docker compose -f docker-compose.prod.yml exec postgres \
     "SELECT node_id, plot_id, recorded_at, soil_moisture_avg_pct FROM node_sensor_readings ORDER BY recorded_at DESC LIMIT 5;"
 ```
 
+On macOS, `/etc/ssl/certs` may not be the usable Homebrew CA directory. If
+certificate verification fails, use the local CA bundle or temporarily add
+`--insecure` only for diagnosis. Do not disable certificate verification in
+firmware.
+
 ## Step 9 — Point the Main Node at staging (firmware round)
 
 Firmware config:
@@ -182,12 +234,14 @@ MQTT_USE_TLS  = true
 
 The firmware skeleton (PlatformIO C++) ships in the follow-up bootstrap.
 
-## What's NOT included in this trimmed staging (add for full Round 15)
+## What's NOT included in this direct staging path
 
 - Coolify (a UI over docker-compose — nice, not necessary).
-- Nightly `pg_dump | zstd | aws s3 cp` to Cloudflare R2. Add before real farmer data flows.
+- Nightly `pg_dump` backups to B2/R2. Add and test restore before real farmer data flows.
 - Tailscale for private `/metrics`. Add before the pilot is publicly announced.
 - A real domain (right now sslip.io serves the IP verbatim).
 - Sentry DSN + BetterStack Uptime pinger.
 
-Everything above is a `docker compose` restart or a single script — add it after hardware validates.
+The current public test endpoint is `mqtts-<IP_DASHES>.sslip.io:8883`; the app's
+private listener remains `mosquitto:1883`. Replace the Caddy placeholder email
+with a real ACME contact before relying on certificate renewals.

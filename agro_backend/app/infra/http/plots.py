@@ -184,7 +184,6 @@ async def get_plot_readings(
     readings = await reading_repo.latest_for_plot(plot_id, limit)
     return [ReadingResponse.from_domain(r) for r in readings]
 
-
 # ---------------------------------------------------------------------------
 # GET /plots/{plot_id}/alerts?limit=50
 # ---------------------------------------------------------------------------
@@ -245,6 +244,45 @@ async def get_plot_suggestions(
             crop_stage=s.crop_stage,
         )
         for s in rows
+    ]
+
+
+# ---------------------------------------------------------------------------
+# GET /plots/{plot_id}/ginger_advisories
+# ---------------------------------------------------------------------------
+# Filters ai_suggestions to rows produced by the daily ginger job. The job
+# stamps every row with ``ai_model_version = 'ginger-engine/v1.0'`` (see
+# ``app.jobs.ginger_daily.GINGER_MODEL_TAG``). Same response shape as
+# ``/suggestions`` so the dashboard can share a component.
+@router.get(
+    "/{plot_id}/ginger_advisories",
+    response_model=list[SuggestionResponse],
+    summary="Daily ginger-engine advisories for this plot, newest first.",
+)
+async def get_plot_ginger_advisories(
+    plot_id: str,
+    claims: ClaimsDep,
+    plot_repo: Annotated[PlotRepo, Depends(get_plot_repo)],
+    suggestion_repo: Annotated[AiSuggestionRepo, Depends(get_ai_suggestion_repo)],
+    limit: int = Query(default=50, ge=1, le=200),
+) -> list[SuggestionResponse]:
+    from app.jobs.ginger_daily import GINGER_MODEL_TAG
+
+    await _load_plot_or_403(plot_id, claims, plot_repo)
+    rows = await suggestion_repo.list_for_plot(plot_id, limit=limit)
+    ginger_rows = [s for s in rows if s.ai_model_version == GINGER_MODEL_TAG]
+    return [
+        SuggestionResponse(
+            suggestion_id=s.suggestion_id,
+            generated_at=s.generated_at,
+            suggestion_type=s.suggestion_type,
+            full_message_marathi=s.full_message_marathi,
+            ai_model_version=s.ai_model_version,
+            tokens_used=s.tokens_used,
+            crop_age_days=s.crop_age_days,
+            crop_stage=s.crop_stage,
+        )
+        for s in ginger_rows
     ]
 
 

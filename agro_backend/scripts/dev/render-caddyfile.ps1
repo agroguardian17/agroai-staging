@@ -47,7 +47,7 @@ $content = Get-Content -Raw $template
 if ($PSCmdlet.ParameterSetName -eq 'Domain') {
     $content = $content `
         -replace 'api-IP-WITH-DASHES\.sslip\.io', "api.$Domain" `
-        -replace 'mqtt-IP-WITH-DASHES\.sslip\.io', "mqtt.$Domain" `
+        -replace 'mqtts-IP-WITH-DASHES\.sslip\.io', "mqtts.$Domain" `
         -replace 'dashboard-IP-WITH-DASHES\.sslip\.io', "dashboard.$Domain" `
         -replace 'metrics-IP-WITH-DASHES\.sslip\.io', "metrics.$Domain"
     Write-Host "Rendered Caddyfile for domain: $Domain"

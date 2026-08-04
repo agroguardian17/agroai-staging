@@ -10,11 +10,9 @@ Each rule gets a happy-path "should fire" test and a quiet-path
 
 from __future__ import annotations
 
-
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
-
 
 from app.domain.alert import AlertType, Severity
 from app.domain.metrics import (
@@ -30,7 +28,6 @@ from app.domain.rule_definitions import (
 )
 from app.domain.rules import evaluate, evaluate_to_hits
 from app.domain.sensor import Reading, TransmissionType
-
 
 NOW = datetime(2026, 6, 20, 12, 0, tzinfo=UTC)
 

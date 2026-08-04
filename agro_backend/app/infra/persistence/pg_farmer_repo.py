@@ -3,16 +3,12 @@
 
 from __future__ import annotations
 
-
 import uuid
-
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-
 from app.application.ports.farmer_repo import FarmerIdentity
-
 
 _SELECT_COLS = "farmer_id, tenant_id, phone_primary, full_name, language_preference, account_status"
 

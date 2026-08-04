@@ -24,7 +24,6 @@ verification, not a password hash). The OTP TTL is short (default
 
 from __future__ import annotations
 
-
 import hashlib
 import hmac
 import secrets
@@ -32,7 +31,6 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import StrEnum
-
 
 # ---------------------------------------------------------------------------
 # Enums

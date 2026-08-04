@@ -3,23 +3,18 @@
 
 from __future__ import annotations
 
-
 import uuid
 from collections.abc import Iterator
-
 
 import pytest
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-
 from app.application.ports.farmer_repo import FarmerRepo
 from app.infra.persistence.pg_farmer_repo import PgFarmerRepo
 
-
 from .conftest import DB_SKIP_REASON, PILOT_TENANT, db_available
-
 
 pytestmark = pytest.mark.skipif(not db_available(), reason=DB_SKIP_REASON)
 

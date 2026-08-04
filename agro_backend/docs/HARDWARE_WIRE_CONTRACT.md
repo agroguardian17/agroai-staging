@@ -19,14 +19,20 @@ The Main Node holds the only MQTT credential. Sub Nodes never authenticate to MQ
 
 | Field | Value |
 | :--- | :--- |
-| Broker host | `staging.<your-lightsail-ip-with-dashes>.sslip.io` (Round 15 staging) |
-| Broker port | `8883` (TLS) — bench-test may use `1883` on the Mac's LAN IP |
+| Broker host | `mqtts-<STATIC_IP_WITH_DASHES>.sslip.io` for the public prototype endpoint |
+| Broker port | `8883` (public TLS) — local bench-test may use `1883` on localhost |
 | Protocol | MQTT v5 (`mqtt.MQTTv5`) |
 | QoS | **1** (at-least-once); the backend deduplicates on `(node_id, recorded_at)` |
 | Auth | username + password from `provision_mqtt_credential.sh` |
 | TLS | Let's Encrypt cert on port 8883; use the system CA bundle |
 | Keepalive | 60 s |
 | Reconnect | firmware must auto-reconnect on disconnect |
+
+The external and internal hops are different. Firmware/laptop clients connect
+to Caddy over TLS on `8883`; Caddy forwards the decrypted stream to Mosquitto
+on private Docker port `1883`. The FastAPI backend also connects directly to
+`mosquitto:1883` with `MQTT_USE_TLS=false`. Do not point the backend at the
+public hostname from inside the Compose network.
 
 ## 3. Topic pattern
 
@@ -100,6 +106,13 @@ Soil:
 | `soil_k_bucket` | integer 0–63 | ″ |
 | `npk_sensor_raw_hex` | string | raw Modbus frame if useful for diagnostics |
 
+Water / pump (VIRAAI v1.0 Sub Node emits flow and pressure):
+
+| Field | Type | Notes |
+| :--- | :--- | :--- |
+| `water_flow_lpm` | decimal | Litres per minute measured by the pulse-counting flow sensor on the Sub Node (pin D9 of the ATmega328P). |
+| `water_pressure_bar` | decimal | Line pressure in bar from the analog pressure sensor on pin A3. Range 0..~10. |
+
 Environment / diagnostics:
 
 | Field | Type | Notes |
@@ -111,6 +124,67 @@ Environment / diagnostics:
 | `cadence_mode` | enum string | `"normal"`, `"rapid"`, `"low_power"`, `"storm"`, `"maintenance"` — how often this Sub Node samples |
 | `backlog_pending` | boolean | true if the Sub Node has unsent readings queued |
 | `validation_warn` | boolean | firmware-side pre-flight check flagged the reading |
+
+The current MQTT Pydantic model accepts exactly the fields listed above. The
+domain `Reading` and database contain additional reserved fields
+(`water_volume_liters_session`, `water_volume_liters_cumulative`,
+`valve_status`, `pump_running`, `pump_current_amps`,
+`pump_runtime_minutes_today`, `dry_run_detected`) that are not currently
+accepted by `TelemetryIn`; sending them today is an unknown-field validation
+failure. Enabling any of them requires a deliberate wire-schema change,
+tests, and a documentation update.
+
+## 4.3 LoRa packet — Sub Node → Main Node (CSV over the air)
+
+The Sub Node firmware does NOT send JSON over LoRa. It sends a compact
+plain-text CSV frame because:
+
+- ATmega328P has 32 KB flash / 2 KB SRAM — an ArduinoJson serializer at
+  this scale would fit but eat working memory the sensor read loop needs.
+- The frame is human-readable on the serial monitor during bench testing
+  without a decoder.
+
+The Main Node is responsible for parsing this CSV into the JSON payload
+above. LoRa itself does the CRC at the radio layer (SX1278 hardware CRC),
+so the packet carries no app-level checksum.
+
+### Packet format
+
+```
+NODE=<sub_node_id>,BAT=<v>,BATP=<pct>,DST=<temp_c>,SOIL=<pct_vwc>,PRESS=<bar>,FLOW=<lpm>,NTEMP=<temp_c>,NMOIST=<pct>,EC=<ms_cm>,PH=<val>,N=<mg_kg>,P=<mg_kg>,K=<mg_kg>
+```
+
+- All fields are `KEY=VALUE`, comma-separated. No spaces.
+- Missing / unavailable readings are transmitted as `KEY=NAN`.
+- Numeric precision is 1 decimal place for temperatures and moistures, 2
+  decimals for battery/pressure/pH, integers for counts.
+- **`NODE` is required.** With more than one Sub Node on the same LoRa
+  channel, this is the only way the Main Node can identify the sender.
+  The Sub Node reads its own ID from EEPROM at boot (see
+  `docs/SUB_NODE_FIRMWARE_CHANGES.md`).
+
+### Example frame (real serial output from the teammate's firmware, 2026-08-03)
+
+```
+NODE=AGR-SN-0001,BAT=9.38,BATP=100,DST=27.4,SOIL=41.9,PRESS=5.31,FLOW=8.00,NTEMP=29.1,NMOIST=35.7,EC=1.045,PH=6.45,N=58,P=79,K=197
+```
+
+### Unit conversions the Main Node performs before publishing MQTT
+
+| CSV field | Wire value | JSON field | Wire → JSON conversion |
+| :--- | :--- | :--- | :--- |
+| `BAT` | 9.38 (V) | `battery_voltage_v` | copy |
+| `BATP` | 100 (%) | `battery_percent` | copy |
+| `DST` | 27.4 (°C, DS18B20 surface) | `soil_temp_c` | copy |
+| `SOIL` | 41.9 (% VWC, after Sub-Node calibration) | `soil_moisture_avg_pct` | copy |
+| `PRESS` | 5.31 (bar) | `water_pressure_bar` | copy |
+| `FLOW` | 8.00 (L/min) | `water_flow_lpm` | copy |
+| `NTEMP` | 29.1 (°C, NPK probe at root depth) | `soil_temp_rootzone_c` | copy |
+| `NMOIST` | 35.7 (%, NPK probe) | (not published — DS18B20 is our primary) | drop |
+| `EC` | 1.045 (mS/cm, **already divided by 1000 on the Sub Node**) | `soil_ec_ms_cm` | copy |
+| `PH` | 6.45 | `soil_ph` | copy |
+| `N`, `P`, `K` | mg/kg | `soil_n_mg_kg`, `soil_p_mg_kg`, `soil_k_mg_kg` | copy |
+| `NAN` (any field) | — | `null` in JSON | never emit the string `"NAN"` |
 
 ## 5. Number format — Decimal safety
 
@@ -208,7 +282,7 @@ agro/v2/11111111-1111-1111-1111-111111111111/bbbbbbbb-2222-2222-2222-22222222222
 | Extra/unknown field in payload | log + drop, metric `ingest_dropped_total{reason="validation"}` |
 | Required field missing | ″ |
 | Timestamp is naive (no offset) | ″ |
-| Everything valid | UPSERT into `node_sensor_readings`; rules evaluate (unless `CALIBRATION_MODE=true`) |
+| Everything valid | Insert into `node_sensor_readings`; an existing `(node_id, recorded_at)` is treated as a duplicate, and rules evaluate only for a fresh insert unless `CALIBRATION_MODE=true` |
 
 ## 9. Bench test checklist for firmware
 
@@ -216,8 +290,9 @@ agro/v2/11111111-1111-1111-1111-111111111111/bbbbbbbb-2222-2222-2222-22222222222
 2. `seed_pilot.py` has been run — Sub Node IDs and plot IDs exist in the DB.
 3. MQTT credential provisioned via `provision_mqtt_credential.sh`.
 4. `CALIBRATION_MODE=true` in the backend `.env` so early wonky readings don't fire alerts.
-5. First test: `mosquitto_pub` from your laptop with the minimal payload from §7.1. If that lands, the Main Node firmware is doing the same job, just with real sensor values.
-6. Only flip `CALIBRATION_MODE=false` once the sensors are producing plausible values.
+5. Provision `main-node-001` in the host-side Mosquitto password/ACL files. Production mounts are read-only inside the broker; use the one-off utility-container procedure in `deploy/staging/README.md`.
+6. First test: `mosquitto_pub` from your laptop with the minimal payload from §7.1. If that lands, the Main Node firmware is doing the same job, just with real sensor values.
+7. Only flip `CALIBRATION_MODE=false` once the sensors are producing plausible values.
 
 ## 10. Change control
 

@@ -120,7 +120,7 @@ with tab_advisories:
     sugs = api_client.list_plot_suggestions(selected, limit=20)
     if not sugs:
         st.info(
-            "No AI advisories yet. They're generated automatically when alerts fire (Round 11)."
+            "No persisted AI advisories yet. The current MQTT path does not generate them automatically."
         )
     else:
         for s in sugs:

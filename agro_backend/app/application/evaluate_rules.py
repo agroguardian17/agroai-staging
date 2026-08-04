@@ -36,11 +36,9 @@ The application-purity AST test enforces this.
 
 from __future__ import annotations
 
-
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
-
 
 from app.application.ports.alert_repo import AlertRepo
 from app.application.ports.event_bus import EVENT_ALERT_CREATED, EventBus
@@ -49,8 +47,6 @@ from app.domain.metrics import MetricsContext, compute
 from app.domain.rule_definitions import PILOT_RULESET
 from app.domain.rules import Rule, RuleHit, RuleSet, evaluate_to_hits
 from app.domain.sensor import Reading
-
-
 
 
 @dataclass(frozen=True, slots=True)
@@ -216,7 +212,7 @@ def _decimal_or_none(v: object) -> object:
         return None
     if isinstance(v, Decimal):
         return v
-    if isinstance(v, (int, str)):
+    if isinstance(v, int | str):
         try:
             return Decimal(str(v))
         except Exception:

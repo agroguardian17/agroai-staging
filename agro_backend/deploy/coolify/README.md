@@ -1,17 +1,17 @@
-# Coolify Deploy Runbook
+# Optional Coolify Deploy Runbook
 
-> **Prerequisites:** AWS Lightsail VPS provisioned per [ACCOUNTS_TO_FILL.md](../../ACCOUNTS_TO_FILL.md) Tier 2 #5, with static IP attached and Lightsail Firewall open for TCP 22, 80, 443, 8883.
+> **Prerequisites:** AWS Lightsail VPS provisioned per [ACCOUNTS_TO_FILL.md](../../ACCOUNTS_TO_FILL.md) Tier 2 #5, with static IP attached and Lightsail Firewall open for TCP 22, 80, 443, 8883. Direct Compose deployment is the simpler, currently proven path; Coolify is optional.
 
 This runbook turns a freshly provisioned Ubuntu 22.04 Lightsail instance into the production AgroGuardian backend, accessible at `https://api-<your-ip-with-dashes>.sslip.io`. Total time: ~90 minutes including waiting for Let's Encrypt.
 
-For the verbatim, command-by-command version with explanatory commentary, see [Roadmap Part 12.2](../../../AgroGuardian_FINAL_Roadmap.md#122-setup-runbook--aws-lightsail-mumbai-one-time-90-min). This file is the operator-facing distillation.
+For the direct VPS procedure, see [`../staging/README.md`](../staging/README.md). This file only covers the optional Coolify layer.
 
 ## Step-by-step
 
 ### 1. SSH in
 
 ```bash
-ssh -i ~/.ssh/agro_lightsail.pem ubuntu@<static-ip>
+ssh -i <PATH_TO_LIGHTSAIL_PRIVATE_KEY> ubuntu@<static-ip>
 ```
 
 (Or use the "Connect using SSH" button in the Lightsail console for a browser terminal.)
@@ -71,7 +71,9 @@ cd agro_backend
 pwsh ./scripts/dev/render-caddyfile.ps1 -IP <static-ip>
 ```
 
-This writes `deploy/caddy/Caddyfile.prod`. Commit and push to `main`.
+This writes `deploy/caddy/Caddyfile.prod`. Run it from the repository directory;
+do not run `make caddyfile-prod` from `~`. A real ACME email must be configured
+in the Caddy template before deployment.
 
 ### 7. Connect Coolify to GitHub
 
@@ -79,7 +81,10 @@ In the Coolify UI:
 
 1. **Sources** → Add a new GitHub source → use a Personal Access Token with `repo` (read) scope. (Or use a GitHub App — Coolify recommends apps over PATs.)
 2. **Resources** → New Resource → Docker Compose → select your `agroguardian` repo, branch `main`, file `agro_backend/docker-compose.prod.yml`.
-3. **Environment Variables** → paste each key from `.env.example`. The values that came from the Tier 1/2 signups in `ACCOUNTS_TO_FILL.md` go in here. **Important:** also set `APP_GIT_SHA` to `${SOURCE_COMMIT}` so the `/health` endpoint reports the deployed commit.
+3. **Environment Variables** → paste the required keys from
+   [`CONFIGURATION.md`](../../docs/CONFIGURATION.md). The values that came
+   from the Tier 1/2 signups in `ACCOUNTS_TO_FILL.md` go in here. **Important:**
+   also set `APP_GIT_SHA` to the deployment commit so `/health` reports it.
 4. **Auto-deploy** → enable on push to `main`.
 5. **Deploy** — first deploy takes ~5 minutes (image build + dependencies).
 
@@ -95,9 +100,11 @@ Expected: `HTTP/2 200`, JSON `{"status":"ok","version":"0.0.1","commit":"<sha>",
 
 If Caddy fails to issue (rate limits or HTTP-01 challenge issues), check `docker compose -f docker-compose.prod.yml logs caddy` and verify ports 80 + 443 are open in **both** Lightsail Firewall and UFW.
 
-### 9. Set up B2 backups
+### 9. Set up backups
 
-The repo already has the cron stub in [Phase 12.2 Prompt](../../../AgroGuardian_FINAL_Roadmap.md#prompt-122--backup--restore-drill); land that file in Phase 12. Until then, Lightsail's automatic snapshots provide a 7-day rolling recovery window.
+The repository contains B2/R2 configuration seams but no completed backup
+worker. Until a tested `pg_dump` + restore procedure is added, rely only on
+Lightsail snapshots and treat them as insufficient for real farmer data.
 
 ### 10. Set up UptimeRobot
 
@@ -111,13 +118,13 @@ Create a HTTP(s) monitor pointing at the health URL above. Email + Telegram aler
 | Caddy stuck issuing cert | Cloudflare proxy ON | Set DNS record to gray-cloud (Proxy: OFF) on first issuance |
 | Coolify can't pull image | GitHub PAT expired or wrong scope | Regenerate PAT with `repo` scope |
 | Postgres container restart loop | `POSTGRES_PASSWORD` unset | Coolify env vars must include this; restart resource |
-| `/api/v1/ready` returns false | One of postgres/mosquitto/chroma not started | `docker compose ps`; check that container's logs |
+| `/api/v1/ready` looks healthy while a dependency fails | Readiness is currently a phase-0 stub, not a real dependency probe | `docker compose ps`; check each container's logs |
 | `mosquitto_sub` returns "Connection refused" | Lightsail Firewall missing TCP 8883 | Same fix as above |
 | Tailscale ACL locks you out | Aggressive ACL change | Test changes from a 2nd device first |
 
 ## Migration to a new VPS (any provider)
 
-Per [Roadmap Part 0.5 Rule 5](../../../AgroGuardian_FINAL_Roadmap.md#rule-5--two-hour-migration-procedure), migration is a 2-hour operation:
+Migration to a new VPS is a controlled operation:
 
 1. Provision new Linux VPS, install Docker
 2. `pg_dump --format=custom` on the current Lightsail
@@ -125,13 +132,21 @@ Per [Roadmap Part 0.5 Rule 5](../../../AgroGuardian_FINAL_Roadmap.md#rule-5--two
 4. `scp` both to the new host; `pg_restore` and `tar xzf`
 5. Update DNS (or `make caddyfile-prod IP=<new-ip>` for sslip.io)
 6. Update Meta WhatsApp webhook callback URL
-7. Push a `cmd` MQTT message to refresh device broker hosts (or wait for next reconnect)
+7. Update the firmware broker host configuration (or wait for the device's next reconnect)
 
 Same procedure no matter the destination — DigitalOcean, Hetzner, Linode, EC2, or another Lightsail region.
 
 ## When you outgrow $20 plan (~100 farms)
 
 - **Easy:** Lightsail Console → your instance → Plans → Resize to $40 (~5 min downtime)
-- **Better long-term:** Migrate to EC2 t3.large + RDS db.t3.medium (~2h via the procedure above; ~$120/mo)
+- **Better long-term:** move to a larger provider-neutral compute/database arrangement after load and backup requirements justify it. The application intentionally avoids hard-coded AWS managed services.
 
 The hexagon makes both mechanical, not architectural.
+
+## Current Coolify limitation
+
+`docker-compose.prod.yml` contains a Caddy route for `streamlit:8501`, but it
+does not define a `streamlit` service. Deploying the compose file therefore
+does not make the dashboard available unless a separate Streamlit service is
+added and placed on the same Docker network. The API, MQTT, Postgres, Chroma,
+Prometheus, and Grafana services are the currently defined production services.

@@ -160,6 +160,9 @@ class Reading:
     water_flow_lpm: Decimal | None = None
     water_volume_liters_session: Decimal | None = None
     water_volume_liters_cumulative: Decimal | None = None
+    # Added 2026-08-04 for the VIRAAI v1.0 pressure sensor on the Sub Node.
+    # Column added to node_sensor_readings by Alembic migration 0011.
+    water_pressure_bar: Decimal | None = None
     valve_status: ValveStatus | None = None
     pump_running: bool | None = None
     pump_current_amps: Decimal | None = None

@@ -33,12 +33,15 @@ from app.infra.http import auth as auth_routes
 from app.infra.http import health
 from app.infra.http import plots as plot_routes
 from app.infra.http.deps import shutdown_engine
+from app.jobs.ginger_scheduler import build_and_start_scheduler, stop_scheduler
 from app.jobs.ingest_startup import build_and_start_ingest, stop_ingest
 from app.lib import metrics
 from app.lib.logging import configure_logging
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
+
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
     from app.infra.mqtt.broker import IngestBroker
 
@@ -65,10 +68,14 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         calibration_mode=settings.CALIBRATION_MODE,
     )
     broker: IngestBroker | None = None
+    scheduler: AsyncIOScheduler | None = None
     try:
         broker = await build_and_start_ingest(settings)
+        scheduler = await build_and_start_scheduler(settings)
         yield
     finally:
+        if scheduler is not None:
+            await stop_scheduler(scheduler)
         if broker is not None:
             await stop_ingest(broker)
         await shutdown_engine()

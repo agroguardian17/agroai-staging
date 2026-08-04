@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Provision an MQTT credential for a hardware device (Main Node).
 #
-# Uses the running Mosquitto container's mosquitto_passwd tool to bcrypt
-# the password directly into deploy/mosquitto/passwd, then appends the
-# ACL entry that scopes this user to the telemetry namespace. The pilot uses
-# one credential for the Main Node publisher and backend subscriber.
+# Uses a one-off Mosquitto container's mosquitto_passwd tool to bcrypt the
+# password directly into deploy/mosquitto/passwd, then appends the ACL entry
+# that scopes this user to the telemetry namespace. The one-off container is
+# required because staging/production mount passwd read-only in Mosquitto.
 #
 # Idempotent: if the username already exists in passwd, we UPDATE (mosquitto_passwd
 # overwrites the entry). ACL append is guarded with a grep so re-runs don't
@@ -41,27 +41,20 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PASSWD_FILE="$ROOT_DIR/deploy/mosquitto/passwd"
 ACL_FILE="$ROOT_DIR/deploy/mosquitto/acl"
 
-if [[ ! -f "$PASSWD_FILE" ]]; then
-    echo "ERROR: passwd file not found at $PASSWD_FILE" >&2
-    exit 2
-fi
-if [[ ! -f "$ACL_FILE" ]]; then
-    echo "ERROR: acl file not found at $ACL_FILE" >&2
-    exit 2
-fi
+# Create the bind-mounted files before Docker sees them. This also avoids
+# Docker creating a directory at a missing file mount point.
+touch "$PASSWD_FILE" "$ACL_FILE"
+chmod 644 "$PASSWD_FILE" "$ACL_FILE"
 
-# Ensure the mosquitto container is up so we can invoke its passwd tool.
-if ! docker ps --format '{{.Names}}' | grep -q '^agro_mosquitto$'; then
-    echo "ERROR: agro_mosquitto container is not running." >&2
-    echo "       Start it with: docker compose -f docker-compose.dev.yml up -d mosquitto" >&2
-    exit 3
-fi
-
-# 1. Set / update the password via mosquitto_passwd inside the container.
+# 1. Set / update the password via mosquitto_passwd in a disposable container.
 #    -b: batch mode (non-interactive)
-#    -c: create file (only used if empty; safe to omit because file exists)
+#    -c: create the password file
 echo ">>> Updating $PASSWD_FILE for user '$USERNAME'"
-docker exec -i agro_mosquitto mosquitto_passwd -b /mosquitto/config/passwd "$USERNAME" "$PASSWORD"
+docker run --rm \
+    -v "$ROOT_DIR/deploy/mosquitto:/mosquitto/config" \
+    eclipse-mosquitto:2.0.18 \
+    mosquitto_passwd -b -c /mosquitto/config/passwd "$USERNAME" "$PASSWORD"
+chmod 644 "$PASSWD_FILE"
 
 # 2. Append ACL entry if it isn't already present. Scope: publish + subscribe
 #    on ``agro/v2/#``. Tighten to a specific tenant/farm prefix if you're
@@ -82,7 +75,7 @@ fi
 
 echo ""
 echo ">>> Restart mosquitto to pick up the new credentials:"
-echo "    docker compose -f docker-compose.dev.yml restart mosquitto"
+echo "    docker compose -f docker-compose.prod.yml restart mosquitto"
 echo ""
 echo ">>> Credential summary:"
 echo "    username: $USERNAME"

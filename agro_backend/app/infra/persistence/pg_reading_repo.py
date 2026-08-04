@@ -92,6 +92,7 @@ _INSERT_COLUMNS: tuple[str, ...] = (
     "water_flow_lpm",
     "water_volume_liters_session",
     "water_volume_liters_cumulative",
+    "water_pressure_bar",
 )
 
 
@@ -171,6 +172,7 @@ def _row_to_reading(row: Any) -> Reading:
         water_flow_lpm=_to_decimal(row.water_flow_lpm),
         water_volume_liters_session=_to_decimal(row.water_volume_liters_session),
         water_volume_liters_cumulative=_to_decimal(row.water_volume_liters_cumulative),
+        water_pressure_bar=_to_decimal(row.water_pressure_bar),
     )
 
 
@@ -236,6 +238,7 @@ def _bind_params(reading: Reading) -> dict[str, Any]:
         "water_flow_lpm": _decimal_to_float(reading.water_flow_lpm),
         "water_volume_liters_session": _decimal_to_float(reading.water_volume_liters_session),
         "water_volume_liters_cumulative": _decimal_to_float(reading.water_volume_liters_cumulative),
+        "water_pressure_bar": _decimal_to_float(reading.water_pressure_bar),
     }
 
 

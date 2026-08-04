@@ -10,14 +10,10 @@ involving the real signer.
 
 from __future__ import annotations
 
-
 import uuid
 from typing import Protocol, runtime_checkable
 
-
 from app.domain.auth import AccessClaims, AuthRole
-
-
 
 
 class InvalidTokenError(Exception):

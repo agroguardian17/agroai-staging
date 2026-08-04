@@ -20,7 +20,7 @@
     # this listener can terminate TLS and proxy the decrypted MQTT stream to
     # Mosquitto's authenticated internal listener on port 1883.
     layer4 {
-        mqtts-IP-WITH-DASHES.sslip.io:8883 {
+        :8883 {
             @mqtt tls sni mqtts-IP-WITH-DASHES.sslip.io
             route @mqtt {
                 tls
@@ -55,7 +55,8 @@ api-IP-WITH-DASHES.sslip.io {
         respond 403
     }
 
-    handle /openapi.json /docs* /redoc* {
+    @docs path /openapi.json /docs* /redoc*
+    handle @docs {
         # In production, hide docs from the public internet.
         respond 404
     }

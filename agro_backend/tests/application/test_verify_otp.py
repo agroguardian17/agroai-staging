@@ -3,13 +3,10 @@
 
 from __future__ import annotations
 
-
 import uuid
 from datetime import UTC, datetime, timedelta
 
-
 import pytest
-
 
 from app.application.ports.farmer_repo import FarmerIdentity
 from app.application.verify_otp import (
@@ -28,7 +25,6 @@ from app.domain.auth import (
     OtpTransport,
     hash_otp_code,
 )
-
 
 PHONE = "+918123456789"
 TENANT = uuid.UUID("11111111-1111-1111-1111-111111111111")

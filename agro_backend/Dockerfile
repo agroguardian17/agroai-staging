@@ -69,9 +69,12 @@ COPY --from=builder /install/share/st-models /opt/st-models
 
 WORKDIR /app
 COPY --chown=agro:agro app ./app
+COPY --chown=agro:agro ginger ./ginger
 COPY --chown=agro:agro alembic ./alembic
 COPY --chown=agro:agro alembic.ini ./
 COPY --chown=agro:agro rules ./rules
+# Keep the idempotent pilot seeder available in the staging image.
+COPY --chown=agro:agro scripts/dev/seed_pilot.py ./scripts/dev/seed_pilot.py
 COPY --chown=agro:agro pyproject.toml ./
 
 USER agro

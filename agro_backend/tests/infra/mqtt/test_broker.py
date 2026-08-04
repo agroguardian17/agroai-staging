@@ -14,16 +14,13 @@ the tests run without a real broker. Verifies:
 
 from __future__ import annotations
 
-
 import asyncio
 import uuid
 from datetime import UTC, datetime
 from typing import Any
 from unittest.mock import MagicMock
 
-
 import pytest
-
 
 from app.application.evaluate_rules import EvaluateRulesDeps, EvaluateRulesResult
 from app.application.ingest_telemetry import IngestDeps, IngestResult
@@ -44,8 +41,6 @@ from app.infra.mqtt.schemas import (
     UnknownTopicKindError,
 )
 from app.lib import metrics
-
-
 
 
 # ---------------------------------------------------------------------------

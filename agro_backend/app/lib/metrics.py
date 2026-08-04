@@ -9,9 +9,7 @@ they're easy to find in Grafana.
 
 from __future__ import annotations
 
-
 from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram
-
 
 # Use a dedicated registry rather than the global one so we can reset it in
 # unit tests without touching prometheus-client internals.
@@ -149,12 +147,42 @@ alerts_cooldown_suppressed_total = Counter(
 
 
 
+# ----- Ginger engine (daily advisory job) --------------------------------
+ginger_engine_run_seconds = Histogram(
+    "agro_ginger_engine_run_seconds",
+    "Wall-clock seconds one plot spends inside PersistentRunner.run_day.",
+    buckets=(0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0),
+    registry=REGISTRY,
+)
+
+
+ginger_messages_total = Counter(
+    "agro_ginger_messages_total",
+    "Ginger advisory messages delivered, labeled by delivery class.",
+    ["delivery_class"],
+    registry=REGISTRY,
+)
+
+
+ginger_engine_errors_total = Counter(
+    "agro_ginger_engine_errors_total",
+    "Errors encountered during a daily ginger engine run.",
+    ["reason"],
+    registry=REGISTRY,
+)
+
+
+
+
 __all__ = [
     "REGISTRY",
     "alerts_cooldown_suppressed_total",
     "alerts_created_total",
     "auth_otp_total",
     "dispatch_total",
+    "ginger_engine_errors_total",
+    "ginger_engine_run_seconds",
+    "ginger_messages_total",
     "http_request_duration_seconds",
     "http_requests_total",
     "ingest_dropped_total",

@@ -36,14 +36,11 @@ diff.
 
 from __future__ import annotations
 
-
 from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 
-
 from app.domain.sensor import Reading
-
 
 # ---------------------------------------------------------------------------
 # Calibration constants - any change is a deliberate event.

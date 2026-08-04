@@ -24,9 +24,7 @@ PURE module: stdlib only.
 
 from __future__ import annotations
 
-
 from decimal import Decimal
-
 
 from app.domain.alert import AlertType, Severity
 from app.domain.metrics import (
@@ -37,7 +35,6 @@ from app.domain.metrics import (
 )
 from app.domain.rules import Rule, RuleSet
 from app.domain.sensor import Reading
-
 
 # ---------------------------------------------------------------------------
 # Individual rule predicates

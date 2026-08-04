@@ -19,11 +19,8 @@ cases (advisories) will add their own methods to this port.
 
 from __future__ import annotations
 
-
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
-
-
 
 
 @dataclass(frozen=True, slots=True)

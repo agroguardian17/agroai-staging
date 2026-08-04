@@ -3,14 +3,11 @@
 
 from __future__ import annotations
 
-
 import uuid
 from datetime import UTC, datetime, timedelta
 
-
 from app.application.logout import LogoutDeps, logout_everywhere, logout_one
 from app.domain.auth import AuthSession, hash_refresh_token
-
 
 TENANT = uuid.UUID("11111111-1111-1111-1111-111111111111")
 NOW = datetime.now(UTC)

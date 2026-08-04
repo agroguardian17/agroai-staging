@@ -9,14 +9,10 @@ the user posts /auth/logout?everywhere=true.
 
 from __future__ import annotations
 
-
 from dataclasses import dataclass
-
 
 from app.application.ports.auth_session_repo import AuthSessionRepo
 from app.domain.auth import hash_refresh_token
-
-
 
 
 @dataclass(frozen=True, slots=True)

@@ -15,19 +15,14 @@ without holding the signing key.
 
 from __future__ import annotations
 
-
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-
 from jose import JWTError, jwt
-
 
 from app.application.ports.token_issuer import InvalidTokenError
 from app.domain.auth import AccessClaims, AuthRole
-
-
 
 
 @dataclass(frozen=True, slots=True)

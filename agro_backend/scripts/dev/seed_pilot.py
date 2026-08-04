@@ -43,14 +43,11 @@ Node firmware config.
 
 from __future__ import annotations
 
-
 import os
 import sys
 import uuid
 
-
 from sqlalchemy import create_engine, text
-
 
 PILOT_TENANT = "11111111-1111-1111-1111-111111111111"
 
@@ -71,12 +68,19 @@ LEGACY_DEVICE_ID = "AGR-MH-0001"
 
 
 # ----- Plots + seasons -----
+# All 4 pilot plots grow ginger in the Kharif 2026 season. Variety and dates are
+# placeholders until confirmed with the field team; correct them in place when
+# you have the real values.
+GINGER_VARIETY = "Mahima"
+GINGER_SOWING_DATE = "2026-06-01"
+GINGER_EXPECTED_HARVEST_DATE = "2027-02-01"
+
 PLOTS = [
     # (plot_id, sub_node_device_id, season_id, crop_marathi, crop_english)
-    ("PLOT_PILOT_001", SUB_NODE_1_ID, uuid.UUID("cccccccc-3333-3333-3333-000000000001"), "कापूस", "Cotton"),
-    ("PLOT_PILOT_002", SUB_NODE_1_ID, uuid.UUID("cccccccc-3333-3333-3333-000000000002"), "सोयाबीन", "Soybean"),
-    ("PLOT_PILOT_003", SUB_NODE_2_ID, uuid.UUID("cccccccc-3333-3333-3333-000000000003"), "तूर", "Pigeon pea"),
-    ("PLOT_PILOT_004", SUB_NODE_2_ID, uuid.UUID("cccccccc-3333-3333-3333-000000000004"), "मका", "Maize"),
+    ("PLOT_PILOT_001", SUB_NODE_1_ID, uuid.UUID("cccccccc-3333-3333-3333-000000000001"), "आले", "Ginger"),
+    ("PLOT_PILOT_002", SUB_NODE_1_ID, uuid.UUID("cccccccc-3333-3333-3333-000000000002"), "आले", "Ginger"),
+    ("PLOT_PILOT_003", SUB_NODE_2_ID, uuid.UUID("cccccccc-3333-3333-3333-000000000003"), "आले", "Ginger"),
+    ("PLOT_PILOT_004", SUB_NODE_2_ID, uuid.UUID("cccccccc-3333-3333-3333-000000000004"), "आले", "Ginger"),
 ]
 
 
@@ -244,9 +248,9 @@ def main() -> int:
                         crop_variety, crop_category, sowing_date, expected_harvest_date,
                         current_growth_stage, crop_age_days_today, season_status
                     ) VALUES (
-                        :sid, :tenant, :farm, :plot, 'Kharif 2026',
+                        :sid, :tenant, :farm, :plot, 'Kharif 2026 Ginger',
                         'kharif', 2026, :cmr, :cen,
-                        'default', 'cash_crop', '2026-06-01', '2026-12-01',
+                        :variety, 'cash_crop', :sowing, :harvest,
                         'vegetative', 50, 'active'
                     )
                     ON CONFLICT (season_id) DO NOTHING
@@ -259,6 +263,9 @@ def main() -> int:
                     "plot": plot_id,
                     "cmr": crop_mr,
                     "cen": crop_en,
+                    "variety": GINGER_VARIETY,
+                    "sowing": GINGER_SOWING_DATE,
+                    "harvest": GINGER_EXPECTED_HARVEST_DATE,
                 },
             )
 

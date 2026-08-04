@@ -68,8 +68,6 @@ services:
       - .env
     environment:
       APP_ENV: development
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-agro}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agro}
-      DATABASE_URL_SYNC: postgresql://${POSTGRES_USER:-agro}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agro}
       MQTT_BROKER_HOST: mosquitto
       CHROMA_HOST: chroma
       CHROMA_PORT: "8000"
@@ -82,6 +80,7 @@ services:
         condition: service_started
     volumes:
       - ./app:/app/app
+      - ./ginger:/app/ginger
       - ./alembic:/app/alembic
       - ./rules:/app/rules
       - ./tests:/app/tests:ro

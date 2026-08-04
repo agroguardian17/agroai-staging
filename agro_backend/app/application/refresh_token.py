@@ -19,11 +19,9 @@ second one sees a 401 and we know something's wrong).
 
 from __future__ import annotations
 
-
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-
 
 from app.application.ports.auth_session_repo import AuthSessionRepo
 from app.application.ports.farmer_repo import FarmerRepo
@@ -35,8 +33,6 @@ from app.domain.auth import (
     generate_refresh_secret,
     hash_refresh_token,
 )
-
-
 
 
 class RefreshError(Exception):

@@ -8,11 +8,9 @@ No real DB, no real LLM call.
 
 from __future__ import annotations
 
-
 import datetime
 import uuid
 from decimal import Decimal
-
 
 from app.application.compose_advisory import (
     ComposeAdvisoryDeps,
@@ -26,7 +24,6 @@ from app.application.ports.crop_season_repo import CropSeasonView
 from app.domain.alert import AlertType, Severity
 from app.domain.plot import DataTier, Plot, PlotStatus
 from app.domain.sensor import Reading, TransmissionType
-
 
 NOW = datetime.datetime(2026, 6, 20, 12, 0, tzinfo=datetime.UTC)
 TENANT = uuid.UUID("11111111-1111-1111-1111-111111111111")

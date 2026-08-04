@@ -3,16 +3,12 @@
 
 from __future__ import annotations
 
-
 import uuid
-
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-
 from app.domain.auth import OtpChallenge, OtpTransport
-
 
 _SELECT_COLS = (
     "challenge_id, tenant_id, phone, code_hash, transport, "

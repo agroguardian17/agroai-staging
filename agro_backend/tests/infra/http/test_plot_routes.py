@@ -3,15 +3,12 @@
 
 from __future__ import annotations
 
-
 import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
-
 import pytest
 from fastapi.testclient import TestClient
-
 
 from app.application.ports.alert_repo import PlotAlertView
 from app.domain.alert import AlertType, Severity
@@ -25,7 +22,6 @@ from app.infra.http.deps import (
     get_reading_repo,
 )
 from app.main import create_app
-
 
 TENANT = uuid.UUID("11111111-1111-1111-1111-111111111111")
 FARMER = uuid.UUID("22222222-2222-2222-2222-222222222222")

@@ -40,7 +40,6 @@ realistic (no jumps from moisture=15 to moisture=85 in one cycle).
 
 from __future__ import annotations
 
-
 import argparse
 import asyncio
 import contextlib
@@ -52,9 +51,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-
 import paho.mqtt.client as mqtt
-
 
 DEFAULT_BROKER_HOST = "localhost"
 DEFAULT_BROKER_PORT = 1883  # the dev compose's plain listener

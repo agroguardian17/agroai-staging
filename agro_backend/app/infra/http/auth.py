@@ -3,15 +3,12 @@
 
 from __future__ import annotations
 
-
 import uuid
 from datetime import datetime
 from typing import Annotated
 
-
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
-
 
 from app.application import logout as logout_uc
 from app.application import refresh_token as refresh_uc
@@ -33,7 +30,6 @@ from app.infra.http.deps import (
     get_token_issuer,
     get_whatsapp_sender,
 )
-
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 

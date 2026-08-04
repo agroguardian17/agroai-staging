@@ -159,6 +159,13 @@ class TelemetryIn(BaseModel):
     npk_sensor_raw_hex: str | None = None
 
 
+    # --- Water / pump (VIRAAI v1.0 Sub Node emits flow + pressure) ---
+    # These map 1:1 to the identically-named columns on
+    # ``node_sensor_readings``. Added 2026-08-04 so the Sub Node's flow
+    # (pulse-counted) and pressure sensor readings actually reach the DB.
+    water_flow_lpm: SafeDecimal = None
+    water_pressure_bar: SafeDecimal = None
+
     # --- Diagnostics ---
     tamper_detected: bool | None = None
     enclosure_temp_c: SafeDecimal = None
@@ -226,6 +233,8 @@ class TelemetryIn(BaseModel):
             soil_p_bucket=self.soil_p_bucket,
             soil_k_bucket=self.soil_k_bucket,
             npk_sensor_raw_hex=self.npk_sensor_raw_hex,
+            water_flow_lpm=self.water_flow_lpm,
+            water_pressure_bar=self.water_pressure_bar,
             tamper_detected=self.tamper_detected,
             enclosure_temp_c=self.enclosure_temp_c,
             fault_flags=self.fault_flags,

@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 # =============================================================================
-# AgroGuardian — Hardware Enablement bootstrap
+# AgroGuardian — historical Hardware Enablement bootstrap
 # =============================================================================
+# WARNING: This script is a historical file-generation bootstrap. It contains
+# older copies of the hardware/Caddy/staging files and can overwrite the
+# current checkout with stale instructions. Do not run it on the current
+# project unless you intentionally audit every generated file first. Use the
+# checked-in files and docs/DEVELOPMENT.md instead.
+#
 #
 # Idempotent: re-running overwrites the same files byte-for-byte. Safe.
 #
@@ -1825,4 +1831,3 @@ echo "         --farm-id   bbbbbbbb-2222-2222-2222-222222222222 \\"
 echo "         --plot-id   PLOT_PILOT_001 --node-id AGR-SN-0001 --rate 1.0 --duration 30"
 echo "  5. Then follow deploy/staging/README.md for the Lightsail bring-up."
 echo ""
-

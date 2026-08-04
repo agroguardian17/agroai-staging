@@ -32,17 +32,13 @@ HTTP status (4xx vs 5xx) plus the provider's ``code`` if present.
 
 from __future__ import annotations
 
-
 from dataclasses import dataclass
-
 
 import httpx
 import structlog
 
-
 from app.application.ports.whatsapp_sender import WhatsappSendResult
 from app.domain.auth import mask_phone
-
 
 log = structlog.get_logger(__name__)
 

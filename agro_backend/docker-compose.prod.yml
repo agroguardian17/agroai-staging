@@ -85,8 +85,6 @@ services:
       - .env
     environment:
       APP_ENV: ${APP_ENV:-production}
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agro}
-      DATABASE_URL_SYNC: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-agro}
       MQTT_BROKER_HOST: mosquitto
       CHROMA_HOST: chroma
       CHROMA_PORT: "8000"

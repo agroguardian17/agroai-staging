@@ -98,6 +98,19 @@ class Settings(BaseSettings):
     # once the sensors are dialed in and the ruleset should engage.
     CALIBRATION_MODE: bool = False
 
+    # ---- Ginger daily advisory job ------------------------------------------
+    # Master switch for the ginger advisory scheduler. When False the lifespan
+    # skips starting APScheduler entirely — useful in tests, during outages,
+    # or when running the app in a batch-only context.
+    GINGER_JOB_ENABLED: bool = True
+    # IANA timezone the "today" date is computed in. Pilot is Aurangabad; the
+    # farmer's day boundary is IST midnight.
+    GINGER_JOB_TIMEZONE: str = "Asia/Kolkata"
+    # Hour + minute of day (in ``GINGER_JOB_TIMEZONE``) when the job fires.
+    # Default 06:30 IST — before the farmer starts the workday.
+    GINGER_JOB_HOUR: int = 6
+    GINGER_JOB_MINUTE: int = 30
+
     # ---- ChromaDB -----------------------------------------------------------
     CHROMA_HOST: str = "localhost"
     CHROMA_PORT: int = 8001

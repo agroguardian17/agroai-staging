@@ -3,19 +3,14 @@
 
 from __future__ import annotations
 
-
 import uuid
 from datetime import UTC, datetime, timedelta
 
-
 import pytest
-
 
 from app.application.ports.token_issuer import InvalidTokenError
 from app.domain.auth import AuthRole
 from app.infra.auth.jwt_issuer import JwtIssuer, JwtSettings
-
-
 
 
 def _issuer(ttl: int = 900) -> JwtIssuer:

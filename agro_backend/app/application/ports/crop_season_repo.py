@@ -46,5 +46,14 @@ class CropSeasonRepo(Protocol):
         """
         ...
 
+    async def list_active_by_crop(self, crop_name_english: str) -> list[CropSeasonView]:
+        """Every active season where ``crop_name_english`` matches, newest first.
+
+        Used by the daily ginger job to iterate all ginger plots at once
+        without loading every plot from every tenant. Returns an empty list
+        if nothing matches.
+        """
+        ...
+
 
 __all__ = ["CropSeasonRepo", "CropSeasonView"]

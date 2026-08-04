@@ -35,7 +35,6 @@ not ours to silently retry.
 
 from __future__ import annotations
 
-
 import asyncio
 import contextlib
 import logging
@@ -43,11 +42,9 @@ import ssl
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 
-
 import paho.mqtt.client as mqtt
 import structlog
 from pydantic import ValidationError
-
 
 from app.application.process_reading import ProcessReadingDeps
 from app.application.process_reading import execute as process_execute
@@ -57,7 +54,6 @@ from app.infra.mqtt.schemas import (
     parse_inbound,
 )
 from app.lib import metrics
-
 
 log = structlog.get_logger(__name__)
 

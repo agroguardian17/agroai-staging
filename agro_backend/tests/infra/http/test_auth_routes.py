@@ -8,14 +8,11 @@ repos/senders so no real DB or WhatsApp call happens.
 
 from __future__ import annotations
 
-
 import uuid
 from datetime import UTC, datetime, timedelta
 
-
 import pytest
 from fastapi.testclient import TestClient
-
 
 from app.application.ports.farmer_repo import FarmerIdentity
 from app.application.ports.whatsapp_sender import WhatsappSendResult
@@ -36,7 +33,6 @@ from app.infra.http.deps import (
     get_whatsapp_sender,
 )
 from app.main import create_app
-
 
 PHONE = "+918123456789"
 TENANT = uuid.UUID("11111111-1111-1111-1111-111111111111")

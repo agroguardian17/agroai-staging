@@ -5,12 +5,15 @@ Phase 1 database schema. There are two authoritative inputs:
 
 1. **`Agro_Guardian_AI_Database_Schema 1.pdf`** — the 21-table / 400+ column
    "source" schema. Authoritative for **column names, data types, enums**.
-2. **`AgroGuardian_FINAL_Roadmap.md`** — adds the **v3 layer**: multi-tenancy,
+2. **Historical `AgroGuardian_FINAL_Roadmap.md` design notes** — added the
+   **v3 layer**: multi-tenancy,
    RLS, partitioning, audit logging, 14 additional tables, and specific column
    additions (Parts 2.2–2.8).
 
-Where the two disagree or the PDF is silent, the decision and its rationale are
-recorded here so they can be reviewed and reversed cleanly.
+The roadmap/PDF artifacts are historical inputs from the original generation
+process and are not present in this checkout. Where those inputs disagree or
+the source is silent, the decision and its rationale are recorded here so they
+can be reviewed and reversed cleanly.
 
 ---
 
@@ -190,10 +193,13 @@ the migration.
 
 ## 10. Roles
 
-0008 creates `authenticated_role NOLOGIN` (the role the app connects as for
+0008 creates `authenticated_role NOLOGIN` (the role intended for
 farmer/staff requests, subject to RLS) and `service_role NOLOGIN BYPASSRLS`
-(ingest + cron). The application's DB user is granted both and switches via
-`SET ROLE` / session GUCs as needed (wired in Phase 2/3 deps).
+(ingest + cron). The migration grants both roles to the current login role,
+but the current FastAPI dependency layer does not yet set the per-request
+session GUCs or switch roles. Application-level repository scoping is the
+active protection today; treat the database RLS layer as defense in depth until
+that session wiring is implemented.
 
 ---
 
@@ -312,11 +318,8 @@ changes any column other than `review_status`, `reviewed_by`, `reviewed_at`,
 
 ## 12. Verification status
 
-- **Windows (here):** ORM model import, ruff, mypy, pytest (non-DB) are green.
-- **Mac (first setup):** `alembic upgrade head` → `downgrade base` →
-  `upgrade head` round-trip runs against real Postgres 15 + PostGIS. The
-  partitioning, RLS, audit, and materialized-view migrations are first executed
-  there. The Round 2 Mac setup notes include this as a required step.
-
-If any migration fails on first Mac run, it will be a localized SQL fix in one
-migration file, not an architectural problem.
+The migration chain is currently deployed through `0009_auth_otp_tables` in
+the pilot VPS. Keep verifying a fresh database with `alembic upgrade head` and
+an explicit downgrade/upgrade drill before trusting a new migration. Do not
+infer migration health from ORM import success: the migrations are hand-written
+SQL and include partitions, materialized views, triggers, roles, and RLS.

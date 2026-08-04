@@ -67,7 +67,7 @@ if [[ -n "$DOMAIN" ]]; then
     # works identically on macOS, Linux and Git Bash for Windows.
     sed \
         -e "s/api-IP-WITH-DASHES\.sslip\.io/api.${DOMAIN}/g" \
-        -e "s/mqtt-IP-WITH-DASHES\.sslip\.io/mqtt.${DOMAIN}/g" \
+        -e "s/mqtts-IP-WITH-DASHES\.sslip\.io/mqtts.${DOMAIN}/g" \
         -e "s/dashboard-IP-WITH-DASHES\.sslip\.io/dashboard.${DOMAIN}/g" \
         -e "s/metrics-IP-WITH-DASHES\.sslip\.io/metrics.${DOMAIN}/g" \
         "$TEMPLATE" > "$OUTPUT"

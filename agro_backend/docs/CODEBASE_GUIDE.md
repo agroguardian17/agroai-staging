@@ -2,6 +2,29 @@
 
 This document describes the behavior implemented in the repository as it exists today. The code is the source of truth when this guide differs from an older roadmap or design note.
 
+This is a current-checkout reference, not a promise that every planned
+integration is live. The project began as a Windows-generated prototype and was
+later copied to a Mac/VPS workflow. That history explains why the repository
+contains both active code and future-phase seams. Start with:
+
+1. [Configuration](CONFIGURATION.md) for every environment variable and the
+   internal/public MQTT distinction.
+2. [Complete file reference](FILE_REFERENCE.md) for every tracked file.
+3. This guide for architecture and runtime behavior.
+4. [Development and operations](DEVELOPMENT.md) before changing the VPS.
+
+## Source-of-truth hierarchy
+
+When two instructions disagree, use this order:
+
+1. Running code and tests.
+2. Alembic migrations for the deployed database schema.
+3. `docker-compose.*.yml` and deployment configuration for container topology.
+4. The current wire schema in `app/infra/mqtt/schemas.py`.
+5. The documentation in this directory.
+6. Older roadmap/bootstrap comments, which may describe work that was planned
+   but never wired.
+
 ## 1. Product and implementation boundary
 
 The backend is designed around this pilot scenario:
@@ -26,7 +49,7 @@ The following paths are implemented and wired into the running app:
 | Dashboard | Streamlit pages over the HTTP API; it does not access Postgres directly |
 | Deployment | Development and production Docker Compose files, Caddy, Mosquitto, Prometheus, Grafana |
 
-Several database tables and adapters are prepared for later phases but are not part of the live request/ingest path yet. In particular, weather, satellite, outbound alert dispatch, WhatsApp advisory delivery, FCM, OTA, and an in-app dashboard login flow remain incomplete or scaffolded.
+Several database tables and adapters are prepared for later phases but are not part of the live request/ingest path yet. In particular, weather, satellite, outbound alert dispatch, automatic Claude advisory generation, FCM, OTA, and an in-app dashboard login flow remain incomplete or scaffolded.
 
 ## 2. Runtime architecture
 
@@ -259,19 +282,64 @@ The SQLAlchemy models cover these areas:
 | `0007` | Audit trigger and audit coverage for master tables |
 | `0008` | Roles, grants, tenant isolation, ownership RLS, agronomist review guard |
 | `0009` | OTP challenge and auth session tables |
+| `0010` | Ginger advisory engine knowledge base — 19 `kb_*` tables, 4 runtime tables, 16 views, immutable-override trigger, 431 rules seeded from `ginger/generated/agroguardian_ginger_kb.sql`. Round G. |
+| `0011` | Adds `water_pressure_bar DOUBLE PRECISION` column to `node_sensor_readings` for the VIRAAI Sub Node's analog pressure sensor. |
 
 Apply migrations with `alembic upgrade head` from `agro_backend/`. Use a new migration for schema changes; do not edit an applied revision.
 
 The RLS migration is a database-level defense-in-depth layer. The current HTTP repositories also scope reads and writes in application code. If a future request path executes as an authenticated database role rather than the service role, it must set the expected `app.current_*` session settings consistently with `0008`.
 
+## 8A. Ginger advisory engine (Round G)
+
+A second rule engine ships alongside the pilot device-health engine described in §6. It is a self-contained subsystem imported from the teammate's delivery.
+
+### Layout
+
+- `ginger/engine/*` — 7 files: `trigger_dsl.py`, `precedence.py`, `notification_policy.py`, `expert_override.py`, `persistence.py`, `runner.py`, `runtime_loader.py`. Their imports are **flat** (`from precedence import Precedence`), so `ginger/__init__.py` inserts `ginger/engine/` onto `sys.path` at import time. Consumers must `import ginger` before importing engine modules.
+- `ginger/generated/agroguardian_ginger_kb.sql` — 1.1 MB compiled knowledge base. Do NOT edit — it is regenerated upstream from JSON.
+- `app/infra/ginger/pg_state_store.py` — our Postgres-backed implementation of the engine's state store interface (fills the "PostgreSQL adapter is a known gap" gap from the teammate's arch doc §15).
+- `app/application/build_farm_brain.py` — assembles the per-plot per-day dict of ~305 `kb_farm_brain_fields` from our repositories. Populates ~85 today; the rest come back as `None` → engine reports `"insufficient data: <field>"`.
+- `app/jobs/ginger_daily.py` — the daily entry point. Iterates active `crop_seasons` where `crop_name_english = 'Ginger'`, builds Farm Brain state, calls `PersistentRunner.run_day` inside `asyncio.to_thread`, persists messages to `ai_suggestions` with `ai_model_version='ginger-engine/v1.0'`.
+- `app/jobs/ginger_scheduler.py` — APScheduler cron wrapper, fires at `GINGER_JOB_HOUR:GINGER_JOB_MINUTE` in `GINGER_JOB_TIMEZONE` (default 06:30 IST). Spawned by the FastAPI lifespan alongside the ingest broker. Master switch: `GINGER_JOB_ENABLED`.
+
+### Design differences vs the device-health engine
+
+| Aspect | Device-health (§6) | Ginger |
+| --- | --- | --- |
+| Rules | 7 Python objects in `rule_definitions.py` | 431 rows in `kb_rules`, editable as data |
+| Logic | Boolean | Three-valued (`TRUE`/`FALSE`/`UNKNOWN`) |
+| Conflict resolution | Per-`(plot, alert_type)` cooldown | Typed precedence relations in `kb_precedence` |
+| Delivery cadence | Fire-per-hit with cooldown | 4 delivery classes: `SILENT_GUARD`, `EVENT`, `WINDOW`, `ONCE_UNTIL_RESOLVED` |
+| Runtime override | None | `kb_overrides` with 5 kinds + 3 scopes + 16 immutable rules (enforced by Python + Postgres trigger) |
+| State across restarts | Stateless (cooldown inferred from `alerts_notifications`) | Persistent — `engine_state.payload` JSONB |
+| Execution | Per-message from MQTT | Daily batch, one plot at a time |
+| Output table | `alerts_notifications` | `ai_suggestions` (source-tagged) + `advisory_log` (engine-internal) |
+
+### Read surface
+
+The FastAPI `GET /api/v1/plots/{plot_id}/ginger_advisories` endpoint (see [API_REFERENCE](API_REFERENCE.md) §Plot routes) filters `ai_suggestions` to ginger-engine output. Prometheus metrics `agro_ginger_engine_run_seconds`, `agro_ginger_messages_total{delivery_class}`, and `agro_ginger_engine_errors_total{reason}` cover runtime observability.
+
+Full integration details, rollback path, and known limitations: [GINGER_ENGINE_CHANGES](GINGER_ENGINE_CHANGES.md).
+
+## 8B. Hardware firmware (sibling directory)
+
+The physical Sub Node and Main Node firmware live at `../firmware/`, outside `agro_backend/` because they build under a different toolchain (Arduino IDE + USBasp for the Sub Node, PlatformIO for the Main Node). They are documented here to keep the whole system on one map:
+
+- `firmware/sub_node/sub_node.ino` — ATmega328P production sketch. Reads DS18B20, capacitive soil, battery, pressure, water flow, RS485 NPK; transmits a CSV frame (`NODE=…,BAT=…,BATP=…,…`) over LoRa 433 MHz every ~5 s.
+- `firmware/sub_node/eeprom_provisioner/eeprom_provisioner.ino` — one-time sketch that writes the Sub Node's ID to EEPROM address 0. Run before flashing the production sketch.
+- `firmware/main_node/src/main.cpp` — ESP32-WROOM-32 firmware. Modem-init (A7672S) → LTE PDP context → NTP → LoRa RX → CSV parse → JSON build → MQTTS publish. Compiles under PlatformIO with pinned library versions.
+- `firmware/main_node/include/pilot_config.h` — all values that vary per deploy: backend endpoint, MQTT credentials, pilot UUIDs, LoRa SPI pin map, GSM UART pin map, Sub Node → plot mapping.
+
+The wire contract they both target is `docs/HARDWARE_WIRE_CONTRACT.md` — §3 for the MQTT topic pattern, §4 for the JSON payload the Main Node builds, §4.3 for the CSV format between Sub and Main Nodes.
+
 ## 9. Dashboard
 
-`dashboard/` is a separate Streamlit application with its own requirements file. It uses only the API client in `dashboard/api_client.py` and a static access token from `ACCESS_TOKEN`.
+`dashboard/` is a separate Streamlit application with its own requirements file. It uses only the API client in `dashboard/api_client.py` and a static access token from `ACCESS_TOKEN`. It does not implement OTP login, live push updates, or direct database access.
 
 | Page | Behavior |
 | --- | --- |
 | `01_Farmer_Overview.py` | Lists visible plots and renders status cards |
-| `02_Plot_Detail.py` | Reads plot metadata, recent readings, plot alerts, and AI suggestions |
+| `02_Plot_Detail.py` | Reads plot metadata, recent readings, plot alerts, and persisted AI suggestions |
 | `03_Ops_Queue.py` | Filters tenant alerts and resolves them with optional notes |
 
 There is no dashboard OTP screen, WebSocket/SSE live stream, or direct database access. Restart Streamlit after changing the token environment variable.
@@ -291,7 +359,12 @@ There is no dashboard OTP screen, WebSocket/SSE live stream, or direct database 
 
 `docker-compose.prod.yml` runs Caddy, PostGIS, Mosquitto, ChromaDB, the app, Prometheus, and Grafana on internal Docker networks. The staging/production Caddy image includes the Layer-4 plugin: it terminates public MQTT TLS on port 8883 and forwards the raw connection to Mosquitto's authenticated internal port 1883. Caddy also exposes the API, dashboard proxy, and Tailscale-gated metrics/Grafana routes. Read the staging and Coolify runbooks before exposing a deployment to hardware or farmers.
 
-The container build is multi-stage, runs as the non-root `agro` user, installs native geospatial libraries, and pre-bakes the multilingual sentence-transformers model. This makes image builds comparatively heavy and requires network access during the build.
+The container build is multi-stage, runs as the non-root `agro` user, installs native geospatial libraries, copies the pilot seeder into the runtime image, and pre-bakes the multilingual sentence-transformers model. This makes image builds comparatively heavy and requires network access during the build.
+
+The Caddy template includes a dashboard reverse-proxy host, but
+`docker-compose.prod.yml` does not define a `streamlit` service. The dashboard
+must therefore be run separately or added as a separate Compose service before
+that public Caddy route can work.
 
 ## 11. Observability and security
 
@@ -324,7 +397,7 @@ ruff format --check .
 mypy app/
 ```
 
-## 13. Known gaps and maintenance notes
+## Current limitations and security debt
 
 These are important facts for contributors:
 
@@ -332,11 +405,52 @@ These are important facts for contributors:
 2. MQTT only supports telemetry payloads. The other topic kinds named in the roadmap are intentionally rejected.
 3. `ProcessReading` evaluates rules inline after persistence. The code comments identify an eventual event-subscriber design as a future option.
 4. Alert rows are created, queried, and resolved, but the outbound WhatsApp/FCM dispatch worker is not wired into the application lifespan.
-5. AI adapters, satellite/weather dependencies, object storage settings, billing settings, and OTA settings exist mainly as future-phase seams; they are not all connected to user-facing routes.
+5. AI adapters, satellite/weather dependencies, object storage settings, billing settings, and OTA settings exist mainly as future-phase seams; they are not all connected to user-facing routes. In particular, `alert.created` is published to PostgreSQL `NOTIFY`, but no live subscriber invokes `compose_advisory`.
 6. The hardware contract must be reconciled with the current enums in `app/domain/sensor.py` before firmware integration. The code currently accepts `transmission_type` values `esp_now`, `lora`, `rs485`, and `wifi`, and `cadence_mode` values `normal`, `rapid`, `low_power`, `storm`, and `maintenance`.
 7. `app/deps.py` still contains the original settings-only dependency surface; the active repository/auth dependencies live in `app/infra/http/deps.py`.
 8. `app/infra/persistence/models/core.py` contains legacy `otp_codes`/`refresh_tokens` models while the active use cases use the `otp_challenges`/`auth_sessions` schema from migration `0009`. Treat the latter as the active auth persistence path.
 9. `GET /plots/{plot_id}` and its nested reading/alert/suggestion routes currently verify that a farmer's token belongs to the plot tenant, while `GET /plots` uses the farmer-specific repository query. If multiple farmers share a tenant, tighten the detail-route ownership check to the farmer before exposing this API beyond the pilot.
+
+10. The repository tracks `deploy/mosquitto/passwd` and `deploy/mosquitto/acl`. Even though the password file contains hashes, both are operational security material. Move them out of Git history and into deployment-only secret storage before onboarding real devices.
+11. `scripts/dev/provision_mqtt_credential.sh` was designed around a writable local file, while production Compose mounts the files read-only inside Mosquitto. On the VPS, create/update the files from the host or a disposable utility container, use the documented `sudo` ownership/permission commands, then restart Mosquitto.
+12. The `.cursorrules` file describes intended quality standards, but the current code still contains historical `print()` calls in scripts/seed tooling and hard-coded Marathi templates. Treat those as cleanup work, not as evidence that the rule has already been fully achieved.
+
+## Deployment drift that caused the VPS errors
+
+The following are now explicit because they were the recurring failure points
+when the Windows-generated tree was copied to the VPS:
+
+- `make` targets exist only in `agro_backend/Makefile`; run `cd ~/agro_backend`
+  before `make caddyfile-prod IP=...`. Running it from `~` correctly reports
+  “No rule to make target”.
+- `Caddyfile.prod` is generated, not the template. Render it after copying the
+  tree and before `docker compose -f docker-compose.prod.yml up -d`.
+- The Caddy image must be built from `deploy/caddy/Dockerfile` with the
+  Layer-4 plugin. The stock Caddy image cannot proxy raw MQTT.
+- The Caddy Layer-4 listener binds `:8883` inside the container. The VPS host
+  port mapping supplies the public address; binding the container to the VPS
+  IP caused the Caddy restart loop.
+- The app uses `mosquitto:1883` internally with `MQTT_USE_TLS=false`. Only the
+  laptop/Main Node uses `mqtts-<dashed-ip>.sslip.io:8883` with TLS.
+- A missing bind-mounted file can be created by Docker as a directory. Ensure
+  `deploy/mosquitto/passwd` and `deploy/mosquitto/acl` are real files before
+  starting Mosquitto.
+- The production compose file requires `GRAFANA_ADMIN_PASSWORD` even when the
+  current pilot does not use Grafana. Missing it prevents Compose interpolation.
+- The production image now includes `scripts/dev/seed_pilot.py`; older images
+  produced “No such file or directory” when the seed command was run inside the
+  container. Rebuild/recreate `app` after pulling that Dockerfile change.
+- The Caddy template email is a placeholder. Set a real ACME contact email on
+  the VPS before relying on certificate automation.
+
+## What is live in the current pilot
+
+The proven staging flow is: Postgres migrations through `0009`, deterministic
+pilot rows, an authenticated Main Node MQTT credential, public TLS on Caddy
+port `8883`, private Mosquitto port `1883`, FastAPI ingest, idempotent reading
+storage, and optional rule evaluation controlled by `CALIBRATION_MODE`. The
+complete commands and smoke-test payload are in
+[`deploy/staging/README.md`](../deploy/staging/README.md).
 
 ## 14. Recommended navigation order for a new contributor
 

@@ -10,16 +10,12 @@ this class refuses to ``accept`` in production via an explicit guard.
 
 from __future__ import annotations
 
-
 from uuid import uuid4
-
 
 import structlog
 
-
 from app.application.ports.whatsapp_sender import WhatsappSendResult
 from app.domain.auth import mask_phone
-
 
 log = structlog.get_logger(__name__)
 

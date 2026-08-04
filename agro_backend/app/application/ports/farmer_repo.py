@@ -11,12 +11,9 @@ inventing a domain entity prematurely. Phase 4 will graduate it to
 
 from __future__ import annotations
 
-
 import uuid
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
-
-
 
 
 @dataclass(frozen=True, slots=True)

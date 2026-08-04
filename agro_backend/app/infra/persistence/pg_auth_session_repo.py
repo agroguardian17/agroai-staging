@@ -3,16 +3,12 @@
 
 from __future__ import annotations
 
-
 import uuid
-
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-
 from app.domain.auth import AuthSession
-
 
 _SELECT_COLS = (
     "session_id, tenant_id, farmer_id, refresh_token_hash, "

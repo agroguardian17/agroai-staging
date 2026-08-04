@@ -1,6 +1,6 @@
 # Accounts & Secrets — Fill-in Checklist
 
-> **What this is:** every external account you need to sign up for, in priority order, with exactly which `.env` variable each generated value goes into.
+> **What this is:** every external account you may need to sign up for, in priority order, with the `.env` variables each value belongs to. For the meaning and runtime effect of every variable, use [`docs/CONFIGURATION.md`](docs/CONFIGURATION.md).
 >
 > **Cost reality:** every account below has a free tier sufficient for the pilot. The only paid commitment in Phase 0 is the optional **AWS Lightsail $20/month** when you're ready to deploy to the cloud — for local development you don't need it.
 
@@ -295,7 +295,7 @@ The app is designed to **boot with empty external secrets** in development. Spec
 
 ## Where to ask if something goes wrong
 
-Each integration has a known set of failure modes documented in [Roadmap Part 9](../AgroGuardian_FINAL_Roadmap.md#part-9--common-failure-points). Common ones:
+Each integration has a known set of failure modes; the current deployment-specific failures are documented in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) and [`deploy/staging/README.md`](deploy/staging/README.md). Common ones:
 
 - WhatsApp template rejected on first submission → Part 9 #29 (language code, wording, button parameter)
 - Copernicus rate limits silently truncating → Part 9 #27 (retry+backoff; cap concurrency)

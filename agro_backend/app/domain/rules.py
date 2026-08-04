@@ -41,18 +41,15 @@ intended quiet period without re-encoding it.
 
 from __future__ import annotations
 
-
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
 
-
 from app.domain.alert import AlertCandidate, AlertType, Severity
 from app.domain.metrics import DerivedMetrics
 from app.domain.sensor import Reading
-
 
 # A predicate sees the reading + the derived metrics and returns either:
 # * False  -> rule didn't fire
@@ -210,7 +207,7 @@ def _decimal_or_none(v: object) -> Decimal | None:
         return None
     if isinstance(v, Decimal):
         return v
-    if isinstance(v, (int, str)):
+    if isinstance(v, int | str):
         try:
             return Decimal(str(v))
         except Exception:

@@ -3,13 +3,10 @@
 
 from __future__ import annotations
 
-
 import uuid
 from datetime import UTC, datetime, timedelta
 
-
 import pytest
-
 
 from app.application.ports.farmer_repo import FarmerIdentity
 from app.application.refresh_token import (
@@ -23,7 +20,6 @@ from app.domain.auth import (
     AuthSession,
     hash_refresh_token,
 )
-
 
 PHONE = "+918123456789"
 TENANT = uuid.UUID("11111111-1111-1111-1111-111111111111")

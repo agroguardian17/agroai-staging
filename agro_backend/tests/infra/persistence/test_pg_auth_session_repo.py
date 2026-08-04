@@ -3,25 +3,20 @@
 
 from __future__ import annotations
 
-
 import uuid
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
-
 
 import pytest
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-
 from app.application.ports.auth_session_repo import AuthSessionRepo
 from app.domain.auth import AuthSession
 from app.infra.persistence.pg_auth_session_repo import PgAuthSessionRepo
 
-
 from .conftest import DB_SKIP_REASON, PILOT_TENANT, db_available
-
 
 pytestmark = pytest.mark.skipif(not db_available(), reason=DB_SKIP_REASON)
 

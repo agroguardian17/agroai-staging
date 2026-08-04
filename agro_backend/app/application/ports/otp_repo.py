@@ -8,14 +8,10 @@ implementation lives in :mod:`app.infra.persistence.pg_otp_repo`.
 
 from __future__ import annotations
 
-
 import uuid
 from typing import Protocol, runtime_checkable
 
-
 from app.domain.auth import OtpChallenge
-
-
 
 
 @runtime_checkable

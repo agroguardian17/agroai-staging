@@ -8,15 +8,12 @@ swapped for a minimal one in most tests so the assertions are precise.
 
 from __future__ import annotations
 
-
 import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
-
 import pytest
-
 
 from app.application.evaluate_rules import (
     EvaluateRulesDeps,
@@ -28,7 +25,6 @@ from app.domain.alert import AlertCandidate, AlertType, Severity
 from app.domain.rule_definitions import PILOT_RULESET
 from app.domain.rules import Rule, RuleSet
 from app.domain.sensor import Reading, TransmissionType
-
 
 NOW = datetime(2026, 6, 20, 12, 0, tzinfo=UTC)
 TENANT = uuid.UUID("11111111-1111-1111-1111-111111111111")

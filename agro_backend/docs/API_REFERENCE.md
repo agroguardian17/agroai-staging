@@ -181,6 +181,12 @@ Returns newest-first alerts for a plot. `limit` is 1–200 and defaults to 50. T
 
 Returns newest-first persisted AI suggestions. `limit` is 1–200 and defaults to 50. The response exposes the Marathi message, model version, token count, crop age, and crop stage.
 
+### `GET /api/v1/plots/{plot_id}/ginger_advisories?limit=50`
+
+Same shape as `/suggestions`, filtered to rows where `ai_model_version = 'ginger-engine/v1.0'` — i.e. output from the daily ginger advisory job (`app/jobs/ginger_daily.py`). `limit` is 1–200 and defaults to 50.
+
+Only relevant on plots where the active `crop_seasons.crop_name_english = 'Ginger'`. On non-ginger plots the response is an empty list. Use this endpoint from the dashboard's plot-detail page when you want to distinguish agronomic advisories (this endpoint) from device-health advisories (`/suggestions`).
+
 ## Operations alert routes
 
 ### `GET /api/v1/alerts`

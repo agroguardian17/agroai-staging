@@ -22,6 +22,9 @@ dependencies = [
   "asyncpg>=0.30,<0.31",
   # Sync driver for Alembic migrations (DATABASE_URL_SYNC = postgresql://...).
   "psycopg2-binary>=2.9,<3",
+  # psycopg v3 is required by ginger/engine/runtime_loader.py::PostgresSource,
+  # which reads the ginger knowledge base directly from PostgreSQL.
+  "psycopg[binary]>=3.1,<4",
   "alembic>=1.13,<2",
   "structlog>=24.4,<25",
   "httpx>=0.27,<0.28",
@@ -69,8 +72,11 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["app*"]
+include = ["app*", "ginger*"]
 exclude = ["tests*", "scripts*", "alembic*", "deploy*", "rules*", "firmware*"]
+
+[tool.setuptools.package-data]
+ginger = ["generated/*.sql"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

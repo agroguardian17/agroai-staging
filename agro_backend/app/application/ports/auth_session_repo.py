@@ -9,14 +9,10 @@ blacklist or rotating signing keys.
 
 from __future__ import annotations
 
-
 import uuid
 from typing import Protocol, runtime_checkable
 
-
 from app.domain.auth import AuthSession
-
-
 
 
 @runtime_checkable

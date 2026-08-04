@@ -34,11 +34,9 @@ Zero dependencies beyond stdlib.
 
 from __future__ import annotations
 
-
 import json
 import sys
 from typing import Any
-
 
 COLORS: dict[str, str] = {
     "reset": "\033[0m",
@@ -104,9 +102,7 @@ def _is_interesting(rec: dict[str, Any]) -> bool:
     # Also surface any error/warning across the app so ingest-adjacent
     # problems (DB timeout, missing plot FK) are visible.
     level = rec.get("level")
-    if level in {"warning", "error", "critical"}:
-        return True
-    return False
+    return level in {"warning", "error", "critical"}
 
 
 
