@@ -140,7 +140,7 @@ the public TLS hostname and port `8883`.
 | `CHROMA_HOST` | `localhost` | Chroma hostname; Compose overrides to `chroma`. |
 | `CHROMA_PORT` | `8001` | Host port when running outside Compose; Compose overrides the app value to container port `8000`. |
 | `CHROMA_PERSIST_PATH` | `/data/chroma` | Chroma persistence path. |
-| `CHROMA_EMBEDDING_MODEL` | `paraphrase-multilingual-mpnet-base-v2` | Multilingual embedding model name. The backend image pre-bakes this model. |
+| `CHROMA_EMBEDDING_MODEL` | `paraphrase-multilingual-mpnet-base-v2` | Multilingual embedding model name for future RAG jobs. The production backend image does not pre-bake this model during the pilot ingest path. |
 | `ANTHROPIC_API_KEY` | empty | Claude credential. Required by the current production startup guard, optional for staging ingest and development. |
 | `ANTHROPIC_MODEL_SONNET` | `claude-sonnet-4-5` | Configured Sonnet model name. |
 | `ANTHROPIC_MODEL_HAIKU` | `claude-haiku-4-5` | Configured Haiku model name. |

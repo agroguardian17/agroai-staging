@@ -29,17 +29,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /build
 
-# Install dependencies into an isolated prefix so the runtime stage stays slim.
+# Install production dependencies into an isolated prefix so the runtime stage stays slim.
 COPY pyproject.toml ./
 RUN pip install --upgrade pip wheel \
-    && pip install --prefix=/install ".[dev]"
-
-# Pre-bake the multilingual MPNet model so first request doesn't pay cold-start (~400 MB).
-# This addresses Part 9 failure point #14 and Part 4 Prompt 4.4 requirement.
-# PYTHONPATH must include the --prefix=/install tree so the import resolves.
-ENV PYTHONPATH="/install/lib/python3.12/site-packages:${PYTHONPATH}"
-RUN python -c "from sentence_transformers import SentenceTransformer; \
-SentenceTransformer('paraphrase-multilingual-mpnet-base-v2').save('/install/share/st-models/mpnet')"
+    && pip install --prefix=/install "."
 
 # ---------- Stage 2: runtime ----------
 FROM python:${PYTHON_VERSION}-slim-bookworm AS runtime
@@ -47,7 +40,6 @@ FROM python:${PYTHON_VERSION}-slim-bookworm AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
-    SENTENCE_TRANSFORMERS_HOME=/opt/st-models \
     APP_ENV=production
 
 # Runtime libs only (no build toolchain).
@@ -63,9 +55,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && groupadd --system --gid 1000 agro \
     && useradd --system --uid 1000 --gid agro --home-dir /app --shell /usr/sbin/nologin agro
 
-# Copy installed packages and pre-baked ST model from builder.
+# Copy installed packages from builder.
 COPY --from=builder /install /usr/local
-COPY --from=builder /install/share/st-models /opt/st-models
 
 WORKDIR /app
 COPY --chown=agro:agro app ./app

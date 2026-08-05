@@ -359,7 +359,7 @@ There is no dashboard OTP screen, WebSocket/SSE live stream, or direct database 
 
 `docker-compose.prod.yml` runs Caddy, PostGIS, Mosquitto, ChromaDB, the app, Prometheus, and Grafana on internal Docker networks. The staging/production Caddy image includes the Layer-4 plugin: it terminates public MQTT TLS on port 8883 and forwards the raw connection to Mosquitto's authenticated internal port 1883. Caddy also exposes the API, dashboard proxy, and Tailscale-gated metrics/Grafana routes. Read the staging and Coolify runbooks before exposing a deployment to hardware or farmers.
 
-The container build is multi-stage, runs as the non-root `agro` user, installs native geospatial libraries, copies the pilot seeder into the runtime image, and pre-bakes the multilingual sentence-transformers model. This makes image builds comparatively heavy and requires network access during the build.
+The container build is multi-stage, runs as the non-root `agro` user, installs native geospatial libraries, and copies the pilot seeder into the runtime image. The pilot production image intentionally avoids baking heavyweight local transformer/GPU packages; RAG/model-serving work should live in a separate worker image when enabled.
 
 The Caddy template includes a dashboard reverse-proxy host, but
 `docker-compose.prod.yml` does not define a `streamlit` service. The dashboard
