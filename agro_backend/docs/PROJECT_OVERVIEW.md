@@ -1,14 +1,18 @@
 # AgroGuardian V2 — Project Overview
 
+
 > **Who this is for.** You, a week from now. Anyone new to the project. Anyone who has shipped part of it and wants to understand the whole.
 >
 > **What it explains.** Everything, in the order you should build mental models: *why* → *who* → *what* → *how*. Every section has enough context to stand alone, and points to the specific docs for deeper dives.
 >
 > **How to read it.** Front-to-back once. Then use the table of contents to jump back when a specific piece confuses you.
 
+
 ---
 
+
 ## Table of contents
+
 
 1. [What AgroGuardian is](#1-what-agroguardian-is)
 2. [The problem we are solving](#2-the-problem-we-are-solving)
@@ -33,21 +37,30 @@
 21. [Cheat sheet of common commands](#21-cheat-sheet-of-common-commands)
 22. [Where to look when confused](#22-where-to-look-when-confused)
 
+
 ---
+
 
 ## 1. What AgroGuardian is
 
+
 AgroGuardian is a **precision-agriculture platform** — sensors in the field, data in the cloud, timely advice on the farmer's phone.
+
 
 In one sentence: **buried sensors send soil and battery data to the cloud, two rule engines watch the data (a small per-message device-health engine and a large daily ginger-advisory engine), and the farmer receives short Marathi advisories on WhatsApp today and in an in-house app tomorrow.**
 
+
 The pilot is a single farm in **Aurangabad, Maharashtra**. The pilot proves the loop end-to-end: physical sensor → LoRa radio → 4G modem → MQTT → backend → alert → farmer's phone. Once the loop works for one farm we can duplicate it for many.
+
 
 ---
 
+
 ## 2. The problem we are solving
 
+
 Smallholder farmers in Aurangabad make daily irrigation and crop-management decisions with incomplete information. Common failure modes:
+
 
 - **Over-irrigation.** Water is scarce and grid-electric pumping is expensive. Farmers often over-water because they cannot see moisture below the surface.
 - **Under-irrigation.** In the opposite direction, farmers miss dry patches that show up on satellite weeks later once yield is already lost.
@@ -55,15 +68,21 @@ Smallholder farmers in Aurangabad make daily irrigation and crop-management deci
 - **Frost damage.** Sudden cold snaps in the root zone kill young plants overnight. Farmers wake up to already-damaged crops.
 - **No feedback loop.** When an agronomist gives generic advice, there is no way to check if the farmer applied it or whether it worked.
 
+
 AgroGuardian addresses all five with a small, cheap sensor node buried in each plot, a rule engine that watches those readings continuously, and a farmer-facing channel that speaks Marathi and is short enough to read on a feature phone.
+
 
 Not solving today: pest detection, market pricing, subsidy paperwork, satellite imagery. Those come later.
 
+
 ---
+
 
 ## 3. The pilot in concrete terms
 
+
 Numbers small enough to hold in one hand:
+
 
 - **1 farm** in Aurangabad
 - **1 farmer** with a WhatsApp number and an Android phone (soon: the in-house AgroGuardian app)
@@ -74,9 +93,12 @@ Numbers small enough to hold in one hand:
 - **1 FastAPI backend** in the cloud that ingests MQTT, runs rules, and exposes read APIs
 - **1 Streamlit dashboard** for the ops team to inspect what is happening
 
+
 Each Sub Node covers **two plots** because it has one moisture probe per plot and the LoRa module can be shared. `PLOT_PILOT_001` and `PLOT_PILOT_002` sit under Sub Node 1; `003` and `004` under Sub Node 2.
 
+
 **Concrete identifiers seeded by `scripts/dev/seed_pilot.py`:**
+
 
 | Thing | Value |
 | :--- | :--- |
@@ -84,17 +106,21 @@ Each Sub Node covers **two plots** because it has one moisture probe per plot an
 | Farmer | `aaaaaaaa-1111-1111-1111-111111111111` |
 | Farm | `bbbbbbbb-2222-2222-2222-222222222222` |
 | Main Node | `AGR-MN-0001` (device_type = `master_node`) |
-| Sub Node 1 | `AGR-SN-0001` covering plots 001 + 002 |
-| Sub Node 2 | `AGR-SN-0002` covering plots 003 + 004 |
-| Plots | `PLOT_PILOT_001` … `PLOT_PILOT_004` |
+| Sub Node 1 | `AGR-SN-0001` → **`PLOT_PILOT_001`** only (hardware team confirmed 2026-08-05) |
+| Sub Node 2 | `AGR-SN-0002` → **`PLOT_PILOT_003`** only (hardware team confirmed 2026-08-05) |
+| Plots | `PLOT_PILOT_001` … `PLOT_PILOT_004` all exist in the DB; only 001 and 003 are instrumented in the current pilot. Plots 002 and 004 have `plots.node_id = NULL` (satellite-only tier). |
 | Crops | Ginger (variety Mahima; Kharif 2026 across all 4 plots) |
 | Ginger sowing / harvest | `2026-06-01` / `2027-02-01` (placeholders — dial in with the field team) |
 
+
 Once you know these identifiers, everything else in the code and database will make sense.
+
 
 ---
 
+
 ## 4. Who touches the system — the actors
+
 
 ```mermaid
 flowchart LR
@@ -104,18 +130,22 @@ flowchart LR
         M["Main Node<br/>mounted on a pole"]
     end
 
+
     subgraph OFFICE["Ops office"]
         A["Agronomist<br/>reads dashboard<br/>writes advisories"]
     end
+
 
     subgraph CLOUD["Cloud (AWS Lightsail Mumbai)"]
         BE["Backend<br/>FastAPI + Postgres"]
     end
 
+
     subgraph EXTERNAL["External providers"]
         WA["Meta WhatsApp"]
         CL["Anthropic Claude"]
     end
+
 
     S -- LoRa --> M
     M -- MQTT --> BE
@@ -125,7 +155,9 @@ flowchart LR
     BE -- ask Claude for advisory --> CL
 ```
 
+
 Five human/machine actors show up throughout the codebase:
+
 
 1. **The farmer** — Marathi-only strings, WhatsApp OTP + advisories, eventually push notifications through the app.
 2. **The agronomist / ops team** — Streamlit dashboard, English UI, sees every plot in the tenant, can filter alerts by severity, resolve them.
@@ -133,13 +165,18 @@ Five human/machine actors show up throughout the codebase:
 4. **The Main Node** — smart gateway. Receives LoRa frames, decodes them, constructs JSON, publishes to MQTT over 4G. Also handles time sync, TLS, and retries.
 5. **The backend** — the star of this repo. Everything downstream of MQTT lives here.
 
+
 ---
+
 
 ## 5. The physical hardware — VIRAAI v1.0
 
+
 The hardware is separate from this repo but the backend has to accept whatever it emits. Full spec: `AgroGuardian_FINAL_Roadmap.md` (upstream) and the [hardware wire contract](HARDWARE_WIRE_CONTRACT.md) in this repo.
 
+
 ### Sub Node
+
 
 - **MCU:** ATmega328P-PU at 3.3 V with an 8 MHz external crystal.
 - **Why 328P instead of ESP32:** ultra-low power. Deep sleep between reads, 20 W solar panel + rechargeable battery, months of unattended operation.
@@ -148,7 +185,9 @@ The hardware is separate from this repo but the backend has to accept whatever i
 - **Sensors today:** DS18B20 (OneWire temperature), capacitive soil moisture. Coming: RS485 NPK Modbus RTU, battery voltage divider.
 - **Constraints:** 32 KB flash / 2 KB SRAM / 1 KB EEPROM. Every byte matters. This is why LoRa frames are binary, never JSON.
 
+
 ### Main Node
+
 
 - **MCU:** ESP32-WROOM-32 Dev Module (38-pin), dual-core 240 MHz, WiFi + BLE (though we use 4G for the WAN path, not WiFi).
 - **LoRa:** same RA-02/SX1278 as the Sub Node.
@@ -159,24 +198,34 @@ The hardware is separate from this repo but the backend has to accept whatever i
 - **Framework:** Arduino.
 - **Libraries expected:** SPI, LoRa (Sandeep Mistry), DallasTemperature, OneWire, Wire, TinyGSM, PubSubClient, SD, RTclib.
 
+
 ### LoRa packet policy
+
 
 **Binary only, never JSON over LoRa.** SX1278 payload size caps out around 255 bytes and airtime is expensive. The packet contains: `node_id`, packet counter, battery voltage, battery percent, temperature, soil moisture, N, P, K, flags, CRC. Exact byte widths are still being finalized — see the outstanding "LoRa Packet Protocol v1.0" doc.
 
+
 **JSON only happens on the Main Node → Cloud hop**, over MQTT, over 4G. The Main Node's job is to translate the LoRa binary format into the JSON schema documented in [HARDWARE_WIRE_CONTRACT](HARDWARE_WIRE_CONTRACT.md).
+
 
 ### SIM card
 
+
 BSNL for the pilot, APN `bsnlnet`. Firmware must accept APN change at runtime (Airtel, Jio, BSNL) so we do not have to recompile every time we swap SIMs.
 
+
 ### Power
+
 
 - Sub Node: 20 W solar → LiFePO4 battery → 3.3 V regulator → MCU. Deep sleep between reads keeps average current in the micro-amp range.
 - Main Node: solar panel → battery → ESP32 → 4G modem. Runs continuously (the modem cannot deep-sleep the same way).
 
+
 ---
 
+
 ## 6. The digital system — one-picture architecture
+
 
 ```mermaid
 flowchart TB
@@ -185,6 +234,7 @@ flowchart TB
         MAIN["Main Node<br/>ESP32-WROOM<br/>+ A7672S 4G"]
         SUB -- "LoRa 433 MHz<br/>binary frame" --> MAIN
     end
+
 
     subgraph CLOUD["Lightsail Mumbai VPS"]
         CADDY["Caddy<br/>TLS on :443 + :8883"]
@@ -195,15 +245,18 @@ flowchart TB
         PROM["Prometheus<br/>+ Grafana"]
     end
 
+
     subgraph EXTERNAL["Third-party"]
         WA["Meta WhatsApp<br/>Cloud API"]
         CL["Anthropic Claude"]
     end
 
+
     subgraph HUMANS["People"]
         AGR["Agronomist<br/>Streamlit dashboard"]
         FARMER["Farmer<br/>WhatsApp on phone"]
     end
+
 
     MAIN -- "MQTT over TLS 8883" --> CADDY
     CADDY -- "raw MQTT :1883" --> MOSQ
@@ -217,10 +270,13 @@ flowchart TB
     CADDY -- reverse proxy --> API
     PROM -- scrape --> API
 
+
     classDef db fill:#ffe082,stroke:#f57c00
 ```
 
+
 Verbal walkthrough of that picture:
+
 
 - **Field side.** A Sub Node wakes up, samples its probes, wraps the values in a small binary frame, and shoots it over LoRa to the Main Node. The Main Node decodes the frame, formats a JSON payload, and publishes over MQTT-TLS to `mqtts-<ip>.sslip.io:8883`.
 - **Edge terminator.** Caddy sits at the network edge. It handles TLS for both HTTPS (the API and dashboard) and MQTTS (the field hardware). Behind Caddy, everything is plain TCP on the private Docker network.
@@ -229,11 +285,15 @@ Verbal walkthrough of that picture:
 - **External providers.** Anthropic Claude generates Marathi advisories on demand. Meta WhatsApp delivers OTPs today; when the automatic-dispatch subscriber ships, WhatsApp will also deliver advisories.
 - **People.** The agronomist accesses everything through the Streamlit dashboard (which itself calls the FastAPI read endpoints — no direct database access). The farmer receives OTPs and eventually advisories on WhatsApp.
 
+
 ---
+
 
 ## 7. Life of one reading — end-to-end trace
 
+
 A single soil-moisture reading, from voltage on a probe to a Marathi sentence in the farmer's chat. Some steps are live today; some are scaffolded but not yet wired. Both are marked below.
+
 
 ```mermaid
 sequenceDiagram
@@ -251,6 +311,7 @@ sequenceDiagram
     participant Sub2 as advisory_subscriber<br/>(planned)
     participant Claude
     participant WA as WhatsApp<br/>(planned to auto)
+
 
     Probe->>Sub: analog voltage → ADC value
     Sub->>Sub: sleep timer wakes<br/>read moisture + temp + battery
@@ -279,19 +340,26 @@ sequenceDiagram
     WA->>Sub2: message id
 ```
 
+
 **Which steps are live today (after your recent code):**
+
 
 - Steps 1–11: **live.** A Sub Node reading over LoRa gets into the database if the Main Node firmware publishes MQTT correctly.
 - Steps 12–13: **live.** `CALIBRATION_MODE=true` short-circuits the rules; set to `false` and rules engage.
 - Steps 14–20: **scaffolded but not wired.** `compose_advisory` exists as a use case (`app/application/compose_advisory.py`). No process runs it automatically. Today, an operator would call it from the REPL.
 
+
 Round 13 is the round that closes that gap.
+
 
 ---
 
+
 ## 8. The backend — hexagonal architecture explained
 
+
 The backend follows **ports and adapters**, a.k.a. **hexagonal architecture**. Three concentric layers with strict rules about which can import which.
+
 
 ```mermaid
 flowchart TB
@@ -299,10 +367,12 @@ flowchart TB
         D["Entities (Reading, Plot, AlertCandidate)<br/>Enums (Severity, AlertType, ValidationFlag)<br/>Pure functions (validation gates, rule engine, metrics)"]
     end
 
+
     subgraph APP["Application layer — use cases + ports"]
         UC["Use cases<br/>(validate_reading, ingest_telemetry, evaluate_rules,<br/>process_reading, compose_advisory, send_otp, verify_otp, ...)"]
         PORTS["Ports (Protocols + value objects)<br/>ReadingRepo, PlotRepo, AlertRepo, EventBus, ChatModel,<br/>WhatsappSender, TokenIssuer, OtpRepo, ..."]
     end
+
 
     subgraph INFRA["Infrastructure layer — adapters"]
         HTTP["FastAPI routes<br/>+ auth middleware<br/>+ DI wiring"]
@@ -314,6 +384,7 @@ flowchart TB
         AUTH["python-jose JWT"]
     end
 
+
     HTTP --> UC
     MQTT --> UC
     UC --> PORTS
@@ -324,6 +395,7 @@ flowchart TB
     BUS -.implements.-> PORTS
     AUTH -.implements.-> PORTS
 
+
     classDef pureCls fill:#e8f5e9,stroke:#2e7d32
     classDef appCls fill:#e3f2fd,stroke:#1565c0
     classDef infraCls fill:#fff3e0,stroke:#ef6c00
@@ -332,9 +404,12 @@ flowchart TB
     class HTTP,MQTT,PG,LLM,WA,BUS,AUTH infraCls
 ```
 
+
 ### Layer rules — enforced by tests
 
+
 The rules are not just convention; two AST-scanning tests fail the build if they are violated.
+
 
 | Layer | Path | Allowed imports | Forbidden imports |
 | :--- | :--- | :--- | :--- |
@@ -342,19 +417,27 @@ The rules are not just convention; two AST-scanning tests fail the build if they
 | Application | `app/application/` | `app.domain.*`, `app.application.*`, stdlib | All third-party frameworks; even `structlog` is forbidden — logging is an infra concern |
 | Infrastructure | `app/infra/` | Anything | Nothing forbidden |
 
+
 The tests: `tests/domain/test_domain_purity.py` and `tests/application/test_application_purity.py`. They walk the AST of every file under the target directory and fail if a forbidden import name appears.
+
 
 ### Why bother?
 
+
 Because the day we outgrow Postgres LISTEN/NOTIFY and want Redis Streams, the swap happens in one file (`app/infra/events/pg_notify_bus.py` becomes `app/infra/events/redis_stream_bus.py`). Domain and use cases do not change. Same story for swapping ChromaDB for pgvector, Streamlit for React, or Meta WhatsApp for a Twilio route.
+
 
 More concretely: the pilot rule engine is 264 lines of pure Python with zero framework dependencies. You could copy that file into a Jupyter notebook and run it on a CSV of readings. That is the layer we protect from framework churn.
 
+
 ---
+
 
 ## 9. Every folder, what it does
 
+
 Annotated tree of everything under `agro_backend/`:
+
 
 ```
 agro_backend/
@@ -446,6 +529,7 @@ agro_backend/
 ├─ Dockerfile / Makefile / pyproject.toml / docker-compose.{dev,prod}.yml / .env.example
 └─ script.sh                       ARCHIVED historical bootstrap — do not run
 
+
 ../firmware/                       Hardware firmware (sibling to agro_backend/)
 ├─ README.md                       System picture + first-time bring-up order
 ├─ main_node/                      ESP32-WROOM-32 PlatformIO project
@@ -459,13 +543,18 @@ agro_backend/
    └─ README.md
 ```
 
+
 For a byte-level view of every tracked file, see [FILE_REFERENCE](FILE_REFERENCE.md).
+
 
 ---
 
+
 ## 10. The database — 58 tables grouped by purpose
 
+
 The schema is dense because the roadmap plans for a much bigger system than the pilot needs today. **35 core tables** are grouped into logical clusters, each cluster a file under `app/infra/persistence/models/`. **23 additional `kb_*` and runtime tables** come from the ginger engine's compiled knowledge base (migration 0010) — those are documented in `ginger/generated/agroguardian_ginger_kb.sql` and covered in [GINGER_ENGINE_CHANGES](GINGER_ENGINE_CHANGES.md) §4 rather than repeated below.
+
 
 ```mermaid
 flowchart TB
@@ -500,7 +589,9 @@ flowchart TB
     end
 ```
 
+
 ### Design choices worth knowing
+
 
 - **UUID primary keys** for entity tables (farmers, farms, tenants, seasons). **TEXT primary keys** for human-readable identifiers used in MQTT topics (`plot_id`, `device_id`, `node_id`). **BIGINT IDENTITY** for high-volume time-series (`node_sensor_readings`, `weather_station_readings`).
 - **Enums are TEXT + CHECK** constraints, not native Postgres enums. Easier to extend without a migration hazard on every child partition.
@@ -508,9 +599,12 @@ flowchart TB
 - **Row-level security.** Migration 0008 sets up two Postgres roles: `authenticated_role` (RLS-subject) and `service_role` (`BYPASSRLS` for ingest and cron). A `RESTRICTIVE tenant_iso` policy is ANDed with every other policy so no query crosses tenant boundaries by accident.
 - **Audit trigger.** Migration 0007 attaches an `audit_trigger_fn` to nine master tables. Every INSERT/UPDATE/DELETE writes to `audit_log` with `TG_OP` + OLD/NEW as JSONB, keyed by `app.current_user_role` and `app.current_user_id` session GUCs.
 
+
 All schema deviations from the original design PDF are documented in [SCHEMA_DECISIONS](SCHEMA_DECISIONS.md).
 
+
 ### Migration timeline
+
 
 | # | Purpose |
 | :---: | :--- |
@@ -526,24 +620,33 @@ All schema deviations from the original design PDF are documented in [SCHEMA_DEC
 | **0010** | **Ginger knowledge base — 19 `kb_*` tables + 4 runtime tables + 16 views + immutable-override trigger + 431 rules seeded (~1.1 MB SQL, idempotent)** |
 | **0011** | **Adds `water_pressure_bar DOUBLE PRECISION` column to `node_sensor_readings` for the VIRAAI Sub Node's pressure sensor.** |
 
+
 ---
+
 
 ## 11. Two rule engines — device-health and ginger
 
+
 The pilot runs **two rule engines side by side**. They handle different concerns and run at different cadences.
+
 
 | Engine | What it watches | Cadence | Location | # rules |
 | :--- | :--- | :--- | :--- | :---: |
 | **Device-health** (crop-agnostic) | Battery, moisture, tamper, dry-run, frost, sensor faults | Per MQTT message | `app/domain/rules.py` + `rule_definitions.py` | 7 |
 | **Ginger advisory** (crop-specific) | Growth stage, disease diagnosis, nutrient timing, harvest windows | Daily batch (06:30 IST) | `ginger/engine/*` + `app/jobs/ginger_daily.py` | 431 |
 
+
 The two never interact directly. The per-message engine writes to `alerts_notifications` and emits `NOTIFY alert.created`; the daily engine writes to `ai_suggestions` with `ai_model_version = 'ginger-engine/v1.0'` and reads from its own `engine_state` table across restarts.
+
 
 ### 11.1 Device-health engine (small, pure Python)
 
+
 Lives in `app/domain/rules.py` (the engine itself) and `app/domain/rule_definitions.py` (the pilot rules). Pure — no side effects, no framework imports, testable in isolation.
 
+
 ### Anatomy of a rule
+
 
 ```python
 Rule(
@@ -557,12 +660,15 @@ Rule(
 )
 ```
 
+
 A predicate returns:
 - `False` — rule did not fire.
 - `True` — rule fired, use the template as-is.
 - `dict` — rule fired, use dict as `.format(**dict)` substitutions on the Marathi template. Special keys `value` and `threshold` also populate `AlertCandidate.alert_value` and `.alert_threshold`.
 
+
 ### The 7 pilot rules
+
 
 | rule_id | Severity | Cooldown | English gloss |
 | :--- | :---: | :---: | :--- |
@@ -574,17 +680,24 @@ A predicate returns:
 | `frost` | warning | 4 h | Soil temp {temp}°C, frost risk |
 | `tamper` | critical | 1 h | Device may have been tampered with |
 
+
 **Cooldowns** are enforced at `(plot_id, alert_type)` granularity by `AlertRepo.last_triggered_at`. Two rules with the same alert type share a cooldown — the pilot's only such pair is `low_battery` + `battery_critical`; the CRITICAL cooldown (2 h) is deliberately shorter than the WARNING cooldown (12 h) so a critical drop after a routine low warn still fires through.
+
 
 ### `CALIBRATION_MODE`
 
+
 `EvaluateRulesDeps.calibration_mode` is a boolean wired from the env var of the same name. When true, `evaluate_rules.execute` short-circuits immediately — no metrics computation, no cooldown lookup, no persistence, no events. Ingest still stores the row so you can inspect raw sensor values. Use `CALIBRATION_MODE=true` during early sensor calibration so wonky readings don't spam alerts. Flip to `false` once probes are dialed in. This only affects the device-health engine — the ginger engine has its own `GINGER_JOB_ENABLED` toggle.
+
 
 ### 11.2 Ginger advisory engine (teammate's delivery, 431 rules)
 
+
 Much larger machinery. Delivered by the teammate as a self-contained Python package (`ginger/engine/*` — 7 files) plus a compiled 1.1 MB SQL knowledge base (`ginger/generated/agroguardian_ginger_kb.sql`) loaded by Alembic migration 0010.
 
+
 Key differences from our device-health engine:
+
 
 - **Rules are data, not code.** Editable in the JSON knowledge base (upstream), compiled to SQL, loaded from `kb_rules` at runtime via `runtime_loader.PostgresSource`.
 - **Three-valued logic** (`TRUE`/`FALSE`/`UNKNOWN`). A missing sensor never silently suppresses an advisory — it surfaces as `"insufficient data: <field>"` in `result.unknown`.
@@ -595,15 +708,21 @@ Key differences from our device-health engine:
 - **Persistent state** across restarts (notifier ladders, event edges, answered diagnostics) via our `PgStateStore` at `app/infra/ginger/pg_state_store.py`.
 - **Runs daily**, not per-message. `run_day(plot_id, farm_brain_state, date)` is the entry point.
 
+
 **Farm Brain state** — the input the ginger engine consumes — is assembled from our repositories by `app/application/build_farm_brain.py`. It supplies ~85 of the ~305 declared `kb_farm_brain_fields` today; the rest come back as `None` and the engine reports `UNKNOWN` for any rule that depends on them. Coverage grows as we add weather adapters and operational-records capture.
+
 
 **Full round details:** see [GINGER_ENGINE_CHANGES](GINGER_ENGINE_CHANGES.md).
 
+
 ---
+
 
 ## 12. Notification strategy — push → WhatsApp → SMS
 
+
 The **long-term primary channel** is push notifications through the AgroGuardian farmer app. That app does not exist yet. Today WhatsApp is the bridge.
+
 
 ```mermaid
 flowchart LR
@@ -619,21 +738,28 @@ flowchart LR
     G -->|no| H["SMS last-resort<br/>Round 17+"]
 ```
 
+
 **What is live today:**
 - WhatsApp OTP delivery via `MetaCloudWhatsappSender` (the real Meta Cloud API adapter) or `LogOnlyWhatsappSender` (dev stub that prints to logs). Selection is automatic: production with credentials → real; otherwise → stub.
 - The `ai_suggestions` and `notification_dispatch_log` tables exist and are populated by manual REPL calls to `compose_advisory.execute`.
+
 
 **What is scaffolded but not automated:**
 - Alert-triggered advisory generation. `compose_advisory` runs when called; nothing calls it automatically. Round 13 closes this gap with an event subscriber.
 - Push notifications. Adapter slot exists at `app/infra/notify/` (empty). Phase 9 fills it in once the mobile app can accept a token.
 
+
 **Why WhatsApp is a stopgap.** WhatsApp works for a 1-farm pilot but doesn't scale to a real farmer UX: no read receipts on advisories, no in-app dashboards, no offline caching, no farmer-friendly onboarding. Push + a real app is the product; WhatsApp is a bridge.
+
 
 ---
 
+
 ## 13. Authentication — OTP + JWT
 
+
 The farmer never types a password. Login is OTP over WhatsApp; a successful OTP mints a short-lived access token and a long-lived refresh token.
+
 
 ```mermaid
 sequenceDiagram
@@ -642,6 +768,7 @@ sequenceDiagram
     participant API as FastAPI
     participant WA as WhatsApp adapter
     participant DB as Postgres
+
 
     F->>API: POST /api/v1/auth/send_otp {phone}
     API->>API: rate-limit check
@@ -659,7 +786,9 @@ sequenceDiagram
     end
 ```
 
+
 **Concrete details:**
+
 
 - **OTP hashing** — never store the code itself. Uses a **salted hash** (bcrypt via `passlib`). Two identical OTP requests produce different rows because of the per-row salt.
 - **Access token** — HS256 JWT, 15-minute TTL, contains subject (farmer UUID) + tenant + issued-at. Signed with `AUTH_JWT_SECRET`.
@@ -667,13 +796,18 @@ sequenceDiagram
 - **Logout** — POST `/api/v1/auth/logout` deletes the current refresh session. Query param `everywhere=true` calls `AuthSessionRepo.revoke_all_for_farmer` to invalidate every device.
 - **Rate limiting** — OTP requests per phone number capped at `OTP_MAX_ATTEMPTS` per `OTP_LOCKOUT_MINUTES` window.
 
+
 Full endpoint details in [API_REFERENCE](API_REFERENCE.md).
+
 
 ---
 
+
 ## 14. Environments — dev, staging, prod
 
+
 Three logical environments; they share the same code but different `.env`, Compose file, and secrets.
+
 
 | Env | Purpose | Compose file | Where it runs | Data |
 | :--- | :--- | :--- | :--- | :--- |
@@ -681,27 +815,36 @@ Three logical environments; they share the same code but different `.env`, Compo
 | **staging** | Lightsail VPS that hardware can point at | `docker-compose.prod.yml` | Lightsail Mumbai | Persistent but recoverable |
 | **production** | Post-Round 15, the pilot farmer's real data | `docker-compose.prod.yml` | Lightsail Mumbai | Sacred; nightly `pg_dump` to R2 |
 
+
 The distinction between staging and production is currently one of intent, not one of file layout. Staging is what you're standing up now to test the pilot. Production is the same infrastructure with real farmer data and stricter change control.
+
 
 ### `APP_ENV` boot-time guards
 
+
 `app/config.py` refuses to boot in `production` mode when secrets still look like defaults:
+
 
 - `AUTH_JWT_SECRET` starts with `CHANGE_ME` — refused.
 - `POSTGRES_PASSWORD` is `agro` or `CHANGE_ME` — refused.
 - `MQTT_BROKER_PASSWORD` is `CHANGE_ME` — refused.
 
+
 These guards are why the boot log line includes `env=` — a fast visual check that you did not accidentally run staging with development defaults.
+
 
 ---
 
+
 ## 15. Deployment topology
+
 
 ```mermaid
 flowchart TB
     subgraph EXT["Public internet"]
         USER["Users<br/>· agronomist browser<br/>· hardware over MQTTS"]
     end
+
 
     subgraph LIGHT["Lightsail Mumbai · Ubuntu 22.04"]
         CADDY["Caddy (custom build)<br/>:443 HTTPS · :8883 MQTT-TLS<br/>Let's Encrypt via HTTP-01"]
@@ -716,10 +859,12 @@ flowchart TB
         TS["tailscaled (planned)"]
     end
 
+
     subgraph BACKUP["Off-site (planned)"]
         R2["Cloudflare R2<br/>nightly pg_dump"]
         B2["Backblaze B2<br/>cold storage"]
     end
+
 
     USER -->|HTTPS| CADDY
     USER -->|MQTTS 8883| CADDY
@@ -733,7 +878,9 @@ flowchart TB
     R2 -.->|lifecycle| B2
 ```
 
+
 ### Ports open in the Lightsail firewall
+
 
 | Port | Purpose |
 | :---: | :--- |
@@ -742,21 +889,30 @@ flowchart TB
 | 443 | HTTPS API and dashboard |
 | 8883 | MQTTS from hardware |
 
+
 ### The Caddy trick — one TLS terminator for HTTP *and* MQTT
+
 
 Stock Caddy handles HTTP reverse proxy but MQTT is raw TCP, not HTTP. The custom `deploy/caddy/Dockerfile` builds Caddy with the `caddy-l4` plugin. `deploy/caddy/Caddyfile` uses a `layer4 { :8883 { proxy mosquitto:1883 } }` block to terminate TLS at Caddy and forward the decrypted MQTT stream to Mosquitto on the private Docker network.
 
+
 **Why this matters:** it means Mosquitto never has to know about TLS. `mosquitto.prod.conf` is 15 lines because it only exposes `1883` unencrypted on the internal Docker network. All certificate handling is Caddy's job. If you swap to a real domain later, one config change to the Caddyfile flips both HTTPS and MQTTS at once.
+
 
 Full step-by-step: [deploy/staging/README.md](../deploy/staging/README.md).
 
+
 ---
+
 
 ## 16. Configuration — every environment variable
 
+
 Every runtime setting is a typed field on the `Settings` class in `app/config.py`. The type system is enforced at boot by pydantic-settings; a wrong type or a missing required variable fails startup with a clear error, not a mysterious KeyError later.
 
+
 Grouped by concern:
+
 
 | Group | Vars |
 | :--- | :--- |
@@ -772,22 +928,30 @@ Grouped by concern:
 | **Sentry** | `SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE`, `SENTRY_PROFILES_SAMPLE_RATE` |
 | **CORS + hosts** | `CORS_ALLOWED_ORIGINS`, `TRUSTED_HOSTS` |
 
+
 Full reference (default, description, validators): [CONFIGURATION](CONFIGURATION.md).
 
+
 **The 4 you actually need to think about when standing up staging:**
+
 
 1. `POSTGRES_PASSWORD` — generate with `openssl rand -hex 24`.
 2. `AUTH_JWT_SECRET` — generate with `openssl rand -hex 32`.
 3. `MQTT_BROKER_PASSWORD` — generate with `openssl rand -hex 24`.
 4. `GRAFANA_ADMIN_PASSWORD` — required by the prod Compose file even if you're not using Grafana yet.
 
+
 Everything else has a sensible default or is optional.
+
 
 ---
 
+
 ## 17. Testing — why the tests are shaped this way
 
+
 **~470 tests, 1 skipped.** Test files mirror the source tree.
+
 
 ```
 tests/
@@ -798,33 +962,48 @@ tests/
 └─ fixtures/       Reserved
 ```
 
+
 Three test categories worth calling out because they enforce architectural rules, not just correctness:
+
 
 ### Purity scans
 
+
 `tests/domain/test_domain_purity.py` and `tests/application/test_application_purity.py` walk every file in the target directory and fail the build if a forbidden import name appears. This is how "no framework imports in the domain layer" stops being a convention and becomes a compile-time check.
+
 
 ### Protocol conformance
 
+
 `tests/application/test_ports_are_protocols.py` instantiates a duck-typed fake for every port (ReadingRepo, AlertRepo, EventBus, etc.) and asserts `isinstance(fake, PortProtocol)`. If a Port gets a new method and someone forgets to update the fake, this test catches it.
+
 
 ### Integration tests
 
+
 The `tests/infra/` subtree needs real services. `conftest.py` provides **function-scoped** `async_engine` and `sessionmaker` fixtures — not session-scoped, because pytest-asyncio's auto mode gives each test its own event loop and session-scoped fixtures bind to the first loop, causing `Future attached to a different loop` errors on subsequent tests.
+
 
 **One test is skipped** — `test_migration_roundtrip`. It drops and re-runs every migration, verifying up + down work cleanly. Gated behind `AGRO_RUN_DESTRUCTIVE=1` so it never fires by accident in CI.
 
+
 ### The MQTT broker fix
+
 
 `tests/infra/mqtt/test_broker.py::test_start_schedules_nonblocking_connection` — added when we switched `client.connect()` to `client.connect_async()` — asserts the synchronous `.connect()` is never called. Locks in the fix so future refactors don't regress the FastAPI startup hang.
 
+
 ---
+
 
 ## 18. What's really running vs what's scaffolded
 
+
 Being honest about this saves you from the "wait, isn't that already done?" trap.
 
+
 ### Live and running
+
 
 - **Backend + persistence**
   - MQTT ingest — `IngestBroker` starts in the FastAPI lifespan, subscribes to `agro/v2/+/+/+/telemetry`.
@@ -856,65 +1035,88 @@ Being honest about this saves you from the "wait, isn't that already done?" trap
   - Sub Node EEPROM provisioner (one-time sketch).
   - Main Node PlatformIO project (`firmware/main_node/`) — full LoRa-to-MQTT bridge skeleton.
 
+
 ### Scaffolded but not wired
+
 
 - **Automatic advisory generation on device-health alerts.** `compose_advisory.execute` exists but no subscriber calls it on `alert.created`. **Round 13** closes this. Note: the ginger engine already generates advisories on its own daily cadence; this concerns the per-message device-health path only.
 - **Automatic alert dispatch to farmer.** Once the subscriber lands, the plan is push → WhatsApp → SMS priority ladder. Push adapter is empty (`app/infra/notify/`).
 - **Farmer mobile app.** Not built yet. Phase 9 after Round 15.
 - **`event_outbox`.** Table exists as a SQLAlchemy model; nothing writes to it yet. Intended durability hook for Round 13.
 
+
 ### Deployed to real infrastructure
+
 
 - **Nothing yet.** The Lightsail staging VPS has never been provisioned. `deploy/staging/README.md` is the step-by-step runbook, ~40 min of ops work. Everything above runs on a Mac dev stack today.
 
+
 ### Empty directories reserved for future work
+
 
 `app/infra/ai/tools/`, `app/infra/forecast/`, `app/infra/notify/`, `app/infra/ota/`, `app/infra/satellite/`, `app/infra/storage/`, `tests/e2e/`, `tests/fixtures/`, `tests/infra/ai/`.
 
+
 ### Explicitly out of scope for the pilot
+
 
 - Firmware OTA for the Sub Node (ATmega328P has no WiFi/BLE; physical reflash only).
 - Sentinel-2 NDVI satellite ingestion (Phase 8).
 - Multi-tenant onboarding UX.
 - Payment / billing / subscription lifecycle.
 
+
 ---
+
 
 ## 19. Roadmap — what comes next
 
+
 Ordered by dependency so the fastest path to a working farm loop.
 
+
 **Immediate (unblocks hardware in the field):**
+
 
 - **Round 15 (partial — staging only)** · Provision the Lightsail Mumbai VPS. `deploy/staging/README.md` is the step-by-step. No new code. Everything downstream needs this endpoint.
 - **Sub Node bench flash** · Once VPS is up, use `firmware/sub_node/eeprom_provisioner/eeprom_provisioner.ino` (one-time per board) followed by `sub_node.ino`. Calibrate `DRY_ADC`/`WET_ADC` per probe.
 - **Main Node bench flash** · Edit `firmware/main_node/include/pilot_config.h` (MQTT host + password + Sub-Node map), `pio run -t upload`. Confirm a real reading in `node_sensor_readings`.
 - **First-day watch** · `CALIBRATION_MODE=true` while probes are dialed in. Check the 06:30 IST ginger job log; expect `"insufficient data"` at first.
 
+
 **Short-term (closes the farmer loop):**
+
 
 - **Round 13 · Subscriber wiring.** ~150 LOC + 1 migration. Add `app/jobs/advisory_subscriber.py` with a dedicated asyncpg connection running `LISTEN agro_events`. Route `alert.created` events to `compose_advisory.execute`. Add an `event_outbox` write inside the same transaction as the notify, so restarts don't lose events. Impact: device-health advisory pipeline becomes fully autonomous. Ginger side is already autonomous via Round G.
 - **Round 14 · Real WhatsApp finalization.** ~50 LOC of wiring. The Meta Cloud adapter already exists; the last mile is wiring `WhatsappSender` into the subscriber path and adding a webhook route at `POST /api/v1/webhooks/whatsapp` for inbound messages (Meta requires an active webhook to keep the number).
 - **Round 15 (full) · Production hardening.** Nightly `pg_dump` to Cloudflare R2, Sentry alerts, Tailscale for private `/metrics`, register a real domain (optional). ~1 day of ops.
 
+
 **Medium-term (increases value of what's deployed):**
+
 
 - **Farm Brain coverage.** Ginger engine reports `UNKNOWN` for ~70% of fields. Highest-leverage additions: weather-station adapter (~15 fields), operational records surface (~30 fields), duration fields via a generic `ReadingRepo.history` (~40 fields).
 - **Round 16 · Cadence advisories** for the device-health side (non-alert-driven weekly/monthly summaries via APScheduler — the scheduler is already installed thanks to Round G).
 - **Round 17 · Observability.** Sentry issue alerts, Grafana dashboards over Prometheus metrics, BetterStack uptime pinger.
 
+
 **Long-term (architecture-shaping):**
+
 
 - **Phase 7 · Hardware in the field.** Physical deploy of Sub Nodes + Main Node at the Aurangabad farm after Round 15 is stable. Firmware code is ready (`firmware/`); pending are enclosures, solar mounts, antenna placement, and probe calibration on the actual soil.
 - **Phase 8 · Sentinel-2 NDVI.** Scheduled satellite ingestion for satellite-only plots. Adapter slot at `app/infra/satellite/`.
 - **Phase 9 · Farmer mobile app + push.** Adds `device_tokens` table, FCM push adapter under `app/infra/notify/`, advisory dispatcher priority ladder push → WhatsApp → SMS.
 - **Round 18 · Main Node OTA firmware update.** ESP32 dual-partition A/B OTA over 4G, signed with ed25519. Not urgent for a 1-farm pilot; important before scaling.
 
+
 ---
+
 
 ## 20. Glossary of terms
 
+
 Terms that show up in code and conversation, in one place.
+
 
 | Term | Meaning |
 | :--- | :--- |
@@ -948,13 +1150,18 @@ Terms that show up in code and conversation, in one place.
 | **Precedence relation** | Ginger engine's typed rule interaction — `SUPPRESSES`, `SUPERSEDES`, `BUNDLES`, `SEQUENCES`, `ESCALATES`. Replaces severity ranking. |
 | **caddy-l4** | Caddy plugin that adds Layer-4 (raw TCP) proxying so Caddy can terminate TLS for MQTT on `:8883` and forward to Mosquitto's internal `:1883`. Our custom Caddy image (`deploy/caddy/Dockerfile`) is built with it. |
 
+
 ---
+
 
 ## 21. Cheat sheet of common commands
 
+
 All commands assume you're inside `agro_backend/` unless noted.
 
+
 ### Local dev on the Mac
+
 
 | Task | Command |
 | :--- | :--- |
@@ -971,7 +1178,9 @@ All commands assume you're inside `agro_backend/` unless noted.
 | Type-check | `mypy app/` |
 | Nuke everything (careful) | `docker compose -f docker-compose.dev.yml down -v` |
 
+
 ### On the Lightsail staging VPS
+
 
 | Task | Command |
 | :--- | :--- |
@@ -986,7 +1195,9 @@ All commands assume you're inside `agro_backend/` unless noted.
 | See ginger advisories | `docker compose -f docker-compose.prod.yml exec postgres psql -U agro -d agro -c "SELECT plot_id, generated_at, full_message_marathi FROM ai_suggestions WHERE ai_model_version = 'ginger-engine/v1.0' ORDER BY generated_at DESC LIMIT 5;"` |
 | Disable ginger job temporarily | `echo 'GINGER_JOB_ENABLED=false' >> .env && docker compose -f docker-compose.prod.yml restart app` |
 
+
 ### Firmware — Sub Node (Arduino IDE via USBasp)
+
 
 | Task | How |
 | :--- | :--- |
@@ -995,7 +1206,9 @@ All commands assume you're inside `agro_backend/` unless noted.
 | Calibrate soil probe | Read `Soil raw` in air and water via serial monitor, edit `DRY_ADC`/`WET_ADC` at top of `sub_node.ino`, re-flash. |
 | Monitor serial | Arduino IDE serial monitor at 9600 baud. |
 
+
 ### Firmware — Main Node (PlatformIO)
+
 
 | Task | Command |
 | :--- | :--- |
@@ -1003,10 +1216,13 @@ All commands assume you're inside `agro_backend/` unless noted.
 | Build + flash | `cd firmware/main_node && pio run -t upload` |
 | Serial monitor | `pio device monitor -b 115200` |
 
+
 ### MQTT smoke test from your laptop
+
 
 ```bash
 IP_DASHES=$(echo <STATIC_IP> | tr '.' '-')
+
 
 mosquitto_pub \
   -h "mqtts-${IP_DASHES}.sslip.io" -p 8883 \
@@ -1016,11 +1232,15 @@ mosquitto_pub \
   -m '{"$schema":"agro-guardian/telemetry/v2","tenant_id":"11111111-1111-1111-1111-111111111111","farmer_id":"aaaaaaaa-1111-1111-1111-111111111111","farm_id":"bbbbbbbb-2222-2222-2222-222222222222","plot_id":"PLOT_PILOT_001","node_id":"AGR-SN-0001","recorded_at":"2026-08-03T10:00:00+00:00","received_at_master":"2026-08-03T10:00:00+00:00","transmission_type":"lora","soil_moisture_avg_pct":42.15}'
 ```
 
+
 No output = success. Confirm with the read query above.
+
 
 ---
 
+
 ## 22. Where to look when confused
+
 
 - **"How does the ingest path work end-to-end?"** — §7 above, then read `app/jobs/ingest_startup.py` → `app/infra/mqtt/broker.py` → `app/application/process_reading.py` → `app/application/ingest_telemetry.py` → `app/application/validate_reading.py`.
 - **"What are all these tables?"** — §10 above, then [SCHEMA_DECISIONS](SCHEMA_DECISIONS.md) for the *why*, then `app/infra/persistence/models/` for the ORM shape.
@@ -1037,8 +1257,11 @@ No output = success. Confirm with the read query above.
 - **"Where is file X in the code?"** — [FILE_REFERENCE](FILE_REFERENCE.md) has a full map.
 - **"Why is this the way it is?"** — [CODEBASE_GUIDE](CODEBASE_GUIDE.md) is the reference-density architecture doc.
 
+
 If none of the above tells you what you need, the code is the ultimate source of truth. Every module has a docstring at the top explaining its purpose. Every use case's docstring explains its inputs, outputs, and side effects. Read the docstrings before the code.
 
+
 ---
+
 
 *Last updated 2026-08-03. Written to be read straight through the first time and then jumped into by section.*

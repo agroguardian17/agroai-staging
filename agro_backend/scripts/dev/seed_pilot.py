@@ -1,7 +1,11 @@
 """Seed pilot data for the Aurangabad deployment.
 
 
+
+
 Aggregate-mode hardware topology:
+
+
 
 
 * **1 Main Node** (``AGR-MN-0001``, device_type = ``master_node``).
@@ -18,7 +22,11 @@ Aggregate-mode hardware topology:
   ``compose_advisory`` requires an active season for context).
 
 
+
+
 Idempotent: fixed UUIDs, so re-running upserts.
+
+
 
 
 Backward compatibility: the pilot used to be seeded with a single device
@@ -27,7 +35,11 @@ NOTHING for those exact identifiers so old fake_main_node.py invocations
 continue to work; the new devices are added alongside.
 
 
+
+
 Run::
+
+
 
 
     set -a; source .env; set +a
@@ -35,10 +47,14 @@ Run::
     python scripts/dev/seed_pilot.py
 
 
+
+
 Reads ``DATABASE_URL_SYNC`` from the shell. Prints the IDs at the end so
 you can copy them into ``fake_main_node.py`` + the OTP curl + the Main
 Node firmware config.
 """
+
+
 
 
 from __future__ import annotations
@@ -52,9 +68,13 @@ from sqlalchemy import create_engine, text
 PILOT_TENANT = "11111111-1111-1111-1111-111111111111"
 
 
+
+
 # Stable identifiers - re-running won't multiply rows.
 FARMER_ID = uuid.UUID("aaaaaaaa-1111-1111-1111-111111111111")
 FARM_ID = uuid.UUID("bbbbbbbb-2222-2222-2222-222222222222")
+
+
 
 
 # ----- Hardware identities (aggregate mode) -----
@@ -63,28 +83,49 @@ SUB_NODE_1_ID = "AGR-SN-0001"
 SUB_NODE_2_ID = "AGR-SN-0002"
 
 
+
+
 # ----- Backward-compat sub node (used by earlier tests + fake_main_node.py) -----
 LEGACY_DEVICE_ID = "AGR-MH-0001"
+
+
 
 
 # ----- Plots + seasons -----
 # All 4 pilot plots grow ginger in the Kharif 2026 season. Variety and dates are
 # placeholders until confirmed with the field team; correct them in place when
 # you have the real values.
+#
+# Hardware team confirmed on 2026-08-05: only 2 of the 4 plots are instrumented
+# in the current pilot. AGR-SN-0001 covers PLOT_PILOT_001, AGR-SN-0002 covers
+# PLOT_PILOT_003. Plots 002 and 004 exist in the DB but have plots.node_id =
+# NULL — they're satellite-only for now (the schema's data_tier trigger will
+# set them to 'satellite_only' automatically).
 GINGER_VARIETY = "Mahima"
 GINGER_SOWING_DATE = "2026-06-01"
 GINGER_EXPECTED_HARVEST_DATE = "2027-02-01"
 
+
+# Sentinel used in the fourth tuple slot to mark a plot as uninstrumented.
+_NO_SUB_NODE: str | None = None
+
+
 PLOTS = [
-    # (plot_id, sub_node_device_id, season_id, crop_marathi, crop_english)
-    ("PLOT_PILOT_001", SUB_NODE_1_ID, uuid.UUID("cccccccc-3333-3333-3333-000000000001"), "आले", "Ginger"),
-    ("PLOT_PILOT_002", SUB_NODE_1_ID, uuid.UUID("cccccccc-3333-3333-3333-000000000002"), "आले", "Ginger"),
-    ("PLOT_PILOT_003", SUB_NODE_2_ID, uuid.UUID("cccccccc-3333-3333-3333-000000000003"), "आले", "Ginger"),
-    ("PLOT_PILOT_004", SUB_NODE_2_ID, uuid.UUID("cccccccc-3333-3333-3333-000000000004"), "आले", "Ginger"),
+    # (plot_id, sub_node_device_id_or_None, season_id, crop_marathi, crop_english)
+    ("PLOT_PILOT_001", SUB_NODE_1_ID,  uuid.UUID("cccccccc-3333-3333-3333-000000000001"), "आले", "Ginger"),
+    ("PLOT_PILOT_002", _NO_SUB_NODE,   uuid.UUID("cccccccc-3333-3333-3333-000000000002"), "आले", "Ginger"),
+    ("PLOT_PILOT_003", SUB_NODE_2_ID,  uuid.UUID("cccccccc-3333-3333-3333-000000000003"), "आले", "Ginger"),
+    ("PLOT_PILOT_004", _NO_SUB_NODE,   uuid.UUID("cccccccc-3333-3333-3333-000000000004"), "आले", "Ginger"),
 ]
 
 
+
+
 PHONE = os.environ.get("PILOT_PHONE", "+919999999999")
+
+
+
+
 
 
 
@@ -99,6 +140,8 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
+
+
 
 
     eng = create_engine(sync_url, future=True)
@@ -126,6 +169,8 @@ def main() -> int:
         )
 
 
+
+
         # ---- Farm ----
         conn.execute(
             text(
@@ -143,6 +188,8 @@ def main() -> int:
             ),
             {"farm": FARM_ID, "tenant": PILOT_TENANT, "farmer": FARMER_ID},
         )
+
+
 
 
         # ---- Legacy sub node (backward compat with older tests + fake_main_node.py) ----
@@ -165,6 +212,8 @@ def main() -> int:
         )
 
 
+
+
         # ---- Main Node (holds the MQTT credential) ----
         conn.execute(
             text(
@@ -183,6 +232,8 @@ def main() -> int:
             ),
             {"dev": MAIN_NODE_ID, "tenant": PILOT_TENANT, "farm": FARM_ID},
         )
+
+
 
 
         # ---- Sub Nodes (LoRa endpoints) ----
@@ -214,6 +265,8 @@ def main() -> int:
                     "qr": qr_tail,
                 },
             )
+
+
 
 
         # ---- Plots + Crop Seasons ----
@@ -270,6 +323,8 @@ def main() -> int:
             )
 
 
+
+
     print()
     print("=========================================")
     print("Pilot data seeded successfully")
@@ -298,5 +353,10 @@ def main() -> int:
 
 
 
+
+
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
+
