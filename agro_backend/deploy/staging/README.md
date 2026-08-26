@@ -109,6 +109,25 @@ This produces `deploy/caddy/Caddyfile.prod` with `api-<IP_DASHES>.sslip.io` and 
 
 The production Compose file builds the Caddy image with the Layer-4 plugin, mounts this rendered file, terminates TLS on public port `8883`, and forwards raw MQTT to Mosquitto's authenticated internal port `1883`. Do not replace the rendered file with the template before starting the stack.
 
+The Caddy template forces RSA certificates (`key_type rsa2048`) because the
+SIMCom A7672S modem is more reliable with RSA Let's Encrypt certificates than
+ECDSA certificates. If the modem reports `+CMQTTCONNECT: 0,32`, first confirm
+the public certificate chain with:
+
+```bash
+openssl s_client -connect mqtts-<IP_DASHES>.sslip.io:8883 \
+  -servername mqtts-<IP_DASHES>.sslip.io -showcerts </dev/null
+```
+
+If Caddy previously issued an ECDSA certificate before this setting was added,
+clear the Caddy certificate cache and restart Caddy once so it obtains fresh
+RSA certificates:
+
+```bash
+docker compose -f docker-compose.prod.yml exec caddy rm -rf /data/caddy/certificates
+docker compose -f docker-compose.prod.yml restart caddy
+```
+
 ## Step 5 — Start the stack (5 min)
 
 ```bash

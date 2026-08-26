@@ -13,6 +13,11 @@
 
 {
     email ops@example.com
+    # SIMCom A7672S modems are much more reliable with RSA Let's Encrypt
+    # certificates than ECDSA certificates. Force RSA for all managed certs,
+    # including mqtts-*.sslip.io on the Layer-4 MQTT listener.
+    key_type rsa2048
+
     # Use Let's Encrypt staging while testing to avoid rate limits:
     # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
 
