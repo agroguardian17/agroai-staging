@@ -18,6 +18,10 @@ services:
     container_name: agro_caddy
     restart: always
     cap_add: [NET_BIND_SERVICE]
+    env_file:
+      - .env
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL must be set in .env}
     ports:
       - "80:80"
       - "443:443"

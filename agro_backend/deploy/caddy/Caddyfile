@@ -12,13 +12,15 @@
 # orange-cloud after the cert is in /data with DNS-01 reconfigured.
 
 {
-    email ops@example.com
+    email {$ACME_EMAIL}
+    acme_ca https://acme-v02.api.letsencrypt.org/directory
+
     # SIMCom A7672S modems are much more reliable with RSA Let's Encrypt
     # certificates than ECDSA certificates. Force RSA for all managed certs,
     # including mqtts-*.sslip.io on the Layer-4 MQTT listener.
     key_type rsa2048
 
-    # Use Let's Encrypt staging while testing to avoid rate limits:
+    # Use Let's Encrypt staging while repeatedly testing to avoid rate limits:
     # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
 
     # MQTT is raw TCP, not HTTP. The production image includes caddy-l4 so

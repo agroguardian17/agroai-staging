@@ -67,6 +67,7 @@ Edit `.env` — the fields that matter for staging:
 ```dotenv
 APP_ENV=staging
 APP_VERSION=0.0.1
+ACME_EMAIL=<real-email-for-letsencrypt>
 
 # Postgres — generate a strong password; do NOT reuse dev's
 POSTGRES_USER=agro
@@ -109,10 +110,12 @@ This produces `deploy/caddy/Caddyfile.prod` with `api-<IP_DASHES>.sslip.io` and 
 
 The production Compose file builds the Caddy image with the Layer-4 plugin, mounts this rendered file, terminates TLS on public port `8883`, and forwards raw MQTT to Mosquitto's authenticated internal port `1883`. Do not replace the rendered file with the template before starting the stack.
 
-The Caddy template forces RSA certificates (`key_type rsa2048`) because the
-SIMCom A7672S modem is more reliable with RSA Let's Encrypt certificates than
-ECDSA certificates. If the modem reports `+CMQTTCONNECT: 0,32`, first confirm
-the public certificate chain with:
+The Caddy template uses Let's Encrypt directly, requires a real `ACME_EMAIL`
+from `.env`, and forces RSA certificates (`key_type rsa2048`) because the
+SIMCom A7672S modem is more reliable with RSA certificates than ECDSA
+certificates. Do not use `ops@example.com`; Let's Encrypt rejects example.com
+contacts. If the modem reports `+CMQTTCONNECT: 0,32`, first confirm the public
+certificate chain with:
 
 ```bash
 openssl s_client -connect mqtts-<IP_DASHES>.sslip.io:8883 \
