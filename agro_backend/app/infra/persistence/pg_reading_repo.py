@@ -33,9 +33,10 @@ Three things this implementation enforces that the Protocol can't:
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
+from uuid import UUID
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -254,8 +255,16 @@ def _jsonb_param(d: dict[str, Any]) -> str:
     """JSONB parameter binding via CAST. ``json.dumps`` for stable encoding."""
     import json
 
+    def default(value: Any) -> str:
+        if isinstance(value, Decimal):
+            return str(value)
+        if isinstance(value, datetime | date):
+            return value.isoformat()
+        if isinstance(value, UUID):
+            return str(value)
+        raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
 
-    return json.dumps(d)
+    return json.dumps(d, default=default)
 
 
 

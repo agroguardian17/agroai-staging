@@ -373,11 +373,11 @@ class IngestBroker:
                 # or our own ValueErrors from the SafeDecimal coercer.
                 metrics.ingest_dropped_total.labels(reason="parse_error").inc()
                 log.warning("ingest_broker.parse_error", topic=topic, exc=str(exc))
-            except Exception:
+            except Exception as exc:
                 # Catch-all so the drain loop never dies. Re-raise inside
                 # CancelledError so :meth:`stop` can still cancel us.
                 metrics.ingest_dropped_total.labels(reason="unexpected").inc()
-                log.exception("ingest_broker.unexpected_error", topic=topic)
+                log.exception("ingest_broker.unexpected_error", topic=topic, exc=str(exc))
 
 
 
