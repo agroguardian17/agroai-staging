@@ -11,13 +11,14 @@ from __future__ import annotations
 
 from app.infra.persistence.base import Base
 
-from . import ai, alerts, billing, core, devices, events, farms, readings, system
+from . import ai, alerts, billing, calibration, core, devices, events, farms, readings, system
 
 __all__ = [
     "Base",
     "ai",
     "alerts",
     "billing",
+    "calibration",
     "core",
     "devices",
     "events",

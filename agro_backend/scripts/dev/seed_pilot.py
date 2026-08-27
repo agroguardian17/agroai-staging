@@ -274,6 +274,38 @@ def main() -> int:
 
 
 
+        # ---- Device calibration (Round 16 — raw-payload firmware) ----
+        # Seed default calibration for every Sub Node so the v2-raw
+        # ingest path works immediately. Field team overrides these
+        # per-probe once boards are commissioned in soil. Idempotent:
+        # existing rows are left untouched.
+        conn.execute(
+            text(
+                """
+                INSERT INTO device_calibration (
+                    tenant_id, device_id,
+                    soil_dry_adc, soil_wet_adc,
+                    battery_vref_v, battery_divider_ratio,
+                    pressure_offset_v, pressure_scale_bar_per_v,
+                    flow_pulses_per_litre, flow_window_seconds,
+                    npk_temp_divisor, npk_moisture_divisor, npk_ph_divisor,
+                    updated_by, notes
+                ) VALUES (
+                    :tenant, :dev,
+                    750, 350,
+                    3.300, 3.200,
+                    0.500, 2.500,
+                    450.000, 16.00,
+                    10.000, 10.000, 100.000,
+                    'seed_pilot.py',
+                    'Firmware-baked defaults; field team must dial in DRY/WET ADC per probe.'
+                )
+                ON CONFLICT (tenant_id, device_id) DO NOTHING
+                """
+            ),
+            {"tenant": PILOT_TENANT, "dev": SUB_NODE_1_ID},
+        )
+
         # ---- Plots + Crop Seasons ----
         for i, (plot_id, sub_dev, season_id, crop_mr, crop_en) in enumerate(PLOTS):
             conn.execute(
@@ -343,6 +375,9 @@ def main() -> int:
     print(f"  Main Node:   {MAIN_NODE_ID}    (master_node, pro tier)")
     print(f"  Sub Node 1:  {SUB_NODE_1_ID}   -> PLOT_PILOT_001 (hardware)")
     print(f"  Legacy:      {LEGACY_DEVICE_ID}   (unchanged; older tests + fake_main_node.py)")
+    print()
+    print("Device calibration (Round 16 defaults for v2-raw ingest):")
+    print(f"  {SUB_NODE_1_ID}: DRY_ADC=750 WET_ADC=350  battery_ratio=3.200  flow=450 pulses/L")
     print()
     print("Plots + crops (revised 2026-08-26 — 2-plot pilot scope):")
     for plot_id, sub_dev, _sid, cmr, cen in PLOTS:

@@ -11,6 +11,7 @@
 
 - **2026-08-05 — NPK power switch:** the Sub Node's RS485/NPK 12 V rail is switched by an **IRLZ44N** N-channel MOSFET. This replaced an earlier AO3401A + 2N7000 arrangement that was cancelled after ~2.5 days of unstable-switching tests. Firmware behaviour is unchanged (A2 HIGH → NPK powered, ~1 s warm-up, then Modbus request, then A2 LOW). Any doc, schematic, or PCB reference to `AO3401A + 2N7000` is **obsolete**.
 - **2026-08-26 — Pilot scope reduced to 2 plots:** `AGR-SN-0001 → PLOT_PILOT_001` (hardware). `PLOT_PILOT_002` is satellite-only (`plots.node_id = NULL`, `data_tier='satellite_only'`). `AGR-SN-0002`, `PLOT_PILOT_003`, and `PLOT_PILOT_004` are removed from the pilot for now; they can be re-added by extending `scripts/dev/seed_pilot.py::PLOTS`. Identification remains sub-node-based in the MQTT payload, so scale-out to more plots requires no wire-contract changes.
+- **2026-08-26 — Round 16: raw-values wire format added** (`$schema = "agro-guardian/telemetry/v2-raw"`). The VIRAAI firmware (`viraai-sn-1.0.0-raw` / `viraai-mn-1.0.0-raw`) emits raw ADC counts, pulse counts, and Modbus register integers; server applies per-device calibration from the `device_calibration` table (Alembic 0012). The original v2 (pre-calibrated) format is still accepted — the parser dispatches on the `$schema` field. See §4 below for the raw-variant payload spec.
 
 
 ## 1. Topology (aggregate mode)
@@ -365,3 +366,113 @@ agro/v2/11111111-1111-1111-1111-111111111111/bbbbbbbb-2222-2222-2222-22222222222
 
 
 Fields can be **added** to the schema in a later round; existing fields cannot be removed or renamed without a migration + a version bump on the `$schema` literal (`agro-guardian/telemetry/v3`). The backend will reject `v3` until it explicitly supports it, so firmware and backend need to move together.
+
+
+## 11. Round 16 — v2-raw wire format (`viraai-*-1.0.0-raw` firmware)
+
+
+The `viraai-sn-1.0.0-raw` + `viraai-mn-1.0.0-raw` firmware emit a **raw-values** variant of the telemetry payload. Server applies per-device calibration from the `device_calibration` table (Alembic 0012) before constructing the domain `Reading`. Both variants are accepted concurrently; `parse_inbound` dispatches on `$schema`.
+
+
+### 11.1 Topic
+
+Same as v2:
+
+```
+agro/v2/<tenant_id>/<farm_id>/<sub_node_id>/telemetry
+```
+
+`sub_node_id` is the originating Sub Node (not the Main Node).
+
+
+### 11.2 Payload shape
+
+
+```json
+{
+  "$schema": "agro-guardian/telemetry/v2-raw",
+  "tenant_id": "11111111-1111-1111-1111-111111111111",
+  "farmer_id": "aaaaaaaa-1111-1111-1111-111111111111",
+  "farm_id":   "bbbbbbbb-2222-2222-2222-222222222222",
+  "plot_id":   "PLOT_PILOT_001",
+  "node_id":   "AGR-SN-0001",
+  "seq": 42,
+  "recorded_at":        "2026-08-26T10:45:00+00:00",
+  "received_at_master": "2026-08-26T10:45:03+00:00",
+  "transmission_type":  "lora",
+  "raw_readings": {
+    "soil_adc": 412,
+    "battery_adc": 780,
+    "pressure_adc": 340,
+    "flow_pulses_window": 12,
+    "flow_pulses_total": 145,
+    "ds18b20_temp_c": 27.5,
+    "npk_ok": true,
+    "npk_temp_raw": 291,
+    "npk_moisture_raw": 357,
+    "npk_ec_us_cm": 1045,
+    "npk_ph_raw": 645,
+    "npk_nitrogen_mg_kg": 58,
+    "npk_phosphorus_mg_kg": 79,
+    "npk_potassium_mg_kg": 197,
+    "sub_node_fw": "viraai-sn-1.0.0-raw"
+  },
+  "master_readings": {
+    "bme280_temp_c": 32.4,
+    "bme280_humidity_pct": 65.1,
+    "bme280_pressure_pa": 95000.0,
+    "ina219_bus_v": 12.1,
+    "ina219_current_ma": 250.0,
+    "rain_pulses_window": 3,
+    "wind_pulses_window": 12,
+    "wind_dir_adc": 976,
+    "lora_rssi_dbm": -71,
+    "lora_snr_db": 8.5
+  },
+  "firmware_version": "viraai-mn-1.0.0-raw",
+  "main_node_id": "AGR-MN-0001"
+}
+```
+
+
+### 11.3 Server-side calibration formulas
+
+
+| Reading field | Raw source | Formula (from `device_calibration`) |
+|---|---|---|
+| `soil_moisture_avg_pct` | `raw_readings.soil_adc` | `(WET_ADC - adc) / (WET_ADC - DRY_ADC) × 100`, clamped [0, 100] |
+| `soil_moisture_1_pct`   | `raw_readings.soil_adc` | same as `soil_moisture_avg_pct` (capacitive probe) |
+| `soil_moisture_2_pct`   | `raw_readings.npk_moisture_raw` | `raw / npk_moisture_divisor` (typ. 10) |
+| `battery_voltage_v`     | `raw_readings.battery_adc` | `adc × VREF/1023 × divider_ratio` |
+| `water_pressure_bar`    | `raw_readings.pressure_adc` | `((adc × VREF/1023) - offset) × scale`, clamped ≥ 0 |
+| `water_flow_lpm`        | `raw_readings.flow_pulses_window` | `pulses × 60 / (window_s × pulses_per_L)` |
+| `soil_temp_c`           | `raw_readings.ds18b20_temp_c` | passthrough (sensor is self-calibrated) |
+| `soil_temp_rootzone_c`  | `raw_readings.npk_temp_raw` | `raw / npk_temp_divisor` (typ. 10) |
+| `soil_ph`               | `raw_readings.npk_ph_raw` | `raw / npk_ph_divisor` (typ. 100) |
+| `soil_ec_ms_cm`         | `raw_readings.npk_ec_us_cm` | `raw / 1000` (µS/cm → mS/cm) |
+| `soil_n_mg_kg`          | `raw_readings.npk_nitrogen_mg_kg` | passthrough (sensor-native mg/kg) |
+| `soil_p_mg_kg`          | `raw_readings.npk_phosphorus_mg_kg` | passthrough |
+| `soil_k_mg_kg`          | `raw_readings.npk_potassium_mg_kg` | passthrough |
+| `signal_rssi_dbm`       | `master_readings.lora_rssi_dbm` | passthrough |
+
+When `raw_readings.npk_ok=false` the six NPK-derived fields are set to `None` on the Reading (rule engine treats them as "no data"), so a failed Modbus read never poisons downstream advisories.
+
+
+### 11.4 Master readings landing zone
+
+
+`master_readings` (BME280 + INA219 + rain + wind) is not persisted to `node_sensor_readings` — that table is Sub-Node-keyed. For Round 16 the master block is carried on the `Reading.sensor_health_json` payload so ops tooling can inspect it via the read API. Round 17 will move these to `weather_station_readings` keyed on `main_node_id`.
+
+
+### 11.5 Calibration ownership
+
+
+Row per `(tenant_id, device_id)` in `device_calibration`. Fields:
+
+- `soil_dry_adc`, `soil_wet_adc` — capacitive-probe endpoints
+- `battery_vref_v`, `battery_divider_ratio`
+- `pressure_offset_v`, `pressure_scale_bar_per_v`
+- `flow_pulses_per_litre`, `flow_window_seconds`
+- `npk_temp_divisor`, `npk_moisture_divisor`, `npk_ph_divisor`
+
+Every update bumps `calibration_version`; the version rides on the `Reading.sensor_health_json` block so historical rows record which calibration produced them. `seed_pilot.py` and migration 0012 both write firmware-baked defaults, so the raw path works end-to-end before any human enters a calibration value.

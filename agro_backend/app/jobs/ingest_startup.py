@@ -39,6 +39,7 @@ from app.infra.events.pg_notify_bus import PgNotifyEventBus
 from app.infra.http.deps import _ensure_engine
 from app.infra.mqtt.broker import BrokerSettings, IngestBroker
 from app.infra.persistence.pg_alert_repo import PgAlertRepo
+from app.infra.persistence.pg_device_calibration_repo import PgDeviceCalibrationRepo
 from app.infra.persistence.pg_reading_repo import PgReadingRepo
 
 if TYPE_CHECKING:
@@ -57,6 +58,7 @@ async def build_and_start_ingest(settings: Settings) -> IngestBroker | None:
     reading_repo = PgReadingRepo(sessionmaker)
     alert_repo = PgAlertRepo(sessionmaker)
     event_bus = PgNotifyEventBus(sessionmaker)
+    calibration_repo = PgDeviceCalibrationRepo(sessionmaker)
 
     ingest_deps = IngestDeps(reading_repo=reading_repo, event_bus=event_bus)
     evaluate_deps = EvaluateRulesDeps(
@@ -83,7 +85,12 @@ async def build_and_start_ingest(settings: Settings) -> IngestBroker | None:
         client_id=f"agro-backend-{settings.APP_ENV.value}",
     )
 
-    broker = IngestBroker(broker_settings, deps, max_queue=settings.MQTT_QUEUE_MAXSIZE)
+    broker = IngestBroker(
+        broker_settings,
+        deps,
+        calibration_repo=calibration_repo,
+        max_queue=settings.MQTT_QUEUE_MAXSIZE,
+    )
     await broker.start()
     log.info(
         "ingest_startup.started",

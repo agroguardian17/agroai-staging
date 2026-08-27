@@ -46,9 +46,11 @@ import paho.mqtt.client as mqtt
 import structlog
 from pydantic import ValidationError
 
+from app.application.ports.device_calibration_repo import DeviceCalibrationRepo
 from app.application.process_reading import ProcessReadingDeps
 from app.application.process_reading import execute as process_execute
 from app.infra.mqtt.schemas import (
+    TelemetryInRaw,
     TopicParseError,
     UnknownTopicKindError,
     parse_inbound,
@@ -124,6 +126,12 @@ class IngestBroker:
         broker_settings: BrokerSettings,
         deps: ProcessReadingDeps,
         *,
+        # Round 16: when a `$schema=agro-guardian/telemetry/v2-raw` payload
+        # arrives, the broker fetches per-device calibration constants from
+        # this repo and applies them via TelemetryInRaw.to_domain(cal).
+        # Injecting via keyword keeps back-compat with Round 7 tests that
+        # don't need the raw path.
+        calibration_repo: DeviceCalibrationRepo | None = None,
         # Test seam: allow callers to inject a fake parser/processor for
         # unit tests. Production callers always use the module defaults.
         # ``ingest_fn`` keeps its historical name (Round 7) for backward
@@ -135,6 +143,7 @@ class IngestBroker:
     ) -> None:
         self._settings = broker_settings
         self._deps = deps
+        self._calibration_repo = calibration_repo
         self._parse_fn = parse_fn
         self._ingest_fn = ingest_fn
         self._max_queue = max_queue
@@ -299,7 +308,36 @@ class IngestBroker:
             metrics.ingest_received_total.labels(topic=_topic_template(topic)).inc()
             try:
                 model = self._parse_fn(topic, raw)
-                reading = model.to_domain()  # type: ignore[attr-defined]
+                if isinstance(model, TelemetryInRaw):
+                    # Round 16: raw-values payload — apply per-device
+                    # calibration before building the Reading.
+                    if self._calibration_repo is None:
+                        metrics.ingest_dropped_total.labels(
+                            reason="raw_no_calibration_repo"
+                        ).inc()
+                        log.error(
+                            "ingest_broker.raw_payload_without_calibration_repo",
+                            topic=topic,
+                            node_id=model.node_id,
+                        )
+                        continue
+                    calibration = await self._calibration_repo.get_by_device(
+                        str(model.tenant_id), model.node_id
+                    )
+                    if calibration is None:
+                        metrics.ingest_dropped_total.labels(
+                            reason="missing_calibration"
+                        ).inc()
+                        log.warning(
+                            "ingest_broker.missing_calibration",
+                            topic=topic,
+                            node_id=model.node_id,
+                            tenant_id=str(model.tenant_id),
+                        )
+                        continue
+                    reading = model.to_domain(calibration)
+                else:
+                    reading = model.to_domain()  # type: ignore[attr-defined]
                 result = await self._ingest_fn(reading, self._deps)
                 if result.reading_id is None:  # type: ignore[attr-defined]
                     metrics.ingest_dropped_total.labels(reason="duplicate").inc()

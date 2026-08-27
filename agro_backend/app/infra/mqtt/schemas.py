@@ -33,12 +33,30 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator
 
+from app.domain.device_calibration import (
+    DeviceCalibration,
+    calibrate_battery_v,
+    calibrate_flow_lpm,
+    calibrate_npk_moisture_pct,
+    calibrate_npk_ph,
+    calibrate_npk_temp_c,
+    calibrate_pressure_bar,
+    calibrate_soil_moisture_pct,
+    npk_ec_ms_cm,
+)
 from app.domain.sensor import CadenceMode, Reading, TransmissionType
 
 # Canonical $schema discriminator. Producers (Sub Node firmware via the
 # Main Node 4G uplink) write this string; the parser dispatches on the
 # topic suffix and validates the $schema field as a final guard.
 SCHEMA_TELEMETRY_V2: str = "agro-guardian/telemetry/v2"
+
+# Round 16 raw-values variant. Firmware `viraai-*-1.0.0-raw` sends raw ADC
+# counts, pulse counts, and Modbus register integers; the Main Node adds
+# tenant/farm/timestamp + its own weather-station master_readings block.
+# Server applies per-device calibration from the device_calibration table
+# (Alembic migration 0012) before constructing the domain Reading.
+SCHEMA_TELEMETRY_V2_RAW: str = "agro-guardian/telemetry/v2-raw"
 
 
 
@@ -249,6 +267,225 @@ class TelemetryIn(BaseModel):
 
 
 
+# ===========================================================================
+# Round 16 — raw-values telemetry (`agro-guardian/telemetry/v2-raw`)
+# ===========================================================================
+# Firmware sends raw sensor outputs; server applies per-device calibration
+# from the ``device_calibration`` table. The wire format has two nested
+# blocks:
+#   * ``raw_readings``   — everything the Sub Node measured (CSV over LoRa,
+#                          then JSON'd by the Main Node)
+#   * ``master_readings`` — everything the Main Node measured itself
+#                          (weather station + LoRa link quality)
+#
+# All three models are ``extra="forbid"`` so an unknown field is a hard
+# validation error — no silent field drops between firmware and server.
+# ---------------------------------------------------------------------------
+
+
+class RawReadings(BaseModel):
+    """Raw Sub Node measurements, keyed exactly as the firmware emits them."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    # ADC counts (10-bit)
+    soil_adc: int = Field(ge=0, le=1023)
+    battery_adc: int = Field(ge=0, le=1023)
+    pressure_adc: int = Field(ge=0, le=1023)
+
+    # Pulse counters (flow sensor, hall-effect)
+    flow_pulses_window: int = Field(ge=0)
+    flow_pulses_total: int = Field(ge=0)
+
+    # DS18B20 emits °C directly (sensor's own calibration is in the chip);
+    # nullable because the firmware reports None as JSON null when the
+    # DS18B20 is disconnected.
+    ds18b20_temp_c: SafeDecimal = None
+
+    # NPK Modbus block. `npk_ok=False` means this cycle's read failed CRC
+    # or timed out; the raw fields below should be treated as stale.
+    npk_ok: bool
+    npk_temp_raw: int          # register (°C x10, backend divides)
+    npk_moisture_raw: int      # register (% x10, backend divides)
+    npk_ec_us_cm: int          # sensor-native µS/cm
+    npk_ph_raw: int            # register (pH x100, backend divides)
+    npk_nitrogen_mg_kg: int    # sensor-native mg/kg
+    npk_phosphorus_mg_kg: int
+    npk_potassium_mg_kg: int
+
+    sub_node_fw: str = Field(min_length=1, max_length=64)
+
+
+class MasterReadings(BaseModel):
+    """Main Node's own sensor readings, bundled with each Sub Node telemetry.
+
+    Backend writes these to ``weather_station_readings`` in a follow-up round
+    (Round 17); today they're carried on the payload and dropped at the
+    ingest boundary so the field team can watch them via ``mosquitto_sub``.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    bme280_temp_c: SafeDecimal = None
+    bme280_humidity_pct: SafeDecimal = None
+    bme280_pressure_pa: SafeDecimal = None
+    ina219_bus_v: SafeDecimal = None
+    ina219_current_ma: SafeDecimal = None
+    rain_pulses_window: int = Field(default=0, ge=0)
+    wind_pulses_window: int = Field(default=0, ge=0)
+    wind_dir_adc: int = Field(default=0, ge=0, le=4095)  # ESP32 12-bit ADC
+    lora_rssi_dbm: int = Field(ge=-150, le=20)
+    lora_snr_db: SafeDecimal = None
+
+
+class TelemetryInRaw(BaseModel):
+    """Raw-values telemetry as emitted by ``viraai-*-1.0.0-raw`` firmware.
+
+    Round 16 accepts this alongside the calibrated ``TelemetryIn``; the
+    parser dispatches on the ``$schema`` field. ``to_domain(calibration)``
+    applies per-device calibration constants to produce the same
+    :class:`Reading` object that the calibrated path emits — the rest of
+    the pipeline is untouched.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+        str_strip_whitespace=True,
+    )
+
+    # --- Discriminator ---
+    schema_id: Literal["agro-guardian/telemetry/v2-raw"] = Field(
+        alias="$schema",
+        description="Raw-values schema; server applies calibration before Reading construction.",
+    )
+
+    # --- Identity ---
+    tenant_id: uuid.UUID
+    farmer_id: uuid.UUID
+    farm_id: uuid.UUID
+    plot_id: str = Field(min_length=1, max_length=64)
+    node_id: str = Field(min_length=1, max_length=64)
+
+    # --- Timing ---
+    recorded_at: datetime
+    received_at_master: datetime
+
+    # --- Transport ---
+    transmission_type: TransmissionType
+
+    # --- Sub Node's per-cycle sequence counter (survives reset by using
+    # firmware bootcount too; on its own it's still useful for detecting
+    # gaps and out-of-order delivery). ---
+    seq: int = Field(default=0, ge=0)
+
+    # --- Nested measurement blocks ---
+    raw_readings: RawReadings
+    master_readings: MasterReadings
+
+    # --- Metadata ---
+    firmware_version: str | None = Field(default=None, max_length=64)
+    main_node_id: str | None = Field(default=None, max_length=64)
+
+    @field_validator("recorded_at", "received_at_master")
+    @classmethod
+    def _must_be_aware(cls, dt: datetime) -> datetime:
+        if dt.tzinfo is None:
+            raise ValueError("datetime must be timezone-aware (RFC 3339 with offset)")
+        return dt.astimezone(UTC)
+
+    # ------------------------------------------------------------------
+    # Boundary -> domain (calibration required)
+    # ------------------------------------------------------------------
+    def to_domain(self, calibration: DeviceCalibration) -> Reading:
+        """Apply per-device calibration and build the pure domain Reading.
+
+        Every raw sensor field is converted here. Fields that the raw
+        firmware doesn't send (valve, pump, tamper flags, cadence mode)
+        are left as their Reading defaults. ``master_readings`` are
+        not persisted to ``node_sensor_readings`` — they're carried on
+        the payload for follow-up work in Round 17.
+        """
+        rr = self.raw_readings
+
+        # DS18B20 already reports °C (sensor's own factory calibration).
+        soil_temp_c: Decimal | None = rr.ds18b20_temp_c
+
+        # NPK-derived values only trust the register set if this cycle's
+        # Modbus read passed CRC. Otherwise leave them ``None`` so the
+        # rule engine treats the fields as "no data" rather than "0".
+        if rr.npk_ok:
+            soil_ph = calibrate_npk_ph(rr.npk_ph_raw, calibration)
+            soil_ec_ms_cm = npk_ec_ms_cm(rr.npk_ec_us_cm)
+            soil_n_mg_kg = Decimal(rr.npk_nitrogen_mg_kg)
+            soil_p_mg_kg = Decimal(rr.npk_phosphorus_mg_kg)
+            soil_k_mg_kg = Decimal(rr.npk_potassium_mg_kg)
+            soil_temp_rootzone_c = calibrate_npk_temp_c(rr.npk_temp_raw, calibration)
+            npk_moist_pct = calibrate_npk_moisture_pct(rr.npk_moisture_raw, calibration)
+        else:
+            soil_ph = None
+            soil_ec_ms_cm = None
+            soil_n_mg_kg = None
+            soil_p_mg_kg = None
+            soil_k_mg_kg = None
+            soil_temp_rootzone_c = None
+            npk_moist_pct = None
+
+        # Firmware version string on the reading — prefer the Sub Node's
+        # own string (transmitted in raw_readings.sub_node_fw); fall back
+        # to the top-level metadata field if the Sub Node string is empty.
+        fw = rr.sub_node_fw or self.firmware_version
+
+        # Carry the master_readings + calibration_version through
+        # ``sensor_health_json`` so downstream tooling can inspect them
+        # without a schema change. Round 17 will move these to their own
+        # tables; until then this is the least surprising landing zone.
+        sensor_health: dict[str, Any] = {
+            "calibration_version": calibration.calibration_version,
+            "seq": self.seq,
+            "main_node_id": self.main_node_id,
+            "master_readings": self.master_readings.model_dump(),
+            "flow_pulses_total": rr.flow_pulses_total,
+            "npk_ok": rr.npk_ok,
+        }
+
+        return Reading(
+            tenant_id=self.tenant_id,
+            farmer_id=self.farmer_id,
+            farm_id=self.farm_id,
+            plot_id=self.plot_id,
+            node_id=self.node_id,
+            recorded_at=self.recorded_at,
+            received_at_master=self.received_at_master,
+            transmission_type=self.transmission_type,
+            signal_rssi_dbm=self.master_readings.lora_rssi_dbm,
+            # Battery
+            battery_voltage_v=calibrate_battery_v(rr.battery_adc, calibration),
+            # Soil moisture — capacitive probe reading only. NPK probe's
+            # own moisture reading is carried separately in soil_moisture_2
+            # so the Farm Brain gets both signals.
+            soil_moisture_1_pct=calibrate_soil_moisture_pct(rr.soil_adc, calibration),
+            soil_moisture_2_pct=npk_moist_pct,
+            soil_moisture_avg_pct=calibrate_soil_moisture_pct(rr.soil_adc, calibration),
+            # Soil temperature — DS18B20 for the primary rootzone probe,
+            # NPK register for rootzone reference.
+            soil_temp_c=soil_temp_c,
+            soil_temp_rootzone_c=soil_temp_rootzone_c,
+            # Soil chemistry (NPK)
+            soil_ph=soil_ph,
+            soil_ec_ms_cm=soil_ec_ms_cm,
+            soil_n_mg_kg=soil_n_mg_kg,
+            soil_p_mg_kg=soil_p_mg_kg,
+            soil_k_mg_kg=soil_k_mg_kg,
+            # Water
+            water_flow_lpm=calibrate_flow_lpm(rr.flow_pulses_window, calibration),
+            water_pressure_bar=calibrate_pressure_bar(rr.pressure_adc, calibration),
+            # Diagnostics
+            sensor_health_json=sensor_health,
+            firmware_version=fw,
+        )
+
+
 # ---------------------------------------------------------------------------
 # Parse dispatcher
 # ---------------------------------------------------------------------------
@@ -295,40 +532,65 @@ def _split_topic(topic: str) -> tuple[str, str, str, str]:
 
 
 
-def parse_inbound(topic: str, raw: bytes) -> TelemetryIn:
+def parse_inbound(topic: str, raw: bytes) -> TelemetryIn | TelemetryInRaw:
     """Dispatch an MQTT payload to the right pydantic model.
 
+    Two schemas are supported today:
 
-    Round 5 implements telemetry only. Caller (the ingest worker in
-    Round 7) handles the dispatcher's errors:
+    * ``agro-guardian/telemetry/v2``      → :class:`TelemetryIn` (calibrated
+      fields; original wire format used by ``fake_main_node.py`` and any
+      producer that does its own calibration).
+    * ``agro-guardian/telemetry/v2-raw``  → :class:`TelemetryInRaw` (Round
+      16; the ``viraai-*-1.0.0-raw`` firmware). Server applies per-device
+      calibration before ``to_domain(...)`` is called by the broker.
 
+    Caller (the ingest worker) handles the dispatcher's errors:
 
-    * :class:`TopicParseError`  -> log + drop (malformed topic; producer bug)
-    * :class:`UnknownTopicKindError` -> log + drop (kind not implemented yet)
-    * :class:`pydantic.ValidationError` -> log + drop (payload malformed)
-    * :class:`json.JSONDecodeError` -> log + drop (payload not JSON)
-
+    * :class:`TopicParseError`             — malformed topic
+    * :class:`UnknownTopicKindError`       — topic kind not implemented
+    * :class:`pydantic.ValidationError`    — payload malformed
+    * :class:`json.JSONDecodeError`        — payload not JSON
+    * :class:`ValueError`                  — unknown ``$schema``
 
     On success the returned model is frozen and ready for ``to_domain()``.
+    ``TelemetryInRaw.to_domain`` requires a ``DeviceCalibration`` argument
+    that the broker fetches from the calibration repo.
     """
     _, _, _, kind = _split_topic(topic)
     if kind != TOPIC_KIND_TELEMETRY:
         raise UnknownTopicKindError(
-            f"kind {kind!r} not implemented in Round 5 (only {TOPIC_KIND_TELEMETRY!r} so far)"
+            f"kind {kind!r} not implemented (only {TOPIC_KIND_TELEMETRY!r} today)"
         )
     # json.loads raises JSONDecodeError on bad payload; that subclasses
     # ValueError so the caller's broad except is enough.
     payload = json.loads(raw)
-    return TelemetryIn.model_validate(payload)
+    if not isinstance(payload, dict):
+        raise ValueError(
+            f"MQTT payload must be a JSON object, got {type(payload).__name__}"
+        )
+
+    schema_id = payload.get("$schema")
+    if schema_id == SCHEMA_TELEMETRY_V2:
+        return TelemetryIn.model_validate(payload)
+    if schema_id == SCHEMA_TELEMETRY_V2_RAW:
+        return TelemetryInRaw.model_validate(payload)
+    raise ValueError(
+        f"unknown $schema {schema_id!r}; expected {SCHEMA_TELEMETRY_V2!r} "
+        f"or {SCHEMA_TELEMETRY_V2_RAW!r}"
+    )
 
 
 
 
 __all__ = [
     "SCHEMA_TELEMETRY_V2",
+    "SCHEMA_TELEMETRY_V2_RAW",
     "TOPIC_KIND_TELEMETRY",
+    "MasterReadings",
+    "RawReadings",
     "SafeDecimal",
     "TelemetryIn",
+    "TelemetryInRaw",
     "TopicParseError",
     "UnknownTopicKindError",
     "parse_inbound",
