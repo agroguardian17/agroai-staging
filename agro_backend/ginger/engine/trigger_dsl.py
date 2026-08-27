@@ -20,6 +20,8 @@ Design constraints that came out of the knowledge base itself:
 
 4. NO SIDE EFFECTS. A trigger only reads. Actions are separate.
 
+
+
 Grammar
 -------
     expr     := or_expr

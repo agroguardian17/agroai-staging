@@ -2796,6 +2796,7 @@ INSERT INTO kb_rule_references (rule_id, reference) VALUES
  ('D03-SC-004', 'Domain 6 leaf wetness reasoning')
 ON CONFLICT DO NOTHING;
 
+
 INSERT INTO kb_rule_dependencies (rule_id, direction, target_domain_id) VALUES
  ('D03-SC-004', 'feeds_into', 6)
 ON CONFLICT DO NOTHING;
@@ -6690,6 +6691,7 @@ INSERT INTO kb_golden_tests (rule_id, seq, context, expect, label) VALUES
  ('D07-MO-002', 1, '{"dry_spell_days": 9, "current_stage": "G2"}'::jsonb, 'FALSE', '')
 ON CONFLICT DO NOTHING;
 
+
 INSERT INTO kb_rule_references (rule_id, reference) VALUES
  ('D07-MO-002', 'The Wire Science dry spell record'),
  ('D07-MO-002', 'SIMA'),
@@ -9951,6 +9953,8 @@ INSERT INTO kb_rule_fields (rule_id, field_name) VALUES
  ('D10-SUB-004', 'water_available_oct_feb_litres'),
  ('D10-SUB-004', 'subsidy_scheme_applied')
 ON CONFLICT DO NOTHING;
+
+
 
 INSERT INTO kb_rule_references (rule_id, reference) VALUES
  ('D10-SUB-004', 'govtyojanamaharashtra.com farm pond lining'),
@@ -14140,6 +14144,7 @@ ungrouped AS (
     WHERE r.u_value IS NOT NULL AND m.rule_id IS NULL
 )
 SELECT * FROM grouped UNION ALL SELECT * FROM ungrouped;
+
 
 COMMENT ON VIEW v_u_values_deduplicated IS
  'Each factor contributes exactly once. Summing raw kb_rules.u_value instead would count the cyclone factor three times and make every prediction pessimistic.';

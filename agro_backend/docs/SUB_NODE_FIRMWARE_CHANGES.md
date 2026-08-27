@@ -6,7 +6,7 @@
 
 ## Change 1 — Add `NODE=<sub_node_id>` to the LoRa packet
 
-**Why.** The backend's Main-Node-side parser needs to know which Sub Node originated a reading. With two Sub Nodes on the same LoRa channel and no `NODE` field, packets are ambiguous and readings will attribute to the wrong plot.
+**Why.** The backend's Main-Node-side parser needs to know which Sub Node originated a reading. The current pilot (revised 2026-08-26) has only **1 Sub Node**, so the `NODE` field is not strictly required today. It is still worth adding now because as soon as a second Sub Node is deployed on the same LoRa channel, packets without a `NODE` field become ambiguous and readings will attribute to the wrong plot — the fix is trivial while the field is still hot.
 
 **How.** Store the Sub Node ID (a short string like `"AGR-SN-0001"`) in EEPROM once at provisioning time, read it at boot into a `char subNodeId[16]` buffer, and include it as the first CSV field.
 
@@ -151,7 +151,7 @@ snprintf(packet, sizeof(packet), "...,EC=%s,...", ..., ecStr, ...);
    NODE=AGR-SN-0001,BAT=9.38,BATP=100,DST=27.4,SOIL=41.9,PRESS=5.31,FLOW=8.00,NTEMP=29.1,NMOIST=35.7,EC=1.045,PH=6.45,N=58,P=79,K=197
    ```
 
-5. Repeat with a second Sub Node — reflash the provisioning sketch with `"AGR-SN-0002"` before the production flash.
+5. (Future) When a second Sub Node is added to the pilot, reflash the provisioning sketch with `"AGR-SN-0002"` before the production flash. Not required for the current 2-plot / 1-Sub-Node scope (revised 2026-08-26).
 
 ## What the backend does with this
 

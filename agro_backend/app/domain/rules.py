@@ -248,7 +248,6 @@ def _uuid_namespace() -> uuid.UUID:
 
 
 
-
 __all__ = [
     "PredicateResult",
     "Rule",

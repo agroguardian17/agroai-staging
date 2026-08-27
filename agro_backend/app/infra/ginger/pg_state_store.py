@@ -76,8 +76,9 @@ class PgStateStore:
 
     The class opens a short-lived connection per method call — matching the
     ``SqliteStateStore`` pattern. A future optimisation could pool
-    connections; the daily job iterates ~4 plots in the pilot so pooling is
-    not worth the complexity today.
+    connections; the daily job iterates ~2 plots in the current pilot (1
+    hardware + 1 satellite as of 2026-08-26) so pooling is not worth the
+    complexity today.
     """
 
     def __init__(self, dsn: str) -> None:

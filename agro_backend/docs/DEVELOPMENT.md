@@ -103,7 +103,7 @@ Seed the deterministic pilot entities after migrations:
 PILOT_PHONE=+918123456789 python scripts/dev/seed_pilot.py
 ```
 
-The script creates the pilot tenant/farmer/farm, Main Node, two Sub Nodes, four plots, and active crop seasons. It prints the IDs used in the MQTT topic.
+The script creates the pilot tenant/farmer/farm, Main Node, one Sub Node, two plots (one hardware, one satellite-only), and two active crop seasons. It prints the IDs used in the MQTT topic. (Scope revised 2026-08-26 from 4 → 2 plots; extend `PLOTS` in the seed script to add more.)
 
 The production Dockerfile now copies the seeder into the image. If an older
 running image reports that `scripts/dev/seed_pilot.py` does not exist, rebuild

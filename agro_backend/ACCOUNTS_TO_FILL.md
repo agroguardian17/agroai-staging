@@ -98,7 +98,7 @@ NASA_EARTHDATA_PASSWORD=your-password
 
 - **Signup:** <https://dataspace.copernicus.eu/>
 - ⏱ Instant. Then go to: <https://shapps.dataspace.copernicus.eu/dashboard/#/account/settings> → OAuth clients → Create a new client.
-- 💰 Free tier ~30,000 processing units/month — comfortably enough for 4 plots × daily ingest.
+- 💰 Free tier ~30,000 processing units/month — comfortably enough for the current 2-plot pilot × daily ingest (and would still cover ~4 plots after any near-term scope expansion).
 
 🔑 **Paste into `.env`:**
 

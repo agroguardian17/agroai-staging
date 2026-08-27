@@ -205,6 +205,7 @@ def test_uptime_negative_rejected() -> None:
 
 
 
+
 def test_invalid_transmission_type_rejected() -> None:
     with pytest.raises(ValidationError):
         TelemetryIn.model_validate(_payload(transmission_type="bluetooth"))

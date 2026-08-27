@@ -42,7 +42,7 @@ Round G adds the **ginger advisory engine** (from the teammate's delivery in `ne
 - Notification cadence uses **delivery classes** (`SILENT_GUARD`, `EVENT`, `WINDOW`, `ONCE_UNTIL_RESOLVED`) — no more "condition-is-true fires every day forever."
 - Agronomists can override thresholds at runtime via a `kb_overrides` table; **16 immutable rules** refuse all overrides.
 - Engine state persists across process restarts through a Postgres-backed store.
-- The pilot's crop is now **ginger** on all 4 plots (previously placeholder cotton/soybean/pigeon-pea/maize).
+- The pilot's crop is **ginger** on all plots (previously placeholder cotton/soybean/pigeon-pea/maize). Pilot scope was revised on 2026-08-26 from 4 plots to 2 (one hardware-instrumented + one satellite-only); the ginger crop assignment carries over unchanged.
 
 **What is still true:**
 
@@ -78,7 +78,7 @@ The four crops previously seeded (`Cotton`, `Soybean`, `Pigeon pea`, `Maize`) we
 
 **`docs/PROJECT_OVERVIEW.md`:**
 
-- Section 3's "Concrete identifiers" table crop row changed from `Cotton, Soybean, Pigeon pea, Maize (one per plot for the pilot Kharif season)` to `Ginger (variety Mahima; Kharif 2026 across all 4 plots)`.
+- Section 3's "Concrete identifiers" table crop row changed from `Cotton, Soybean, Pigeon pea, Maize (one per plot for the pilot Kharif season)` to `Ginger (variety Mahima; Kharif 2026, both plots)` (was "all 4 plots" before the 2026-08-26 scope revision).
 
 **Not changed:** hardware wire contract, database schema, MQTT topic pattern. Crop is a data value, not a code value.
 
@@ -205,7 +205,7 @@ Same shape as their `SqliteStateStore` so their tests pass unchanged when the st
 ### Design decisions
 
 - **Sync, not async.** Their calling code is synchronous. The daily job wraps runs in `asyncio.to_thread`, which is the right seam for one sync boundary.
-- **Short-lived connections.** Each method opens a psycopg2 connection, runs the query, closes. The pilot has 4 plots — pooling adds complexity without measurable win.
+- **Short-lived connections.** Each method opens a psycopg2 connection, runs the query, closes. The pilot has 2 plots (revised 2026-08-26) — pooling adds complexity without measurable win.
 - **Version guard.** On `load`, if `engine_state.version != STATE_VERSION`, return `{'_reset_reason': str}`. The engine treats this as "start clean" instead of half-restoring.
 - **JSON payload parity.** The stored blob is the same JSON their `SqliteStateStore` produces. Migrating between backends is a plain `COPY`.
 - **`log_advisory([])` short-circuit.** No connection opened, no SQL issued. Test locks that in.
@@ -427,19 +427,17 @@ Full DB round-trip tests for `PgStateStore` require migration 0010 applied; kept
 - `knowledge_base/Domain*.json` (13 files — upstream source of truth)
 - `docs/T1_Expert_Review_Sheet.docx`
 
-### Should be deleted from `new-docs/` (md5 duplicates)
+### Historical note — md5-duplicate stragglers deleted 2026-08-26
 
-The sandbox mount is read-only for these three, so Priyanshu must delete them from the Mac manually:
+Three files were once dropped into `new-docs/` alongside the canonical
+`AgroGuardian_Ginger_Engine_v1.0_9931/` bundle as md5-identical duplicates:
 
-- `new-docs/ARCHITECTURE_1830.md` (identical to `AgroGuardian_Ginger_Engine_v1.0_9931/ARCHITECTURE.md`)
-- `new-docs/README_4741.md` (identical to `AgroGuardian_Ginger_Engine_v1.0_9931/README.md`)
-- `new-docs/runtime_loader_6493.py` (identical to `AgroGuardian_Ginger_Engine_v1.0_9931/engine/runtime_loader.py`)
+- `new-docs/ARCHITECTURE_1830.md` ≡ `AgroGuardian_Ginger_Engine_v1.0_9931/ARCHITECTURE.md`
+- `new-docs/README_4741.md`       ≡ `AgroGuardian_Ginger_Engine_v1.0_9931/README.md`
+- `new-docs/runtime_loader_6493.py` ≡ `AgroGuardian_Ginger_Engine_v1.0_9931/engine/runtime_loader.py`
 
-```bash
-rm ~/Documents/agri-AI/new-docs/ARCHITECTURE_1830.md
-rm ~/Documents/agri-AI/new-docs/README_4741.md
-rm ~/Documents/agri-AI/new-docs/runtime_loader_6493.py
-```
+They were removed during the 2026-08-26 workspace cleanup; the canonical
+files inside `AgroGuardian_Ginger_Engine_v1.0_9931/` are the surviving copies.
 
 ---
 

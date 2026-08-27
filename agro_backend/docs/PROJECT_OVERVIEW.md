@@ -86,15 +86,15 @@ Numbers small enough to hold in one hand:
 
 - **1 farm** in Aurangabad
 - **1 farmer** with a WhatsApp number and an Android phone (soon: the in-house AgroGuardian app)
-- **4 plots** on that farm — think of each as a distinct field growing one crop
-- **2 Sub Nodes** — the field sensor devices, physically buried near a plot
-- **1 Main Node** — the gateway that collects LoRa frames from both Sub Nodes and pushes them to the cloud over 4G
+- **2 plots** on that farm (revised 2026-08-26; scope reduced from 4 → 2 to focus the initial field validation on one instrumented plot + one satellite-only plot; more can be added later)
+- **1 Sub Node** — the field sensor device, physically buried near the instrumented plot
+- **1 Main Node** — the gateway that collects LoRa frames from the Sub Node and pushes them to the cloud over 4G
 - **1 Postgres database** in the cloud that stores every reading, every alert, every farmer, every device
 - **1 FastAPI backend** in the cloud that ingests MQTT, runs rules, and exposes read APIs
 - **1 Streamlit dashboard** for the ops team to inspect what is happening
 
 
-Each Sub Node covers **two plots** because it has one moisture probe per plot and the LoRa module can be shared. `PLOT_PILOT_001` and `PLOT_PILOT_002` sit under Sub Node 1; `003` and `004` under Sub Node 2.
+The single pilot Sub Node covers **one plot** (`PLOT_PILOT_001`) via its moisture probe. `PLOT_PILOT_002` is satellite-only for now (no sub node attached). Additional plots can be added by extending `scripts/dev/seed_pilot.py::PLOTS` — MQTT payloads carry the originating Sub Node ID, so identification scales without further code changes.
 
 
 **Concrete identifiers seeded by `scripts/dev/seed_pilot.py`:**
@@ -106,10 +106,9 @@ Each Sub Node covers **two plots** because it has one moisture probe per plot an
 | Farmer | `aaaaaaaa-1111-1111-1111-111111111111` |
 | Farm | `bbbbbbbb-2222-2222-2222-222222222222` |
 | Main Node | `AGR-MN-0001` (device_type = `master_node`) |
-| Sub Node 1 | `AGR-SN-0001` → **`PLOT_PILOT_001`** only (hardware team confirmed 2026-08-05) |
-| Sub Node 2 | `AGR-SN-0002` → **`PLOT_PILOT_003`** only (hardware team confirmed 2026-08-05) |
-| Plots | `PLOT_PILOT_001` … `PLOT_PILOT_004` all exist in the DB; only 001 and 003 are instrumented in the current pilot. Plots 002 and 004 have `plots.node_id = NULL` (satellite-only tier). |
-| Crops | Ginger (variety Mahima; Kharif 2026 across all 4 plots) |
+| Sub Node 1 | `AGR-SN-0001` → **`PLOT_PILOT_001`** (only Sub Node in the current pilot) |
+| Plots | `PLOT_PILOT_001` (hardware, instrumented by Sub Node 1) and `PLOT_PILOT_002` (satellite-only, `plots.node_id = NULL`). Scope revised 2026-08-26 from 4 → 2 plots; add more by extending `scripts/dev/seed_pilot.py::PLOTS`. |
+| Crops | Ginger (variety Mahima; Kharif 2026, both plots) |
 | Ginger sowing / harvest | `2026-06-01` / `2027-02-01` (placeholders — dial in with the field team) |
 
 
@@ -526,8 +525,7 @@ agro_backend/
 ├─ rules/                          Reserved
 ├─ scripts/dev/                    Pilot seed + MQTT credential + tail_ingest + fake_main_node
 ├─ tests/                          Domain, application, HTTP, MQTT, persistence, ginger
-├─ Dockerfile / Makefile / pyproject.toml / docker-compose.{dev,prod}.yml / .env.example
-└─ script.sh                       ARCHIVED historical bootstrap — do not run
+└─ Dockerfile / Makefile / pyproject.toml / docker-compose.{dev,prod}.yml / .env.example
 
 
 ../firmware/                       Hardware firmware (sibling to agro_backend/)

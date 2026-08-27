@@ -10,7 +10,7 @@
 
 
 - **2026-08-05 — NPK power switch:** the Sub Node's RS485/NPK 12 V rail is switched by an **IRLZ44N** N-channel MOSFET. This replaced an earlier AO3401A + 2N7000 arrangement that was cancelled after ~2.5 days of unstable-switching tests. Firmware behaviour is unchanged (A2 HIGH → NPK powered, ~1 s warm-up, then Modbus request, then A2 LOW). Any doc, schematic, or PCB reference to `AO3401A + 2N7000` is **obsolete**.
-- **2026-08-05 — Pilot Sub-Node → plot mapping:** confirmed **1:1**, not 1:2. `AGR-SN-0001 → PLOT_PILOT_001` and `AGR-SN-0002 → PLOT_PILOT_003`. Plots 002 and 004 exist in the DB but are uninstrumented in the current pilot (`plots.node_id = NULL`, satellite-only tier).
+- **2026-08-26 — Pilot scope reduced to 2 plots:** `AGR-SN-0001 → PLOT_PILOT_001` (hardware). `PLOT_PILOT_002` is satellite-only (`plots.node_id = NULL`, `data_tier='satellite_only'`). `AGR-SN-0002`, `PLOT_PILOT_003`, and `PLOT_PILOT_004` are removed from the pilot for now; they can be re-added by extending `scripts/dev/seed_pilot.py::PLOTS`. Identification remains sub-node-based in the MQTT payload, so scale-out to more plots requires no wire-contract changes.
 
 
 ## 1. Topology (aggregate mode)
@@ -86,7 +86,7 @@ agro/v2/<tenant_id>/<farm_id>/<node_id>/telemetry
 | `tenant_id` | UUID string | Same as topic's `<tenant_id>`. |
 | `farmer_id` | UUID string | From `seed_pilot.py`. Pilot: `aaaaaaaa-1111-1111-1111-111111111111`. |
 | `farm_id` | UUID string | Same as topic's `<farm_id>`. |
-| `plot_id` | string (1–64 chars) | Which plot this reading covers. Pilot values: `PLOT_PILOT_001` … `PLOT_PILOT_004`. |
+| `plot_id` | string (1–64 chars) | Which plot this reading covers. Current pilot value: `PLOT_PILOT_001` (hardware). `PLOT_PILOT_002` also exists as a satellite-only plot but does not appear in MQTT telemetry. |
 | `node_id` | string (1–64 chars) | Same as topic's `<node_id>` — the originating Sub Node. |
 | `recorded_at` | RFC 3339 timestamp **with offset** | e.g. `"2026-07-21T13:12:00+00:00"`. Naive timestamps (no `Z`/offset) are rejected. |
 | `received_at_master` | RFC 3339 timestamp with offset | When the Main Node received the LoRa frame from the Sub Node. Usually same as `recorded_at` if the Sub Node has an RTC. |

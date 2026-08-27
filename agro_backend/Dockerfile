@@ -66,6 +66,9 @@ COPY --chown=agro:agro alembic.ini ./
 COPY --chown=agro:agro rules ./rules
 # Keep the idempotent pilot seeder available in the staging image.
 COPY --chown=agro:agro scripts/dev/seed_pilot.py ./scripts/dev/seed_pilot.py
+# Keep the exact pilot-scope cleanup available for VPSes seeded before the
+# 2026-08-26 two-plot pilot cutover.
+COPY --chown=agro:agro scripts/dev/cleanup_stale_pilot_data.py ./scripts/dev/cleanup_stale_pilot_data.py
 COPY --chown=agro:agro pyproject.toml ./
 
 USER agro

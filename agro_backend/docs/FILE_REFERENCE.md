@@ -20,7 +20,6 @@ and are not documented as source files.
 | [`agro_backend/README.md`](../README.md) | Backend quick start, local endpoints, tests, and architecture links. |
 | [`agro_backend/alembic.ini`](../alembic.ini) | Alembic script location and logging configuration; the URL is supplied by `DATABASE_URL_SYNC`. |
 | [`agro_backend/pyproject.toml`](../pyproject.toml) | Python package metadata, dependencies, test settings, coverage gate, Ruff, and mypy configuration. |
-| [`agro_backend/script.sh`](../script.sh) | Historical bootstrap script that writes hardware-enablement files; do not use it to overwrite an already-evolved checkout without reviewing its payload. |
 | `agro_backend/.github/workflows/ci.yml` | GitHub Actions lint/type/test/multi-architecture build pipeline. |
 
 ## Application package
@@ -191,7 +190,8 @@ used for autogeneration.
 
 | File | Purpose |
 |---|---|
-| `scripts/dev/seed_pilot.py` | Idempotently seeds the pilot tenant, farmer, farm, Main Node, two Sub Nodes, four plots, and crop seasons. |
+| `scripts/dev/seed_pilot.py` | Idempotently seeds the pilot tenant, farmer, farm, Main Node, one Sub Node, two plots (one hardware, one satellite-only), and crop seasons. Scope revised 2026-08-26 from 4 → 2 plots; extend `PLOTS` to scale out. |
+| `scripts/dev/cleanup_stale_pilot_data.py` | Removes stale rows left over from the pre-2-plot scope: `PLOT_PILOT_003/004`, `AGR-SN-0002`, and every referencing row across `crop_seasons`, `alerts_notifications`, `ai_suggestions`, `node_sensor_readings`. Single transaction; idempotent; supports `--dry-run`. |
 | `scripts/dev/fake_main_node.py` | Generates plausible QoS-1 telemetry against a plain MQTT listener for non-hardware testing. |
 | `scripts/dev/provision_mqtt_credential.sh` | Updates a Mosquitto bcrypt credential and ACL; production mounts require the documented host-side permission procedure. |
 | `scripts/dev/tail_ingest.py` | Filters structured logs into color-tagged ingest diagnostics. |

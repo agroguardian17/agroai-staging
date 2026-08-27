@@ -3,7 +3,10 @@
 
 
 
-Aggregate-mode hardware topology:
+Aggregate-mode hardware topology (revised 2026-08-26 — pilot scope
+reduced from 4 plots to 2: one hardware-instrumented plot + one
+satellite-only plot. More plots can be added later by extending
+``PLOTS`` below):
 
 
 
@@ -13,12 +16,14 @@ Aggregate-mode hardware topology:
   publishes to ``agro/v2/{tenant}/{farm}/{node}/telemetry`` on behalf
   of each Sub Node (the ``node_id`` in each MQTT payload identifies the
   originating Sub Node, not the Main Node).
-* **2 Sub Nodes** (``AGR-SN-0001``, ``AGR-SN-0002``, device_type =
-  ``sub_node``). Each Sub Node covers 2 plots.
-* **4 Plots** (``PLOT_PILOT_001``..``004``).
-  - Plots 001, 002 are covered by Sub Node 1.
-  - Plots 003, 004 are covered by Sub Node 2.
-* **1 Farmer**, **1 Farm**, **4 active crop seasons** (one per plot;
+* **1 Sub Node** (``AGR-SN-0001``, device_type = ``sub_node``) covering
+  ``PLOT_PILOT_001``.
+* **2 Plots**:
+  - ``PLOT_PILOT_001`` — instrumented by Sub Node 1 (hardware tier).
+  - ``PLOT_PILOT_002`` — satellite-only (``plots.node_id = NULL``; the
+    schema's ``plots_set_data_tier`` trigger sets ``data_tier =
+    'satellite_only'`` automatically).
+* **1 Farmer**, **1 Farm**, **2 active crop seasons** (one per plot;
   ``compose_advisory`` requires an active season for context).
 
 
@@ -80,7 +85,6 @@ FARM_ID = uuid.UUID("bbbbbbbb-2222-2222-2222-222222222222")
 # ----- Hardware identities (aggregate mode) -----
 MAIN_NODE_ID = "AGR-MN-0001"
 SUB_NODE_1_ID = "AGR-SN-0001"
-SUB_NODE_2_ID = "AGR-SN-0002"
 
 
 
@@ -92,15 +96,17 @@ LEGACY_DEVICE_ID = "AGR-MH-0001"
 
 
 # ----- Plots + seasons -----
-# All 4 pilot plots grow ginger in the Kharif 2026 season. Variety and dates are
+# Both pilot plots grow ginger in the Kharif 2026 season. Variety and dates are
 # placeholders until confirmed with the field team; correct them in place when
 # you have the real values.
 #
-# Hardware team confirmed on 2026-08-05: only 2 of the 4 plots are instrumented
-# in the current pilot. AGR-SN-0001 covers PLOT_PILOT_001, AGR-SN-0002 covers
-# PLOT_PILOT_003. Plots 002 and 004 exist in the DB but have plots.node_id =
-# NULL — they're satellite-only for now (the schema's data_tier trigger will
-# set them to 'satellite_only' automatically).
+# Revised 2026-08-26: pilot scope reduced to 2 plots so the field team can
+# focus on one instrumented plot + one satellite-only plot for the initial
+# validation. AGR-SN-0001 covers PLOT_PILOT_001. PLOT_PILOT_002 has
+# plots.node_id = NULL — the schema's data_tier trigger sets it to
+# 'satellite_only' automatically. To add more plots later, extend the PLOTS
+# list below; identification is done via the originating Sub Node ID in the
+# MQTT payload so no other code changes are required for scale-out.
 GINGER_VARIETY = "Mahima"
 GINGER_SOWING_DATE = "2026-06-01"
 GINGER_EXPECTED_HARVEST_DATE = "2027-02-01"
@@ -114,8 +120,6 @@ PLOTS = [
     # (plot_id, sub_node_device_id_or_None, season_id, crop_marathi, crop_english)
     ("PLOT_PILOT_001", SUB_NODE_1_ID,  uuid.UUID("cccccccc-3333-3333-3333-000000000001"), "आले", "Ginger"),
     ("PLOT_PILOT_002", _NO_SUB_NODE,   uuid.UUID("cccccccc-3333-3333-3333-000000000002"), "आले", "Ginger"),
-    ("PLOT_PILOT_003", SUB_NODE_2_ID,  uuid.UUID("cccccccc-3333-3333-3333-000000000003"), "आले", "Ginger"),
-    ("PLOT_PILOT_004", _NO_SUB_NODE,   uuid.UUID("cccccccc-3333-3333-3333-000000000004"), "आले", "Ginger"),
 ]
 
 
@@ -237,9 +241,10 @@ def main() -> int:
 
 
         # ---- Sub Nodes (LoRa endpoints) ----
+        # Only one instrumented plot in the current pilot; add more entries here
+        # (and a matching row in PLOTS above) when the second Sub Node ships.
         for sub_id, mac_tail, serial_tail, qr_tail in [
             (SUB_NODE_1_ID, "S1", "SN-PILOT-01", "QR_SN_01"),
-            (SUB_NODE_2_ID, "S2", "SN-PILOT-02", "QR_SN_02"),
         ]:
             conn.execute(
                 text(
@@ -336,13 +341,13 @@ def main() -> int:
     print()
     print("Devices (aggregate mode - Main Node owns MQTT credential):")
     print(f"  Main Node:   {MAIN_NODE_ID}    (master_node, pro tier)")
-    print(f"  Sub Node 1:  {SUB_NODE_1_ID}   -> PLOT_PILOT_001, PLOT_PILOT_002")
-    print(f"  Sub Node 2:  {SUB_NODE_2_ID}   -> PLOT_PILOT_003, PLOT_PILOT_004")
+    print(f"  Sub Node 1:  {SUB_NODE_1_ID}   -> PLOT_PILOT_001 (hardware)")
     print(f"  Legacy:      {LEGACY_DEVICE_ID}   (unchanged; older tests + fake_main_node.py)")
     print()
-    print("Plots + crops:")
+    print("Plots + crops (revised 2026-08-26 — 2-plot pilot scope):")
     for plot_id, sub_dev, _sid, cmr, cen in PLOTS:
-        print(f"  {plot_id} -> {sub_dev}  crop={cen} ({cmr})")
+        tier = "hardware" if sub_dev else "satellite_only"
+        print(f"  {plot_id} -> {sub_dev or '(no sub node)'}  crop={cen} ({cmr})  tier={tier}")
     print()
     print("MQTT topic pattern (Main Node publishes on behalf of Sub Nodes):")
     print(f"  agro/v2/{PILOT_TENANT}/{FARM_ID}/<sub_node_id>/telemetry")

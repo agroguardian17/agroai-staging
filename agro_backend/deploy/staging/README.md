@@ -157,7 +157,7 @@ docker compose -f docker-compose.prod.yml exec -e PILOT_PHONE=+91XXXXXXXXXX \
     app python scripts/dev/seed_pilot.py
 ```
 
-Save the Main Node ID (`AGR-MN-0001`) and Sub Node IDs (`AGR-SN-0001`, `AGR-SN-0002`) that get printed.
+Save the Main Node ID (`AGR-MN-0001`) and Sub Node ID (`AGR-SN-0001`) that get printed. (Scope revised 2026-08-26 from 2 → 1 Sub Node; a second Sub Node `AGR-SN-0002` can be added later by extending the seed script.)
 
 ## Step 7 — Provision the Main Node's MQTT credential (5 min)
 

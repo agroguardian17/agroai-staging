@@ -189,8 +189,9 @@ async def _resolve_plot(alert: AlertFull, deps: ComposeAdvisoryDeps) -> Plot | N
     Strategy: the alert carries ``device_id`` (the Sub Node serial).
     Round 6's PlotRepo.find takes a plot_id, not a device_id, so we
     iterate the farm's plots and pick the one whose node matches.
-    For the pilot's 1-farm-4-plots scope this is fine; a future
-    PlotRepo.find_by_device method would optimise this.
+    For the pilot's 1-farm-2-plots scope (1 hardware plot + 1 satellite
+    plot as of 2026-08-26) this is fine; a future PlotRepo.find_by_device
+    method would optimise this.
     """
     if alert.device_id is None:
         return None
