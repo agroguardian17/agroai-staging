@@ -33,6 +33,7 @@ from app.infra.mqtt.broker import (
     TELEMETRY_TOPIC_FILTER,
     BrokerSettings,
     IngestBroker,
+    _normalize_clock_skew,
     _topic_template,
 )
 from app.infra.mqtt.schemas import (
@@ -377,6 +378,23 @@ async def test_unexpected_error_increments_unexpected_label() -> None:
     assert after == pytest.approx(before + 1)
 
 
+
+
+def test_normalize_clock_skew_replaces_impossible_future_timestamp() -> None:
+    reading = _reading().with_(
+        recorded_at=datetime(2070, 1, 1, 1, 3, 6, tzinfo=UTC),
+        received_at_master=datetime(2070, 1, 1, 1, 3, 6, tzinfo=UTC),
+    )
+    now = datetime(2026, 8, 27, 4, 10, tzinfo=UTC)
+
+    normalized = _normalize_clock_skew(reading, now=now)
+
+    assert normalized.recorded_at == now
+    assert normalized.received_at_master == now
+    assert normalized.validation_warn is True
+    assert normalized.sensor_health_json["timestamp_corrected"] is True
+    assert normalized.sensor_health_json["timestamp_correction_reason"] == "future_clock_skew"
+    assert normalized.sensor_health_json["original_recorded_at"] == "2070-01-01T01:03:06+00:00"
 
 
 # ===========================================================================

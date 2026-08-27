@@ -41,6 +41,7 @@ import logging
 import ssl
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 import paho.mqtt.client as mqtt
 import structlog
@@ -74,6 +75,8 @@ TELEMETRY_TOPIC_FILTER: str = "agro/v2/+/+/+/telemetry"
 
 
 QOS_AT_LEAST_ONCE: int = 1
+MAX_CLOCK_SKEW_FUTURE: timedelta = timedelta(days=1)
+MAX_CLOCK_SKEW_PAST: timedelta = timedelta(days=365)
 
 
 
@@ -338,6 +341,7 @@ class IngestBroker:
                     reading = model.to_domain(calibration)
                 else:
                     reading = model.to_domain()  # type: ignore[attr-defined]
+                reading = _normalize_clock_skew(reading)
                 result = await self._ingest_fn(reading, self._deps)
                 if result.reading_id is None:  # type: ignore[attr-defined]
                     metrics.ingest_dropped_total.labels(reason="duplicate").inc()
@@ -395,12 +399,69 @@ def _topic_template(topic: str) -> str:
     return "other"
 
 
+def _normalize_clock_skew(reading: object, *, now: datetime | None = None) -> object:
+    """Replace impossible device timestamps with server time.
+
+    Field hardware can briefly boot with a bad RTC/modem time (for example
+    2070-01-01). ``node_sensor_readings`` is monthly-partitioned, so such a
+    timestamp can miss all existing partitions and make Postgres reject the
+    insert. For ingest we prefer a usable row with a validation warning over
+    dropping the packet: store the original timestamps in ``sensor_health_json``
+    and stamp the row with server UTC time.
+    """
+    if not hasattr(reading, "recorded_at") or not hasattr(reading, "with_"):
+        return reading
+
+    current = now or datetime.now(UTC)
+    recorded_at = reading.recorded_at
+    if recorded_at.tzinfo is None:
+        recorded_at = recorded_at.replace(tzinfo=UTC)
+    else:
+        recorded_at = recorded_at.astimezone(UTC)
+
+    too_future = recorded_at > current + MAX_CLOCK_SKEW_FUTURE
+    too_old = recorded_at < current - MAX_CLOCK_SKEW_PAST
+    if not (too_future or too_old):
+        return reading
+
+    received_at_master = reading.received_at_master
+    if received_at_master.tzinfo is None:
+        received_at_master = received_at_master.replace(tzinfo=UTC)
+    else:
+        received_at_master = received_at_master.astimezone(UTC)
+
+    health = dict(reading.sensor_health_json)
+    health.update(
+        {
+            "timestamp_corrected": True,
+            "timestamp_correction_reason": "future_clock_skew" if too_future else "past_clock_skew",
+            "original_recorded_at": recorded_at.isoformat(),
+            "original_received_at_master": received_at_master.isoformat(),
+        }
+    )
+    log.warning(
+        "ingest_broker.timestamp_corrected",
+        node_id=reading.node_id,
+        original_recorded_at=recorded_at.isoformat(),
+        corrected_recorded_at=current.isoformat(),
+    )
+    return reading.with_(
+        recorded_at=current,
+        received_at_master=current,
+        sensor_health_json=health,
+        validation_warn=True,
+    )
+
+
 
 
 __all__ = [
+    "MAX_CLOCK_SKEW_FUTURE",
+    "MAX_CLOCK_SKEW_PAST",
     "MAX_QUEUE",
     "QOS_AT_LEAST_ONCE",
     "TELEMETRY_TOPIC_FILTER",
     "BrokerSettings",
     "IngestBroker",
+    "_normalize_clock_skew",
 ]
