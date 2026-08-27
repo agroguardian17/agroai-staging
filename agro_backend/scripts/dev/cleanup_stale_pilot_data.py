@@ -36,51 +36,98 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from dataclasses import dataclass
 
 from sqlalchemy import Connection, create_engine, text
 
 STALE_PLOT_IDS = ("PLOT_PILOT_003", "PLOT_PILOT_004")
 STALE_DEVICE_IDS = ("AGR-SN-0002",)
 
-# (label, table, SQL) — order matters: children before parents.
-CLEANUP_STEPS: list[tuple[str, str, str]] = [
+
+@dataclass(frozen=True)
+class CleanupStep:
+    """One guarded delete in the stale-pilot cleanup plan."""
+
+    label: str
+    tables: tuple[str, ...]
+    required_columns: dict[str, tuple[str, ...]]
+    sql: str
+
+
+# Order matters: children before parents.
+CLEANUP_STEPS: list[CleanupStep] = [
     # 1. Anything that references these plots — remove first.
-    (
-        "ai_suggestions for stale plots",
-        "ai_suggestions",
-        "DELETE FROM ai_suggestions WHERE plot_id = ANY(:plots)",
+    CleanupStep(
+        label="ai_suggestions for stale plots",
+        tables=("ai_suggestions",),
+        required_columns={"ai_suggestions": ("plot_id",)},
+        sql="DELETE FROM ai_suggestions WHERE plot_id = ANY(:plots)",
     ),
-    (
-        "alerts_notifications for stale plots",
-        "alerts_notifications",
-        "DELETE FROM alerts_notifications WHERE plot_id = ANY(:plots)",
+    CleanupStep(
+        label="notification_dispatch_log for stale-device alerts",
+        tables=("notification_dispatch_log", "alerts_notifications"),
+        required_columns={
+            "notification_dispatch_log": ("alert_id",),
+            "alerts_notifications": ("alert_id", "device_id"),
+        },
+        sql=(
+            "DELETE FROM notification_dispatch_log "
+            "WHERE alert_id IN ("
+            "SELECT alert_id FROM alerts_notifications WHERE device_id = ANY(:devices)"
+            ")"
+        ),
     ),
-    (
-        "node_sensor_readings for stale plots",
-        "node_sensor_readings",
-        "DELETE FROM node_sensor_readings WHERE plot_id = ANY(:plots)",
+    CleanupStep(
+        label="notification_dlq for stale-device alerts",
+        tables=("notification_dlq", "alerts_notifications"),
+        required_columns={
+            "notification_dlq": ("alert_id",),
+            "alerts_notifications": ("alert_id", "device_id"),
+        },
+        sql=(
+            "DELETE FROM notification_dlq "
+            "WHERE alert_id IN ("
+            "SELECT alert_id FROM alerts_notifications WHERE device_id = ANY(:devices)"
+            ")"
+        ),
     ),
-    (
-        "crop_seasons for stale plots",
-        "crop_seasons",
-        "DELETE FROM crop_seasons WHERE plot_id = ANY(:plots)",
+    CleanupStep(
+        label="alerts_notifications for stale devices",
+        tables=("alerts_notifications",),
+        required_columns={"alerts_notifications": ("device_id",)},
+        sql="DELETE FROM alerts_notifications WHERE device_id = ANY(:devices)",
+    ),
+    CleanupStep(
+        label="node_sensor_readings for stale plots",
+        tables=("node_sensor_readings",),
+        required_columns={"node_sensor_readings": ("plot_id",)},
+        sql="DELETE FROM node_sensor_readings WHERE plot_id = ANY(:plots)",
+    ),
+    CleanupStep(
+        label="crop_seasons for stale plots",
+        tables=("crop_seasons",),
+        required_columns={"crop_seasons": ("plot_id",)},
+        sql="DELETE FROM crop_seasons WHERE plot_id = ANY(:plots)",
     ),
     # 2. Plots themselves.
-    (
-        "plots (PLOT_PILOT_003, PLOT_PILOT_004)",
-        "plots",
-        "DELETE FROM plots WHERE plot_id = ANY(:plots)",
+    CleanupStep(
+        label="plots (PLOT_PILOT_003, PLOT_PILOT_004)",
+        tables=("plots",),
+        required_columns={"plots": ("plot_id",)},
+        sql="DELETE FROM plots WHERE plot_id = ANY(:plots)",
     ),
     # 3. Anything that references the stale devices before the device row.
-    (
-        "node_sensor_readings for stale devices",
-        "node_sensor_readings",
-        "DELETE FROM node_sensor_readings WHERE node_id = ANY(:devices)",
+    CleanupStep(
+        label="node_sensor_readings for stale devices",
+        tables=("node_sensor_readings",),
+        required_columns={"node_sensor_readings": ("node_id",)},
+        sql="DELETE FROM node_sensor_readings WHERE node_id = ANY(:devices)",
     ),
-    (
-        "device_registry (AGR-SN-0002)",
-        "device_registry",
-        "DELETE FROM device_registry WHERE device_id = ANY(:devices)",
+    CleanupStep(
+        label="device_registry (AGR-SN-0002)",
+        tables=("device_registry",),
+        required_columns={"device_registry": ("device_id",)},
+        sql="DELETE FROM device_registry WHERE device_id = ANY(:devices)",
     ),
 ]
 
@@ -93,6 +140,40 @@ def _table_exists(conn: Connection, table_name: str) -> bool:
             {"qualified_table_name": f"public.{table_name}"},
         ).scalar()
     )
+
+
+def _column_exists(conn: Connection, table_name: str, column_name: str) -> bool:
+    """Return whether a public table column exists without aborting the transaction."""
+    return bool(
+        conn.execute(
+            text(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public'
+                      AND table_name = :table_name
+                      AND column_name = :column_name
+                )
+                """
+            ),
+            {"table_name": table_name, "column_name": column_name},
+        ).scalar()
+    )
+
+
+def _skip_reason(conn: Connection, step: CleanupStep) -> str | None:
+    """Return why a cleanup step cannot run on this DB shape, or None."""
+    for table_name in step.tables:
+        if not _table_exists(conn, table_name):
+            return f"table not present: {table_name}"
+
+    for table_name, column_names in step.required_columns.items():
+        for column_name in column_names:
+            if not _column_exists(conn, table_name, column_name):
+                return f"column not present: {table_name}.{column_name}"
+
+    return None
 
 
 def main() -> int:
@@ -129,18 +210,19 @@ def main() -> int:
     with eng.connect() as conn:
         transaction = conn.begin()
         try:
-            for label, table_name, sql in CLEANUP_STEPS:
-                if not _table_exists(conn, table_name):
-                    print(f"  skip  {label:<52} (table not present)")
+            for step in CLEANUP_STEPS:
+                skip_reason = _skip_reason(conn, step)
+                if skip_reason is not None:
+                    print(f"  skip  {step.label:<52} ({skip_reason})")
                     continue
 
                 result = conn.execute(
-                    text(sql),
+                    text(step.sql),
                     {"plots": plots_param, "devices": devices_param},
                 )
                 n = result.rowcount if result.rowcount is not None else 0
 
-                print(f"  {'preview' if args.dry_run else 'deleted'}  {label:<52} rows={n}")
+                print(f"  {'preview' if args.dry_run else 'deleted'}  {step.label:<52} rows={n}")
                 total_removed += n
 
             if args.dry_run:
