@@ -37,45 +37,62 @@ import argparse
 import os
 import sys
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import Connection, create_engine, text
 
-STALE_PLOT_IDS   = ("PLOT_PILOT_003", "PLOT_PILOT_004")
+STALE_PLOT_IDS = ("PLOT_PILOT_003", "PLOT_PILOT_004")
 STALE_DEVICE_IDS = ("AGR-SN-0002",)
 
-# (label, SQL) — order matters: children before parents.
-CLEANUP_STEPS: list[tuple[str, str]] = [
+# (label, table, SQL) — order matters: children before parents.
+CLEANUP_STEPS: list[tuple[str, str, str]] = [
     # 1. Anything that references these plots — remove first.
     (
         "ai_suggestions for stale plots",
+        "ai_suggestions",
         "DELETE FROM ai_suggestions WHERE plot_id = ANY(:plots)",
     ),
     (
         "alerts_notifications for stale plots",
+        "alerts_notifications",
         "DELETE FROM alerts_notifications WHERE plot_id = ANY(:plots)",
     ),
     (
         "node_sensor_readings for stale plots",
+        "node_sensor_readings",
         "DELETE FROM node_sensor_readings WHERE plot_id = ANY(:plots)",
     ),
     (
         "crop_seasons for stale plots",
+        "crop_seasons",
         "DELETE FROM crop_seasons WHERE plot_id = ANY(:plots)",
     ),
     # 2. Plots themselves.
     (
         "plots (PLOT_PILOT_003, PLOT_PILOT_004)",
+        "plots",
         "DELETE FROM plots WHERE plot_id = ANY(:plots)",
     ),
     # 3. Anything that references the stale devices before the device row.
     (
         "node_sensor_readings for stale devices",
+        "node_sensor_readings",
         "DELETE FROM node_sensor_readings WHERE node_id = ANY(:devices)",
     ),
     (
         "device_registry (AGR-SN-0002)",
+        "device_registry",
         "DELETE FROM device_registry WHERE device_id = ANY(:devices)",
     ),
 ]
+
+
+def _table_exists(conn: Connection, table_name: str) -> bool:
+    """Return whether a public table exists without aborting the transaction."""
+    return bool(
+        conn.execute(
+            text("SELECT to_regclass(:qualified_table_name) IS NOT NULL"),
+            {"qualified_table_name": f"public.{table_name}"},
+        ).scalar()
+    )
 
 
 def main() -> int:
@@ -97,7 +114,7 @@ def main() -> int:
         )
         return 1
 
-    plots_param   = list(STALE_PLOT_IDS)
+    plots_param = list(STALE_PLOT_IDS)
     devices_param = list(STALE_DEVICE_IDS)
 
     eng = create_engine(sync_url, future=True)
@@ -109,35 +126,32 @@ def main() -> int:
     print()
 
     total_removed = 0
-    with eng.begin() as conn:
-        for label, sql in CLEANUP_STEPS:
-            try:
+    with eng.connect() as conn:
+        transaction = conn.begin()
+        try:
+            for label, table_name, sql in CLEANUP_STEPS:
+                if not _table_exists(conn, table_name):
+                    print(f"  skip  {label:<52} (table not present)")
+                    continue
+
                 result = conn.execute(
                     text(sql),
                     {"plots": plots_param, "devices": devices_param},
                 )
                 n = result.rowcount if result.rowcount is not None else 0
-            except Exception as exc:
-                # Missing tables are OK on very-first-run environments:
-                # the seed may not have created every referenced table yet.
-                msg = str(exc)
-                if "does not exist" in msg or "UndefinedTable" in msg:
-                    print(f"  skip  {label:<52} (table not present)")
-                    continue
-                print(f"  FAIL  {label}: {exc}")
-                raise
 
-            print(f"  {'preview' if args.dry_run else 'deleted'}  "
-                  f"{label:<52} rows={n}")
-            total_removed += n
+                print(f"  {'preview' if args.dry_run else 'deleted'}  {label:<52} rows={n}")
+                total_removed += n
 
-        if args.dry_run:
-            conn.rollback()
-            print()
-            print(f"Dry-run complete — {total_removed} row(s) would have been removed.")
-        else:
-            # commit is implicit at the end of the ``with eng.begin()`` block
-            pass
+            if args.dry_run:
+                transaction.rollback()
+                print()
+                print(f"Dry-run complete — {total_removed} row(s) would have been removed.")
+            else:
+                transaction.commit()
+        except Exception:
+            transaction.rollback()
+            raise
 
     if not args.dry_run:
         print()
