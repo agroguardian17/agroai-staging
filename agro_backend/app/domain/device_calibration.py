@@ -68,7 +68,7 @@ class DeviceCalibration:
 
     # Flow sensor
     flow_pulses_per_litre: Decimal    # hall-effect ticks per litre (typ. 450)
-    flow_window_seconds: Decimal      # firmware reporting cadence (typ. 16.0)
+    flow_window_seconds: Decimal      # fallback reporting cadence (typ. 300.0)
 
     # NPK register scaling
     npk_temp_divisor: Decimal         # register / 10  → °C
@@ -135,20 +135,49 @@ def calibrate_pressure_bar(raw_adc: int, cal: DeviceCalibration) -> Decimal:
     return bar if bar > ZERO else ZERO
 
 
-def calibrate_flow_lpm(pulses_window: int, cal: DeviceCalibration) -> Decimal:
+def calibrate_flow_lpm(
+    pulses_window: int,
+    cal: DeviceCalibration,
+    window_seconds_override: Decimal | None = None,
+) -> Decimal | None:
     """Convert per-window pulse count to litres/minute.
 
     ``L/min = pulses x 60 / (window_seconds x pulses_per_L)``
 
-    If ``pulses_per_L`` or ``window_seconds`` is zero (misconfigured
-    calibration row), return 0 rather than raising — downstream rules
-    treat 0 flow as "no water", which is a safer default than crashing.
+    Round 16 used ``cal.flow_window_seconds`` as a fixed compile-time
+    constant. 2026-08-27 v2 firmware (Sub Node 5-min cadence + LowPower
+    WDT-timed sleep, RC ±10-15%) measures the actual wall-clock window
+    on-device and emits it as ``raw_readings.window_s``; the ingest
+    layer passes that through as ``window_seconds_override``.
+
+    Contract:
+    * ``window_seconds_override is None`` → fall back to the calibration
+      row's fixed ``flow_window_seconds`` (legacy behaviour; used by the
+      calibrated ``v2`` producer and by tests that don't exercise the new
+      path).
+    * ``window_seconds_override == 0`` → firmware signalled "unknown
+      window" (first cycle after boot). Return ``None`` so the backend
+      treats the derived flow rate as no-data; the totalizer
+      ``flow_pulses_total`` remains the authoritative volume signal.
+    * ``window_seconds_override > 0`` → use that value.
+
+    If ``pulses_per_L`` or the effective ``window_seconds`` is zero
+    (misconfigured calibration row) we return ``Decimal(0)`` rather than
+    raising — downstream rules treat 0 flow as "no water", which is a
+    safer default than crashing.
     """
-    if cal.flow_pulses_per_litre == ZERO or cal.flow_window_seconds == ZERO:
+    if window_seconds_override is not None:
+        if window_seconds_override == ZERO:
+            return None
+        window = window_seconds_override
+    else:
+        window = cal.flow_window_seconds
+
+    if cal.flow_pulses_per_litre == ZERO or window == ZERO:
         return ZERO
     return (
         Decimal(pulses_window) * SECONDS_PER_MINUTE
-        / (cal.flow_window_seconds * cal.flow_pulses_per_litre)
+        / (window * cal.flow_pulses_per_litre)
     )
 
 

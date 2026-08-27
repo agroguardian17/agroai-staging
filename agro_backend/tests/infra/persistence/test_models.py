@@ -1,6 +1,6 @@
 """Model-layer tests that need no database (run on Windows + CI).
 
-These assert the ORM mapping matches the migrations: all 36 tables present,
+These assert the ORM mapping matches the migrations: all 37 tables present,
 tenant_id on tenant-scoped tables, partition metadata + idempotency constraints
 on the time-series tables, and the key v3 columns.
 """
@@ -51,6 +51,7 @@ EXPECTED_TABLES = {
     "calibration_history",
     "wa_inbound_log",
     "device_calibration",
+    "main_node_readings",
 }
 
 # Every tenant-scoped table must carry tenant_id.
@@ -62,10 +63,10 @@ TENANT_SCOPED = EXPECTED_TABLES - {
 }
 
 
-def test_all_36_tables_registered() -> None:
+def test_all_37_tables_registered() -> None:
     actual = set(Base.metadata.tables.keys())
     assert actual == EXPECTED_TABLES
-    assert len(actual) == 36
+    assert len(actual) == 37
 
 
 @pytest.mark.parametrize("table", sorted(TENANT_SCOPED))
@@ -87,6 +88,16 @@ def test_node_sensor_readings_is_partitioned_with_idempotency() -> None:
         if isinstance(con, UniqueConstraint)
     }
     assert ("node_id", "recorded_at") in uniques
+
+
+def test_main_node_readings_has_idempotency_constraint() -> None:
+    t = Base.metadata.tables["main_node_readings"]
+    uniques = {
+        tuple(sorted(c.name for c in con.columns))
+        for con in t.constraints
+        if isinstance(con, UniqueConstraint)
+    }
+    assert ("main_node_id", "recorded_at") in uniques
 
 
 def test_weather_forecasts_partitioned_by_fetched_at() -> None:

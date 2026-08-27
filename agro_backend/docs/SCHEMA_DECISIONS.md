@@ -323,3 +323,64 @@ the pilot VPS. Keep verifying a fresh database with `alembic upgrade head` and
 an explicit downgrade/upgrade drill before trusting a new migration. Do not
 infer migration health from ORM import success: the migrations are hand-written
 SQL and include partitions, materialized views, triggers, roles, and RLS.
+
+---
+
+## 13. 2026-08-27 v2 firmware — wire-contract additions
+
+Two design decisions worth recording so the reasoning survives the next
+schema review.
+
+### 13.1 `raw_readings.window_s` uses three-way `Optional[int]` encoding
+
+Sub Node cadence is now 5 minutes with `LowPower.powerDown()` between
+cycles. The ATmega WDT clock is a 128 kHz internal RC (±10-15%), so a
+nominal 300 s sleep can land anywhere in 260-340 s. Firmware measures
+the actual wall-clock window on-device and emits it as
+`raw_readings.window_s`.
+
+Three producer states must be distinguishable at the wire boundary:
+
+| State | Encoding | Backend behaviour |
+|---|---|---|
+| Pre-v2 firmware (fake_main_node.py, older tests) | field absent | Fall back to `device_calibration.flow_window_seconds`. Legacy path, unchanged. |
+| v2 firmware, first cycle after boot | `window_s == 0` | Unknown window; leave `water_flow_lpm` as `None`; totalizer `flow_pulses_total` is authoritative. |
+| v2 firmware, steady state | `window_s > 0` | Override `flow_window_seconds` at compute time. |
+
+**Alternatives considered:**
+
+- *Required int* (no `None`, `0` means unknown). Rejected because it hard-
+  breaks pre-v2 producers (Pydantic `extra="forbid"` + missing required
+  field = validation error).
+- *Sentinel `-1` for "unknown"*. Rejected because `Field(ge=0)` blocks
+  the sentinel and a nullable int is cleaner than a magic negative.
+- *Two fields (`window_s` + `window_s_valid: bool`)*. Rejected as over-
+  specified; two states of a single field are enough.
+
+The `window_s` value is mirrored into `Reading.sensor_health_json["window_s"]`
+so historical rows preserve the divisor that produced their flow rate.
+
+### 13.2 `main_node_readings` (migration 0013) is Main-Node-keyed, not plot-keyed
+
+The v2-master heartbeat carries no `plot_id` (the Main Node covers all
+plots in a farm) and no `farmer_id` (it's an infrastructure ping, not a
+farmer-facing signal). `node_sensor_readings` is Sub-Node-keyed and
+plot-aware; adding a nullable `plot_id` there would degrade downstream
+queries. Round 17.5 keeps the two histories separate:
+
+- `node_sensor_readings` — Sub Node telemetry, keyed on
+  `(node_id, recorded_at)`.
+- `main_node_readings`   — Main Node heartbeat + weather-station history,
+  keyed on `(main_node_id, recorded_at)`.
+
+Column shape follows the fields the firmware actually emits (see
+`HARDWARE_WIRE_CONTRACT.md` §12.2). Idempotent UPSERT on the composite
+unique constraint. Not monthly-partitioned at pilot scale (12 heartbeats
+per hour × 24 h × 365 d ≈ 105 k rows/year per Main Node — negligible);
+partitioning trigger lands in a follow-up round when total ingest
+volume warrants it.
+
+Migration number **0013** is claimed for `main_node_readings` because it
+ships now; Round 13 (advisory subscriber) will use 0014 when it lands.
+The number reflects delivery order, not phase name — the roadmap phases
+and Alembic revisions have always been independent numbering axes.

@@ -40,6 +40,7 @@ from app.infra.http.deps import _ensure_engine
 from app.infra.mqtt.broker import BrokerSettings, IngestBroker
 from app.infra.persistence.pg_alert_repo import PgAlertRepo
 from app.infra.persistence.pg_device_calibration_repo import PgDeviceCalibrationRepo
+from app.infra.persistence.pg_main_node_reading_repo import PgMainNodeReadingRepo
 from app.infra.persistence.pg_reading_repo import PgReadingRepo
 
 if TYPE_CHECKING:
@@ -59,6 +60,12 @@ async def build_and_start_ingest(settings: Settings) -> IngestBroker | None:
     alert_repo = PgAlertRepo(sessionmaker)
     event_bus = PgNotifyEventBus(sessionmaker)
     calibration_repo = PgDeviceCalibrationRepo(sessionmaker)
+    # Round 17.5 (2026-08-27 v2 firmware): persist v2-master heartbeats
+    # to `main_node_readings` (migration 0013). Constructed unconditionally
+    # so ops can query Main Node liveness the moment the migration lands;
+    # tests that don't care still work because they pass `parse_fn` /
+    # `ingest_fn` fakes and never hit this repo.
+    main_node_reading_repo = PgMainNodeReadingRepo(sessionmaker)
 
     ingest_deps = IngestDeps(reading_repo=reading_repo, event_bus=event_bus)
     evaluate_deps = EvaluateRulesDeps(
@@ -89,6 +96,7 @@ async def build_and_start_ingest(settings: Settings) -> IngestBroker | None:
         broker_settings,
         deps,
         calibration_repo=calibration_repo,
+        main_node_reading_repo=main_node_reading_repo,
         max_queue=settings.MQTT_QUEUE_MAXSIZE,
     )
     await broker.start()

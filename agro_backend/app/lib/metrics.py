@@ -55,6 +55,19 @@ ingest_dropped_total = Counter(
 )
 
 
+# 2026-08-27 v2 firmware — Main Node master-only heartbeat.
+# Labelled by sub_node_online ("true"|"false") so ops can chart Main-Node
+# liveness independently of Sub-Node liveness. Round 17.5 will add a
+# durable table + view; until then this counter is the primary signal
+# that Main Node is alive but Sub Node is silent (or vice versa).
+main_node_heartbeat_total = Counter(
+    "agro_main_node_heartbeat_total",
+    "Main Node v2-master heartbeats received, labelled by sub_node_online.",
+    ["sub_node_online"],
+    registry=REGISTRY,
+)
+
+
 
 
 # ----- LLM (Phase 5 will fill these in) ----------------------------------
@@ -191,6 +204,7 @@ __all__ = [
     "llm_calls_total",
     "llm_cost_inr_total",
     "llm_tokens_total",
+    "main_node_heartbeat_total",
     "rule_evaluations_total",
     "rule_hits_total",
 ]

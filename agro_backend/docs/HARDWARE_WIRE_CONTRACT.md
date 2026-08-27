@@ -476,3 +476,98 @@ Row per `(tenant_id, device_id)` in `device_calibration`. Fields:
 - `npk_temp_divisor`, `npk_moisture_divisor`, `npk_ph_divisor`
 
 Every update bumps `calibration_version`; the version rides on the `Reading.sensor_health_json` block so historical rows record which calibration produced them. `seed_pilot.py` and migration 0012 both write firmware-baked defaults, so the raw path works end-to-end before any human enters a calibration value.
+
+
+### 11.6 `raw_readings.window_s` (2026-08-27 v2 firmware)
+
+
+Sub Node cadence is now 5 minutes with `LowPower.powerDown()` between cycles. The ATmega WDT sleep clock is a 128 kHz internal RC that drifts ±10-15% temperature-dependent, so a nominal 300 s sleep can actually be 260-340 s. Firmware measures the wall-clock window on-device (from previous TX to this TX) and emits it as `raw_readings.window_s`.
+
+**Type:** integer seconds, `Field(ge=0)`, optional.
+
+**Three-way semantics:**
+
+- `window_s` **absent** → pre-v2 producer (fake_main_node.py, older test fixtures). Backend falls back to `device_calibration.flow_window_seconds` for the flow-rate divisor. Legacy behaviour, unchanged.
+- `window_s == 0` → v2 firmware first cycle after boot; the on-device stopwatch has no previous TX to measure against. Backend leaves `water_flow_lpm` as `None`; the `flow_pulses_total` totalizer delta between adjacent rows is the authoritative volume signal on this row.
+- `window_s > 0` → v2 firmware steady state. Backend uses this value as the flow-rate divisor **in place of** `device_calibration.flow_window_seconds`. The calibration row's fixed value stays as a sane fallback.
+
+The `window_s` value is also mirrored into `Reading.sensor_health_json["window_s"]` so historical rows record which window produced their flow rate.
+
+
+### 11.7 Master readings extension fields (2026-08-27 v1/v2 firmware)
+
+
+`master_readings` gained two optional fields:
+
+- `time_source: "ntp" | "rtc" | "none" | null` — provenance of the payload's timestamp. `"ntp"` = fresh modem NTP, `"rtc"` = DS3231 fallback, `"none"` = firmware fell through to the 1970 sentinel (broker's `_normalize_clock_skew` will rewrite it). `null` = pre-2026-08-27 v1 firmware that never sent the field.
+- `sub_node_online: bool` (default `true`) — Main Node's view of Sub Node liveness at the moment this payload was assembled. Always `true` on the v2-raw path (we only build a v2-raw payload from a fresh LoRa RX); the field carries its real meaning on the v2-master heartbeat path below.
+
+
+## 12. Round 17.5 — v2-master master-only heartbeat
+
+
+Every `MASTER_HEARTBEAT_MS` (currently 5 min) the Main Node publishes a master-only heartbeat, independent of Sub Node cadence. Purpose: distinguish "Sub Node dead" from "Main Node dead / LoRa dead" downstream.
+
+
+### 12.1 Topic
+
+
+```
+agro/v2/<tenant>/<farm>/<main_node_id>/telemetry
+```
+
+Uses `main_node_id` in the sub-node slot so the existing broker filter (`agro/v2/+/+/+/telemetry`) still catches it. There is no `plot_id` on the heartbeat — it is Main-Node-level, not plot-level.
+
+
+### 12.2 Payload shape (`$schema=agro-guardian/telemetry/v2-master`)
+
+
+```json
+{
+  "$schema": "agro-guardian/telemetry/v2-master",
+  "tenant_id": "11111111-1111-1111-1111-111111111111",
+  "farm_id":   "bbbbbbbb-2222-2222-2222-222222222222",
+  "main_node_id": "AGR-MN-0001",
+  "recorded_at":        "2026-08-27T05:00:00+00:00",
+  "received_at_master": "2026-08-27T05:00:00+00:00",
+  "transmission_type":  "heartbeat",
+  "master_readings": {
+    "bme280_temp_c": 32.4,
+    "bme280_humidity_pct": 65.1,
+    "bme280_pressure_pa": 95000.0,
+    "ina219_bus_v": 12.1,
+    "ina219_current_ma": 250.0,
+    "rain_pulses_window": 0,
+    "wind_pulses_window": 0,
+    "wind_dir_adc": 976,
+    "time_source": "ntp",
+    "sub_node_online": true,
+    "sub_node_silence_ms": 42000
+  },
+  "firmware_version": "viraai-mn-1.0.0-raw"
+}
+```
+
+- `transmission_type` is the literal string `"heartbeat"` (not one of the `TransmissionType` enum values — it is a wire-only concept).
+- `sub_node_online` is `false` when the age of the last LoRa RX is greater than `SUB_NODE_SILENCE_THRESHOLD_MS` (15 min).
+- `sub_node_silence_ms` is 0 when the Main Node has never seen the Sub Node since boot.
+- `extra="forbid"` on every level: unknown fields hard-reject.
+
+
+### 12.3 Backend consumption
+
+
+The broker's `parse_inbound` returns a `TelemetryMaster` model. The drain loop:
+
+1. Increments `agro_main_node_heartbeat_total{sub_node_online="true"|"false"}` (Prometheus).
+2. Emits a structured `ingest_broker.master_heartbeat` log line with `main_node_id`, `sub_node_online`, `sub_node_silence_ms`, `time_source`.
+3. Persists the payload to `main_node_readings` (migration 0013) — a Main-Node-keyed history table with the same monthly-partition layout as `node_sensor_readings`. Idempotent on `(main_node_id, recorded_at)`.
+
+
+### 12.4 Ops alerting
+
+
+Two Prometheus rules (in `deploy/prometheus/alerts.yml`):
+
+- **`MainNodeDown`**: `rate(agro_main_node_heartbeat_total[15m]) == 0` for 15 min — no heartbeat in the last quarter hour.
+- **`SubNodeDown`**: `sum(rate(agro_main_node_heartbeat_total{sub_node_online="false"}[15m])) > 0` for 15 min — Main Node is alive but every heartbeat it sent reports the Sub Node as silent.

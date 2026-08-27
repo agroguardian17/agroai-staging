@@ -48,10 +48,13 @@ import structlog
 from pydantic import ValidationError
 
 from app.application.ports.device_calibration_repo import DeviceCalibrationRepo
+from app.application.ports.main_node_reading_repo import MainNodeReadingRepo
 from app.application.process_reading import ProcessReadingDeps
 from app.application.process_reading import execute as process_execute
+from app.domain.main_node_reading import MainNodeReading
 from app.infra.mqtt.schemas import (
     TelemetryInRaw,
+    TelemetryMaster,
     TopicParseError,
     UnknownTopicKindError,
     parse_inbound,
@@ -135,6 +138,12 @@ class IngestBroker:
         # Injecting via keyword keeps back-compat with Round 7 tests that
         # don't need the raw path.
         calibration_repo: DeviceCalibrationRepo | None = None,
+        # Round 17.5 (2026-08-27 v2 firmware): when a `$schema=agro-guardian/
+        # telemetry/v2-master` heartbeat arrives, the broker persists it via
+        # this repo. Optional — if None, the heartbeat is still metered +
+        # logged (the pre-17.5 behaviour), just not persisted. Keeps every
+        # existing test working without touching their broker construction.
+        main_node_reading_repo: MainNodeReadingRepo | None = None,
         # Test seam: allow callers to inject a fake parser/processor for
         # unit tests. Production callers always use the module defaults.
         # ``ingest_fn`` keeps its historical name (Round 7) for backward
@@ -147,6 +156,7 @@ class IngestBroker:
         self._settings = broker_settings
         self._deps = deps
         self._calibration_repo = calibration_repo
+        self._main_node_reading_repo = main_node_reading_repo
         self._parse_fn = parse_fn
         self._ingest_fn = ingest_fn
         self._max_queue = max_queue
@@ -311,6 +321,63 @@ class IngestBroker:
             metrics.ingest_received_total.labels(topic=_topic_template(topic)).inc()
             try:
                 model = self._parse_fn(topic, raw)
+                if isinstance(model, TelemetryMaster):
+                    # 2026-08-27 v2 Main Node master-only heartbeat.
+                    # Meter + log always. Persist when the Round 17.5 repo
+                    # is wired (migration 0013 landed and ingest_startup
+                    # constructs a PgMainNodeReadingRepo). Tests that don't
+                    # inject the repo still see identical behaviour to the
+                    # pre-17.5 log-only path.
+                    online_label = (
+                        "true" if model.master_readings.sub_node_online else "false"
+                    )
+                    metrics.main_node_heartbeat_total.labels(
+                        sub_node_online=online_label
+                    ).inc()
+                    log.info(
+                        "ingest_broker.master_heartbeat",
+                        topic=topic,
+                        main_node_id=model.main_node_id,
+                        sub_node_online=model.master_readings.sub_node_online,
+                        sub_node_silence_ms=model.master_readings.sub_node_silence_ms,
+                        time_source=model.master_readings.time_source,
+                    )
+                    if self._main_node_reading_repo is not None:
+                        mr = model.master_readings
+                        heartbeat = MainNodeReading(
+                            tenant_id=model.tenant_id,
+                            farm_id=model.farm_id,
+                            main_node_id=model.main_node_id,
+                            recorded_at=model.recorded_at,
+                            received_at_master=model.received_at_master,
+                            time_source=mr.time_source,
+                            sub_node_online=mr.sub_node_online,
+                            sub_node_silence_ms=mr.sub_node_silence_ms,
+                            bme280_temp_c=mr.bme280_temp_c,
+                            bme280_humidity_pct=mr.bme280_humidity_pct,
+                            bme280_pressure_pa=mr.bme280_pressure_pa,
+                            ina219_bus_v=mr.ina219_bus_v,
+                            ina219_current_ma=mr.ina219_current_ma,
+                            rain_pulses_window=mr.rain_pulses_window,
+                            wind_pulses_window=mr.wind_pulses_window,
+                            wind_dir_adc=mr.wind_dir_adc,
+                            firmware_version=model.firmware_version,
+                        )
+                        # Same broker-side safety net as the Sub Node path:
+                        # rewrite impossible device timestamps to server UTC
+                        # before the row lands. MainNodeReading has the same
+                        # (recorded_at, received_at_master, with_,
+                        # sensor_health_json, validation_warn) shape as
+                        # Reading, so _normalize_clock_skew works duck-typed.
+                        heartbeat = _normalize_clock_skew(heartbeat)  # type: ignore[assignment]
+                        reading_id = await self._main_node_reading_repo.save(
+                            heartbeat
+                        )
+                        if reading_id is None:
+                            metrics.ingest_dropped_total.labels(
+                                reason="duplicate"
+                            ).inc()
+                    continue
                 if isinstance(model, TelemetryInRaw):
                     # Round 16: raw-values payload — apply per-device
                     # calibration before building the Reading.

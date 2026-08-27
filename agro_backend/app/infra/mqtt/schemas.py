@@ -58,6 +58,14 @@ SCHEMA_TELEMETRY_V2: str = "agro-guardian/telemetry/v2"
 # (Alembic migration 0012) before constructing the domain Reading.
 SCHEMA_TELEMETRY_V2_RAW: str = "agro-guardian/telemetry/v2-raw"
 
+# 2026-08-27 v2 firmware — Main Node emits a master-only heartbeat every
+# `MASTER_HEARTBEAT_MS` (5 min) that carries `master_readings` +
+# `sub_node_online` liveness flag. Independent of Sub Node cadence so ops
+# can distinguish "Main Node dead" from "Sub Node dead / LoRa dead".
+# Backend parses and meters these here; persistence to a `main_node_readings`
+# table is scoped for Round 17.5 (needs migration 0013 + new repo).
+SCHEMA_TELEMETRY_V2_MASTER: str = "agro-guardian/telemetry/v2-master"
+
 
 
 
@@ -288,6 +296,23 @@ class RawReadings(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    # 2026-08-27 v2 firmware: wall-clock seconds since the Sub Node's
+    # previous LoRa TX (measured on-device — the ATmega WDT-timed sleep
+    # is ±10-15% vs the nominal 5-min cadence, so the backend needs the
+    # actual window to compute flow rate correctly).
+    #
+    # Three-way encoding preserves back-compat with pre-v2 producers:
+    #
+    # * ``window_s is None`` (field absent) → pre-v2 firmware; fall back
+    #   to the calibration row's fixed ``flow_window_seconds``.
+    # * ``window_s == 0``                   → v2 firmware first cycle
+    #   after boot / unknown window; ingest leaves ``water_flow_lpm`` as
+    #   ``None`` and downstream consumers rely on the
+    #   ``flow_pulses_total`` totalizer delta instead.
+    # * ``window_s > 0``                    → v2 firmware steady-state;
+    #   use this value in place of ``cal.flow_window_seconds``.
+    window_s: int | None = Field(default=None, ge=0)
+
     # ADC counts (10-bit)
     soil_adc: int = Field(ge=0, le=1023)
     battery_adc: int = Field(ge=0, le=1023)
@@ -336,6 +361,18 @@ class MasterReadings(BaseModel):
     wind_dir_adc: int = Field(default=0, ge=0, le=4095)  # ESP32 12-bit ADC
     lora_rssi_dbm: int = Field(ge=-150, le=20)
     lora_snr_db: SafeDecimal = None
+
+    # 2026-08-27 v1 firmware — provenance of the payload timestamp.
+    # "ntp" = fresh modem NTP, "rtc" = DS3231 fallback, "none" = sentinel
+    # 1970-01-01 (the broker-side clock-skew net will rewrite this).
+    # Optional with default None so pre-2026-08-27-v1 firmware validates.
+    time_source: str | None = Field(default=None, max_length=16)
+
+    # 2026-08-27 v2 firmware — Main Node's view of Sub Node liveness at
+    # the moment this payload was assembled. Always True on the v2-raw
+    # path (we only build this payload from a fresh LoRa RX); the field
+    # is meaningful on the v2-master heartbeat path.
+    sub_node_online: bool = True
 
 
 class TelemetryInRaw(BaseModel):
@@ -447,7 +484,18 @@ class TelemetryInRaw(BaseModel):
             "master_readings": self.master_readings.model_dump(),
             "flow_pulses_total": rr.flow_pulses_total,
             "npk_ok": rr.npk_ok,
+            # 2026-08-27 v2 firmware: carry the on-device flow window so the
+            # historical audit trail records what was used to derive the
+            # rate, not just the rate itself. ``None`` means pre-v2 firmware.
+            "window_s": rr.window_s,
         }
+
+        # Flow calibration window resolution (see RawReadings.window_s):
+        # * None → pre-v2 firmware → let calibrator use cal.flow_window_seconds
+        # * 0    → v2 firmware first cycle → pass 0 through so calibrator
+        #          returns None (unknown window; totalizer is authoritative)
+        # * >0   → v2 firmware steady state → override calibrator's window
+        window_override = None if rr.window_s is None else Decimal(rr.window_s)
 
         return Reading(
             tenant_id=self.tenant_id,
@@ -478,12 +526,91 @@ class TelemetryInRaw(BaseModel):
             soil_p_mg_kg=soil_p_mg_kg,
             soil_k_mg_kg=soil_k_mg_kg,
             # Water
-            water_flow_lpm=calibrate_flow_lpm(rr.flow_pulses_window, calibration),
+            water_flow_lpm=calibrate_flow_lpm(
+                rr.flow_pulses_window, calibration, window_override
+            ),
             water_pressure_bar=calibrate_pressure_bar(rr.pressure_adc, calibration),
             # Diagnostics
             sensor_health_json=sensor_health,
             firmware_version=fw,
         )
+
+
+# ===========================================================================
+# 2026-08-27 v2 — Main Node master-only heartbeat (`v2-master`)
+# ===========================================================================
+# Fires every ``MASTER_HEARTBEAT_MS`` on the Main Node (currently 5 min) —
+# independent of Sub Node LoRa cadence — so ops can tell the difference
+# between "Sub Node dead" and "Main Node dead / LoRa dead". The payload
+# carries only master_readings + a ``sub_node_online`` flag; there is no
+# raw_readings block, no plot_id, no farmer_id (the heartbeat is Main-Node-
+# level, not Sub-Node-level).
+#
+# Round 17.5 will introduce a ``main_node_readings`` table + repo to
+# persist these; today the broker parses, meters, logs, and drops.
+
+
+class MasterReadingsHeartbeat(BaseModel):
+    """Heartbeat variant of master_readings — adds ``sub_node_silence_ms``.
+
+    ``sub_node_online`` and ``time_source`` live on the base
+    :class:`MasterReadings` too (both are also emitted on the v2-raw path).
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    bme280_temp_c: SafeDecimal = None
+    bme280_humidity_pct: SafeDecimal = None
+    bme280_pressure_pa: SafeDecimal = None
+    ina219_bus_v: SafeDecimal = None
+    ina219_current_ma: SafeDecimal = None
+    rain_pulses_window: int = Field(default=0, ge=0)
+    wind_pulses_window: int = Field(default=0, ge=0)
+    wind_dir_adc: int = Field(default=0, ge=0, le=4095)
+    time_source: str | None = Field(default=None, max_length=16)
+    sub_node_online: bool
+    # Milliseconds since the Main Node last received a LoRa frame from
+    # the Sub Node. 0 when we've never heard from it since Main Node boot
+    # (Sub Node liveness is genuinely unknown at that point;
+    # ``sub_node_online`` will be False).
+    sub_node_silence_ms: int = Field(default=0, ge=0)
+
+
+class TelemetryMaster(BaseModel):
+    """Main Node master-only heartbeat payload (``$schema=v2-master``)."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+        str_strip_whitespace=True,
+    )
+
+    schema_id: Literal["agro-guardian/telemetry/v2-master"] = Field(
+        alias="$schema",
+        description="Main Node heartbeat; parsed + metered, not persisted (Round 17.5).",
+    )
+
+    tenant_id: uuid.UUID
+    farm_id: uuid.UUID
+    main_node_id: str = Field(min_length=1, max_length=64)
+
+    recorded_at: datetime
+    received_at_master: datetime
+
+    # Firmware sends the literal string "heartbeat" here. Kept as a
+    # Literal instead of the domain enum ``TransmissionType`` so the
+    # domain layer doesn't need a new enum member for a wire-only concept.
+    transmission_type: Literal["heartbeat"]
+
+    master_readings: MasterReadingsHeartbeat
+    firmware_version: str | None = Field(default=None, max_length=64)
+
+    @field_validator("recorded_at", "received_at_master")
+    @classmethod
+    def _must_be_aware(cls, dt: datetime) -> datetime:
+        if dt.tzinfo is None:
+            raise ValueError("datetime must be timezone-aware (RFC 3339 with offset)")
+        return dt.astimezone(UTC)
 
 
 # ---------------------------------------------------------------------------
@@ -532,17 +659,23 @@ def _split_topic(topic: str) -> tuple[str, str, str, str]:
 
 
 
-def parse_inbound(topic: str, raw: bytes) -> TelemetryIn | TelemetryInRaw:
+def parse_inbound(
+    topic: str, raw: bytes
+) -> TelemetryIn | TelemetryInRaw | TelemetryMaster:
     """Dispatch an MQTT payload to the right pydantic model.
 
-    Two schemas are supported today:
+    Three schemas are supported today:
 
-    * ``agro-guardian/telemetry/v2``      → :class:`TelemetryIn` (calibrated
+    * ``agro-guardian/telemetry/v2``       → :class:`TelemetryIn` (calibrated
       fields; original wire format used by ``fake_main_node.py`` and any
       producer that does its own calibration).
-    * ``agro-guardian/telemetry/v2-raw``  → :class:`TelemetryInRaw` (Round
+    * ``agro-guardian/telemetry/v2-raw``   → :class:`TelemetryInRaw` (Round
       16; the ``viraai-*-1.0.0-raw`` firmware). Server applies per-device
       calibration before ``to_domain(...)`` is called by the broker.
+    * ``agro-guardian/telemetry/v2-master`` → :class:`TelemetryMaster`
+      (2026-08-27 v2 firmware). Main Node master-only heartbeat carrying
+      ``master_readings`` + ``sub_node_online``. Parsed + metered by the
+      broker; persistence lands with Round 17.5.
 
     Caller (the ingest worker) handles the dispatcher's errors:
 
@@ -552,9 +685,9 @@ def parse_inbound(topic: str, raw: bytes) -> TelemetryIn | TelemetryInRaw:
     * :class:`json.JSONDecodeError`        — payload not JSON
     * :class:`ValueError`                  — unknown ``$schema``
 
-    On success the returned model is frozen and ready for ``to_domain()``.
-    ``TelemetryInRaw.to_domain`` requires a ``DeviceCalibration`` argument
-    that the broker fetches from the calibration repo.
+    On success the returned model is frozen. ``TelemetryIn`` and
+    ``TelemetryInRaw`` are ready for ``to_domain(...)``; ``TelemetryMaster``
+    has no ``to_domain`` — the broker meters/logs it and drops.
     """
     _, _, _, kind = _split_topic(topic)
     if kind != TOPIC_KIND_TELEMETRY:
@@ -574,9 +707,11 @@ def parse_inbound(topic: str, raw: bytes) -> TelemetryIn | TelemetryInRaw:
         return TelemetryIn.model_validate(payload)
     if schema_id == SCHEMA_TELEMETRY_V2_RAW:
         return TelemetryInRaw.model_validate(payload)
+    if schema_id == SCHEMA_TELEMETRY_V2_MASTER:
+        return TelemetryMaster.model_validate(payload)
     raise ValueError(
-        f"unknown $schema {schema_id!r}; expected {SCHEMA_TELEMETRY_V2!r} "
-        f"or {SCHEMA_TELEMETRY_V2_RAW!r}"
+        f"unknown $schema {schema_id!r}; expected {SCHEMA_TELEMETRY_V2!r}, "
+        f"{SCHEMA_TELEMETRY_V2_RAW!r}, or {SCHEMA_TELEMETRY_V2_MASTER!r}"
     )
 
 
@@ -584,13 +719,16 @@ def parse_inbound(topic: str, raw: bytes) -> TelemetryIn | TelemetryInRaw:
 
 __all__ = [
     "SCHEMA_TELEMETRY_V2",
+    "SCHEMA_TELEMETRY_V2_MASTER",
     "SCHEMA_TELEMETRY_V2_RAW",
     "TOPIC_KIND_TELEMETRY",
     "MasterReadings",
+    "MasterReadingsHeartbeat",
     "RawReadings",
     "SafeDecimal",
     "TelemetryIn",
     "TelemetryInRaw",
+    "TelemetryMaster",
     "TopicParseError",
     "UnknownTopicKindError",
     "parse_inbound",

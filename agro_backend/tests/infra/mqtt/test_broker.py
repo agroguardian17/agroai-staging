@@ -37,7 +37,9 @@ from app.infra.mqtt.broker import (
     _topic_template,
 )
 from app.infra.mqtt.schemas import (
+    SCHEMA_TELEMETRY_V2_MASTER,
     TelemetryIn,
+    TelemetryMaster,
     TopicParseError,
     UnknownTopicKindError,
 )
@@ -380,6 +382,162 @@ async def test_unexpected_error_increments_unexpected_label() -> None:
 
 
 
+# ===========================================================================
+# 2026-08-27 v2 firmware — v2-master heartbeat dispatch
+# ===========================================================================
+def _make_heartbeat_model(sub_node_online: bool = True) -> TelemetryMaster:
+    return TelemetryMaster.model_validate(
+        {
+            "$schema": SCHEMA_TELEMETRY_V2_MASTER,
+            "tenant_id": "11111111-1111-1111-1111-111111111111",
+            "farm_id":   "bbbbbbbb-2222-2222-2222-222222222222",
+            "main_node_id": "AGR-MN-0001",
+            "recorded_at":        "2026-08-27T05:00:00+00:00",
+            "received_at_master": "2026-08-27T05:00:00+00:00",
+            "transmission_type":  "heartbeat",
+            "master_readings": {
+                "bme280_temp_c": 32.4,
+                "bme280_humidity_pct": 65.1,
+                "bme280_pressure_pa": 95000.0,
+                "ina219_bus_v": 12.1,
+                "ina219_current_ma": 250.0,
+                "rain_pulses_window": 0,
+                "wind_pulses_window": 0,
+                "wind_dir_adc": 976,
+                "time_source": "ntp",
+                "sub_node_online": sub_node_online,
+                "sub_node_silence_ms": 42_000 if sub_node_online else 900_001,
+            },
+            "firmware_version": "viraai-mn-1.0.0-raw",
+        }
+    )
+
+
+async def test_v2_master_heartbeat_meters_and_does_not_ingest() -> None:
+    """Drain loop dispatches TelemetryMaster to the meter path, not to ingest."""
+    ingested: list[Reading] = []
+
+    async def capture_ingest(reading: Reading, _deps: ProcessReadingDeps) -> ProcessReadingResult:
+        ingested.append(reading)
+        return ProcessReadingResult(
+            ingest=IngestResult(reading_id=1, validation_warn=False, flags={}),
+            rules=None,
+        )
+
+    def parse_heartbeat(_t: str, _r: bytes) -> TelemetryMaster:
+        return _make_heartbeat_model(sub_node_online=True)
+
+    before_online = metrics.main_node_heartbeat_total.labels(
+        sub_node_online="true"
+    )._value.get()
+
+    await _run_one_message_through_drain(parse_heartbeat, capture_ingest)
+
+    # No ingest — heartbeats are metered + logged, not persisted.
+    assert ingested == []
+
+    after_online = metrics.main_node_heartbeat_total.labels(
+        sub_node_online="true"
+    )._value.get()
+    assert after_online == pytest.approx(before_online + 1)
+
+
+async def test_v2_master_heartbeat_labels_sub_node_offline() -> None:
+    def parse_heartbeat(_t: str, _r: bytes) -> TelemetryMaster:
+        return _make_heartbeat_model(sub_node_online=False)
+
+    before_offline = metrics.main_node_heartbeat_total.labels(
+        sub_node_online="false"
+    )._value.get()
+    await _run_one_message_through_drain(parse_heartbeat)
+    after_offline = metrics.main_node_heartbeat_total.labels(
+        sub_node_online="false"
+    )._value.get()
+    assert after_offline == pytest.approx(before_offline + 1)
+
+
+# ---------------------------------------------------------------------------
+# Round 17.5 persistence — main_node_reading_repo is injected
+# ---------------------------------------------------------------------------
+class _FakeMainNodeRepo:
+    """Records every save() call. Round-17.5 broker wiring test hook."""
+
+    def __init__(self, return_id: int | None = 42) -> None:
+        self.saved: list[Any] = []
+        self._return_id = return_id
+
+    async def save(self, reading: Any) -> int | None:
+        self.saved.append(reading)
+        return self._return_id
+
+    async def latest_for_node(self, main_node_id: str, limit: int) -> list[Any]:
+        return []
+
+    async def most_recent(self, main_node_id: str) -> Any | None:
+        return None
+
+
+async def test_v2_master_heartbeat_persists_when_repo_injected() -> None:
+    """When Round 17.5's PgMainNodeReadingRepo is wired the heartbeat lands."""
+    fake_repo = _FakeMainNodeRepo(return_id=99)
+
+    def parse_heartbeat(_t: str, _r: bytes) -> TelemetryMaster:
+        return _make_heartbeat_model(sub_node_online=True)
+
+    broker = IngestBroker(
+        _settings(),
+        _empty_deps(),
+        main_node_reading_repo=fake_repo,
+        parse_fn=parse_heartbeat,
+        ingest_fn=_ok_ingest,
+        max_queue=4,
+    )
+    broker._loop = asyncio.get_running_loop()
+    broker._queue = asyncio.Queue(maxsize=4)
+    task = asyncio.create_task(broker._drain())
+    broker._enqueue("agro/v2/T/F/AGR-MN-0001/telemetry", b"{}")
+    await asyncio.sleep(0.1)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert len(fake_repo.saved) == 1
+    row = fake_repo.saved[0]
+    assert row.main_node_id == "AGR-MN-0001"
+    assert row.sub_node_online is True
+    assert row.sub_node_silence_ms == 42_000
+    assert row.time_source == "ntp"
+
+
+async def test_v2_master_heartbeat_duplicate_repo_counts_as_dropped() -> None:
+    """Repo returning None (ON CONFLICT) increments the `duplicate` counter."""
+    fake_repo = _FakeMainNodeRepo(return_id=None)
+
+    def parse_heartbeat(_t: str, _r: bytes) -> TelemetryMaster:
+        return _make_heartbeat_model(sub_node_online=True)
+
+    before = _dropped_count("duplicate")
+    broker = IngestBroker(
+        _settings(),
+        _empty_deps(),
+        main_node_reading_repo=fake_repo,
+        parse_fn=parse_heartbeat,
+        ingest_fn=_ok_ingest,
+        max_queue=4,
+    )
+    broker._loop = asyncio.get_running_loop()
+    broker._queue = asyncio.Queue(maxsize=4)
+    task = asyncio.create_task(broker._drain())
+    broker._enqueue("agro/v2/T/F/AGR-MN-0001/telemetry", b"{}")
+    await asyncio.sleep(0.1)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    after = _dropped_count("duplicate")
+    assert after == pytest.approx(before + 1)
+
+
 def test_normalize_clock_skew_replaces_impossible_future_timestamp() -> None:
     reading = _reading().with_(
         recorded_at=datetime(2070, 1, 1, 1, 3, 6, tzinfo=UTC),
@@ -395,6 +553,53 @@ def test_normalize_clock_skew_replaces_impossible_future_timestamp() -> None:
     assert normalized.sensor_health_json["timestamp_corrected"] is True
     assert normalized.sensor_health_json["timestamp_correction_reason"] == "future_clock_skew"
     assert normalized.sensor_health_json["original_recorded_at"] == "2070-01-01T01:03:06+00:00"
+
+
+def test_normalize_clock_skew_replaces_impossible_past_timestamp() -> None:
+    """Uninitialised RTCs commonly boot to year 2000 or the 1970 epoch.
+
+    ``MAX_CLOCK_SKEW_PAST`` = 365 days: anything older is treated as clock
+    skew and rewritten to server UTC. The audit trail records
+    ``past_clock_skew`` so ops can distinguish this from a firmware future
+    clock like 2070.
+    """
+    reading = _reading().with_(
+        recorded_at=datetime(2000, 1, 1, 0, 0, 0, tzinfo=UTC),
+        received_at_master=datetime(2000, 1, 1, 0, 0, 0, tzinfo=UTC),
+    )
+    now = datetime(2026, 8, 27, 4, 10, tzinfo=UTC)
+
+    normalized = _normalize_clock_skew(reading, now=now)
+
+    assert normalized.recorded_at == now
+    assert normalized.received_at_master == now
+    assert normalized.validation_warn is True
+    assert normalized.sensor_health_json["timestamp_corrected"] is True
+    assert normalized.sensor_health_json["timestamp_correction_reason"] == "past_clock_skew"
+    assert normalized.sensor_health_json["original_recorded_at"] == "2000-01-01T00:00:00+00:00"
+
+
+def test_normalize_clock_skew_leaves_valid_timestamps_untouched() -> None:
+    """Happy path: a fresh reading within the skew window passes through unchanged.
+
+    Guards against a regression that inverts the ``too_future or too_old``
+    branch and starts rewriting every timestamp.
+    """
+    original_recorded_at = datetime(2026, 8, 27, 4, 5, 0, tzinfo=UTC)
+    original_received_at = datetime(2026, 8, 27, 4, 5, 1, tzinfo=UTC)
+    reading = _reading().with_(
+        recorded_at=original_recorded_at,
+        received_at_master=original_received_at,
+    )
+    now = datetime(2026, 8, 27, 4, 10, tzinfo=UTC)
+
+    normalized = _normalize_clock_skew(reading, now=now)
+
+    assert normalized is reading   # frozen dataclass; no copy needed
+    assert normalized.recorded_at == original_recorded_at
+    assert normalized.received_at_master == original_received_at
+    assert normalized.validation_warn is False
+    assert "timestamp_corrected" not in normalized.sensor_health_json
 
 
 # ===========================================================================

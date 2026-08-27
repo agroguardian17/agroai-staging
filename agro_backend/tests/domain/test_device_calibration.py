@@ -136,6 +136,39 @@ def test_flow_lpm_zero_window_returns_zero() -> None:
     assert calibrate_flow_lpm(999, cal) == Decimal("0")
 
 
+def test_flow_lpm_window_override_positive_uses_override() -> None:
+    """2026-08-27 v2 firmware: on-device measured window trumps calibration constant.
+
+    Sub Node WDT-timed sleep drifts ±10-15% vs nominal, so the actual
+    on-device window (from raw_readings.window_s) is the correct divisor
+    for flow rate. Here: 12 pulses in 300 s at 450 pulses/L →
+    12*60 / (300*450) = ~0.00533 L/min. Note this differs from the
+    calibration row's flow_window_seconds=16.
+    """
+    cal = _cal()
+    lpm = calibrate_flow_lpm(12, cal, Decimal("300"))
+    expected = Decimal("12") * Decimal("60") / (Decimal("300") * Decimal("450.000"))
+    assert lpm == expected
+
+
+def test_flow_lpm_window_override_zero_returns_none() -> None:
+    """window_seconds_override=0 signals "unknown window" — first cycle after boot.
+
+    Backend then treats water_flow_lpm as no-data; flow_pulses_total delta
+    between adjacent rows is the authoritative volume signal.
+    """
+    cal = _cal()
+    assert calibrate_flow_lpm(12, cal, Decimal("0")) is None
+
+
+def test_flow_lpm_window_override_none_falls_back_to_calibration_row() -> None:
+    """No override -> use cal.flow_window_seconds (legacy behaviour)."""
+    cal = _cal()
+    lpm_default = calibrate_flow_lpm(12, cal)
+    lpm_explicit_none = calibrate_flow_lpm(12, cal, None)
+    assert lpm_default == lpm_explicit_none
+
+
 # ---------- NPK ----------
 
 def test_npk_temp_divides_by_ten() -> None:

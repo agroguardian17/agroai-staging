@@ -1,0 +1,96 @@
+# AgroGuardian Caddyfile (template).
+#
+# Generate the production version with:
+#   make caddyfile-prod IP=13.235.50.100               # for sslip.io prototype
+#   make caddyfile-prod DOMAIN=agroguardian.in         # once brand is locked
+#
+# This file is the TEMPLATE — `make caddyfile-prod` writes the rendered
+# version to deploy/caddy/Caddyfile.prod for Coolify to mount.
+#
+# Auto-issues Let's Encrypt certs over HTTP-01 challenge. Cloudflare
+# proxy must be OFF (gray-cloud) on first issuance; can be flipped to
+# orange-cloud after the cert is in /data with DNS-01 reconfigured.
+
+{
+    email {$ACME_EMAIL}
+    acme_ca https://acme-v02.api.letsencrypt.org/directory
+
+    # SIMCom A7672S modems are much more reliable with RSA Let's Encrypt
+    # certificates than ECDSA certificates. Force RSA for all managed certs,
+    # including mqtts-*.sslip.io on the Layer-4 MQTT listener.
+    key_type rsa2048
+
+    # Use Let's Encrypt staging while repeatedly testing to avoid rate limits:
+    # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+
+    # MQTT is raw TCP, not HTTP. The production image includes caddy-l4 so
+    # this listener can terminate TLS and proxy the decrypted MQTT stream to
+    # Mosquitto's authenticated internal listener on port 1883.
+    layer4 {
+        :8883 {
+            @mqtt tls sni mqtts-13-207-20-67.sslip.io
+            route @mqtt {
+                tls
+                proxy mosquitto:1883
+            }
+        }
+    }
+}
+
+# ----- API ---------------------------------------------------------------
+api-13-207-20-67.sslip.io {
+    encode zstd gzip
+
+    @health path /api/v1/health
+    handle @health {
+        reverse_proxy app:8000
+    }
+
+    handle /api/* {
+        reverse_proxy app:8000 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    handle /metrics {
+        # Production metric scraping is Tailscale-only.
+        @tailscale remote_ip 100.64.0.0/10
+        handle @tailscale {
+            reverse_proxy app:8000
+        }
+        respond 403
+    }
+
+    @docs path /openapi.json /docs* /redoc*
+    handle @docs {
+        # In production, hide docs from the public internet.
+        respond 404
+    }
+
+    handle {
+        respond "AgroGuardian API" 200
+    }
+}
+
+# ----- MQTT certificate subject -----------------------------------------
+# This HTTP site block gives Caddy's certificate automation a subject for
+# the Layer-4 TLS listener above. MQTT clients still connect to :8883.
+mqtts-13-207-20-67.sslip.io {
+    respond "AgroGuardian MQTT endpoint" 404
+}
+
+# ----- Streamlit dashboard ----------------------------------------------
+dashboard-13-207-20-67.sslip.io {
+    encode zstd gzip
+    reverse_proxy streamlit:8501
+}
+
+# ----- Grafana (Tailscale-only) -----------------------------------------
+metrics-13-207-20-67.sslip.io {
+    @tailscale remote_ip 100.64.0.0/10
+    handle @tailscale {
+        reverse_proxy grafana:3000
+    }
+    respond 403
+}

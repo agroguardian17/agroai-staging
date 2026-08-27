@@ -1,0 +1,108 @@
+# AgroGuardian V2 — Prometheus alerting rules
+# ============================================
+#
+# Load in `prometheus.yml`:
+#
+#   rule_files:
+#     - /etc/prometheus/alerts.yml
+#
+# All rules key off metrics defined in `app/lib/metrics.py`. Fire severities
+# ("page" vs "ticket") match the pilot's ops model — page for anything that
+# takes the farmer's morning advisory offline, ticket for degradations.
+
+groups:
+  # -------------------------------------------------------------
+  # Ingest & MQTT
+  # -------------------------------------------------------------
+  - name: agro_ingest
+    interval: 30s
+    rules:
+      - alert: IngestBrokerDroppingMessages
+        expr: sum(rate(agro_ingest_dropped_total{reason!="duplicate"}[10m])) > 0.1
+        for: 15m
+        labels:
+          severity: ticket
+          service: agro-backend
+        annotations:
+          summary: "Ingest broker dropping messages"
+          description: |
+            The MQTT ingest pipeline has dropped >0.1 msg/s (non-duplicate)
+            averaged over the last 10 minutes for 15 minutes. Check the
+            `reason` label for the failure mode (parse_error, validation,
+            unknown_topic_kind, unexpected).
+          runbook: "Query: sum by (reason) (rate(agro_ingest_dropped_total[10m]))"
+
+      - alert: IngestQueueGrowing
+        expr: agro_ingest_queue_depth > 1000
+        for: 5m
+        labels:
+          severity: ticket
+          service: agro-backend
+        annotations:
+          summary: "Ingest queue > 1000 for 5 minutes"
+          description: |
+            The in-process asyncio queue between paho and the drain loop is
+            not draining as fast as messages arrive. If it hits MAX_QUEUE
+            (5000) new messages are dropped with reason=queue_full.
+
+  # -------------------------------------------------------------
+  # 2026-08-27 v2 firmware — Main Node liveness via v2-master heartbeat
+  # -------------------------------------------------------------
+  - name: agro_main_node
+    interval: 30s
+    rules:
+      - alert: MainNodeDown
+        # No v2-master heartbeat received in the last 15 minutes.
+        # Cadence is MASTER_HEARTBEAT_MS=5min → 3 missed cycles = alarm.
+        expr: sum(rate(agro_main_node_heartbeat_total[15m])) == 0
+        for: 15m
+        labels:
+          severity: page
+          service: agro-firmware
+        annotations:
+          summary: "Main Node dead — no v2-master heartbeat for 15 min"
+          description: |
+            The Main Node has not published a `$schema=v2-master` heartbeat
+            for at least 15 minutes. Either the ESP32 is dead, the A7672S
+            modem is down (SIM problem, no 4G coverage), TLS is broken, or
+            Mosquitto is not reachable from the device network.
+            Field ops: check the Main Node's status LED and serial log.
+
+      - alert: SubNodeDown
+        # Main Node is alive (heartbeats arriving) but every recent heartbeat
+        # reports the Sub Node as silent. Firmware side threshold:
+        # SUB_NODE_SILENCE_THRESHOLD_MS=15min => `sub_node_online=false`.
+        expr: |
+          sum(rate(agro_main_node_heartbeat_total{sub_node_online="false"}[15m])) > 0
+          and
+          sum(rate(agro_main_node_heartbeat_total{sub_node_online="true"}[15m])) == 0
+        for: 15m
+        labels:
+          severity: page
+          service: agro-firmware
+        annotations:
+          summary: "Sub Node dead — Main Node alive but no LoRa RX for 15 min"
+          description: |
+            Main Node is publishing heartbeats but every one reports
+            `sub_node_online=false`. Either the Sub Node is dead (battery,
+            WDT loop, buried board flooded) or the LoRa link is broken
+            (antenna, RA-02 wiring, RF interference). Field ops: check the
+            Sub Node status LED — 3 short blinks post-TX = TX failed.
+
+  # -------------------------------------------------------------
+  # HTTP
+  # -------------------------------------------------------------
+  - name: agro_http
+    interval: 30s
+    rules:
+      - alert: HttpErrorRateHigh
+        expr: |
+          sum(rate(agro_http_requests_total{status=~"5.."}[5m]))
+            /
+          sum(rate(agro_http_requests_total[5m])) > 0.05
+        for: 10m
+        labels:
+          severity: ticket
+          service: agro-backend
+        annotations:
+          summary: "HTTP 5xx rate > 5% for 10 minutes"

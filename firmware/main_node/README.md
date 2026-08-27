@@ -1,121 +1,223 @@
-# AgroGuardian Main Node firmware — v0.1
+# VIRAAI Main Node — Firmware
 
-PlatformIO project for the ESP32-WROOM-32 (38-pin dev module) that acts as the LoRa-to-MQTT bridge for the Aurangabad pilot.
+Full production firmware for the ESP32-based Main Node. Receives LoRa CSV
+frames from the Sub Node, reads the Main Node's own weather-station
+sensors, assembles a raw-values JSON payload, and publishes to the pilot
+MQTT broker over TLS via the SIMCom A7672S 4G modem.
 
-## What this firmware does
+All calibration is done **server-side**. Firmware transmits raw sensor
+outputs (raw ADC counts, pulse counts, Modbus register values).
 
-Boot sequence, in order:
+## Hardware assumptions
 
-1. Powers up the SIMCom A7672S 4G modem, opens UART2.
-2. Registers on LTE, opens a PDP context using the BSNL APN.
-3. NTP-syncs the clock (falls back to the modem's built-in NTP if the OS-level `configTime` stalls).
-4. Initializes the LoRa RA-02 radio on 433 MHz.
-5. Connects MQTT over TLS to Caddy at `mqtts-<ip>.sslip.io:8883`, authenticating as `main-node-001`.
-
-Main loop:
-
-- Blocks briefly on `LoRa.parsePacket()`.
-- On any packet: reads the CSV payload, parses `KEY=VALUE` pairs, extracts the Sub Node ID.
-- Looks up which plot that Sub Node covers (`SUB_NODE_MAP` in `include/pilot_config.h`).
-- Builds a JSON payload matching `docs/HARDWARE_WIRE_CONTRACT.md` §4.
-- Publishes to `agro/v2/<tenant>/<farm>/<node>/telemetry` with QoS 0 (raise to QoS 1 once you're happy).
-- Keeps MQTT and the modem session alive; auto-reconnects on drop.
+- **MCU:** ESP32-WROOM-32 dual-core @ 240 MHz.
+- **Modem:** SIMCom A7672S LTE Cat-1 on UART2 (RX=GPIO 14, TX=GPIO 33).
+- **LoRa:** RA-02 (SX1278) 433 MHz on HSPI (CS=5, RST=32, DIO0=27).
+- **I2C:** BME280 (0x76/0x77), INA219 (0x40), DS3231 (0x68) on SDA=21 / SCL=22.
+- **Weather I/O:** tipping-bucket rain gauge (GPIO 16, FALLING, INPUT_PULLUP),
+  anemometer (GPIO 17, FALLING, INPUT_PULLUP), wind vane (GPIO 34, ADC).
+- **SD:** MicroSD on SPI, CS=13. Currently init-verify only; offline
+  buffering is a follow-up.
+- **SIM:** Airtel (`airtelgprs.com`). Change `MODEM_APN` in `pilot_config.h`
+  if the SIM operator changes.
 
 ## Prerequisites
 
-- PlatformIO Core (`brew install platformio` or the VS Code extension).
-- ESP32-WROOM-32 dev board wired per the VIRAAI hardware spec:
-  - LoRa RA-02: SCK=18, MISO=19, MOSI=23, NSS=5, RESET=14, DIO0=26.
-  - A7672S UART2: TX=17, RX=16, power-key GPIO 4 (verify against the actual PCB before flashing).
-- A working USB cable and driver for your board (CP2102 or CH340).
-- The backend running at Lightsail so there's something for MQTT to reach. See `agro_backend/deploy/staging/README.md`.
+1. **PlatformIO Core** (`pip install platformio` or install VSCode extension).
+2. USB-serial driver for the ESP32 board's USB bridge (CP210x / CH340 —
+   depends on the specific dev board).
+3. Antenna + SIM installed on the A7672S module before power-on.
+4. Backend already reachable at `mqtts-13-207-20-67.sslip.io:8883` with a
+   valid MQTT credential provisioned via
+   `agro_backend/scripts/dev/provision_mqtt_credential.sh AGR-MN-0001`.
 
-## First-time setup
+## Configure
 
-1. Edit `include/pilot_config.h`:
-   - `MQTT_HOST` — replace `<STATIC_IP_DASHES>` with your VPS static IP (dots → dashes).
-   - `MQTT_PASSWORD` — replace with the value from `provision_mqtt_credential.sh main-node-001 …`.
-   - Confirm `GSM_APN`, `GSM_TX_PIN`, `GSM_RX_PIN`, `GSM_PWR_PIN` match your PCB.
-   - Confirm `SUB_NODE_MAP` maps every Sub Node ID you flashed via `docs/SUB_NODE_FIRMWARE_CHANGES.md`.
-2. Build + flash:
+Edit `include/pilot_config.h` and confirm:
 
-   ```bash
-   pio run -t upload
-   pio device monitor -b 115200
-   ```
+- `MAIN_NODE_ID` — string identity of this Main Node.
+- `PILOT_TENANT_ID`, `PILOT_FARM_ID`, `PILOT_FARMER_ID` — must match the
+  UUIDs seeded by `agro_backend/scripts/dev/seed_pilot.py`.
+- `MQTT_HOST`, `MQTT_PORT`, `MQTT_USERNAME`, `MQTT_PASSWORD` — from the
+  provisioning script's output.
+- `MODEM_APN` — `airtelgprs.com` for the pilot SIM.
+- `NODE_MAP` — every `Sub Node ID → PLOT_ID` pair the Main Node should
+  route. For the current 2-plot pilot only `AGR-SN-0001 → PLOT_PILOT_001`
+  is populated.
 
-3. On the serial monitor you should see:
+**Do not commit real credentials to git.** For any environment past the
+pilot smoke test, move `MQTT_PASSWORD` to ESP32 NVS (Preferences library)
+and rotate the value in `pilot_config.h` back to a placeholder.
 
-   ```
-   [boot] AgroGuardian Main Node v0.1
-   [modem] power-cycling A7672S
-   [modem] init
-   [gsm] waiting for LTE registration
-   [gsm] network OK, opening PDP context
-   [gsm] IP: 10.x.y.z
-   [ntp] time = 2026-08-04T05:30:00Z
-   [lora] listening on 433000000 Hz
-   [mqtt] connecting as AGR-MN-0001-xxxxxxxx
-   [mqtt] connected
-   [boot] ready
-   ```
+## Build and flash
 
-4. Power on a Sub Node. Watch for:
+From this folder:
 
-   ```
-   [lora] RX 132 bytes rssi=-72 snr=8.5
-   [lora] payload: NODE=AGR-SN-0001,BAT=9.38,BATP=100,...
-   [mqtt] publish OK -> agro/v2/.../AGR-SN-0001/telemetry (412 bytes)
-   ```
+```
+pio run                       # compile
+pio run -t upload             # compile + flash over USB
+pio device monitor -b 115200  # open serial monitor
+```
 
-5. On the VPS, confirm the row landed:
+Or in one shot:
 
-   ```bash
-   docker compose -f docker-compose.prod.yml exec postgres \
-     psql -U agro -d agro -c \
-     "SELECT node_id, plot_id, recorded_at, soil_moisture_avg_pct, water_flow_lpm, water_pressure_bar \
-      FROM node_sensor_readings ORDER BY recorded_at DESC LIMIT 3;"
-   ```
+```
+pio run -t upload && pio device monitor -b 115200
+```
 
-## Known limitations
+## What you should see on boot (typical timings)
 
-- **TLS in the modem, not in mbedtls on the ESP32.** The A7672S handles TLS termination; you rely on the modem firmware. If the LTE carrier does DPI on 8883 you may need to switch to port 443 + a HTTPS-tunnelled MQTT (out of scope).
-- **QoS 0 publish today.** Raise to QoS 1 once you observe zero dropped messages during a bench test — QoS 1 needs a larger `MQTT_MAX_PACKET_SIZE` and a longer session state, both of which the ESP32-WROOM handles fine.
-- **No offline buffering yet.** If MQTT connect fails when a LoRa packet arrives, the reading is dropped. A follow-up should write the JSON to the MicroSD card (`SD.h`) and replay on next connect. The VIRAAI spec calls out MicroSD explicitly for exactly this reason.
-- **No OTA yet.** Firmware updates today require a physical USB flash. Round-18 territory: ESP32 supports dual-partition A/B OTA, and pulling the firmware from the same backend server closes that loop.
-- **Sub Node → plot mapping is one-to-one.** Each Sub Node covers exactly one plot in `SUB_NODE_MAP`. The physical pilot has one Sub Node per two plots; extend the mapping (or ship a per-probe plot_id inside the LoRa payload) when that matters.
-- **No heartbeat topic.** The backend's `agro/v2/+/+/+/heartbeat` route rejects heartbeats today (`UnknownTopicKindError`). Send only `telemetry` for now.
+```
+==================================================
+ VIRAAI Main Node — RAW variant
+  main_node_id = AGR-MN-0001
+  firmware     = viraai-mn-1.0.0-raw
+==================================================
+I2C scan:
+  0x40
+  0x68
+  0x76
+  (3 device(s) found)
+[bme]  init OK
+[ina]  init OK
+[rtc]  DS3231 present
+[sd]   OK, 15230 MB
+[lora] listening on 433 MHz SF7 BW125k CR4/5
+[modem] wake…
+AT
+OK
+AT+CPIN?
++CPIN: READY
+...
++CMQTTSTART: 0
+...
++CMQTTCONNECT: 0,0
+[mqtt] CONNECTED
+==================================================
+ SETUP COMPLETE — waiting for LoRa packets
+==================================================
+```
 
-## Where to change what
+Once the Sub Node powers on nearby, each cycle prints:
 
-| Change | File |
-| :--- | :--- |
-| Backend endpoint / credentials | `include/pilot_config.h` |
-| GPIO pinouts (LoRa or GSM) | `include/pilot_config.h` |
-| Add another Sub Node → plot mapping | `include/pilot_config.h` — extend `SUB_NODE_MAP` and bump `NUM_SUB_NODES` |
-| Change JSON payload shape | `src/main.cpp::buildJson` |
-| CSV parsing | `src/main.cpp::parseCsv` |
-| Library versions | `platformio.ini` — pin to majors, not `latest` |
+```
+[lora] RX (168 B, rssi=-71, snr=8.50): NODE=AGR-SN-0001,SEQ=3,SOIL=412,...
+[mqtt] publish → agro/v2/1111.../bbbb.../AGR-SN-0001/telemetry
+[mqtt] publish OK
+```
+
+## Wire format published to MQTT
+
+Topic: `agro/v2/<tenant_id>/<farm_id>/<sub_node_id>/telemetry`
+
+Payload (raw variant — server does calibration):
+
+```json
+{
+  "$schema": "agro-guardian/telemetry/v2-raw",
+  "tenant_id": "11111111-1111-1111-1111-111111111111",
+  "farmer_id": "aaaaaaaa-1111-1111-1111-111111111111",
+  "farm_id":   "bbbbbbbb-2222-2222-2222-222222222222",
+  "plot_id":   "PLOT_PILOT_001",
+  "node_id":   "AGR-SN-0001",
+  "seq": 42,
+  "recorded_at":       "2026-08-26T10:45:00+00:00",
+  "received_at_master":"2026-08-26T10:45:03+00:00",
+  "transmission_type": "lora",
+  "raw_readings": {
+    "soil_adc": 412,
+    "battery_adc": 780,
+    "pressure_adc": 340,
+    "flow_pulses_window": 12,
+    "flow_pulses_total": 145,
+    "ds18b20_temp_c": 27.5,
+    "npk_ok": true,
+    "npk_temp_raw": 291,
+    "npk_moisture_raw": 357,
+    "npk_ec_us_cm": 1045,
+    "npk_ph_raw": 645,
+    "npk_nitrogen_mg_kg": 58,
+    "npk_phosphorus_mg_kg": 79,
+    "npk_potassium_mg_kg": 197,
+    "sub_node_fw": "viraai-sn-1.0.0-raw"
+  },
+  "master_readings": {
+    "bme280_temp_c": 32.4,
+    "bme280_humidity_pct": 65.1,
+    "bme280_pressure_pa": 95000.0,
+    "ina219_bus_v": 12.1,
+    "ina219_current_ma": 250.0,
+    "rain_pulses_window": 3,
+    "wind_pulses_window": 12,
+    "wind_dir_adc": 976,
+    "lora_rssi_dbm": -71,
+    "lora_snr_db": 8.5
+  },
+  "firmware_version": "viraai-mn-1.0.0-raw",
+  "main_node_id": "AGR-MN-0001"
+}
+```
+
+**Backend implication:** the current backend `TelemetryIn` schema
+(`app/infra/mqtt/schemas.py`) uses `extra="forbid"` and expects
+calibrated fields (`soil_moisture_avg_pct`, `water_flow_lpm`,
+`water_pressure_bar`). This firmware sends the raw variant instead. The
+backend must be extended with a matching `TelemetryInRaw` schema
+(`$schema=agro-guardian/telemetry/v2-raw`) plus a calibration step that
+converts raw values into the existing `Reading` domain model. That
+schema change is a separate backend task — file a follow-up when you're
+ready to consume these payloads live.
+
+## Boot-time A7672S sequence
+
+`main.cpp::modemDataAttach()` and `mqttStartAndAcquire()` reproduce the
+exact AT sequence the hardware team verified working on 2026-08-26:
+
+```
+AT                                     ; wake, 5-retry loop
+AT+CPIN?                               ; SIM ready check
+AT+CMEE=2                              ; verbose errors
+AT+CMQTTDISC / REL / STOP / NETCLOSE   ; cleanup previous session
+AT+CGDCONT=1,"IP","airtelgprs.com"     ; data attach
+AT+CDNSCFG="8.8.8.8","8.8.4.4"         ; force Google DNS
+AT+NETOPEN                             ; expect +NETOPEN: 0
+AT+CNTP="pool.ntp.org",0,1,2           ; UTC NTP sync
+AT+CCLK?                               ; verify RTC updated
+AT+CMQTTSTART                          ; expect +CMQTTSTART: 0
+AT+CSSLCFG="sslversion",0,3            ; auto-negotiate TLS
+AT+CSSLCFG="ignorelocaltime",0,1       ; pilot only
+AT+CSSLCFG="authmode",0,0              ; NO cert verify (pilot only)
+AT+CSSLCFG="enableSNI",0,1             ; CRITICAL for caddy-l4 routing
+AT+CMQTTACCQ=0,"AGR-MN-0001",1         ; SSL client acquire
+AT+CMQTTCFG="version",0,4              ; MQTT 3.1.1
+AT+CMQTTSSLCFG=0,0                     ; bind SSL ctx 0
+AT+CMQTTCONNECT=0,"tcp://…:8883",…     ; connect
+```
+
+**Security caveat (production migration path):** `authmode=0` accepts
+any server certificate — vulnerable to MITM. Before real deployment,
+upload Let's Encrypt ISRG Root X1 via `AT+CCERTDOWN` and set
+`MODEM_AUTHMODE=2` in `pilot_config.h`, then reflash. See project skill
+§17.3 for the full hardening steps.
 
 ## Troubleshooting
 
-- **SIMCom `+CMQTTCONNECT: 0,32`**: TCP reached the server but TLS failed.
-  First check modem time with `AT+CCLK?`, upload ISRG Root X1 as the CA,
-  set `AT+CSSLCFG="enableSNI",0,1`, and bind SSL context 0 with
-  `AT+CMQTTSSLCFG=0,0` before `AT+CMQTTCONNECT`. The server-side Caddy
-  template forces RSA certificates for A7672S compatibility.
-- **`[modem] init FAILED`**: check `GSM_TX_PIN`/`GSM_RX_PIN` orientation; ESP32 TX must go to modem RX. Also verify the modem is powered (LED on the A7672S board).
-- **`[gsm] network timeout`**: often SIM PIN. Set `GSM_PIN` in the config if the SIM is locked. Otherwise confirm carrier coverage and antenna.
-- **`[mqtt] connect FAILED, state=-2`**: TLS handshake failure. Double-check `MQTT_HOST` matches your sslip.io hostname exactly (dashes, not dots). Also check the Caddy log on the VPS.
-- **`[mqtt] connect FAILED, state=5`**: bad credentials. Confirm `MQTT_PASSWORD` matches what `provision_mqtt_credential.sh` set.
-- **`[lora] payload: ...` but no MQTT publish**: `SUB_NODE_MAP` doesn't recognize that node ID. Update the map and reflash.
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `[modem] SIM not ready` | SIM missing, PIN-locked, or antenna disconnected | Reseat SIM; verify no PIN; check antenna |
+| `+NETOPEN: <error>` other than 0 | APN wrong or no cellular coverage | Confirm SIM operator; update `MODEM_APN` in `pilot_config.h` |
+| `+CMQTTCONNECT: 0,32` | TLS handshake failure | Verify `enableSNI=1`, RSA cert on Caddy, port 80 open for ACME. See project skill §17. |
+| `+CMQTTCONNECT: 0,3` | Bad credentials | Rerun `agro_backend/scripts/dev/provision_mqtt_credential.sh AGR-MN-0001` and update `MQTT_PASSWORD` |
+| `[bme] init FAIL` | I2C wiring or wrong address | Check pull-ups on SDA/SCL, confirm 0x76/0x77 in `I2C scan` output |
+| No `[lora] RX` messages while Sub Node is on | Frequency / SF mismatch | Both firmwares must agree on `LORA_FREQUENCY_HZ`, SF, BW, CR. Defaults in `pilot_config.h` and `sub_node_config.h` match. |
+| `[map] unknown NODE_ID` | Sub Node's `NODE_ID` not in `NODE_MAP` | Extend the table in `pilot_config.h` and reflash |
+| `[mqtt] publish FAILED` repeats | Modem lost connection | Firmware auto-reconnects every 5 s. If persistent, cellular link is down. |
 
-## Handoff to the field
+## Files in this folder
 
-Before deploying:
-
-1. Bench-test one Sub Node → Main Node → cloud pipeline end-to-end.
-2. Confirm you can see the row in `node_sensor_readings` on the VPS.
-3. Set `MQTT_PASSWORD` and any other secrets in the config; commit an example without the secrets.
-4. Enclosure: IP66 minimum for the Main Node. Solar panel wire routing.
-5. On the VPS, flip `CALIBRATION_MODE=false` in `.env` and restart the app once the sensor values look plausible.
+| Path | Purpose |
+|---|---|
+| `platformio.ini` | PlatformIO env, board, deps. |
+| `include/pilot_config.h` | All deployment-specific constants + `NODE_MAP`. |
+| `src/main.cpp` | Full firmware — direct-register sensor drivers, modem AT wrapper, MQTT publish, LoRa RX parser, JSON builder. |
+| `README.md` | You are here. |

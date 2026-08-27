@@ -23,9 +23,11 @@ from pydantic import ValidationError
 from app.domain.device_calibration import DeviceCalibration
 from app.infra.mqtt.schemas import (
     SCHEMA_TELEMETRY_V2,
+    SCHEMA_TELEMETRY_V2_MASTER,
     SCHEMA_TELEMETRY_V2_RAW,
     TelemetryIn,
     TelemetryInRaw,
+    TelemetryMaster,
     parse_inbound,
 )
 
@@ -269,3 +271,181 @@ def test_wrong_schema_id_rejected_by_model() -> None:
     payload = _raw_payload(**{"$schema": SCHEMA_TELEMETRY_V2})
     with pytest.raises(ValidationError):
         TelemetryInRaw.model_validate(payload)
+
+
+# ---------- 2026-08-27 v2 firmware: window_s in raw_readings ----------
+
+def test_window_s_absent_falls_back_to_calibration_row() -> None:
+    """Pre-v2 firmware sends no window_s. Calibrator uses cal.flow_window_seconds."""
+    payload = _raw_payload()
+    assert "window_s" not in payload["raw_readings"]
+    model = TelemetryInRaw.model_validate(payload)
+    assert model.raw_readings.window_s is None
+    reading = model.to_domain(_cal())
+    # 12 pulses / 16 s / 450 pulses/L → ~0.1 L/min (unchanged from pre-v2)
+    assert reading.water_flow_lpm is not None
+    assert Decimal("0.09") < reading.water_flow_lpm < Decimal("0.11")
+
+
+def test_window_s_positive_overrides_calibration_row() -> None:
+    """v2 firmware steady-state: on-device window trumps the calibration row."""
+    payload = copy.deepcopy(_raw_payload())
+    payload["raw_readings"]["window_s"] = 300   # 5-min cadence
+    model = TelemetryInRaw.model_validate(payload)
+    assert model.raw_readings.window_s == 300
+    reading = model.to_domain(_cal())
+    # 12 pulses / 300 s / 450 pulses/L → 0.00533... L/min
+    assert reading.water_flow_lpm is not None
+    expected = Decimal("12") * Decimal("60") / (Decimal("300") * Decimal("450.000"))
+    assert reading.water_flow_lpm == expected
+
+
+def test_window_s_zero_leaves_flow_rate_none() -> None:
+    """v2 firmware first cycle: window unknown -> water_flow_lpm None.
+
+    Backend relies on flow_pulses_total delta between rows in this case.
+    """
+    payload = copy.deepcopy(_raw_payload())
+    payload["raw_readings"]["window_s"] = 0
+    model = TelemetryInRaw.model_validate(payload)
+    reading = model.to_domain(_cal())
+    assert reading.water_flow_lpm is None
+    # Totalizer is still preserved in sensor_health_json.
+    assert reading.sensor_health_json["flow_pulses_total"] == 145
+
+
+def test_window_s_negative_rejected_at_boundary() -> None:
+    payload = copy.deepcopy(_raw_payload())
+    payload["raw_readings"]["window_s"] = -5
+    with pytest.raises(ValidationError):
+        TelemetryInRaw.model_validate(payload)
+
+
+def test_window_s_carried_through_sensor_health() -> None:
+    """Audit trail: what window produced this reading's flow rate."""
+    payload = copy.deepcopy(_raw_payload())
+    payload["raw_readings"]["window_s"] = 297
+    model = TelemetryInRaw.model_validate(payload)
+    reading = model.to_domain(_cal())
+    assert reading.sensor_health_json["window_s"] == 297
+
+
+# ---------- 2026-08-27 v1/v2 firmware: time_source + sub_node_online in master_readings ----------
+
+def test_master_readings_time_source_optional_defaults_none() -> None:
+    """Pre-2026-08-27-v1 firmware never sent time_source."""
+    payload = _raw_payload()
+    assert "time_source" not in payload["master_readings"]
+    model = TelemetryInRaw.model_validate(payload)
+    assert model.master_readings.time_source is None
+    assert model.master_readings.sub_node_online is True
+
+
+def test_master_readings_accepts_time_source_ntp() -> None:
+    payload = copy.deepcopy(_raw_payload())
+    payload["master_readings"]["time_source"] = "ntp"
+    model = TelemetryInRaw.model_validate(payload)
+    assert model.master_readings.time_source == "ntp"
+
+
+def test_master_readings_accepts_sub_node_online_flag() -> None:
+    payload = copy.deepcopy(_raw_payload())
+    payload["master_readings"]["sub_node_online"] = False
+    model = TelemetryInRaw.model_validate(payload)
+    assert model.master_readings.sub_node_online is False
+
+
+# ---------- 2026-08-27 v2 firmware: v2-master heartbeat ----------
+
+def _heartbeat_payload(**overrides: Any) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "$schema": SCHEMA_TELEMETRY_V2_MASTER,
+        "tenant_id": "11111111-1111-1111-1111-111111111111",
+        "farm_id":   "bbbbbbbb-2222-2222-2222-222222222222",
+        "main_node_id": "AGR-MN-0001",
+        "recorded_at":        "2026-08-27T05:00:00+00:00",
+        "received_at_master": "2026-08-27T05:00:00+00:00",
+        "transmission_type":  "heartbeat",
+        "master_readings": {
+            "bme280_temp_c": 32.4,
+            "bme280_humidity_pct": 65.1,
+            "bme280_pressure_pa": 95000.0,
+            "ina219_bus_v": 12.1,
+            "ina219_current_ma": 250.0,
+            "rain_pulses_window": 0,
+            "wind_pulses_window": 0,
+            "wind_dir_adc": 976,
+            "time_source": "ntp",
+            "sub_node_online": True,
+            "sub_node_silence_ms": 42_000,
+        },
+        "firmware_version": "viraai-mn-1.0.0-raw",
+    }
+    payload.update(overrides)
+    return payload
+
+
+PILOT_HEARTBEAT_TOPIC = (
+    "agro/v2/11111111-1111-1111-1111-111111111111"
+    "/bbbbbbbb-2222-2222-2222-222222222222"
+    "/AGR-MN-0001/telemetry"
+)
+
+
+def test_parse_inbound_routes_v2_master_schema_to_telemetry_master() -> None:
+    payload = _heartbeat_payload()
+    model = parse_inbound(PILOT_HEARTBEAT_TOPIC, json.dumps(payload).encode())
+    assert isinstance(model, TelemetryMaster)
+    assert model.main_node_id == "AGR-MN-0001"
+    assert model.master_readings.sub_node_online is True
+    assert model.master_readings.sub_node_silence_ms == 42_000
+    assert model.master_readings.time_source == "ntp"
+
+
+def test_v2_master_accepts_sub_node_offline() -> None:
+    payload = copy.deepcopy(_heartbeat_payload())
+    payload["master_readings"]["sub_node_online"] = False
+    payload["master_readings"]["sub_node_silence_ms"] = 900_001
+    model = TelemetryMaster.model_validate(payload)
+    assert model.master_readings.sub_node_online is False
+    assert model.master_readings.sub_node_silence_ms == 900_001
+
+
+def test_v2_master_rejects_wrong_transmission_type() -> None:
+    payload = copy.deepcopy(_heartbeat_payload())
+    payload["transmission_type"] = "lora"
+    with pytest.raises(ValidationError):
+        TelemetryMaster.model_validate(payload)
+
+
+def test_v2_master_rejects_missing_sub_node_online() -> None:
+    payload = copy.deepcopy(_heartbeat_payload())
+    del payload["master_readings"]["sub_node_online"]
+    with pytest.raises(ValidationError):
+        TelemetryMaster.model_validate(payload)
+
+
+def test_v2_master_rejects_extra_field_at_top_level() -> None:
+    payload = _heartbeat_payload(evil="hax")
+    with pytest.raises(ValidationError):
+        TelemetryMaster.model_validate(payload)
+
+
+def test_v2_master_rejects_extra_field_in_master_readings() -> None:
+    payload = copy.deepcopy(_heartbeat_payload())
+    payload["master_readings"]["evil"] = "hax"
+    with pytest.raises(ValidationError):
+        TelemetryMaster.model_validate(payload)
+
+
+def test_v2_master_rejects_naive_timestamp() -> None:
+    payload = _heartbeat_payload(recorded_at="2026-08-27T05:00:00")
+    with pytest.raises(ValidationError):
+        TelemetryMaster.model_validate(payload)
+
+
+def test_v2_master_defaults_silence_ms_to_zero_when_absent() -> None:
+    payload = copy.deepcopy(_heartbeat_payload())
+    del payload["master_readings"]["sub_node_silence_ms"]
+    model = TelemetryMaster.model_validate(payload)
+    assert model.master_readings.sub_node_silence_ms == 0

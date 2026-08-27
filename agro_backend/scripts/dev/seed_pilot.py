@@ -295,10 +295,17 @@ def main() -> int:
                     750, 350,
                     3.300, 3.200,
                     0.500, 2.500,
-                    450.000, 16.00,
+                    -- 2026-08-27 v2 firmware: cadence is now 5 min. The Sub
+                    -- Node also sends its actual on-device flow window via
+                    -- raw_readings.window_s, which OVERRIDES this row's
+                    -- flow_window_seconds at runtime (see
+                    -- app/domain/device_calibration.py::calibrate_flow_lpm).
+                    -- This value is kept as a sane fallback for pre-v2
+                    -- producers (fake_main_node.py etc.).
+                    450.000, 300.00,
                     10.000, 10.000, 100.000,
                     'seed_pilot.py',
-                    'Firmware-baked defaults; field team must dial in DRY/WET ADC per probe.'
+                    'Firmware-baked defaults; field team must dial in DRY/WET ADC per probe. flow_window_seconds is a fallback -- v2 firmware overrides it via raw_readings.window_s.'
                 )
                 ON CONFLICT (tenant_id, device_id) DO NOTHING
                 """
