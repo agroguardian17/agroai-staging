@@ -377,6 +377,20 @@ class IngestBroker:
                             metrics.ingest_dropped_total.labels(
                                 reason="duplicate"
                             ).inc()
+                            log.info(
+                                "ingest_broker.master_heartbeat_duplicate",
+                                topic=topic,
+                                main_node_id=heartbeat.main_node_id,
+                                recorded_at=heartbeat.recorded_at.isoformat(),
+                            )
+                        else:
+                            log.info(
+                                "ingest_broker.master_heartbeat_saved",
+                                topic=topic,
+                                main_node_id=heartbeat.main_node_id,
+                                reading_id=reading_id,
+                                recorded_at=heartbeat.recorded_at.isoformat(),
+                            )
                     continue
                 if isinstance(model, TelemetryInRaw):
                     # Round 16: raw-values payload — apply per-device
@@ -412,6 +426,12 @@ class IngestBroker:
                 result = await self._ingest_fn(reading, self._deps)
                 if result.reading_id is None:  # type: ignore[attr-defined]
                     metrics.ingest_dropped_total.labels(reason="duplicate").inc()
+                    log.info(
+                        "ingest_broker.reading_duplicate",
+                        topic=topic,
+                        node_id=reading.node_id,
+                        recorded_at=reading.recorded_at.isoformat(),
+                    )
                 else:
                     # Rule-engine accounting. Only fires when the use case
                     # actually ran rule evaluation (ProcessReadingResult);
@@ -497,7 +517,7 @@ def _normalize_clock_skew(reading: object, *, now: datetime | None = None) -> ob
     else:
         received_at_master = received_at_master.astimezone(UTC)
 
-    health = dict(reading.sensor_health_json)
+    health = dict(getattr(reading, "sensor_health_json", {}))
     health.update(
         {
             "timestamp_corrected": True,
@@ -508,7 +528,7 @@ def _normalize_clock_skew(reading: object, *, now: datetime | None = None) -> ob
     )
     log.warning(
         "ingest_broker.timestamp_corrected",
-        node_id=reading.node_id,
+        device_id=getattr(reading, "node_id", getattr(reading, "main_node_id", "unknown")),
         original_recorded_at=recorded_at.isoformat(),
         corrected_recorded_at=current.isoformat(),
     )
