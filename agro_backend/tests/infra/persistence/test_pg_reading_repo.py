@@ -5,7 +5,6 @@ Requires a reachable Postgres with all migrations applied. Auto-skip path
 is in ``conftest.py``.
 """
 
-
 from __future__ import annotations
 
 import uuid
@@ -31,8 +30,6 @@ from .conftest import DB_SKIP_REASON, PILOT_TENANT, db_available
 pytestmark = pytest.mark.skipif(not db_available(), reason=DB_SKIP_REASON)
 
 
-
-
 # ---------------------------------------------------------------------------
 # Seed helpers - create the master rows the FK constraints need.
 # ---------------------------------------------------------------------------
@@ -48,7 +45,6 @@ def _seed_master_data(eng: Engine) -> tuple[uuid.UUID, uuid.UUID, str, str]:
     farm_id = uuid.uuid4()
     plot_id = f"PLOT_PG_{run}"
     device_id = f"AGR-PG-{run}"
-
 
     with eng.begin() as conn:
         conn.execute(
@@ -128,8 +124,6 @@ def _seed_master_data(eng: Engine) -> tuple[uuid.UUID, uuid.UUID, str, str]:
     return farmer_id, farm_id, plot_id, device_id
 
 
-
-
 @pytest.fixture
 def seed(
     sync_engine: Engine, clean_telemetry: None
@@ -159,8 +153,6 @@ def seed(
         conn.execute(text("DELETE FROM farmers WHERE farmer_id = :f"), {"f": farmer_id})
 
 
-
-
 def _make_reading(
     farmer_id: uuid.UUID,
     farm_id: uuid.UUID,
@@ -187,8 +179,6 @@ def _make_reading(
     return Reading(**base)  # type: ignore[arg-type]
 
 
-
-
 # ===========================================================================
 # Protocol structural check
 # ===========================================================================
@@ -197,8 +187,6 @@ async def test_pg_reading_repo_satisfies_protocol(
 ) -> None:
     repo = PgReadingRepo(sessionmaker)
     assert isinstance(repo, ReadingRepo)
-
-
 
 
 # ===========================================================================
@@ -215,8 +203,6 @@ async def test_save_returns_reading_id_on_fresh_insert(
     assert rid is not None
     assert isinstance(rid, int)
     assert rid > 0
-
-
 
 
 async def test_save_returns_none_on_duplicate_node_time(
@@ -241,8 +227,6 @@ async def test_save_returns_none_on_duplicate_node_time(
     assert rid2 is None  # duplicate key -> DO NOTHING -> no row -> None
 
 
-
-
 async def test_save_different_times_creates_two_rows(
     sessionmaker: async_sessionmaker[AsyncSession],
     seed: tuple[uuid.UUID, uuid.UUID, str, str],
@@ -255,8 +239,6 @@ async def test_save_different_times_creates_two_rows(
     rid2 = await repo.save(_make_reading(farmer_id, farm_id, plot_id, device_id, recorded_at=t2))
     assert rid1 is not None and rid2 is not None
     assert rid1 != rid2
-
-
 
 
 # ===========================================================================
@@ -288,8 +270,6 @@ async def test_latest_for_plot_returns_newest_first_with_limit(
     assert out[2].soil_moisture_1_pct == Decimal("22")
 
 
-
-
 # ===========================================================================
 # recent_for_node - oldest-first within a window
 # ===========================================================================
@@ -314,8 +294,6 @@ async def test_recent_for_node_filters_by_since(
     since = base + timedelta(minutes=15)  # only readings 2 and 3 qualify
     out = await repo.recent_for_node(device_id, since)
     assert len(out) == 2
-
-
 
 
 # ===========================================================================
@@ -351,8 +329,6 @@ async def test_history_for_stuck_check_returns_oldest_first(
     assert first < last
 
 
-
-
 async def test_history_for_stuck_check_rejects_disallowed_field(
     sessionmaker: async_sessionmaker[AsyncSession],
     seed: tuple[uuid.UUID, uuid.UUID, str, str],
@@ -361,8 +337,6 @@ async def test_history_for_stuck_check_rejects_disallowed_field(
     repo = PgReadingRepo(sessionmaker)
     with pytest.raises(ValueError, match="not in ALLOWED_HISTORY_FIELDS"):
         await repo.history_for_stuck_check(device_id, "drop table users", minutes=90)
-
-
 
 
 # ===========================================================================
@@ -392,8 +366,6 @@ async def test_history_for_mad_check_returns_non_null_decimals(
     assert all(isinstance(v, Decimal) for v in window)
 
 
-
-
 async def test_history_for_mad_check_rejects_disallowed_field(
     sessionmaker: async_sessionmaker[AsyncSession],
     seed: tuple[uuid.UUID, uuid.UUID, str, str],
@@ -402,8 +374,6 @@ async def test_history_for_mad_check_rejects_disallowed_field(
     repo = PgReadingRepo(sessionmaker)
     with pytest.raises(ValueError, match="not in ALLOWED_HISTORY_FIELDS"):
         await repo.history_for_mad_check(device_id, "tenant_id", hours=24)
-
-
 
 
 # ===========================================================================

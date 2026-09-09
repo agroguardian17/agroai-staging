@@ -170,6 +170,7 @@ used for autogeneration.
 | `dashboard/pages/02_Plot_Detail.py` | Reading charts, alert table, and persisted-suggestion view. |
 | `dashboard/pages/03_Ops_Queue.py` | Tenant-wide alert filtering and resolve forms. |
 
+
 ## Deployment and operations
 
 | File | Purpose |

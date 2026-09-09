@@ -1,6 +1,5 @@
 """Integration tests for :class:`~app.infra.persistence.pg_plot_repo.PgPlotRepo`."""
 
-
 from __future__ import annotations
 
 import uuid
@@ -19,8 +18,6 @@ from app.infra.persistence.pg_plot_repo import PgPlotRepo
 from .conftest import DB_SKIP_REASON, PILOT_TENANT, db_available
 
 pytestmark = pytest.mark.skipif(not db_available(), reason=DB_SKIP_REASON)
-
-
 
 
 def _seed_minimum(eng: Engine) -> tuple[uuid.UUID, uuid.UUID, str, str]:
@@ -107,8 +104,6 @@ def _seed_minimum(eng: Engine) -> tuple[uuid.UUID, uuid.UUID, str, str]:
     return farmer_id, farm_id, plot_id, device_id
 
 
-
-
 @pytest.fixture
 def seed(sync_engine: Engine) -> Iterator[tuple[uuid.UUID, uuid.UUID, str, str]]:
     farmer_id, farm_id, plot_id, device_id = _seed_minimum(sync_engine)
@@ -128,8 +123,6 @@ def seed(sync_engine: Engine) -> Iterator[tuple[uuid.UUID, uuid.UUID, str, str]]
         conn.execute(text("DELETE FROM farmers WHERE farmer_id = :f"), {"f": farmer_id})
 
 
-
-
 # ===========================================================================
 # Protocol check
 # ===========================================================================
@@ -137,8 +130,6 @@ async def test_pg_plot_repo_satisfies_protocol(
     sessionmaker: async_sessionmaker[AsyncSession],
 ) -> None:
     assert isinstance(PgPlotRepo(sessionmaker), PlotRepo)
-
-
 
 
 # ===========================================================================
@@ -162,8 +153,6 @@ async def test_find_returns_plot_with_sub_node_tier(
     assert isinstance(p.area_acre, Decimal)
 
 
-
-
 async def test_find_returns_none_when_missing(
     sessionmaker: async_sessionmaker[AsyncSession],
     seed: tuple[uuid.UUID, uuid.UUID, str, str],
@@ -171,8 +160,6 @@ async def test_find_returns_none_when_missing(
     repo = PgPlotRepo(sessionmaker)
     p = await repo.find("does-not-exist")
     assert p is None
-
-
 
 
 # ===========================================================================
@@ -188,8 +175,6 @@ async def test_for_farmer_returns_only_owned_plots(
     assert any(p.plot_id == plot_id for p in plots)
 
 
-
-
 async def test_for_farmer_empty_when_unknown_id(
     sessionmaker: async_sessionmaker[AsyncSession],
     seed: tuple[uuid.UUID, uuid.UUID, str, str],
@@ -197,8 +182,6 @@ async def test_for_farmer_empty_when_unknown_id(
     repo = PgPlotRepo(sessionmaker)
     plots = await repo.for_farmer(uuid.uuid4())
     assert plots == []
-
-
 
 
 # ===========================================================================
@@ -214,8 +197,6 @@ async def test_for_tenant_includes_seeded_plot(
     assert any(p.plot_id == plot_id for p in plots)
 
 
-
-
 # ===========================================================================
 # update_data_tier
 # ===========================================================================
@@ -227,22 +208,17 @@ async def test_update_data_tier_to_satellite_only_clears_node(
     _, _, plot_id, _ = seed
     repo = PgPlotRepo(sessionmaker)
 
-
     # Verify starting state.
     p = await repo.find(plot_id)
     assert p is not None
     assert p.data_tier is DataTier.SUB_NODE
 
-
     await repo.update_data_tier(plot_id, DataTier.SATELLITE_ONLY)
-
 
     p_after = await repo.find(plot_id)
     assert p_after is not None
     assert p_after.data_tier is DataTier.SATELLITE_ONLY
     assert p_after.node_id is None
-
-
 
 
 async def test_update_data_tier_to_sub_node_not_implemented(
@@ -253,8 +229,6 @@ async def test_update_data_tier_to_sub_node_not_implemented(
     repo = PgPlotRepo(sessionmaker)
     with pytest.raises(NotImplementedError, match="Round 9"):
         await repo.update_data_tier(plot_id, DataTier.SUB_NODE)
-
-
 
 
 # ===========================================================================

@@ -1,6 +1,5 @@
 """Tests for app.application.send_otp.execute."""
 
-
 from __future__ import annotations
 
 import uuid
@@ -23,8 +22,6 @@ PHONE = "+918123456789"
 TENANT = uuid.UUID("11111111-1111-1111-1111-111111111111")
 
 
-
-
 def _farmer() -> FarmerIdentity:
     return FarmerIdentity(
         farmer_id=uuid.uuid4(),
@@ -36,23 +33,17 @@ def _farmer() -> FarmerIdentity:
     )
 
 
-
-
 class _StubFarmerRepo:
     def __init__(self, by_phone: FarmerIdentity | None) -> None:
         self._by_phone = by_phone
         self.lookups: list[str] = []
 
-
     async def find_by_phone(self, phone: str) -> FarmerIdentity | None:
         self.lookups.append(phone)
         return self._by_phone
 
-
     async def find_by_id(self, farmer_id: uuid.UUID) -> FarmerIdentity | None:
         return None
-
-
 
 
 class _StubOtpRepo:
@@ -65,32 +56,24 @@ class _StubOtpRepo:
         self.recent_count = recent_count
         self.created: list[OtpChallenge] = []
 
-
     async def create(self, c: OtpChallenge) -> uuid.UUID:
         self.created.append(c)
         return c.challenge_id
 
-
     async def find_latest_active(self, phone: str) -> OtpChallenge | None:
         return self.latest_active
-
 
     async def find_by_id(self, cid: uuid.UUID) -> OtpChallenge | None:
         return None
 
-
     async def increment_attempt(self, cid: uuid.UUID) -> int:
         return 0
-
 
     async def mark_consumed(self, cid: uuid.UUID) -> None:
         pass
 
-
     async def recent_attempts_count(self, phone: str, since_minutes: int) -> int:
         return self.recent_count
-
-
 
 
 class _StubSender:
@@ -98,7 +81,6 @@ class _StubSender:
         self.accepted = accepted
         self.error = error
         self.sent: list[tuple[str, str]] = []
-
 
     async def send_otp_template(
         self, *, phone: str, code: str, template_name: str, language_code: str = "en"
@@ -109,8 +91,6 @@ class _StubSender:
             provider_message_id="msg-1" if self.accepted else None,
             error_code=self.error,
         )
-
-
 
 
 def _deps(
@@ -135,8 +115,6 @@ def _deps(
     )
 
 
-
-
 # ===========================================================================
 # Happy path
 # ===========================================================================
@@ -151,8 +129,6 @@ async def test_send_otp_creates_challenge_and_sends() -> None:
     assert sender.sent[0][0] == PHONE
 
 
-
-
 async def test_send_otp_creates_hashed_code_not_plain() -> None:
     deps, otp, sender = _deps(_farmer())
     await execute(phone=PHONE, deps=deps)
@@ -163,15 +139,11 @@ async def test_send_otp_creates_hashed_code_not_plain() -> None:
     assert saved.code_hash.startswith("sha256$")
 
 
-
-
 async def test_send_otp_attaches_farmer_tenant() -> None:
     farmer = _farmer()
     deps, otp, _ = _deps(farmer)
     await execute(phone=PHONE, deps=deps)
     assert otp.created[0].tenant_id == farmer.tenant_id
-
-
 
 
 # ===========================================================================
@@ -181,8 +153,6 @@ async def test_send_otp_unknown_phone_raises() -> None:
     deps, _, _ = _deps(None)
     with pytest.raises(UnknownPhoneError):
         await execute(phone=PHONE, deps=deps)
-
-
 
 
 async def test_send_otp_rejects_when_active_challenge_exists() -> None:
@@ -205,15 +175,11 @@ async def test_send_otp_rejects_when_active_challenge_exists() -> None:
     assert exc_info.value.reason == "active_challenge_exists"
 
 
-
-
 async def test_send_otp_rejects_when_rate_limited() -> None:
     deps, _, _ = _deps(_farmer(), recent_count=10)
     with pytest.raises(OtpThrottledError) as exc_info:
         await execute(phone=PHONE, deps=deps)
     assert exc_info.value.reason == "rate_limited"
-
-
 
 
 async def test_send_otp_raises_when_provider_rejects() -> None:

@@ -42,6 +42,9 @@ from app.infra.persistence.pg_alert_repo import PgAlertRepo
 from app.infra.persistence.pg_device_calibration_repo import PgDeviceCalibrationRepo
 from app.infra.persistence.pg_main_node_reading_repo import PgMainNodeReadingRepo
 from app.infra.persistence.pg_reading_repo import PgReadingRepo
+from app.infra.persistence.pg_weather_station_reading_repo import (
+    PgWeatherStationReadingRepo,
+)
 
 if TYPE_CHECKING:
     from app.config import Settings
@@ -66,6 +69,13 @@ async def build_and_start_ingest(settings: Settings) -> IngestBroker | None:
     # tests that don't care still work because they pass `parse_fn` /
     # `ingest_fn` fakes and never hit this repo.
     main_node_reading_repo = PgMainNodeReadingRepo(sessionmaker)
+    # Round 17 (2026-09-05): promote the Main Node's master_readings block
+    # from `Reading.sensor_health_json` into a proper Main-Node-keyed
+    # weather_station_readings table. Broker persists from BOTH v2-raw
+    # (bundled with Sub Node telemetry) AND v2-master (heartbeat).
+    # Idempotent on (master_node_id, recorded_at) — the two paths landing
+    # the same second collapse into one row.
+    weather_station_reading_repo = PgWeatherStationReadingRepo(sessionmaker)
 
     ingest_deps = IngestDeps(reading_repo=reading_repo, event_bus=event_bus)
     evaluate_deps = EvaluateRulesDeps(
@@ -78,9 +88,7 @@ async def build_and_start_ingest(settings: Settings) -> IngestBroker | None:
     # ``MQTT_BROKER_USER`` defaults to "service"; treat empty/default as
     # "anonymous". paho will send AUTH only if username is truthy.
     user = settings.MQTT_BROKER_USER or None
-    password = (
-        settings.MQTT_BROKER_PASSWORD.get_secret_value() or None if user else None
-    )
+    password = settings.MQTT_BROKER_PASSWORD.get_secret_value() or None if user else None
 
     broker_settings = BrokerSettings(
         host=settings.MQTT_BROKER_HOST,
@@ -97,6 +105,7 @@ async def build_and_start_ingest(settings: Settings) -> IngestBroker | None:
         deps,
         calibration_repo=calibration_repo,
         main_node_reading_repo=main_node_reading_repo,
+        weather_station_reading_repo=weather_station_reading_repo,
         max_queue=settings.MQTT_QUEUE_MAXSIZE,
     )
     await broker.start()

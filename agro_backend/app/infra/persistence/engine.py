@@ -23,7 +23,6 @@ URLs - vanilla Postgres, no AWS-specific driver. The URL itself comes
 from Settings (``DATABASE_URL``); the schema string is portable.
 """
 
-
 from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import (
@@ -66,8 +65,6 @@ def make_async_engine(
     )
 
 
-
-
 def make_sessionmaker(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
     """Build the async sessionmaker bound to an engine.
 
@@ -86,8 +83,6 @@ def make_sessionmaker(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
         expire_on_commit=False,
         autoflush=False,
     )
-
-
 
 
 __all__ = [

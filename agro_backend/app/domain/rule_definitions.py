@@ -21,7 +21,6 @@ To add a rule in a future round:
 PURE module: stdlib only.
 """
 
-
 from __future__ import annotations
 
 from decimal import Decimal
@@ -39,8 +38,6 @@ from app.domain.sensor import Reading
 # ---------------------------------------------------------------------------
 # Individual rule predicates
 # ---------------------------------------------------------------------------
-
-
 
 
 def _predicate_low_battery(r: Reading, m: DerivedMetrics) -> bool | dict[str, object]:
@@ -62,8 +59,6 @@ def _predicate_low_battery(r: Reading, m: DerivedMetrics) -> bool | dict[str, ob
     }
 
 
-
-
 def _predicate_battery_critical(r: Reading, m: DerivedMetrics) -> bool | dict[str, object]:
     """Separate rule for CRITICAL/DEAD so the message + severity match."""
     if m.battery_state not in (BatteryState.CRITICAL, BatteryState.DEAD):
@@ -75,8 +70,6 @@ def _predicate_battery_critical(r: Reading, m: DerivedMetrics) -> bool | dict[st
     }
 
 
-
-
 def _predicate_low_water(_r: Reading, m: DerivedMetrics) -> bool | dict[str, object]:
     if not m.moisture_below_target or m.moisture_deficit_pct is None:
         return False
@@ -84,8 +77,6 @@ def _predicate_low_water(_r: Reading, m: DerivedMetrics) -> bool | dict[str, obj
         "deficit": str(m.moisture_deficit_pct),
         "value": m.moisture_deficit_pct,
     }
-
-
 
 
 def _predicate_dry_run(r: Reading, m: DerivedMetrics) -> bool:
@@ -96,12 +87,8 @@ def _predicate_dry_run(r: Reading, m: DerivedMetrics) -> bool:
     return m.dry_run_signature
 
 
-
-
 def _predicate_sensor_fault(_r: Reading, m: DerivedMetrics) -> bool:
     return m.sensor_health_warn
-
-
 
 
 def _predicate_frost(r: Reading, m: DerivedMetrics) -> bool | dict[str, object]:
@@ -114,19 +101,13 @@ def _predicate_frost(r: Reading, m: DerivedMetrics) -> bool | dict[str, object]:
     }
 
 
-
-
 def _predicate_tamper(r: Reading, _m: DerivedMetrics) -> bool:
     return bool(r.tamper_detected)
-
-
 
 
 # ---------------------------------------------------------------------------
 # The pilot ruleset itself
 # ---------------------------------------------------------------------------
-
-
 
 
 PILOT_RULESET: RuleSet = RuleSet(
@@ -207,12 +188,8 @@ PILOT_RULESET: RuleSet = RuleSet(
 )
 
 
-
-
 # Convenience for tests + the dispatcher: rule_id -> Rule lookup.
 PILOT_RULE_BY_ID: dict[str, Rule] = {r.rule_id: r for r in PILOT_RULESET.rules}
-
-
 
 
 # Re-exported alert types so the dashboard / dispatcher can enumerate
@@ -222,16 +199,12 @@ PILOT_EMITTED_ALERT_TYPES: frozenset[AlertType] = frozenset(
 )
 
 
-
-
 # Threshold constants exposed for the dashboard (Round 12) so it can
 # render the same numbers the rules use without hard-coding them twice.
 PILOT_THRESHOLDS: dict[str, Decimal] = {
     "battery_low_v": BATTERY_LOW_V,
     "battery_critical_v": BATTERY_CRITICAL_V,
 }
-
-
 
 
 __all__ = [

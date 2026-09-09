@@ -82,7 +82,7 @@ static const struct { const char* node_id; const char* plot_id; } NODE_MAP[NODE_
 // _normalize_clock_skew) but firmware should be the first line of defence so
 // bad rows never enter the partition router.
 #define TIME_MIN_YEAR          2025
-#define TIME_MAX_YEAR          2035
+#define TIME_MAX_YEAR          2099
 
 // -------- Sub Node liveness + Main Node heartbeat --------
 // Publish a master-only telemetry packet ($schema=agro-guardian/telemetry/
@@ -118,6 +118,15 @@ static const struct { const char* node_id; const char* plot_id; } NODE_MAP[NODE_
 
 // -------- Payload sizing --------
 #define MAX_LORA_PAYLOAD       240      // SX1278 hard cap is 255; buffer smaller
-#define MAX_JSON_PAYLOAD       1200     // headroom for verbose JSON
+#define MAX_JSON_PAYLOAD       1400     // headroom for verbose JSON (v2.1 fault_flags)
+
+// -------- Wind gust tracking (v2.1, 2026-09-05) --------
+// The anemometer ISR increments a rolling counter every N ms; we snapshot
+// the max delta seen across any WIND_GUST_BUCKET_MS window during the last
+// MASTER_HEARTBEAT_MS cadence. Emitted as master_readings.wind_gust_pulses_max
+// so backend calibration can render km/h gust; spray-suitability rules care
+// about gusts, not averages.
+#define WIND_GUST_BUCKET_MS    3000UL   // 3 s bucket per Davis anemometer standard
+#define WIND_GUST_HISTORY      100      // 100 × 3 s = 5 min ring
 
 #endif // PILOT_CONFIG_H

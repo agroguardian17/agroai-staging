@@ -6,7 +6,6 @@ contains no IO of its own; the fakes capture every call so we can
 assert the orchestration is correct.
 """
 
-
 from __future__ import annotations
 
 import uuid
@@ -37,11 +36,8 @@ def _r(**over: object) -> Reading:
     return Reading(**base)  # type: ignore[arg-type]
 
 
-
-
 class _StubReadingRepo:
     """Fake ReadingRepo capturing the last saved reading + returning a chosen id."""
-
 
     def __init__(
         self,
@@ -55,43 +51,33 @@ class _StubReadingRepo:
         self._mad = mad or {}
         self.saved: list[Reading] = []
 
-
     async def save(self, reading: Reading) -> int | None:
         self.saved.append(reading)
         return self._save_return
 
-
     async def latest_for_plot(self, plot_id: str, limit: int) -> list[Reading]:  # pragma: no cover
         raise AssertionError("ingest must not call latest_for_plot()")
-
 
     async def recent_for_node(
         self, node_id: str, since: datetime
     ) -> list[Reading]:  # pragma: no cover
         raise AssertionError("ingest must not call recent_for_node()")
 
-
     async def history_for_stuck_check(
         self, node_id: str, field: str, minutes: int
     ) -> list[Decimal | None]:
         return self._stuck.get(field, [])
 
-
     async def history_for_mad_check(self, node_id: str, field: str, hours: int) -> list[Decimal]:
         return self._mad.get(field, [])
-
-
 
 
 class _StubEventBus:
     def __init__(self) -> None:
         self.published: list[tuple[str, dict[str, Any]]] = []
 
-
     async def publish(self, event_name: str, payload: dict[str, Any]) -> None:
         self.published.append((event_name, payload))
-
-
 
 
 def _deps(repo: ReadingRepo | None = None, bus: EventBus | None = None) -> IngestDeps:
@@ -99,8 +85,6 @@ def _deps(repo: ReadingRepo | None = None, bus: EventBus | None = None) -> Inges
         reading_repo=repo or _StubReadingRepo(),
         event_bus=bus or _StubEventBus(),
     )
-
-
 
 
 # ===========================================================================
@@ -124,8 +108,6 @@ async def test_clean_reading_saves_and_publishes() -> None:
     assert payload == {"plot_id": "P1", "reading_id": 100, "validation_warn": False}
 
 
-
-
 # ===========================================================================
 # Duplicate
 # ===========================================================================
@@ -138,8 +120,6 @@ async def test_duplicate_save_returns_none_and_suppresses_event() -> None:
     # No event published when the row was a duplicate; the ingest worker's
     # drain loop will increment metrics.ingest_dropped_total{reason=duplicate}.
     assert bus.published == []
-
-
 
 
 # ===========================================================================
@@ -160,8 +140,6 @@ async def test_range_fail_propagates_into_flags_and_event_payload() -> None:
     assert payload["validation_warn"] is True
 
 
-
-
 async def test_cross_sensor_disagreement_recorded_in_flags() -> None:
     repo = _StubReadingRepo(save_return=8)
     bus = _StubEventBus()
@@ -176,8 +154,6 @@ async def test_cross_sensor_disagreement_recorded_in_flags() -> None:
     assert result.flags["soil_moisture_avg_pct"] == "cross_sensor"
 
 
-
-
 # ===========================================================================
 # Repo / bus error propagation
 # ===========================================================================
@@ -186,13 +162,9 @@ class _BoomRepo(_StubReadingRepo):
         raise RuntimeError("DB down")
 
 
-
-
 class _BoomBus:
     async def publish(self, event_name: str, payload: dict[str, Any]) -> None:
         raise RuntimeError("bus down")
-
-
 
 
 async def test_repo_save_error_propagates() -> None:
@@ -200,8 +172,6 @@ async def test_repo_save_error_propagates() -> None:
     # The broker drain loop catches and meters them.
     with pytest.raises(RuntimeError, match="DB down"):
         await execute(_r(), _deps(repo=_BoomRepo()))
-
-
 
 
 async def test_bus_publish_error_propagates_after_save() -> None:
@@ -214,15 +184,11 @@ async def test_bus_publish_error_propagates_after_save() -> None:
     assert len(repo.saved) == 1
 
 
-
-
 # ===========================================================================
 # Ports are satisfied by the fakes (sanity)
 # ===========================================================================
 def test_stub_reading_repo_satisfies_protocol() -> None:
     assert isinstance(_StubReadingRepo(), ReadingRepo)
-
-
 
 
 def test_stub_event_bus_satisfies_protocol() -> None:

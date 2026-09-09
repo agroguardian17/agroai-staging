@@ -38,7 +38,6 @@ its ``cooldown_minutes`` here so the application layer knows the
 intended quiet period without re-encoding it.
 """
 
-
 from __future__ import annotations
 
 import uuid
@@ -60,8 +59,6 @@ PredicateResult = bool | dict[str, object]
 RulePredicate = Callable[[Reading, DerivedMetrics], PredicateResult]
 
 
-
-
 @dataclass(frozen=True, slots=True)
 class Rule:
     """One rule definition.
@@ -70,7 +67,6 @@ class Rule:
     The ``rule_id`` is a stable string identifier used in metrics and
     test diagnostics. It MUST be unique within a RuleSet.
     """
-
 
     rule_id: str
     alert_type: AlertType
@@ -84,17 +80,13 @@ class Rule:
     emits_value: bool = False
 
 
-
-
 @dataclass(frozen=True, slots=True)
 class RuleSet:
     """Collection of rules evaluated together. Frozen + ordered for
     deterministic test output and metric label stability.
     """
 
-
     rules: tuple[Rule, ...]
-
 
     def __post_init__(self) -> None:
         seen: set[str] = set()
@@ -102,8 +94,6 @@ class RuleSet:
             if r.rule_id in seen:
                 raise ValueError(f"Duplicate rule_id in RuleSet: {r.rule_id}")
             seen.add(r.rule_id)
-
-
 
 
 @dataclass(frozen=True, slots=True)
@@ -117,10 +107,8 @@ class RuleHit:
     materialises AlertCandidates directly.
     """
 
-
     rule: Rule
     substitutions: dict[str, object] = field(default_factory=dict)
-
 
     def render_message(self) -> str:
         if not self.substitutions:
@@ -134,13 +122,9 @@ class RuleHit:
             return self.rule.message_template_marathi
 
 
-
-
 # ---------------------------------------------------------------------------
 # Evaluation
 # ---------------------------------------------------------------------------
-
-
 
 
 def evaluate_to_hits(
@@ -163,8 +147,6 @@ def evaluate_to_hits(
             continue
         hits.append(RuleHit(rule=rule, substitutions=substitutions))
     return hits
-
-
 
 
 def evaluate(
@@ -200,8 +182,6 @@ def evaluate(
     return candidates
 
 
-
-
 def _decimal_or_none(v: object) -> Decimal | None:
     if v is None:
         return None
@@ -218,13 +198,9 @@ def _decimal_or_none(v: object) -> Decimal | None:
     return None
 
 
-
-
 # ---------------------------------------------------------------------------
 # Helpers for rule authors (used by app.domain.rule_definitions)
 # ---------------------------------------------------------------------------
-
-
 
 
 def alert_id_for(reading: Reading, rule_id: str) -> str:
@@ -238,14 +214,11 @@ def alert_id_for(reading: Reading, rule_id: str) -> str:
     return f"{reading.node_id}:{rule_id}:{reading.recorded_at.isoformat()}"
 
 
-
-
 def _uuid_namespace() -> uuid.UUID:
     """Stable namespace UUID for hashing rule_ids if any caller wants UUIDv5.
     Not used by the engine itself; exposed for downstream tooling.
     """
     return uuid.UUID("11111111-2222-3333-4444-555555555555")
-
 
 
 __all__ = [

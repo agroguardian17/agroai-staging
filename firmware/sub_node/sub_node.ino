@@ -100,6 +100,29 @@ float    g_dsTempC         = NAN;
 // a CSV field.
 uint8_t  g_npkRetriesThisCycle = 0;
 
+// v2.1 firmware (2026-09-05) — fault_flags accumulator. Reset at cycle
+// start, appended-to by sensor reads that failed but were non-fatal,
+// emitted in the CSV as FLT=<comma,list>. Empty string = healthy cycle.
+char     g_faultFlags[FLT_MAX_LEN + 1] = "";
+
+static void faultFlagsReset() {
+  g_faultFlags[0] = '\0';
+}
+
+// Append a flag if there's room. Silently drops if the buffer is full —
+// we'd rather lose the 6th flag than corrupt the CSV.
+static void faultFlagsAdd(const char* tag) {
+  size_t cur = strlen(g_faultFlags);
+  size_t addLen = strlen(tag);
+  size_t needed = cur + (cur > 0 ? 1 : 0) + addLen;
+  if (needed >= FLT_MAX_LEN) return;
+  if (cur > 0) {
+    g_faultFlags[cur++] = ',';
+    g_faultFlags[cur] = '\0';
+  }
+  strcpy(g_faultFlags + cur, tag);
+}
+
 // Actual wall-clock ms since the previous LoRa TX. Used to compute the flow
 // window on the backend (WDT tick RC is ±10-15%, so this can drift vs the
 // nominal CYCLE_PERIOD_MS). Set at boot to 0 which the backend treats as
@@ -242,6 +265,7 @@ static void readDs18() {
   float t = dsSensors.getTempCByIndex(0);
   if (t == DEVICE_DISCONNECTED_C) {
     g_dsTempC = NAN;
+    faultFlagsAdd(FLT_DS18_DISCONNECTED);
   } else {
     g_dsTempC = t;
   }
@@ -276,11 +300,13 @@ static bool readNpkAttempt() {
   if (received < NPK_RESPONSE_LEN) {
     Serial.print(F("NPK: short read, bytes="));
     Serial.println(received);
+    faultFlagsAdd(FLT_NPK_SHORT_READ);
     return false;
   }
   // Header check: slave 0x01, function 0x03, byte count 0x0E (14 = 7×2).
   if (resp[0] != 0x01 || resp[1] != 0x03 || resp[2] != 0x0E) {
     Serial.println(F("NPK: bad Modbus header"));
+    faultFlagsAdd(FLT_NPK_BAD_HEADER);
     return false;
   }
   // CRC check (bytes 0..16, expected CRC in 17..18, low byte first).
@@ -288,6 +314,7 @@ static bool readNpkAttempt() {
   uint16_t calcCrc = crc16(resp, 17);
   if (rxCrc != calcCrc) {
     Serial.println(F("NPK: CRC fail"));
+    faultFlagsAdd(FLT_NPK_CRC_FAIL);
     return false;
   }
   // Registers — send raw ints. Backend applies /10 or /100 conversions.
@@ -351,27 +378,45 @@ static bool sendLoRa() {
   }
   uint32_t winSec = g_windowMs / 1000UL;
 
-  int n = snprintf(pkt, sizeof(pkt),
-    "NODE=%s,SEQ=%lu,WIN=%lu,SOIL=%d,BAT=%d,PRESS=%d,FLOW=%u,FTOT=%lu,DST=%s,"
-    "NOK=%d,NT=%d,NM=%d,EC=%d,PH=%d,N=%d,P=%d,K=%d,FW=%s",
-    NODE_ID,
-    (unsigned long)g_seq,
-    (unsigned long)winSec,
-    g_soilAdc,
-    g_batAdc,
-    g_pressAdc,
-    (unsigned)flowThis,
-    (unsigned long)flowTot,
-    dsBuf,
-    g_npkOk ? 1 : 0,
-    (int)g_npkTempRaw,
-    (int)g_npkMoistRaw,
-    (int)g_npkEc,
-    (int)g_npkPhRaw,
-    (int)g_npkN,
-    (int)g_npkP,
-    (int)g_npkK,
-    FIRMWARE_VERSION);
+  // v2.1 firmware (2026-09-05): UP=<uptime_seconds> for reboot detection and
+  // stability scoring; FLT=<comma-flags> so backend rules can react to
+  // specific fault modes (npk_crc vs ds18_disc vs npk_short vs npk_hdr).
+  // FLT is omitted from the CSV entirely when there are no flags — saves
+  // ~5 bytes per healthy packet on the LoRa airtime budget.
+  uint32_t upSec = (uint32_t)(millis() / 1000UL);
+  int n;
+  if (g_faultFlags[0] == '\0') {
+    n = snprintf(pkt, sizeof(pkt),
+      "NODE=%s,SEQ=%lu,WIN=%lu,UP=%lu,SOIL=%d,BAT=%d,PRESS=%d,FLOW=%u,FTOT=%lu,DST=%s,"
+      "NOK=%d,NT=%d,NM=%d,EC=%d,PH=%d,N=%d,P=%d,K=%d,FW=%s",
+      NODE_ID,
+      (unsigned long)g_seq,
+      (unsigned long)winSec,
+      (unsigned long)upSec,
+      g_soilAdc, g_batAdc, g_pressAdc,
+      (unsigned)flowThis, (unsigned long)flowTot,
+      dsBuf,
+      g_npkOk ? 1 : 0,
+      (int)g_npkTempRaw, (int)g_npkMoistRaw, (int)g_npkEc, (int)g_npkPhRaw,
+      (int)g_npkN, (int)g_npkP, (int)g_npkK,
+      FIRMWARE_VERSION);
+  } else {
+    n = snprintf(pkt, sizeof(pkt),
+      "NODE=%s,SEQ=%lu,WIN=%lu,UP=%lu,SOIL=%d,BAT=%d,PRESS=%d,FLOW=%u,FTOT=%lu,DST=%s,"
+      "NOK=%d,NT=%d,NM=%d,EC=%d,PH=%d,N=%d,P=%d,K=%d,FLT=%s,FW=%s",
+      NODE_ID,
+      (unsigned long)g_seq,
+      (unsigned long)winSec,
+      (unsigned long)upSec,
+      g_soilAdc, g_batAdc, g_pressAdc,
+      (unsigned)flowThis, (unsigned long)flowTot,
+      dsBuf,
+      g_npkOk ? 1 : 0,
+      (int)g_npkTempRaw, (int)g_npkMoistRaw, (int)g_npkEc, (int)g_npkPhRaw,
+      (int)g_npkN, (int)g_npkP, (int)g_npkK,
+      g_faultFlags,
+      FIRMWARE_VERSION);
+  }
 
   if (n < 0 || n >= (int)sizeof(pkt)) {
     Serial.println(F("LoRa: payload overflow"));
@@ -480,6 +525,10 @@ void loop() {
   ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
     g_flowThisCycle = 0;
   }
+
+  // v2.1 firmware: fault flags accumulate across sensor reads this cycle;
+  // start fresh so a single npk_crc in cycle N doesn't stick to cycle N+1.
+  faultFlagsReset();
 
   Serial.println();
   Serial.print(F("---- CYCLE "));

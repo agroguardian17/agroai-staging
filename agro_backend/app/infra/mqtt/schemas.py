@@ -22,7 +22,6 @@ domain code touches the value (.cursorrules #3 - never float for
 measurements).
 """
 
-
 from __future__ import annotations
 
 import json
@@ -67,8 +66,6 @@ SCHEMA_TELEMETRY_V2_RAW: str = "agro-guardian/telemetry/v2-raw"
 SCHEMA_TELEMETRY_V2_MASTER: str = "agro-guardian/telemetry/v2-master"
 
 
-
-
 # ---------------------------------------------------------------------------
 # Decimal-safe coercion for incoming numeric fields.
 #
@@ -102,11 +99,7 @@ def _to_decimal(v: Any) -> Decimal | None:
     raise ValueError(f"cannot coerce {type(v).__name__} to Decimal")
 
 
-
-
 SafeDecimal = Annotated[Decimal | None, BeforeValidator(_to_decimal)]
-
-
 
 
 class TelemetryIn(BaseModel):
@@ -119,7 +112,6 @@ class TelemetryIn(BaseModel):
     identifiers that begin with a digit (per ``SCHEMA_DECISIONS.md`` #11b).
     """
 
-
     # ``ConfigDict`` is the pydantic-v2 way; no ``class Config`` (.cursorrules #1).
     # ``strict`` is False because the wire format mixes int + float for the
     # same field across producer versions; we want safe coercion.
@@ -129,13 +121,11 @@ class TelemetryIn(BaseModel):
         str_strip_whitespace=True,
     )
 
-
     # --- Discriminator ---
     schema_id: Literal["agro-guardian/telemetry/v2"] = Field(
         alias="$schema",
         description="Canonical schema identifier; rejected if unknown.",
     )
-
 
     # --- Identity ---
     tenant_id: uuid.UUID
@@ -144,16 +134,13 @@ class TelemetryIn(BaseModel):
     plot_id: str = Field(min_length=1, max_length=64)
     node_id: str = Field(min_length=1, max_length=64)
 
-
     # --- Timing (.cursorrules #2: must be timezone-aware) ---
     recorded_at: datetime
     received_at_master: datetime
 
-
     # --- Transport ---
     transmission_type: TransmissionType
     signal_rssi_dbm: int | None = Field(default=None, ge=-150, le=20)
-
 
     # --- Battery ---
     battery_voltage_v: SafeDecimal = None
@@ -161,17 +148,14 @@ class TelemetryIn(BaseModel):
     solar_charging: bool | None = None
     low_battery_flag: bool = False
 
-
     # --- Soil moisture ---
     soil_moisture_1_pct: SafeDecimal = None
     soil_moisture_2_pct: SafeDecimal = None
     soil_moisture_avg_pct: SafeDecimal = None
 
-
     # --- Soil temperature ---
     soil_temp_c: SafeDecimal = None
     soil_temp_rootzone_c: SafeDecimal = None
-
 
     # --- Soil chemistry ---
     soil_ph: SafeDecimal = None
@@ -183,7 +167,6 @@ class TelemetryIn(BaseModel):
     soil_p_bucket: int | None = Field(default=None, ge=0, le=63)
     soil_k_bucket: int | None = Field(default=None, ge=0, le=63)
     npk_sensor_raw_hex: str | None = None
-
 
     # --- Water / pump (VIRAAI v1.0 Sub Node emits flow + pressure) ---
     # These map 1:1 to the identically-named columns on
@@ -200,12 +183,10 @@ class TelemetryIn(BaseModel):
     firmware_version: str | None = None
     uptime_seconds: int | None = Field(default=None, ge=0)
 
-
     # --- v3 cadence + ingest flags ---
     cadence_mode: CadenceMode | None = None
     backlog_pending: bool = False
     validation_warn: bool = False
-
 
     # ------------------------------------------------------------------
     # Validators
@@ -218,7 +199,6 @@ class TelemetryIn(BaseModel):
         if dt.tzinfo is None:
             raise ValueError("datetime must be timezone-aware (RFC 3339 with offset)")
         return dt.astimezone(UTC)
-
 
     # ------------------------------------------------------------------
     # Boundary -> domain
@@ -273,8 +253,6 @@ class TelemetryIn(BaseModel):
         )
 
 
-
-
 # ===========================================================================
 # Round 16 — raw-values telemetry (`agro-guardian/telemetry/v2-raw`)
 # ===========================================================================
@@ -313,6 +291,18 @@ class RawReadings(BaseModel):
     #   use this value in place of ``cal.flow_window_seconds``.
     window_s: int | None = Field(default=None, ge=0)
 
+    # 2026-09-05 v2.1 firmware: Sub Node uptime in seconds (from millis()/1000
+    # at TX). Used for reboot detection and stability scoring. Optional so
+    # pre-v2.1 firmware (window_s but no uptime) validates cleanly.
+    uptime_seconds: int | None = Field(default=None, ge=0)
+
+    # 2026-09-05 v2.1 firmware: comma-separated fault tags emitted by the
+    # Sub Node this cycle. Empty string or None = healthy cycle. Backend
+    # writes this straight into node_sensor_readings.fault_flags; rules can
+    # fire per-tag (e.g. sensor_fault on `ds18_disc`, alert-on-`npk_crc`
+    # spikes to schedule a service visit).
+    fault_flags: str | None = Field(default=None, max_length=80)
+
     # ADC counts (10-bit)
     soil_adc: int = Field(ge=0, le=1023)
     battery_adc: int = Field(ge=0, le=1023)
@@ -330,11 +320,11 @@ class RawReadings(BaseModel):
     # NPK Modbus block. `npk_ok=False` means this cycle's read failed CRC
     # or timed out; the raw fields below should be treated as stale.
     npk_ok: bool
-    npk_temp_raw: int          # register (°C x10, backend divides)
-    npk_moisture_raw: int      # register (% x10, backend divides)
-    npk_ec_us_cm: int          # sensor-native µS/cm
-    npk_ph_raw: int            # register (pH x100, backend divides)
-    npk_nitrogen_mg_kg: int    # sensor-native mg/kg
+    npk_temp_raw: int  # register (°C x10, backend divides)
+    npk_moisture_raw: int  # register (% x10, backend divides)
+    npk_ec_us_cm: int  # sensor-native µS/cm
+    npk_ph_raw: int  # register (pH x100, backend divides)
+    npk_nitrogen_mg_kg: int  # sensor-native mg/kg
     npk_phosphorus_mg_kg: int
     npk_potassium_mg_kg: int
 
@@ -359,6 +349,11 @@ class MasterReadings(BaseModel):
     rain_pulses_window: int = Field(default=0, ge=0)
     wind_pulses_window: int = Field(default=0, ge=0)
     wind_dir_adc: int = Field(default=0, ge=0, le=4095)  # ESP32 12-bit ADC
+    # 2026-09-05 v2.1 firmware: max wind pulses in any 3-s bucket over the
+    # window. Backend calibration converts to km/h gust; spray-suitability
+    # and structural-damage rules care about gusts, not averages. Optional
+    # so pre-v2.1 firmware validates.
+    wind_gust_pulses_max: int = Field(default=0, ge=0)
     lora_rssi_dbm: int = Field(ge=-150, le=20)
     lora_snr_db: SafeDecimal = None
 
@@ -423,6 +418,11 @@ class TelemetryInRaw(BaseModel):
     # --- Metadata ---
     firmware_version: str | None = Field(default=None, max_length=64)
     main_node_id: str | None = Field(default=None, max_length=64)
+    # 2026-09-05 v2.1 firmware: TRUE when the Main Node's SD outbox drainer
+    # is replaying a packet queued during an earlier MQTT outage. Backend
+    # sets Reading.backlog_pending so downstream tooling can distinguish
+    # "live at recorded_at" from "queued at recorded_at, delivered later".
+    backlog_pending: bool = False
 
     @field_validator("recorded_at", "received_at_master")
     @classmethod
@@ -526,13 +526,17 @@ class TelemetryInRaw(BaseModel):
             soil_p_mg_kg=soil_p_mg_kg,
             soil_k_mg_kg=soil_k_mg_kg,
             # Water
-            water_flow_lpm=calibrate_flow_lpm(
-                rr.flow_pulses_window, calibration, window_override
-            ),
+            water_flow_lpm=calibrate_flow_lpm(rr.flow_pulses_window, calibration, window_override),
             water_pressure_bar=calibrate_pressure_bar(rr.pressure_adc, calibration),
             # Diagnostics
             sensor_health_json=sensor_health,
             firmware_version=fw,
+            # 2026-09-05 v2.1 firmware — Sub Node uptime + fault flags.
+            uptime_seconds=rr.uptime_seconds,
+            fault_flags=rr.fault_flags,
+            # SD outbox replay marker; True when Main Node drained this
+            # from /outbox.jsonl after an outage.
+            backlog_pending=self.backlog_pending,
         )
 
 
@@ -567,6 +571,8 @@ class MasterReadingsHeartbeat(BaseModel):
     rain_pulses_window: int = Field(default=0, ge=0)
     wind_pulses_window: int = Field(default=0, ge=0)
     wind_dir_adc: int = Field(default=0, ge=0, le=4095)
+    # 2026-09-05 v2.1 firmware — see MasterReadings.wind_gust_pulses_max.
+    wind_gust_pulses_max: int = Field(default=0, ge=0)
     time_source: str | None = Field(default=None, max_length=16)
     sub_node_online: bool
     # Milliseconds since the Main Node last received a LoRa frame from
@@ -630,18 +636,12 @@ alert, health) raise :class:`UnknownTopicKindError` until their schemas
 land in later rounds."""
 
 
-
-
 class TopicParseError(ValueError):
     """The topic string did not match ``agro/v2/<tenant>/<farm>/<node>/<kind>``."""
 
 
-
-
 class UnknownTopicKindError(ValueError):
     """The topic kind is well-formed but not yet implemented (e.g. weather)."""
-
-
 
 
 def _split_topic(topic: str) -> tuple[str, str, str, str]:
@@ -657,11 +657,7 @@ def _split_topic(topic: str) -> tuple[str, str, str, str]:
     return tenant, farm, node, kind
 
 
-
-
-def parse_inbound(
-    topic: str, raw: bytes
-) -> TelemetryIn | TelemetryInRaw | TelemetryMaster:
+def parse_inbound(topic: str, raw: bytes) -> TelemetryIn | TelemetryInRaw | TelemetryMaster:
     """Dispatch an MQTT payload to the right pydantic model.
 
     Three schemas are supported today:
@@ -698,9 +694,7 @@ def parse_inbound(
     # ValueError so the caller's broad except is enough.
     payload = json.loads(raw)
     if not isinstance(payload, dict):
-        raise ValueError(
-            f"MQTT payload must be a JSON object, got {type(payload).__name__}"
-        )
+        raise ValueError(f"MQTT payload must be a JSON object, got {type(payload).__name__}")
 
     schema_id = payload.get("$schema")
     if schema_id == SCHEMA_TELEMETRY_V2:
@@ -713,8 +707,6 @@ def parse_inbound(
         f"unknown $schema {schema_id!r}; expected {SCHEMA_TELEMETRY_V2!r}, "
         f"{SCHEMA_TELEMETRY_V2_RAW!r}, or {SCHEMA_TELEMETRY_V2_MASTER!r}"
     )
-
-
 
 
 __all__ = [

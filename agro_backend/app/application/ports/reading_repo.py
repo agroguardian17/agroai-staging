@@ -17,7 +17,6 @@ the concrete repo. Tests substitute a fake implementation; production
 substitutes Postgres.
 """
 
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -54,8 +53,6 @@ ALLOWED_HISTORY_FIELDS: frozenset[str] = frozenset(
 )
 
 
-
-
 @runtime_checkable
 class ReadingRepo(Protocol):
     """Operations the ingest pipeline + validation gates need against ``node_sensor_readings``.
@@ -65,7 +62,6 @@ class ReadingRepo(Protocol):
     ``(node_id, recorded_at)`` per the schema's UNIQUE constraint
     (``node_sensor_readings_idem`` from migration 0005).
     """
-
 
     async def save(self, reading: Reading) -> int | None:
         """Insert one row; return the new ``reading_id``.
@@ -78,7 +74,6 @@ class ReadingRepo(Protocol):
         """
         ...
 
-
     async def latest_for_plot(self, plot_id: str, limit: int) -> list[Reading]:
         """Most recent ``limit`` readings for a plot, newest first.
 
@@ -88,7 +83,6 @@ class ReadingRepo(Protocol):
         """
         ...
 
-
     async def recent_for_node(self, node_id: str, since: datetime) -> list[Reading]:
         """All readings from one node since ``since`` (UTC, tz-aware).
 
@@ -97,7 +91,6 @@ class ReadingRepo(Protocol):
         multiple recent rows from the same device.
         """
         ...
-
 
     async def history_for_stuck_check(
         self, node_id: str, field: str, minutes: int
@@ -120,7 +113,6 @@ class ReadingRepo(Protocol):
         """
         ...
 
-
     async def history_for_mad_check(self, node_id: str, field: str, hours: int) -> list[Decimal]:
         """Trailing 24-h window for Median Absolute Deviation outlier check.
 
@@ -131,8 +123,6 @@ class ReadingRepo(Protocol):
         "pass" until enough history exists.
         """
         ...
-
-
 
 
 __all__ = ["ALLOWED_HISTORY_FIELDS", "ReadingRepo"]

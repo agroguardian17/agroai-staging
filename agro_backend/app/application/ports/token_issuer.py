@@ -7,7 +7,6 @@ swap a stub implementation that produces fixed strings without
 involving the real signer.
 """
 
-
 from __future__ import annotations
 
 import uuid
@@ -20,8 +19,6 @@ class InvalidTokenError(Exception):
     """Raised by ``verify_access_token`` for any invalid / expired token."""
 
 
-
-
 @runtime_checkable
 class TokenIssuer(Protocol):
     """Mint and verify access tokens.
@@ -30,7 +27,6 @@ class TokenIssuer(Protocol):
     Refresh-token issuing is handled separately: it's a random opaque
     secret (no signed JWT) stored hashed in ``auth_sessions``.
     """
-
 
     def issue_access_token(
         self,
@@ -43,12 +39,9 @@ class TokenIssuer(Protocol):
         """Return (signed JWT, the claims that went into it)."""
         ...
 
-
     def verify_access_token(self, token: str) -> AccessClaims:
         """Parse + verify signature + check exp/iss/aud. Raise on failure."""
         ...
-
-
 
 
 __all__ = ["InvalidTokenError", "TokenIssuer"]

@@ -31,7 +31,6 @@ Non-JSON stdout lines (paho debug etc.) are passed through untouched.
 Zero dependencies beyond stdlib.
 """
 
-
 from __future__ import annotations
 
 import json
@@ -57,8 +56,6 @@ INTERESTING_PREFIXES: tuple[str, ...] = (
 )
 
 
-
-
 def _colorize(event: str, level: str | None) -> str:
     if event.endswith((".error", "_failed", ".connect_failed", ".unexpected_error")):
         return f"{COLORS['red']}{event}{COLORS['reset']}"
@@ -73,8 +70,6 @@ def _colorize(event: str, level: str | None) -> str:
     return f"{COLORS['cyan']}{event}{COLORS['reset']}"
 
 
-
-
 def _format_record(rec: dict[str, Any]) -> str:
     event = str(rec.get("event", ""))
     level = rec.get("level")
@@ -86,13 +81,7 @@ def _format_record(rec: dict[str, Any]) -> str:
         if k not in {"event", "level", "timestamp", "logger", "logger_name"}
     }
     payload_str = " ".join(f"{k}={v!r}" for k, v in payload.items())
-    return (
-        f"{COLORS['dim']}{ts}{COLORS['reset']} "
-        f"{_colorize(event, level)} "
-        f"{payload_str}"
-    )
-
-
+    return f"{COLORS['dim']}{ts}{COLORS['reset']} {_colorize(event, level)} {payload_str}"
 
 
 def _is_interesting(rec: dict[str, Any]) -> bool:
@@ -103,8 +92,6 @@ def _is_interesting(rec: dict[str, Any]) -> bool:
     # problems (DB timeout, missing plot FK) are visible.
     level = rec.get("level")
     return level in {"warning", "error", "critical"}
-
-
 
 
 def main() -> int:
@@ -125,8 +112,6 @@ def main() -> int:
         if _is_interesting(rec):
             print(_format_record(rec), flush=True)
     return 0
-
-
 
 
 if __name__ == "__main__":

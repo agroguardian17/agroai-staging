@@ -7,7 +7,6 @@ Each rule gets a happy-path "should fire" test and a quiet-path
 (Reading, DerivedMetrics) to AlertCandidate.
 """
 
-
 from __future__ import annotations
 
 import uuid
@@ -32,8 +31,6 @@ from app.domain.sensor import Reading, TransmissionType
 NOW = datetime(2026, 6, 20, 12, 0, tzinfo=UTC)
 
 
-
-
 def _r(**over: object) -> Reading:
     base: dict[str, object] = {
         "tenant_id": uuid.UUID("11111111-1111-1111-1111-111111111111"),
@@ -49,8 +46,6 @@ def _r(**over: object) -> Reading:
     return Reading(**base)  # type: ignore[arg-type]
 
 
-
-
 def _m(**over: object) -> DerivedMetrics:
     base: dict[str, object] = {
         "moisture_deficit_pct": None,
@@ -64,12 +59,8 @@ def _m(**over: object) -> DerivedMetrics:
     return DerivedMetrics(**base)  # type: ignore[arg-type]
 
 
-
-
 def _fired_rule_ids(reading: Reading, metrics: DerivedMetrics) -> set[str]:
     return {h.rule.rule_id for h in evaluate_to_hits(reading, metrics, PILOT_RULESET)}
-
-
 
 
 # ===========================================================================
@@ -80,13 +71,9 @@ def test_ruleset_rule_ids_are_unique() -> None:
     assert len(ids) == len(set(ids))
 
 
-
-
 def test_pilot_emitted_alert_types_is_subset_of_alert_type() -> None:
     for at in PILOT_EMITTED_ALERT_TYPES:
         assert at in set(AlertType)
-
-
 
 
 def test_every_rule_has_a_marathi_template_with_no_english() -> None:
@@ -96,12 +83,8 @@ def test_every_rule_has_a_marathi_template_with_no_english() -> None:
         assert any("ऀ" <= ch <= "ॿ" for ch in r.message_template_marathi), r.rule_id
 
 
-
-
 def test_pilot_rule_by_id_matches_ruleset() -> None:
     assert set(PILOT_RULE_BY_ID.keys()) == {r.rule_id for r in PILOT_RULESET.rules}
-
-
 
 
 # ===========================================================================
@@ -116,8 +99,6 @@ def test_low_battery_fires_when_state_is_low() -> None:
     assert "battery_critical" not in fired
 
 
-
-
 def test_low_battery_fires_when_state_is_critical_or_dead() -> None:
     fired = _fired_rule_ids(
         _r(battery_voltage_v=Decimal("3.00")),
@@ -125,8 +106,6 @@ def test_low_battery_fires_when_state_is_critical_or_dead() -> None:
     )
     assert "low_battery" in fired
     assert "battery_critical" in fired
-
-
 
 
 def test_battery_critical_silent_when_only_low() -> None:
@@ -137,8 +116,6 @@ def test_battery_critical_silent_when_only_low() -> None:
     assert "battery_critical" not in fired
 
 
-
-
 def test_low_battery_silent_when_healthy() -> None:
     fired = _fired_rule_ids(
         _r(battery_voltage_v=Decimal("3.55")),
@@ -146,8 +123,6 @@ def test_low_battery_silent_when_healthy() -> None:
     )
     assert "low_battery" not in fired
     assert "battery_critical" not in fired
-
-
 
 
 # ===========================================================================
@@ -164,16 +139,12 @@ def test_low_water_fires_when_below_target() -> None:
     assert "low_water" in fired
 
 
-
-
 def test_low_water_silent_when_above_target() -> None:
     fired = _fired_rule_ids(
         _r(soil_moisture_avg_pct=Decimal("35")),
         _m(moisture_below_target=False, moisture_deficit_pct=Decimal("-7")),
     )
     assert "low_water" not in fired
-
-
 
 
 # ===========================================================================
@@ -184,20 +155,14 @@ def test_dry_run_fires_via_firmware_flag() -> None:
     assert "dry_run" in fired
 
 
-
-
 def test_dry_run_fires_via_signature() -> None:
     fired = _fired_rule_ids(_r(), _m(dry_run_signature=True))
     assert "dry_run" in fired
 
 
-
-
 def test_dry_run_silent_when_neither_signal() -> None:
     fired = _fired_rule_ids(_r(), _m())
     assert "dry_run" not in fired
-
-
 
 
 # ===========================================================================
@@ -208,12 +173,8 @@ def test_sensor_fault_fires_when_validation_warn() -> None:
     assert "sensor_fault" in fired
 
 
-
-
 def test_sensor_fault_silent_on_clean_reading() -> None:
     assert "sensor_fault" not in _fired_rule_ids(_r(), _m())
-
-
 
 
 # ===========================================================================
@@ -227,13 +188,9 @@ def test_frost_fires_when_temp_low() -> None:
     assert "frost" in fired
 
 
-
-
 def test_frost_silent_when_warm() -> None:
     fired = _fired_rule_ids(_r(soil_temp_rootzone_c=Decimal("25")), _m())
     assert "frost" not in fired
-
-
 
 
 # ===========================================================================
@@ -243,13 +200,9 @@ def test_tamper_fires_when_flag_set() -> None:
     assert "tamper" in _fired_rule_ids(_r(tamper_detected=True), _m())
 
 
-
-
 def test_tamper_silent_when_flag_unset_or_none() -> None:
     assert "tamper" not in _fired_rule_ids(_r(), _m())
     assert "tamper" not in _fired_rule_ids(_r(tamper_detected=False), _m())
-
-
 
 
 # ===========================================================================
@@ -271,20 +224,15 @@ def test_evaluate_emits_alert_candidates_for_healthy_critical_battery() -> None:
     assert "3.05" in crit.alert_message_marathi
 
 
-
-
 def test_evaluate_emits_no_candidates_for_clean_reading() -> None:
     candidates = evaluate(_r(), _m(), PILOT_RULESET, now=NOW)
     assert candidates == []
-
-
 
 
 def test_thresholds_constants_match_metrics_module() -> None:
     # PILOT_THRESHOLDS is the dashboard's source of truth; if it drifts
     # from the metrics module the surface area gets confused.
     from app.domain.rule_definitions import PILOT_THRESHOLDS
-
 
     assert PILOT_THRESHOLDS["battery_low_v"] == BATTERY_LOW_V
     assert PILOT_THRESHOLDS["battery_critical_v"] == BATTERY_CRITICAL_V

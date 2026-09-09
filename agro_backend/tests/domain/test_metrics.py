@@ -1,6 +1,5 @@
 """Pure tests for app.domain.metrics."""
 
-
 from __future__ import annotations
 
 import uuid
@@ -31,8 +30,6 @@ NOW = datetime(2026, 6, 20, 12, 0, tzinfo=UTC)
 TENANT = uuid.UUID("11111111-1111-1111-1111-111111111111")
 
 
-
-
 def _reading(**over: object) -> Reading:
     base: dict[str, object] = {
         "tenant_id": TENANT,
@@ -48,8 +45,6 @@ def _reading(**over: object) -> Reading:
     return Reading(**base)  # type: ignore[arg-type]
 
 
-
-
 # ===========================================================================
 # moisture_deficit
 # ===========================================================================
@@ -57,19 +52,12 @@ def test_moisture_deficit_positive_when_below_target() -> None:
     assert moisture_deficit(Decimal("20"), Decimal("28")) == Decimal("8")
 
 
-
-
 def test_moisture_deficit_negative_when_above_target() -> None:
     assert moisture_deficit(Decimal("35"), Decimal("28")) == Decimal("-7")
 
 
-
-
 def test_moisture_deficit_none_when_actual_missing() -> None:
     assert moisture_deficit(None, Decimal("28")) is None
-
-
-
 
 
 # ===========================================================================
@@ -92,12 +80,8 @@ def test_battery_state_voltage_buckets(v: Decimal, expected: BatteryState) -> No
     assert battery_state_from(v, None) is expected
 
 
-
-
 def test_battery_state_unknown_when_no_telemetry() -> None:
     assert battery_state_from(None, None) is BatteryState.UNKNOWN
-
-
 
 
 def test_battery_state_picks_worst_across_voltage_and_percent() -> None:
@@ -106,13 +90,9 @@ def test_battery_state_picks_worst_across_voltage_and_percent() -> None:
     assert battery_state_from(Decimal("3.50"), Decimal("5")) is BatteryState.CRITICAL
 
 
-
-
 def test_battery_low_voltage_floor_matches_published_constant() -> None:
     # Round 3 published LOW_BATTERY_THRESHOLD_V = 3.30. Keep them in sync.
     assert Decimal("3.30") == BATTERY_LOW_V
-
-
 
 
 # ===========================================================================
@@ -122,18 +102,12 @@ def test_frost_risk_true_at_threshold() -> None:
     assert is_frost_risk(FROST_SOIL_TEMP_C) is True
 
 
-
-
 def test_frost_risk_false_above_threshold() -> None:
     assert is_frost_risk(Decimal("10.0")) is False
 
 
-
-
 def test_frost_risk_false_when_temp_missing() -> None:
     assert is_frost_risk(None) is False
-
-
 
 
 # ===========================================================================
@@ -150,8 +124,6 @@ def test_dry_run_when_pump_running_and_no_current_no_flow() -> None:
     )
 
 
-
-
 def test_dry_run_false_when_pump_off() -> None:
     assert (
         is_dry_run_signature(
@@ -163,8 +135,6 @@ def test_dry_run_false_when_pump_off() -> None:
     )
 
 
-
-
 def test_dry_run_false_when_current_or_flow_unknown() -> None:
     assert (
         is_dry_run_signature(pump_running=True, pump_current_amps=None, water_flow_lpm=Decimal("0"))
@@ -174,8 +144,6 @@ def test_dry_run_false_when_current_or_flow_unknown() -> None:
         is_dry_run_signature(pump_running=True, pump_current_amps=Decimal("0"), water_flow_lpm=None)
         is False
     )
-
-
 
 
 def test_dry_run_false_when_pump_drawing_normal_current() -> None:
@@ -190,16 +158,12 @@ def test_dry_run_false_when_pump_drawing_normal_current() -> None:
     )
 
 
-
-
 # ===========================================================================
 # sensor_health_warn_from
 # ===========================================================================
 def test_sensor_health_warn_true_when_validation_warn() -> None:
     r = _reading(validation_warn=True)
     assert sensor_health_warn_from(r) is True
-
-
 
 
 def test_sensor_health_warn_true_when_fault_flags_set() -> None:
@@ -209,12 +173,8 @@ def test_sensor_health_warn_true_when_fault_flags_set() -> None:
     assert sensor_health_warn_from(r) is True
 
 
-
-
 def test_sensor_health_warn_false_when_clean_reading() -> None:
     assert sensor_health_warn_from(_reading()) is False
-
-
 
 
 # ===========================================================================
@@ -237,15 +197,11 @@ def test_compute_returns_clean_metrics_for_healthy_reading() -> None:
     assert m.sensor_health_warn is False
 
 
-
-
 def test_compute_uses_custom_context_target() -> None:
     r = _reading(soil_moisture_avg_pct=Decimal("30"))
     m = compute(r, MetricsContext(target_moisture_pct=Decimal("35")))
     assert m.moisture_deficit_pct == Decimal("5")
     assert m.moisture_below_target is True
-
-
 
 
 def test_compute_target_default_matches_constant() -> None:
@@ -254,8 +210,6 @@ def test_compute_target_default_matches_constant() -> None:
     # 28 (default) - 20 = 8
     assert m.moisture_deficit_pct == Decimal("8")
     assert Decimal("28.0") == DEFAULT_TARGET_MOISTURE_PCT
-
-
 
 
 def test_compute_aggregates_all_warning_signals() -> None:

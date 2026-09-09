@@ -20,7 +20,6 @@ full domain objects - consumers re-fetch from repositories. Keeps each
 event well under 8000 bytes and avoids stale-copy races.
 """
 
-
 from __future__ import annotations
 
 from typing import Any, Protocol, runtime_checkable
@@ -69,8 +68,6 @@ EVENT_DEVICE_ONLINE = "device.online"
 Same payload shape as ``device.offline``."""
 
 
-
-
 @runtime_checkable
 class EventBus(Protocol):
     """Publish-only Protocol for the pilot.
@@ -84,7 +81,6 @@ class EventBus(Protocol):
     Protocol grows a ``subscribe`` method then.
     """
 
-
     async def publish(self, event_name: str, payload: dict[str, Any]) -> None:
         """Emit one event.
 
@@ -95,8 +91,6 @@ class EventBus(Protocol):
         this. Producers should always emit IDs, not full objects.
         """
         ...
-
-
 
 
 __all__ = [

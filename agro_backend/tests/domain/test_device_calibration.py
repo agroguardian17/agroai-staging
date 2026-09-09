@@ -43,6 +43,7 @@ def _cal(**overrides: object) -> DeviceCalibration:
 
 # ---------- Soil moisture ----------
 
+
 def test_soil_moisture_at_dry_endpoint_is_zero_pct() -> None:
     cal = _cal()
     assert calibrate_soil_moisture_pct(750, cal) == Decimal("0")
@@ -77,6 +78,7 @@ def test_soil_moisture_zero_span_returns_zero() -> None:
 
 # ---------- Battery ----------
 
+
 def test_battery_voltage_pilot_default() -> None:
     cal = _cal()
     # ADC=780, VREF=3.3, ratio=3.2 → 780 * 3.3/1023 * 3.2 ≈ 8.052 V
@@ -90,6 +92,7 @@ def test_battery_voltage_zero_adc_is_zero() -> None:
 
 
 # ---------- Pressure ----------
+
 
 def test_pressure_at_offset_is_zero() -> None:
     """When the transducer's DC output equals `offset_v`, bar = 0."""
@@ -112,6 +115,7 @@ def test_pressure_positive_reading() -> None:
 
 
 # ---------- Flow ----------
+
 
 def test_flow_lpm_zero_pulses_is_zero() -> None:
     assert calibrate_flow_lpm(0, _cal()) == Decimal("0")
@@ -171,6 +175,7 @@ def test_flow_lpm_window_override_none_falls_back_to_calibration_row() -> None:
 
 # ---------- NPK ----------
 
+
 def test_npk_temp_divides_by_ten() -> None:
     cal = _cal()
     # register 291 → 29.1 °C
@@ -197,6 +202,7 @@ def test_npk_zero_divisor_returns_zero() -> None:
 
 
 # ---------- Purity ----------
+
 
 def test_all_returns_are_decimal() -> None:
     """Ensure no float sneaks through the boundary."""

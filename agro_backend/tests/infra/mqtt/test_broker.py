@@ -11,7 +11,6 @@ the tests run without a real broker. Verifies:
 * Topic-template helper folds concrete topics to the metric template.
 """
 
-
 from __future__ import annotations
 
 import asyncio
@@ -62,22 +61,15 @@ def _reading() -> Reading:
     )
 
 
-
-
 class _StubModel:
     """Stand-in for TelemetryIn whose to_domain returns our fixture Reading."""
-
 
     def to_domain(self) -> Reading:
         return _reading()
 
 
-
-
 def _ok_parse(topic: str, raw: bytes) -> _StubModel:
     return _StubModel()
-
-
 
 
 async def _ok_ingest(reading: Reading, deps: ProcessReadingDeps) -> ProcessReadingResult:
@@ -87,15 +79,11 @@ async def _ok_ingest(reading: Reading, deps: ProcessReadingDeps) -> ProcessReadi
     )
 
 
-
-
 async def _duplicate_ingest(reading: Reading, deps: ProcessReadingDeps) -> ProcessReadingResult:
     return ProcessReadingResult(
         ingest=IngestResult(reading_id=None, validation_warn=False, flags={}),
         rules=None,
     )
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -110,12 +98,8 @@ def _empty_deps() -> ProcessReadingDeps:
     )
 
 
-
-
 def _settings() -> BrokerSettings:
     return BrokerSettings(host="localhost", port=1883)
-
-
 
 
 @pytest.fixture(autouse=True)
@@ -125,38 +109,26 @@ def _reset_metrics() -> None:
     pass
 
 
-
-
 def _dropped_count(reason: str) -> float:
     # prometheus_client exposes ._value.get() on Counters; for a labeled
     # counter we grab the child first.
     return metrics.ingest_dropped_total.labels(reason=reason)._value.get()
 
 
-
-
 def _received_count(topic_template: str) -> float:
     return metrics.ingest_received_total.labels(topic=topic_template)._value.get()
-
-
 
 
 def _rule_eval_count() -> float:
     return metrics.rule_evaluations_total._value.get()
 
 
-
-
 def _alerts_created_count() -> float:
     return metrics.alerts_created_total._value.get()
 
 
-
-
 def _cooldown_count() -> float:
     return metrics.alerts_cooldown_suppressed_total._value.get()
-
-
 
 
 # ===========================================================================
@@ -166,13 +138,9 @@ def test_topic_template_folds_telemetry_topics() -> None:
     assert _topic_template("agro/v2/pilot/F_001/N_001/telemetry") == "agro/v2/+/+/+/telemetry"
 
 
-
-
 def test_topic_template_handles_other_shapes() -> None:
     assert _topic_template("garbage") == "other"
     assert _topic_template("agro/v1/pilot/x/y/telemetry") == "other"
-
-
 
 
 # ===========================================================================
@@ -181,14 +149,12 @@ def test_topic_template_handles_other_shapes() -> None:
 async def test_drain_loop_dispatches_to_ingest_fn() -> None:
     ingested: list[Reading] = []
 
-
     async def capture_ingest(reading: Reading, _deps: ProcessReadingDeps) -> ProcessReadingResult:
         ingested.append(reading)
         return ProcessReadingResult(
             ingest=IngestResult(reading_id=1, validation_warn=False, flags={}),
             rules=EvaluateRulesResult(hits=0, created=0, cooldown_suppressed=0),
         )
-
 
     broker = IngestBroker(
         _settings(),
@@ -198,28 +164,22 @@ async def test_drain_loop_dispatches_to_ingest_fn() -> None:
         max_queue=4,
     )
 
-
     # Bypass paho - directly set up the asyncio plumbing.
     broker._loop = asyncio.get_running_loop()
     broker._queue = asyncio.Queue(maxsize=4)
     task = asyncio.create_task(broker._drain())
 
-
     received_before = _received_count("agro/v2/+/+/+/telemetry")
     broker._enqueue("agro/v2/pilot/F/N/telemetry", b"{}")
     await asyncio.sleep(0.1)
-
 
     assert len(ingested) == 1
     received_after = _received_count("agro/v2/+/+/+/telemetry")
     assert received_after == pytest.approx(received_before + 1)
 
-
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
         await task
-
-
 
 
 # ===========================================================================
@@ -237,19 +197,15 @@ async def test_drain_loop_marks_duplicate_drops() -> None:
     broker._queue = asyncio.Queue(maxsize=4)
     task = asyncio.create_task(broker._drain())
 
-
     before = _dropped_count("duplicate")
     broker._enqueue("agro/v2/pilot/F/N/telemetry", b"{}")
     await asyncio.sleep(0.1)
     after = _dropped_count("duplicate")
     assert after == pytest.approx(before + 1)
 
-
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
         await task
-
-
 
 
 # ===========================================================================
@@ -273,12 +229,9 @@ async def _run_one_message_through_drain(parse_fn: Any, ingest_fn: Any = _ok_ing
         await task
 
 
-
-
 async def test_topic_parse_error_increments_topic_parse_label() -> None:
     def bad_topic(_t: str, _r: bytes) -> _StubModel:
         raise TopicParseError("bad topic")
-
 
     before = _dropped_count("topic_parse")
     await _run_one_message_through_drain(bad_topic)
@@ -286,19 +239,14 @@ async def test_topic_parse_error_increments_topic_parse_label() -> None:
     assert after == pytest.approx(before + 1)
 
 
-
-
 async def test_unknown_kind_error_increments_unknown_topic_kind_label() -> None:
     def unknown(_t: str, _r: bytes) -> _StubModel:
         raise UnknownTopicKindError("weather not yet supported")
-
 
     before = _dropped_count("unknown_topic_kind")
     await _run_one_message_through_drain(unknown)
     after = _dropped_count("unknown_topic_kind")
     assert after == pytest.approx(before + 1)
-
-
 
 
 async def test_validation_error_increments_validation_label() -> None:
@@ -308,26 +256,20 @@ async def test_validation_error_increments_validation_label() -> None:
         TelemetryIn.model_validate({"$schema": "agro-guardian/telemetry/v2"})
         raise AssertionError  # unreachable
 
-
     before = _dropped_count("validation")
     await _run_one_message_through_drain(invalid)
     after = _dropped_count("validation")
     assert after == pytest.approx(before + 1)
 
 
-
-
 async def test_parse_error_via_value_error_increments_parse_error_label() -> None:
     def value_err(_t: str, _r: bytes) -> _StubModel:
         raise ValueError("garbage payload")
-
 
     before = _dropped_count("parse_error")
     await _run_one_message_through_drain(value_err)
     after = _dropped_count("parse_error")
     assert after == pytest.approx(before + 1)
-
-
 
 
 async def test_drain_loop_increments_rule_metrics_for_fresh_insert() -> None:
@@ -336,7 +278,6 @@ async def test_drain_loop_increments_rule_metrics_for_fresh_insert() -> None:
             ingest=IngestResult(reading_id=42, validation_warn=False, flags={}),
             rules=EvaluateRulesResult(hits=2, created=1, cooldown_suppressed=1),
         )
-
 
     broker = IngestBroker(
         _settings(),
@@ -349,37 +290,29 @@ async def test_drain_loop_increments_rule_metrics_for_fresh_insert() -> None:
     broker._queue = asyncio.Queue(maxsize=4)
     task = asyncio.create_task(broker._drain())
 
-
     eval_before = _rule_eval_count()
     created_before = _alerts_created_count()
     cooldown_before = _cooldown_count()
     broker._enqueue("agro/v2/pilot/F/N/telemetry", b"{}")
     await asyncio.sleep(0.1)
 
-
     assert _rule_eval_count() == pytest.approx(eval_before + 1)
     assert _alerts_created_count() == pytest.approx(created_before + 1)
     assert _cooldown_count() == pytest.approx(cooldown_before + 1)
-
 
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
         await task
 
 
-
-
 async def test_unexpected_error_increments_unexpected_label() -> None:
     def boom(_t: str, _r: bytes) -> _StubModel:
         raise RuntimeError("infra meltdown")
-
 
     before = _dropped_count("unexpected")
     await _run_one_message_through_drain(boom)
     after = _dropped_count("unexpected")
     assert after == pytest.approx(before + 1)
-
-
 
 
 # ===========================================================================
@@ -390,11 +323,11 @@ def _make_heartbeat_model(sub_node_online: bool = True) -> TelemetryMaster:
         {
             "$schema": SCHEMA_TELEMETRY_V2_MASTER,
             "tenant_id": "11111111-1111-1111-1111-111111111111",
-            "farm_id":   "bbbbbbbb-2222-2222-2222-222222222222",
+            "farm_id": "bbbbbbbb-2222-2222-2222-222222222222",
             "main_node_id": "AGR-MN-0001",
-            "recorded_at":        "2026-08-27T05:00:00+00:00",
+            "recorded_at": "2026-08-27T05:00:00+00:00",
             "received_at_master": "2026-08-27T05:00:00+00:00",
-            "transmission_type":  "heartbeat",
+            "transmission_type": "heartbeat",
             "master_readings": {
                 "bme280_temp_c": 32.4,
                 "bme280_humidity_pct": 65.1,
@@ -427,18 +360,14 @@ async def test_v2_master_heartbeat_meters_and_does_not_ingest() -> None:
     def parse_heartbeat(_t: str, _r: bytes) -> TelemetryMaster:
         return _make_heartbeat_model(sub_node_online=True)
 
-    before_online = metrics.main_node_heartbeat_total.labels(
-        sub_node_online="true"
-    )._value.get()
+    before_online = metrics.main_node_heartbeat_total.labels(sub_node_online="true")._value.get()
 
     await _run_one_message_through_drain(parse_heartbeat, capture_ingest)
 
     # No ingest — heartbeats are metered + logged, not persisted.
     assert ingested == []
 
-    after_online = metrics.main_node_heartbeat_total.labels(
-        sub_node_online="true"
-    )._value.get()
+    after_online = metrics.main_node_heartbeat_total.labels(sub_node_online="true")._value.get()
     assert after_online == pytest.approx(before_online + 1)
 
 
@@ -446,13 +375,9 @@ async def test_v2_master_heartbeat_labels_sub_node_offline() -> None:
     def parse_heartbeat(_t: str, _r: bytes) -> TelemetryMaster:
         return _make_heartbeat_model(sub_node_online=False)
 
-    before_offline = metrics.main_node_heartbeat_total.labels(
-        sub_node_online="false"
-    )._value.get()
+    before_offline = metrics.main_node_heartbeat_total.labels(sub_node_online="false")._value.get()
     await _run_one_message_through_drain(parse_heartbeat)
-    after_offline = metrics.main_node_heartbeat_total.labels(
-        sub_node_online="false"
-    )._value.get()
+    after_offline = metrics.main_node_heartbeat_total.labels(sub_node_online="false")._value.get()
     assert after_offline == pytest.approx(before_offline + 1)
 
 
@@ -538,6 +463,202 @@ async def test_v2_master_heartbeat_duplicate_repo_counts_as_dropped() -> None:
     assert after == pytest.approx(before + 1)
 
 
+# ===========================================================================
+# Round 17 — weather_station_readings persistence (v2-master path)
+# ===========================================================================
+class _FakeWeatherRepo:
+    """Records every save() call; Round-17 broker-wiring test hook."""
+
+    def __init__(self, return_id: int | None = 7) -> None:
+        self.saved: list[Any] = []
+        self._return_id = return_id
+
+    async def save(self, reading: Any) -> int | None:
+        self.saved.append(reading)
+        return self._return_id
+
+    async def latest_for_node(self, master_node_id: str, limit: int) -> list[Any]:
+        return []
+
+    async def most_recent(self, master_node_id: str) -> Any | None:
+        return None
+
+
+async def test_v2_master_heartbeat_persists_weather_when_repo_injected() -> None:
+    """The heartbeat's master_readings block also lands in weather_station_readings."""
+    fake_weather = _FakeWeatherRepo(return_id=99)
+
+    def parse_heartbeat(_t: str, _r: bytes) -> TelemetryMaster:
+        return _make_heartbeat_model(sub_node_online=True)
+
+    broker = IngestBroker(
+        _settings(),
+        _empty_deps(),
+        weather_station_reading_repo=fake_weather,
+        parse_fn=parse_heartbeat,
+        ingest_fn=_ok_ingest,
+        max_queue=4,
+    )
+    broker._loop = asyncio.get_running_loop()
+    broker._queue = asyncio.Queue(maxsize=4)
+    task = asyncio.create_task(broker._drain())
+    broker._enqueue("agro/v2/T/F/AGR-MN-0001/telemetry", b"{}")
+    await asyncio.sleep(0.1)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert len(fake_weather.saved) == 1
+    row = fake_weather.saved[0]
+    assert row.master_node_id == "AGR-MN-0001"
+    # Fixture bme280_temp_c=32.4; assert Decimal survived pass-through.
+    from decimal import Decimal
+
+    assert row.air_temp_c == Decimal("32.4")
+    # BME280 emits pascals; broker converts to hPa via /100.
+    assert row.atmospheric_pressure_hpa == Decimal("950.00")
+
+
+async def test_v2_master_heartbeat_no_weather_save_when_repo_absent() -> None:
+    """Repo not injected -> broker still meters, logs, saves heartbeat, but no weather write."""
+    fake_hb = _FakeMainNodeRepo(return_id=1)
+
+    def parse_heartbeat(_t: str, _r: bytes) -> TelemetryMaster:
+        return _make_heartbeat_model(sub_node_online=True)
+
+    broker = IngestBroker(
+        _settings(),
+        _empty_deps(),
+        main_node_reading_repo=fake_hb,
+        # weather_station_reading_repo intentionally omitted
+        parse_fn=parse_heartbeat,
+        ingest_fn=_ok_ingest,
+        max_queue=4,
+    )
+    broker._loop = asyncio.get_running_loop()
+    broker._queue = asyncio.Queue(maxsize=4)
+    task = asyncio.create_task(broker._drain())
+    broker._enqueue("agro/v2/T/F/AGR-MN-0001/telemetry", b"{}")
+    await asyncio.sleep(0.1)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    # Heartbeat still saved; no crash on the missing weather repo.
+    assert len(fake_hb.saved) == 1
+
+
+async def test_v2_raw_path_also_persists_weather_when_repo_injected() -> None:
+    """v2-raw carries master_readings too; the broker persists them on that path."""
+    import json as _json
+    from decimal import Decimal
+
+    from app.application.ports.device_calibration_repo import DeviceCalibrationRepo
+    from app.domain.device_calibration import DeviceCalibration
+
+    fake_weather = _FakeWeatherRepo(return_id=42)
+
+    class _FakeCalRepo:
+        async def get_by_device(self, tenant_id: str, device_id: str) -> DeviceCalibration | None:
+            return DeviceCalibration(
+                tenant_id=tenant_id,
+                device_id=device_id,
+                soil_dry_adc=750,
+                soil_wet_adc=350,
+                battery_vref_v=Decimal("3.300"),
+                battery_divider_ratio=Decimal("3.200"),
+                pressure_offset_v=Decimal("0.500"),
+                pressure_scale_bar_per_v=Decimal("2.500"),
+                flow_pulses_per_litre=Decimal("450.000"),
+                flow_window_seconds=Decimal("300.00"),
+                npk_temp_divisor=Decimal("10.000"),
+                npk_moisture_divisor=Decimal("10.000"),
+                npk_ph_divisor=Decimal("100.000"),
+                calibration_version=1,
+            )
+
+    fake_cal: DeviceCalibrationRepo = _FakeCalRepo()  # type: ignore[assignment]
+
+    v2raw_payload = {
+        "$schema": "agro-guardian/telemetry/v2-raw",
+        "tenant_id": "11111111-1111-1111-1111-111111111111",
+        "farmer_id": "aaaaaaaa-1111-1111-1111-111111111111",
+        "farm_id": "bbbbbbbb-2222-2222-2222-222222222222",
+        "plot_id": "PLOT_PILOT_001",
+        "node_id": "AGR-SN-0001",
+        "seq": 1,
+        "recorded_at": "2026-09-05T10:00:00+00:00",
+        "received_at_master": "2026-09-05T10:00:00+00:00",
+        "transmission_type": "lora",
+        "raw_readings": {
+            "window_s": 300,
+            "soil_adc": 550,
+            "battery_adc": 780,
+            "pressure_adc": 340,
+            "flow_pulses_window": 12,
+            "flow_pulses_total": 145,
+            "ds18b20_temp_c": 27.5,
+            "npk_ok": True,
+            "npk_temp_raw": 291,
+            "npk_moisture_raw": 357,
+            "npk_ec_us_cm": 1045,
+            "npk_ph_raw": 645,
+            "npk_nitrogen_mg_kg": 58,
+            "npk_phosphorus_mg_kg": 79,
+            "npk_potassium_mg_kg": 197,
+            "sub_node_fw": "viraai-sn-1.0.0-raw",
+        },
+        "master_readings": {
+            "bme280_temp_c": 30.0,
+            "bme280_humidity_pct": 60.0,
+            "bme280_pressure_pa": 95500.0,
+            "ina219_bus_v": 12.5,
+            "ina219_current_ma": 220.0,
+            "rain_pulses_window": 0,
+            "wind_pulses_window": 0,
+            "wind_dir_adc": 500,
+            "lora_rssi_dbm": -71,
+            "lora_snr_db": 8.5,
+        },
+        "firmware_version": "viraai-mn-1.0.0-raw",
+        "main_node_id": "AGR-MN-0001",
+    }
+
+    from app.infra.mqtt.schemas import parse_inbound
+
+    def parse_v2raw(_t: str, _r: bytes):
+        return parse_inbound(_t, _json.dumps(v2raw_payload).encode())
+
+    broker = IngestBroker(
+        _settings(),
+        _empty_deps(),
+        calibration_repo=fake_cal,
+        weather_station_reading_repo=fake_weather,
+        parse_fn=parse_v2raw,
+        ingest_fn=_ok_ingest,
+        max_queue=4,
+    )
+    broker._loop = asyncio.get_running_loop()
+    broker._queue = asyncio.Queue(maxsize=4)
+    task = asyncio.create_task(broker._drain())
+    broker._enqueue(
+        "agro/v2/11111111-1111-1111-1111-111111111111"
+        "/bbbbbbbb-2222-2222-2222-222222222222/AGR-SN-0001/telemetry",
+        b"{}",
+    )
+    await asyncio.sleep(0.15)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert len(fake_weather.saved) == 1
+    row = fake_weather.saved[0]
+    assert row.master_node_id == "AGR-MN-0001"
+    assert row.air_temp_c == Decimal("30.0")
+    # pascals -> hPa: 95500 / 100 = 955.00
+    assert row.atmospheric_pressure_hpa == Decimal("955.00")
+
+
 def test_normalize_clock_skew_replaces_impossible_future_timestamp() -> None:
     reading = _reading().with_(
         recorded_at=datetime(2070, 1, 1, 1, 3, 6, tzinfo=UTC),
@@ -595,7 +716,7 @@ def test_normalize_clock_skew_leaves_valid_timestamps_untouched() -> None:
 
     normalized = _normalize_clock_skew(reading, now=now)
 
-    assert normalized is reading   # frozen dataclass; no copy needed
+    assert normalized is reading  # frozen dataclass; no copy needed
     assert normalized.recorded_at == original_recorded_at
     assert normalized.received_at_master == original_received_at
     assert normalized.validation_warn is False
@@ -616,15 +737,12 @@ async def test_enqueue_drops_when_queue_full() -> None:
     broker._loop = asyncio.get_running_loop()
     broker._queue = asyncio.Queue(maxsize=1)
 
-
     before = _dropped_count("queue_full")
     broker._enqueue("agro/v2/p/f/n/telemetry", b"a")
     # Queue is now full; second enqueue without a drain in between must drop.
     broker._enqueue("agro/v2/p/f/n/telemetry", b"b")
     after = _dropped_count("queue_full")
     assert after == pytest.approx(before + 1)
-
-
 
 
 # ===========================================================================
@@ -685,15 +803,11 @@ async def test_start_raises_when_already_started() -> None:
         await broker.start()
 
 
-
-
 async def test_stop_is_idempotent() -> None:
     broker = IngestBroker(_settings(), _empty_deps())
     # Fresh broker; stop() should be a no-op (everything is None).
     await broker.stop()
     await broker.stop()
-
-
 
 
 # ===========================================================================
@@ -703,12 +817,8 @@ def test_telemetry_topic_filter_uses_multilevel_wildcards() -> None:
     assert TELEMETRY_TOPIC_FILTER == "agro/v2/+/+/+/telemetry"
 
 
-
-
 def test_qos_default_is_at_least_once() -> None:
     assert QOS_AT_LEAST_ONCE == 1
-
-
 
 
 def test_max_queue_is_a_reasonable_size() -> None:

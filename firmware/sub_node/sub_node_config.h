@@ -66,6 +66,17 @@
 #define LED_BLINK_MS          150UL
 #define LED_BLINK_GAP_MS      150UL
 
+// -------- Fault flags (v2.1 firmware, 2026-09-05) --------
+// Comma-separated tags emitted in the CSV as FLT=<tags>. Backend routes
+// them into node_sensor_readings.fault_flags and rules can fire per-tag
+// (dry_run_detected on `flow_zero_pump_on`, sensor_fault on `ds18_disc`).
+// Keep flag names short — total CSV payload budget is 240 bytes.
+#define FLT_NPK_SHORT_READ    "npk_short"    // Modbus reply < NPK_RESPONSE_LEN
+#define FLT_NPK_BAD_HEADER    "npk_hdr"      // slave/function/count byte wrong
+#define FLT_NPK_CRC_FAIL      "npk_crc"      // CRC16 mismatch
+#define FLT_DS18_DISCONNECTED "ds18_disc"    // DS18B20 returned DEVICE_DISCONNECTED_C
+#define FLT_MAX_LEN           64             // max chars in the FLT string
+
 // -------- Battery divider (raw ADC only — no conversion here) --------
 // Divider is 220k + 100k on A1. Backend applies:
 //   voltage = adc * (VREF / 1023.0) * ((220e3 + 100e3) / 100e3)

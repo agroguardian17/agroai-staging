@@ -53,6 +53,7 @@ from typing import Any
 # Three-valued logic
 # ---------------------------------------------------------------------------
 
+
 class TV:
     TRUE = "TRUE"
     FALSE = "FALSE"
@@ -83,26 +84,48 @@ class TV:
         return TV.UNKNOWN
 
 
-MONTHS = {m: i + 1 for i, m in enumerate(
-    ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'])}
-STAGES = ['G0','G1','G2','G3','G4','G5']
+MONTHS = {
+    m: i + 1
+    for i, m in enumerate(
+        ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
+    )
+}
+STAGES = ["G0", "G1", "G2", "G3", "G4", "G5"]
 
 
 # ---------------------------------------------------------------------------
 # Tokeniser
 # ---------------------------------------------------------------------------
 
-TOKEN_RE = re.compile(r"""
+TOKEN_RE = re.compile(
+    r"""
     (?P<ws>\s+)
   | (?P<num>-?\d+(?:\.\d+)?)
   | (?P<str>'[^']*')
   | (?P<op>>=|<=|!=|==|>|<)
   | (?P<punc>[(),\[\]])
   | (?P<word>[A-Za-z_][A-Za-z_0-9]*)
-""", re.X)
+""",
+    re.X,
+)
 
-KEYWORDS = {'AND','OR','NOT','IN','BETWEEN','IS','NULL','TRUE','FALSE',
-            'DURATION','WITHIN','MONTH','STAGE','DAYS','HOURS'}
+KEYWORDS = {
+    "AND",
+    "OR",
+    "NOT",
+    "IN",
+    "BETWEEN",
+    "IS",
+    "NULL",
+    "TRUE",
+    "FALSE",
+    "DURATION",
+    "WITHIN",
+    "MONTH",
+    "STAGE",
+    "DAYS",
+    "HOURS",
+}
 
 
 @dataclass
@@ -119,26 +142,34 @@ def tokenise(s: str) -> list[Tok]:
         if not m:
             raise SyntaxError(f"unexpected character at {i}: {s[i]!r}")
         i = m.end()
-        if m.lastgroup == 'ws':
+        if m.lastgroup == "ws":
             continue
-        if m.lastgroup == 'num':
-            toks.append(Tok('NUM', float(m.group()) if '.' in m.group() else int(m.group()), m.start()))
-        elif m.lastgroup == 'str':
-            toks.append(Tok('STR', m.group()[1:-1], m.start()))
-        elif m.lastgroup == 'op':
-            toks.append(Tok('OP', m.group(), m.start()))
-        elif m.lastgroup == 'punc':
+        if m.lastgroup == "num":
+            toks.append(
+                Tok("NUM", float(m.group()) if "." in m.group() else int(m.group()), m.start())
+            )
+        elif m.lastgroup == "str":
+            toks.append(Tok("STR", m.group()[1:-1], m.start()))
+        elif m.lastgroup == "op":
+            toks.append(Tok("OP", m.group(), m.start()))
+        elif m.lastgroup == "punc":
             toks.append(Tok(m.group(), m.group(), m.start()))
         else:
             w = m.group()
-            toks.append(Tok('KW' if w.upper() in KEYWORDS else 'FIELD',
-                            w.upper() if w.upper() in KEYWORDS else w, m.start()))
+            toks.append(
+                Tok(
+                    "KW" if w.upper() in KEYWORDS else "FIELD",
+                    w.upper() if w.upper() in KEYWORDS else w,
+                    m.start(),
+                )
+            )
     return toks
 
 
 # ---------------------------------------------------------------------------
 # AST
 # ---------------------------------------------------------------------------
+
 
 class Node:
     def fields(self) -> set[str]:
@@ -164,11 +195,19 @@ class Cmp(Node):
         left = ctx.get(self.fld)
         right = ctx.get(self.val.name) if isinstance(self.val, FieldRef) else self.val
         if left is None or right is None:
-            trace.append((self.to_str(), TV.UNKNOWN, f"{self.fld}=None" if left is None else "rhs=None"))
+            trace.append(
+                (self.to_str(), TV.UNKNOWN, f"{self.fld}=None" if left is None else "rhs=None")
+            )
             return TV.UNKNOWN
         try:
-            r = {'>':  left >  right, '>=': left >= right, '<': left < right,
-                 '<=': left <= right, '==': left == right, '!=': left != right}[self.op]
+            r = {
+                ">": left > right,
+                ">=": left >= right,
+                "<": left < right,
+                "<=": left <= right,
+                "==": left == right,
+                "!=": left != right,
+            }[self.op]
         except TypeError:
             trace.append((self.to_str(), TV.UNKNOWN, "type mismatch"))
             return TV.UNKNOWN
@@ -177,8 +216,11 @@ class Cmp(Node):
         return out
 
     def to_str(self):
-        v = self.val.name if isinstance(self.val, FieldRef) else (
-            f"'{self.val}'" if isinstance(self.val, str) else self.val)
+        v = (
+            self.val.name
+            if isinstance(self.val, FieldRef)
+            else (f"'{self.val}'" if isinstance(self.val, str) else self.val)
+        )
         return f"{self.fld} {self.op} {v}"
 
 
@@ -233,7 +275,7 @@ class Between(Node):
 @dataclass
 class IsCheck(Node):
     fld: str
-    what: str          # NULL | NOT_NULL | TRUE | FALSE
+    what: str  # NULL | NOT_NULL | TRUE | FALSE
 
     def fields(self):
         return {self.fld}
@@ -241,13 +283,13 @@ class IsCheck(Node):
     def eval(self, ctx, trace):
         present = self.fld in ctx and ctx[self.fld] is not None
         v = ctx.get(self.fld)
-        if self.what == 'NULL':
+        if self.what == "NULL":
             out = TV.TRUE if not present else TV.FALSE
-        elif self.what == 'NOT_NULL':
+        elif self.what == "NOT_NULL":
             out = TV.TRUE if present else TV.FALSE
         elif not present:
             out = TV.UNKNOWN
-        elif self.what == 'TRUE':
+        elif self.what == "TRUE":
             out = TV.TRUE if v is True else TV.FALSE
         else:
             out = TV.TRUE if v is False else TV.FALSE
@@ -255,7 +297,7 @@ class IsCheck(Node):
         return out
 
     def to_str(self):
-        return f"{self.fld} IS {'NOT NULL' if self.what=='NOT_NULL' else self.what}"
+        return f"{self.fld} IS {'NOT NULL' if self.what == 'NOT_NULL' else self.what}"
 
 
 @dataclass
@@ -295,7 +337,7 @@ class Within(Node):
     unit: str
 
     def _key(self):
-        base = self.fld.replace('_date', '')
+        base = self.fld.replace("_date", "")
         return f"days_to_{base}"
 
     def fields(self):
@@ -343,8 +385,7 @@ class And(Node):
 
     def to_str(self):
         return " AND ".join(
-            f"({p.to_str()})" if isinstance(p, Or) else p.to_str()
-            for p in self.parts
+            f"({p.to_str()})" if isinstance(p, Or) else p.to_str() for p in self.parts
         )
 
 
@@ -368,6 +409,7 @@ class Or(Node):
 # ---------------------------------------------------------------------------
 # Parser
 # ---------------------------------------------------------------------------
+
 
 class Parser:
     def __init__(self, toks, known_fields=None):
@@ -406,112 +448,113 @@ class Parser:
 
     def or_expr(self):
         parts = [self.and_expr()]
-        while self.accept('KW', 'OR'):
+        while self.accept("KW", "OR"):
             parts.append(self.and_expr())
         return parts[0] if len(parts) == 1 else Or(parts)
 
     def and_expr(self):
         parts = [self.not_expr()]
-        while self.accept('KW', 'AND'):
+        while self.accept("KW", "AND"):
             parts.append(self.not_expr())
         return parts[0] if len(parts) == 1 else And(parts)
 
     def not_expr(self):
-        if self.accept('KW', 'NOT'):
+        if self.accept("KW", "NOT"):
             return Not(self.not_expr())
         return self.primary()
 
     def primary(self):
-        if self.accept('(', '('):
+        if self.accept("(", "("):
             n = self.or_expr()
-            self.expect(')', ')')
+            self.expect(")", ")")
             return n
 
         t = self.peek()
-        if t and t.kind == 'KW' and t.val == 'DURATION':
+        if t and t.kind == "KW" and t.val == "DURATION":
             self.next()
-            self.expect('(', '(')
+            self.expect("(", "(")
             fld = self.field_name()
-            op = self.expect('OP').val
+            op = self.expect("OP").val
             iv = self.value()
-            self.expect(')', ')')
-            self.expect('OP', '>')
+            self.expect(")", ")")
+            self.expect("OP", ">")
             n = self.value()
-            unit = self.expect('KW').val
+            unit = self.expect("KW").val
             return Duration(fld, op, iv, n, unit)
 
-        if t and t.kind == 'KW' and t.val == 'WITHIN':
+        if t and t.kind == "KW" and t.val == "WITHIN":
             self.next()
-            self.expect('(', '(')
+            self.expect("(", "(")
             fld = self.field_name()
-            self.expect(',', ',')
+            self.expect(",", ",")
             n = self.value()
-            unit = self.expect('KW').val
-            self.expect(')', ')')
+            unit = self.expect("KW").val
+            self.expect(")", ")")
             return Within(fld, n, unit)
 
-        if t and t.kind == 'KW' and t.val in ('MONTH', 'STAGE'):
+        if t and t.kind == "KW" and t.val in ("MONTH", "STAGE"):
             kw = self.next().val
-            self.expect('KW', 'IN')
+            self.expect("KW", "IN")
             vals = self.value_list()
-            fld = 'current_month' if kw == 'MONTH' else 'current_stage'
-            if kw == 'MONTH':
+            fld = "current_month" if kw == "MONTH" else "current_stage"
+            if kw == "MONTH":
                 vals = [MONTHS.get(str(v).upper()[:3], v) for v in vals]
             return InSet(fld, vals)
 
         fld = self.field_name()
 
-        if self.accept('KW', 'IN'):
+        if self.accept("KW", "IN"):
             return InSet(fld, self.value_list())
-        if self.accept('KW', 'BETWEEN'):
+        if self.accept("KW", "BETWEEN"):
             lo = self.value()
-            self.expect('KW', 'AND')
+            self.expect("KW", "AND")
             hi = self.value()
             return Between(fld, lo, hi)
-        if self.accept('KW', 'IS'):
-            if self.accept('KW', 'NOT'):
-                self.expect('KW', 'NULL')
-                return IsCheck(fld, 'NOT_NULL')
-            kw = self.expect('KW').val
-            if kw not in ('NULL', 'TRUE', 'FALSE'):
+        if self.accept("KW", "IS"):
+            if self.accept("KW", "NOT"):
+                self.expect("KW", "NULL")
+                return IsCheck(fld, "NOT_NULL")
+            kw = self.expect("KW").val
+            if kw not in ("NULL", "TRUE", "FALSE"):
                 raise SyntaxError(f"IS must be followed by NULL/TRUE/FALSE, got {kw}")
             return IsCheck(fld, kw)
 
-        op = self.expect('OP').val
+        op = self.expect("OP").val
         return Cmp(fld, op, self.value())
 
     def field_name(self):
-        t = self.expect('FIELD')
+        t = self.expect("FIELD")
         if self.known is not None and t.val not in self.known:
             raise NameError(f"undeclared field: {t.val}")
         return t.val
 
     def value(self):
         t = self.next()
-        if t.kind == 'NUM':
+        if t.kind == "NUM":
             return t.val
-        if t.kind == 'STR':
+        if t.kind == "STR":
             return t.val
-        if t.kind == 'KW' and t.val in ('TRUE', 'FALSE'):
-            return t.val == 'TRUE'
-        if t.kind == 'FIELD':
+        if t.kind == "KW" and t.val in ("TRUE", "FALSE"):
+            return t.val == "TRUE"
+        if t.kind == "FIELD":
             if self.known is not None and t.val not in self.known:
-                return t.val                       # bare word acts as an enum literal
+                return t.val  # bare word acts as an enum literal
             return FieldRef(t.val)
         raise SyntaxError(f"expected a value at {t.pos}")
 
     def value_list(self):
-        self.expect('[', '[')
+        self.expect("[", "[")
         vals = [self.value()]
-        while self.accept(',', ','):
+        while self.accept(",", ","):
             vals.append(self.value())
-        self.expect(']', ']')
+        self.expect("]", "]")
         return [v.name if isinstance(v, FieldRef) else v for v in vals]
 
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def parse(expr: str, known_fields: set[str] | None = None) -> Node:
     return Parser(tokenise(expr), known_fields).parse()
@@ -527,11 +570,12 @@ class Result:
     def fired(self):
         return self.outcome == TV.TRUE
 
-    def why(self, lang='en'):
+    def why(self, lang="en"):
         """One line explaining the outcome — the deciding condition."""
         if self.outcome == TV.UNKNOWN:
-            return ("माहिती अपुरी: " if lang == 'mr' else "insufficient data: ") + \
-                   ", ".join(self.missing)
+            return ("माहिती अपुरी: " if lang == "mr" else "insufficient data: ") + ", ".join(
+                self.missing
+            )
         decisive = [t for t in self.trace if t[1] == self.outcome]
         d = decisive[-1] if decisive else (self.trace[-1] if self.trace else ("", "", ""))
         return f"{d[0]}  [{d[2]}]"
@@ -540,22 +584,40 @@ class Result:
 def evaluate(node: Node, ctx: dict) -> Result:
     trace = []
     out = node.eval(ctx, trace)
-    missing = sorted({t[2].split('=')[0] for t in trace
-                      if (t[1] == TV.UNKNOWN and '=None' in t[2]) or 'not supplied' in t[2]})
-    missing = [m.replace(' not supplied', '') for m in missing]
+    missing = sorted(
+        {
+            t[2].split("=")[0]
+            for t in trace
+            if (t[1] == TV.UNKNOWN and "=None" in t[2]) or "not supplied" in t[2]
+        }
+    )
+    missing = [m.replace(" not supplied", "") for m in missing]
     return Result(out, trace, missing)
 
 
-if __name__ == '__main__':
-    known = {'saturation_hours', 'soil_moisture_vwc', 'vwc_saturation', 'current_stage',
-             'calibration_done', 'dap', 'air_temp_max_c'}
+if __name__ == "__main__":
+    known = {
+        "saturation_hours",
+        "soil_moisture_vwc",
+        "vwc_saturation",
+        "current_stage",
+        "calibration_done",
+        "dap",
+        "air_temp_max_c",
+    }
     tests = [
-        ("saturation_hours > 12 AND STAGE IN [G2, G3]", {'saturation_hours': 14, 'current_stage': 'G3'}),
-        ("saturation_hours > 12 AND STAGE IN [G2, G3]", {'saturation_hours': 14}),
+        (
+            "saturation_hours > 12 AND STAGE IN [G2, G3]",
+            {"saturation_hours": 14, "current_stage": "G3"},
+        ),
+        ("saturation_hours > 12 AND STAGE IN [G2, G3]", {"saturation_hours": 14}),
         ("calibration_done IS FALSE", {}),
-        ("calibration_done IS FALSE", {'calibration_done': False}),
-        ("dap BETWEEN 75 AND 90", {'dap': 82}),
-        ("air_temp_max_c > 35 AND STAGE IN [G0, G1]", {'air_temp_max_c': 39, 'current_stage': 'G1'}),
+        ("calibration_done IS FALSE", {"calibration_done": False}),
+        ("dap BETWEEN 75 AND 90", {"dap": 82}),
+        (
+            "air_temp_max_c > 35 AND STAGE IN [G0, G1]",
+            {"air_temp_max_c": 39, "current_stage": "G1"},
+        ),
     ]
     for e, ctx in tests:
         n = parse(e, known)

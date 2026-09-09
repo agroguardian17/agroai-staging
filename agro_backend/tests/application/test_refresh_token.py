@@ -1,6 +1,5 @@
 """Tests for app.application.refresh_token.execute."""
 
-
 from __future__ import annotations
 
 import uuid
@@ -27,8 +26,6 @@ FARMER = uuid.uuid4()
 NOW = datetime.now(UTC)
 
 
-
-
 def _farmer(status: str = "active") -> FarmerIdentity:
     return FarmerIdentity(
         farmer_id=FARMER,
@@ -40,21 +37,15 @@ def _farmer(status: str = "active") -> FarmerIdentity:
     )
 
 
-
-
 class _StubFarmerRepo:
     def __init__(self, f: FarmerIdentity | None) -> None:
         self._f = f
 
-
     async def find_by_phone(self, phone: str) -> FarmerIdentity | None:
         return self._f
 
-
     async def find_by_id(self, farmer_id: uuid.UUID) -> FarmerIdentity | None:
         return self._f
-
-
 
 
 class _StubSessionRepo:
@@ -63,11 +54,9 @@ class _StubSessionRepo:
         self.created: list[AuthSession] = []
         self.revoked: list[uuid.UUID] = []
 
-
     async def create(self, s: AuthSession) -> uuid.UUID:
         self.created.append(s)
         return s.session_id
-
 
     async def find_by_token_hash(self, h: str) -> AuthSession | None:
         if self._existing is None:
@@ -76,19 +65,14 @@ class _StubSessionRepo:
             return None
         return self._existing
 
-
     async def revoke(self, sid: uuid.UUID) -> None:
         self.revoked.append(sid)
-
 
     async def revoke_all_for_farmer(self, farmer_id: uuid.UUID) -> int:
         return 0
 
-
     async def touch(self, sid: uuid.UUID) -> None:
         pass
-
-
 
 
 class _StubTokenIssuer:
@@ -109,11 +93,8 @@ class _StubTokenIssuer:
             session_id=session_id,
         )
 
-
     def verify_access_token(self, token: str) -> AccessClaims:
         raise AssertionError
-
-
 
 
 def _session(
@@ -131,8 +112,6 @@ def _session(
     )
 
 
-
-
 def _deps(
     *, farmer: FarmerIdentity | None, existing: AuthSession | None
 ) -> tuple[RefreshTokenDeps, _StubSessionRepo]:
@@ -147,14 +126,11 @@ def _deps(
     )
 
 
-
-
 async def test_refresh_rotates_session_and_returns_new_pair() -> None:
     secret = "old-secret-value"
     old = _session(secret)
     deps, sess = _deps(farmer=_farmer(), existing=old)
     new_pair = await execute(refresh_secret=secret, deps=deps)
-
 
     assert new_pair.access_token == "fresh.access"
     assert new_pair.refresh_token != secret  # rotated
@@ -162,14 +138,10 @@ async def test_refresh_rotates_session_and_returns_new_pair() -> None:
     assert len(sess.created) == 1  # new created
 
 
-
-
 async def test_refresh_rejects_unknown_token() -> None:
     deps, _ = _deps(farmer=_farmer(), existing=None)
     with pytest.raises(InvalidRefreshTokenError):
         await execute(refresh_secret="bogus", deps=deps)
-
-
 
 
 async def test_refresh_rejects_revoked_session() -> None:
@@ -180,16 +152,12 @@ async def test_refresh_rejects_revoked_session() -> None:
         await execute(refresh_secret=secret, deps=deps)
 
 
-
-
 async def test_refresh_rejects_expired_session() -> None:
     secret = "expired"
     old = _session(secret, expires_at=NOW - timedelta(seconds=1))
     deps, _ = _deps(farmer=_farmer(), existing=old)
     with pytest.raises(InvalidRefreshTokenError):
         await execute(refresh_secret=secret, deps=deps)
-
-
 
 
 async def test_refresh_rejects_inactive_farmer_and_revokes() -> None:

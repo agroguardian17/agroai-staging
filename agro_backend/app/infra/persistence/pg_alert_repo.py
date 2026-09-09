@@ -8,9 +8,10 @@ notification dispatcher picks the row up. Cooldown queries select only
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -30,6 +31,40 @@ def _float_to_decimal(v: float | int | None) -> Decimal | None:
     if isinstance(v, Decimal):
         return v
     return Decimal(str(v))
+
+
+def _row_to_alert_full(row: object) -> AlertFull:
+    r: Any = row
+    return AlertFull(
+        alert_id=int(r.alert_id),
+        tenant_id=r.tenant_id,
+        farm_id=r.farm_id,
+        farmer_id=r.farmer_id,
+        device_id=r.device_id,
+        alert_type=AlertType(r.alert_type),
+        severity=Severity(r.severity),
+        alert_message_marathi=r.alert_message_marathi,
+        alert_value=_float_to_decimal(r.alert_value),
+        alert_threshold=_float_to_decimal(r.alert_threshold),
+        triggered_at=r.triggered_at,
+        resolved=bool(r.resolved) if r.resolved is not None else False,
+        resolved_at=r.resolved_at,
+    )
+
+
+def _row_to_plot_alert(row: object) -> PlotAlertView:
+    r: Any = row
+    return PlotAlertView(
+        alert_id=int(r.alert_id),
+        alert_type=AlertType(r.alert_type),
+        severity=Severity(r.severity),
+        alert_message_marathi=r.alert_message_marathi,
+        triggered_at=r.triggered_at,
+        resolved=bool(r.resolved) if r.resolved is not None else False,
+        resolved_at=r.resolved_at,
+        device_id=r.device_id,
+        farmer_id=r.farmer_id,
+    )
 
 
 class PgAlertRepo:
@@ -69,7 +104,8 @@ class PgAlertRepo:
             res = await session.execute(stmt, params)
             row = res.one()  # RETURNING always yields one row on successful INSERT
             await session.commit()
-        return int(row.alert_id)
+        r: Any = row
+        return int(r.alert_id)
 
     # ------------------------------------------------------------------
     async def last_triggered_at(self, plot_id: str, alert_type: AlertType) -> datetime | None:
@@ -88,7 +124,10 @@ class PgAlertRepo:
         async with self._sm() as session:
             res = await session.execute(stmt, {"plot_id": plot_id, "alert_type": alert_type.value})
             row = res.first()
-        return row.last_at if row is not None else None
+        if row is None:
+            return None
+        r: Any = row
+        return cast(datetime | None, r.last_at)
 
     # ------------------------------------------------------------------
     async def resolve(self, alert_id: int, notes: str | None = None) -> None:
@@ -124,31 +163,17 @@ class PgAlertRepo:
             row = res.first()
         if row is None:
             return None
-        return AlertFull(
-            alert_id=int(row.alert_id),
-            tenant_id=row.tenant_id,
-            farm_id=row.farm_id,
-            farmer_id=row.farmer_id,
-            device_id=row.device_id,
-            alert_type=AlertType(row.alert_type),
-            severity=Severity(row.severity),
-            alert_message_marathi=row.alert_message_marathi,
-            alert_value=_float_to_decimal(row.alert_value),
-            alert_threshold=_float_to_decimal(row.alert_threshold),
-            triggered_at=row.triggered_at,
-            resolved=bool(row.resolved) if row.resolved is not None else False,
-            resolved_at=row.resolved_at,
-        )
+        return _row_to_alert_full(row)
 
     # ------------------------------------------------------------------
     async def list_for_tenant(
         self,
-        tenant_id,
+        tenant_id: uuid.UUID,
         *,
         only_unresolved: bool = True,
-        severity_filter=None,
+        severity_filter: Severity | None = None,
         limit: int = 100,
-    ):
+    ) -> list[AlertFull]:
         conditions = ["a.tenant_id = :tid"]
         params: dict[str, object] = {"tid": tenant_id, "limit": limit}
         if only_unresolved:
@@ -173,24 +198,7 @@ class PgAlertRepo:
         async with self._sm() as session:
             res = await session.execute(stmt, params)
             rows = res.all()
-        return [
-            AlertFull(
-                alert_id=int(r.alert_id),
-                tenant_id=r.tenant_id,
-                farm_id=r.farm_id,
-                farmer_id=r.farmer_id,
-                device_id=r.device_id,
-                alert_type=AlertType(r.alert_type),
-                severity=Severity(r.severity),
-                alert_message_marathi=r.alert_message_marathi,
-                alert_value=_float_to_decimal(r.alert_value),
-                alert_threshold=_float_to_decimal(r.alert_threshold),
-                triggered_at=r.triggered_at,
-                resolved=bool(r.resolved) if r.resolved is not None else False,
-                resolved_at=r.resolved_at,
-            )
-            for r in rows
-        ]
+        return [_row_to_alert_full(row) for row in rows]
 
     # ------------------------------------------------------------------
     async def list_for_plot(self, plot_id: str, limit: int = 50) -> list[PlotAlertView]:
@@ -209,20 +217,7 @@ class PgAlertRepo:
         async with self._sm() as session:
             res = await session.execute(stmt, {"plot_id": plot_id, "limit": limit})
             rows = res.all()
-        return [
-            PlotAlertView(
-                alert_id=int(r.alert_id),
-                alert_type=AlertType(r.alert_type),
-                severity=Severity(r.severity),
-                alert_message_marathi=r.alert_message_marathi,
-                triggered_at=r.triggered_at,
-                resolved=bool(r.resolved) if r.resolved is not None else False,
-                resolved_at=r.resolved_at,
-                device_id=r.device_id,
-                farmer_id=r.farmer_id,
-            )
-            for r in rows
-        ]
+        return [_row_to_plot_alert(row) for row in rows]
 
 
 __all__ = ["PgAlertRepo"]

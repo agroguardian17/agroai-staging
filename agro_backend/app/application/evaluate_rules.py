@@ -33,11 +33,11 @@ PURE w.r.t. imports: stdlib + ports + domain only. No infra imports.
 The application-purity AST test enforces this.
 """
 
-
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from decimal import Decimal
 from typing import Any
 
 from app.application.ports.alert_repo import AlertRepo
@@ -64,7 +64,6 @@ class EvaluateRulesDeps:
     ``Settings.CALIBRATION_MODE`` in :mod:`app.jobs.ingest_startup`.
     """
 
-
     alert_repo: AlertRepo
     event_bus: EventBus
     ruleset: RuleSet = PILOT_RULESET
@@ -72,18 +71,13 @@ class EvaluateRulesDeps:
     calibration_mode: bool = False
 
 
-
-
 @dataclass(frozen=True, slots=True)
 class EvaluateRulesResult:
     """Counts surfaced as Prometheus deltas by the caller."""
 
-
     hits: int
     created: int
     cooldown_suppressed: int
-
-
 
 
 async def execute(
@@ -101,7 +95,6 @@ async def execute(
     metrics = compute(reading, deps.metrics_context)
     hits = evaluate_to_hits(reading, metrics, deps.ruleset)
 
-
     created = 0
     suppressed = 0
     for hit in hits:
@@ -118,7 +111,6 @@ async def execute(
         )
         created += 1
 
-
     return EvaluateRulesResult(
         hits=len(hits),
         created=created,
@@ -126,13 +118,9 @@ async def execute(
     )
 
 
-
-
 # ---------------------------------------------------------------------------
 # Internals
 # ---------------------------------------------------------------------------
-
-
 
 
 async def _is_in_cooldown(
@@ -158,8 +146,6 @@ async def _is_in_cooldown(
     return elapsed_minutes < rule.cooldown_minutes
 
 
-
-
 def _build_candidate(hit: RuleHit, reading: Reading, now: datetime) -> AlertCandidate:
     return AlertCandidate(
         alert_type=hit.rule.alert_type,
@@ -173,8 +159,6 @@ def _build_candidate(hit: RuleHit, reading: Reading, now: datetime) -> AlertCand
         alert_value=_decimal_or_none(hit.substitutions.get("value")),
         alert_threshold=_decimal_or_none(hit.substitutions.get("threshold")),
     )
-
-
 
 
 async def _publish_alert_created(
@@ -201,13 +185,8 @@ async def _publish_alert_created(
     await event_bus.publish(EVENT_ALERT_CREATED, payload)
 
 
-
-
-def _decimal_or_none(v: object) -> object:
+def _decimal_or_none(v: object) -> Decimal | None:
     """Wrapper around the same helper used by rules.evaluate."""
-    from decimal import Decimal
-
-
     if v is None:
         return None
     if isinstance(v, Decimal):
@@ -220,8 +199,6 @@ def _decimal_or_none(v: object) -> object:
     if isinstance(v, float):
         return Decimal(str(v))
     return None
-
-
 
 
 __all__ = ["EvaluateRulesDeps", "EvaluateRulesResult", "execute"]

@@ -10,7 +10,6 @@ Steps:
    ``max_attempts`` misses the challenge is locked.
 """
 
-
 from __future__ import annotations
 
 import uuid
@@ -35,48 +34,33 @@ from app.domain.auth import (
 # ---------------------------------------------------------------------------
 
 
-
-
 class VerifyOtpError(Exception):
     pass
-
-
 
 
 class NoActiveChallengeError(VerifyOtpError):
     """No live OTP challenge for this phone (expired or never sent)."""
 
 
-
-
 class ChallengeLockedError(VerifyOtpError):
     """Too many wrong guesses; the challenge is dead."""
 
 
-
-
 class InvalidOtpError(VerifyOtpError):
     """Wrong code. ``attempts_remaining`` is the new count after this miss."""
-
 
     def __init__(self, attempts_remaining: int) -> None:
         super().__init__("invalid_otp")
         self.attempts_remaining = attempts_remaining
 
 
-
-
 class FarmerInactiveError(VerifyOtpError):
     """Farmer's account_status is not 'active'."""
-
-
 
 
 # ---------------------------------------------------------------------------
 # Deps + result
 # ---------------------------------------------------------------------------
-
-
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,13 +72,9 @@ class VerifyOtpDeps:
     refresh_ttl_seconds: int = 30 * 24 * 3600  # 30 days
 
 
-
-
 # ---------------------------------------------------------------------------
 # Use case
 # ---------------------------------------------------------------------------
-
-
 
 
 async def execute(
@@ -113,30 +93,24 @@ async def execute(
     """
     now = datetime.now(UTC)
 
-
     challenge = await deps.otp_repo.find_latest_active(phone)
     if challenge is None or challenge.is_expired(now) or challenge.is_consumed():
         raise NoActiveChallengeError(phone)
 
-
     if challenge.is_locked():
         raise ChallengeLockedError(phone)
-
 
     if not verify_otp_code(code, challenge.code_hash):
         new_count = await deps.otp_repo.increment_attempt(challenge.challenge_id)
         remaining = max(0, challenge.max_attempts - new_count)
         raise InvalidOtpError(attempts_remaining=remaining)
 
-
     # Hit. Lock the challenge so it can't be reused.
     await deps.otp_repo.mark_consumed(challenge.challenge_id)
-
 
     farmer = await deps.farmer_repo.find_by_phone(phone)
     if farmer is None or farmer.account_status != "active":
         raise FarmerInactiveError(phone)
-
 
     # Mint refresh session FIRST so we can embed its id in the access token.
     refresh_secret = generate_refresh_secret()
@@ -153,7 +127,6 @@ async def execute(
     )
     session_id = await deps.session_repo.create(session)
 
-
     access_token, claims = deps.token_issuer.issue_access_token(
         subject=farmer.farmer_id,
         tenant_id=farmer.tenant_id,
@@ -161,15 +134,12 @@ async def execute(
         session_id=session_id,
     )
 
-
     return TokenPair(
         access_token=access_token,
         refresh_token=refresh_secret,
         access_expires_at=claims.expires_at,
         refresh_expires_at=refresh_expires_at,
     )
-
-
 
 
 __all__ = [

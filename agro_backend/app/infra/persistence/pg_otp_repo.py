@@ -1,9 +1,9 @@
 """Postgres adapter for :class:`~app.application.ports.otp_repo.OtpRepo`."""
 
-
 from __future__ import annotations
 
 import uuid
+from typing import Any, cast
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -16,29 +16,25 @@ _SELECT_COLS = (
 )
 
 
-
-
 def _row_to_challenge(row: object) -> OtpChallenge:
+    r: Any = row
     return OtpChallenge(
-        challenge_id=row.challenge_id,
-        tenant_id=row.tenant_id,
-        phone=row.phone,
-        code_hash=row.code_hash,
-        transport=OtpTransport(row.transport),
-        expires_at=row.expires_at,
-        consumed_at=row.consumed_at,
-        attempt_count=row.attempt_count,
-        max_attempts=row.max_attempts,
-        created_at=row.created_at,
+        challenge_id=r.challenge_id,
+        tenant_id=r.tenant_id,
+        phone=r.phone,
+        code_hash=r.code_hash,
+        transport=OtpTransport(r.transport),
+        expires_at=r.expires_at,
+        consumed_at=r.consumed_at,
+        attempt_count=r.attempt_count,
+        max_attempts=r.max_attempts,
+        created_at=r.created_at,
     )
-
-
 
 
 class PgOtpRepo:
     def __init__(self, sessionmaker: async_sessionmaker[AsyncSession]) -> None:
         self._sm = sessionmaker
-
 
     async def create(self, c: OtpChallenge) -> uuid.UUID:
         stmt = text(
@@ -69,8 +65,7 @@ class PgOtpRepo:
             await session.commit()
         if row is None:
             raise RuntimeError("otp_challenges INSERT did not RETURN a row")
-        return row.challenge_id
-
+        return cast(uuid.UUID, row.challenge_id)
 
     async def find_latest_active(self, phone: str) -> OtpChallenge | None:
         stmt = text(
@@ -86,14 +81,12 @@ class PgOtpRepo:
             row = res.first()
         return None if row is None else _row_to_challenge(row)
 
-
     async def find_by_id(self, challenge_id: uuid.UUID) -> OtpChallenge | None:
         stmt = text(f"SELECT {_SELECT_COLS} FROM otp_challenges WHERE challenge_id = :cid LIMIT 1")
         async with self._sm() as session:
             res = await session.execute(stmt, {"cid": challenge_id})
             row = res.first()
         return None if row is None else _row_to_challenge(row)
-
 
     async def increment_attempt(self, challenge_id: uuid.UUID) -> int:
         # RETURNING the new value avoids a second SELECT.
@@ -108,8 +101,8 @@ class PgOtpRepo:
             await session.commit()
         if row is None:
             return 0
-        return int(row.attempt_count)
-
+        r: Any = row
+        return int(r.attempt_count)
 
     async def mark_consumed(self, challenge_id: uuid.UUID) -> None:
         stmt = text(
@@ -119,7 +112,6 @@ class PgOtpRepo:
         async with self._sm() as session:
             await session.execute(stmt, {"cid": challenge_id})
             await session.commit()
-
 
     async def recent_attempts_count(self, phone: str, since_minutes: int) -> int:
         # Interval arithmetic (avoids the ``::cast`` form that breaks
@@ -132,9 +124,8 @@ class PgOtpRepo:
         async with self._sm() as session:
             res = await session.execute(stmt, {"phone": phone, "mins": since_minutes})
             row = res.one()
-        return int(row.n)
-
-
+        r: Any = row
+        return int(r.n)
 
 
 __all__ = ["PgOtpRepo"]

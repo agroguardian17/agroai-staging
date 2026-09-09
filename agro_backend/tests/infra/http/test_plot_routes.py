@@ -1,6 +1,5 @@
 """HTTP-layer tests for /api/v1/plots/*."""
 
-
 from __future__ import annotations
 
 import uuid
@@ -29,8 +28,6 @@ FARM = uuid.UUID("33333333-3333-3333-3333-333333333333")
 NOW = datetime.now(UTC).replace(microsecond=0)
 
 
-
-
 def _plot(plot_id: str = "PLOT_A", tenant: uuid.UUID = TENANT) -> Plot:
     return Plot(
         plot_id=plot_id,
@@ -46,8 +43,6 @@ def _plot(plot_id: str = "PLOT_A", tenant: uuid.UUID = TENANT) -> Plot:
         plot_status=PlotStatus.ACTIVE,
         irrigation_valve_id="V_1",
     )
-
-
 
 
 def _reading() -> Reading:
@@ -67,8 +62,6 @@ def _reading() -> Reading:
     )
 
 
-
-
 def _alert_view() -> PlotAlertView:
     return PlotAlertView(
         alert_id=1,
@@ -83,12 +76,9 @@ def _alert_view() -> PlotAlertView:
     )
 
 
-
-
 class StubPlotRepo:
     def __init__(self, plots: list[Plot]) -> None:
         self.plots = plots
-
 
     async def find(self, plot_id):
         for p in self.plots:
@@ -96,69 +86,51 @@ class StubPlotRepo:
                 return p
         return None
 
-
     async def for_farmer(self, farmer_id):
         return self.plots
-
 
     async def for_tenant(self, tenant_id):
         return self.plots
 
-
     async def update_data_tier(self, plot_id, tier):
         pass
-
-
 
 
 class StubReadingRepo:
     def __init__(self, items: list[Reading]) -> None:
         self.items = items
 
-
     async def save(self, r):
         return 1
-
 
     async def latest_for_plot(self, plot_id, limit):
         return self.items[:limit]
 
-
     async def recent_for_node(self, node_id, since):
         return []
-
 
     async def history_for_stuck_check(self, node_id, field, minutes):
         return []
 
-
     async def history_for_mad_check(self, node_id, field, hours):
         return []
-
-
 
 
 class StubAlertRepo:
     def __init__(self, items: list[PlotAlertView]) -> None:
         self.items = items
 
-
     async def create(self, c):
         return 1
-
 
     async def last_triggered_at(self, plot_id, alert_type):
         return None
 
-
     async def resolve(self, alert_id, notes=None):
         pass
 
-
     async def list_for_plot(self, plot_id, limit=50):
         return self.items
-
-
 
 
 def _claims() -> AccessClaims:
@@ -172,8 +144,6 @@ def _claims() -> AccessClaims:
     )
 
 
-
-
 @pytest.fixture
 def app_with_stubs():
     app = create_app()
@@ -184,18 +154,14 @@ def app_with_stubs():
     reading_repo = StubReadingRepo([reading])
     alert_repo = StubAlertRepo([alert])
 
-
     app.dependency_overrides[get_plot_repo] = lambda: plot_repo
     app.dependency_overrides[get_reading_repo] = lambda: reading_repo
     app.dependency_overrides[get_alert_repo] = lambda: alert_repo
     app.dependency_overrides[get_current_claims] = lambda: _claims()
 
-
     client = TestClient(app)
     yield client, plot_repo, reading_repo, alert_repo
     app.dependency_overrides.clear()
-
-
 
 
 # ===========================================================================
@@ -211,14 +177,10 @@ def test_list_plots_returns_farmer_plots(app_with_stubs) -> None:
     assert body[0]["data_tier"] == "sub_node"
 
 
-
-
 def test_get_plot_404_when_not_found(app_with_stubs) -> None:
     client, *_ = app_with_stubs
     resp = client.get("/api/v1/plots/NOT_EXIST", headers={"Authorization": "Bearer X"})
     assert resp.status_code == 404
-
-
 
 
 def test_get_plot_returns_one(app_with_stubs) -> None:
@@ -228,16 +190,12 @@ def test_get_plot_returns_one(app_with_stubs) -> None:
     assert resp.json()["plot_id"] == "PLOT_A"
 
 
-
-
 def test_get_plot_cross_tenant_returns_404(app_with_stubs) -> None:
     client, plot_repo, *_ = app_with_stubs
     # Replace the plot with one in a different tenant.
     plot_repo.plots = [_plot(tenant=uuid.uuid4())]
     resp = client.get("/api/v1/plots/PLOT_A", headers={"Authorization": "Bearer X"})
     assert resp.status_code == 404
-
-
 
 
 # ===========================================================================
@@ -252,16 +210,12 @@ def test_get_plot_readings_returns_list(app_with_stubs) -> None:
     assert body[0]["cadence_mode"] == "normal"
 
 
-
-
 def test_readings_limit_validation(app_with_stubs) -> None:
     client, *_ = app_with_stubs
     resp = client.get(
         "/api/v1/plots/PLOT_A/readings?limit=0", headers={"Authorization": "Bearer X"}
     )
     assert resp.status_code == 422  # Query(ge=1)
-
-
 
 
 # ===========================================================================
@@ -275,8 +229,6 @@ def test_get_plot_alerts_returns_list(app_with_stubs) -> None:
     assert body[0]["alert_type"] == "low_battery"
     assert body[0]["severity"] == "warning"
     assert body[0]["resolved"] is False
-
-
 
 
 # ===========================================================================

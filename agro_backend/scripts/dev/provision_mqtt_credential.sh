@@ -48,12 +48,18 @@ chmod 644 "$PASSWD_FILE" "$ACL_FILE"
 
 # 1. Set / update the password via mosquitto_passwd in a disposable container.
 #    -b: batch mode (non-interactive)
-#    -c: create the password file
+#    -c: create the password file only when it is empty/missing. Never use
+#        -c on a populated file, because it recreates the DB and deletes
+#        every other user.
 echo ">>> Updating $PASSWD_FILE for user '$USERNAME'"
+PASSWD_ARGS=(-b)
+if [[ ! -s "$PASSWD_FILE" ]]; then
+    PASSWD_ARGS=(-b -c)
+fi
 docker run --rm \
     -v "$ROOT_DIR/deploy/mosquitto:/mosquitto/config" \
     eclipse-mosquitto:2.0.18 \
-    mosquitto_passwd -b -c /mosquitto/config/passwd "$USERNAME" "$PASSWORD"
+    mosquitto_passwd "${PASSWD_ARGS[@]}" /mosquitto/config/passwd "$USERNAME" "$PASSWORD"
 chmod 644 "$PASSWD_FILE"
 
 # 2. Append ACL entry if it isn't already present. Scope: publish + subscribe

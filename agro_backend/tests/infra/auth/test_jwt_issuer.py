@@ -1,6 +1,5 @@
 """Unit tests for JwtIssuer. Pure: no DB, no HTTP."""
 
-
 from __future__ import annotations
 
 import uuid
@@ -25,8 +24,6 @@ def _issuer(ttl: int = 900) -> JwtIssuer:
     )
 
 
-
-
 def test_issue_and_verify_round_trip() -> None:
     iss = _issuer()
     sub = uuid.uuid4()
@@ -38,7 +35,6 @@ def test_issue_and_verify_round_trip() -> None:
     assert isinstance(token, str)
     assert token.count(".") == 2  # JWT has three segments.
 
-
     decoded = iss.verify_access_token(token)
     assert decoded.subject == sub
     assert decoded.tenant_id == tid
@@ -47,14 +43,10 @@ def test_issue_and_verify_round_trip() -> None:
     assert decoded.expires_at > claims.issued_at
 
 
-
-
 def test_verify_rejects_garbage_token() -> None:
     iss = _issuer()
     with pytest.raises(InvalidTokenError):
         iss.verify_access_token("not.a.jwt")
-
-
 
 
 def test_verify_rejects_wrong_audience() -> None:
@@ -78,8 +70,6 @@ def test_verify_rejects_wrong_audience() -> None:
         b.verify_access_token(token)
 
 
-
-
 def test_verify_rejects_wrong_signature() -> None:
     a = _issuer()
     b = JwtIssuer(
@@ -99,8 +89,6 @@ def test_verify_rejects_wrong_signature() -> None:
     )
     with pytest.raises(InvalidTokenError):
         b.verify_access_token(token)
-
-
 
 
 def test_expiry_is_set_to_ttl() -> None:

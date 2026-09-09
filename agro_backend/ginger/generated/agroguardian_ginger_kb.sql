@@ -4305,6 +4305,7 @@ INSERT INTO kb_rule_dependencies (rule_id, direction, target_domain_id) VALUES
  ('D04-DG-004', 'depends_on', 7)
 ON CONFLICT DO NOTHING;
 
+
 INSERT INTO kb_rules (rule_id,domain_id,category,priority,severity,stage_code,trigger_en,trigger_mr,trigger_expr,trigger_expr_version,delivery,immutable,immutable_reason,action_en,action_mr,agronomic_basis,yield_impact,confidence_score,source_tier,source_class,u_value,recoverability,kannad_note) VALUES
  ('D04-SB-001', 4, 'SB', 5, 'red', NULL,
   'NPK probe reading used to set a fertiliser dose',
@@ -10201,6 +10202,7 @@ INSERT INTO kb_rule_references (rule_id, reference) VALUES
  ('D10-CROP-002', 'AgroWorld district list'),
  ('D10-CROP-002', 'AgroWorld variety list including Aurangabadi')
 ON CONFLICT DO NOTHING;
+
 
 INSERT INTO kb_rule_dependencies (rule_id, direction, target_domain_id) VALUES
  ('D10-CROP-002', 'feeds_into', 1)

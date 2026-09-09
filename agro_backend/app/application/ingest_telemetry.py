@@ -18,7 +18,6 @@ Per ``.cursorrules`` #13 this file imports domain + ports + stdlib only.
 No fastapi, sqlalchemy, paho, etc.
 """
 
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -40,11 +39,8 @@ class IngestDeps:
     so a misbehaving caller can't swap the bus mid-stream.
     """
 
-
     reading_repo: ReadingRepo
     event_bus: EventBus
-
-
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,12 +56,9 @@ class IngestResult:
     * ``flags`` is the gate-by-gate breakdown for observability.
     """
 
-
     reading_id: int | None
     validation_warn: bool
     flags: dict[str, str]
-
-
 
 
 async def execute(reading: Reading, deps: IngestDeps) -> IngestResult:
@@ -103,7 +96,6 @@ async def execute(reading: Reading, deps: IngestDeps) -> IngestResult:
     validated = await validate_reading.execute(reading, deps.reading_repo)
     reading_id = await deps.reading_repo.save(validated)
 
-
     if reading_id is not None:
         # Payload carries IDs and a minimal status flag - subscribers
         # (Phase 4+ rule engine, dashboard live view) re-fetch from the
@@ -117,7 +109,6 @@ async def execute(reading: Reading, deps: IngestDeps) -> IngestResult:
         }
         await deps.event_bus.publish(EVENT_TELEMETRY_INGESTED, payload)
 
-
     flags = {
         k: v
         for k, v in validated.sensor_health_json.items()
@@ -128,8 +119,6 @@ async def execute(reading: Reading, deps: IngestDeps) -> IngestResult:
         validation_warn=validated.validation_warn,
         flags=flags,
     )
-
-
 
 
 __all__ = ["IngestDeps", "IngestResult", "execute"]

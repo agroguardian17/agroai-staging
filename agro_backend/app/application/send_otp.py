@@ -20,7 +20,6 @@ Returns the challenge_id only - never the plain code. The code goes
 out via WhatsApp (or to the server log in dev mode).
 """
 
-
 from __future__ import annotations
 
 import uuid
@@ -45,47 +44,33 @@ from app.domain.auth import (
 # ---------------------------------------------------------------------------
 
 
-
-
 class SendOtpError(Exception):
     """Base class for send_otp problems."""
-
-
 
 
 class UnknownPhoneError(SendOtpError):
     """No farmer registered with this phone number."""
 
 
-
-
 class OtpThrottledError(SendOtpError):
     """Too many OTPs requested too recently."""
-
 
     def __init__(self, reason: str) -> None:
         super().__init__(reason)
         self.reason = reason
 
 
-
-
 class WhatsappDeliveryError(SendOtpError):
     """Send was attempted but the provider rejected it."""
-
 
     def __init__(self, provider_error: str) -> None:
         super().__init__(provider_error)
         self.provider_error = provider_error
 
 
-
-
 # ---------------------------------------------------------------------------
 # Deps + result
 # ---------------------------------------------------------------------------
-
-
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,18 +86,13 @@ class SendOtpDeps:
     rate_max_in_window: int = 5
 
 
-
-
 @dataclass(frozen=True, slots=True)
 class SendOtpResult:
     """What the use case returns. Plain code is NOT included."""
 
-
     challenge_id: uuid.UUID
     expires_at: datetime
     masked_phone: str
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -120,29 +100,23 @@ class SendOtpResult:
 # ---------------------------------------------------------------------------
 
 
-
-
 async def execute(*, phone: str, deps: SendOtpDeps) -> SendOtpResult:
     """Send an OTP to ``phone``. ``phone`` must be E.164."""
     now = datetime.now(UTC)
 
-
     farmer = await deps.farmer_repo.find_by_phone(phone)
     if farmer is None:
         raise UnknownPhoneError(phone)
-
 
     # Throttle 1: no concurrent active challenge.
     active = await deps.otp_repo.find_latest_active(phone)
     if active is not None and active.can_attempt(now):
         raise OtpThrottledError("active_challenge_exists")
 
-
     # Throttle 2: rate limit per phone per window.
     recent = await deps.otp_repo.recent_attempts_count(phone, deps.rate_window_minutes)
     if recent >= deps.rate_max_in_window:
         raise OtpThrottledError("rate_limited")
-
 
     # Generate + persist.
     code = generate_otp_code()
@@ -161,7 +135,6 @@ async def execute(*, phone: str, deps: SendOtpDeps) -> SendOtpResult:
     )
     challenge_id = await deps.otp_repo.create(challenge)
 
-
     # Deliver. The log-only sender prints the code; the Meta adapter doesn't.
     result = await deps.sender.send_otp_template(
         phone=phone,
@@ -171,14 +144,11 @@ async def execute(*, phone: str, deps: SendOtpDeps) -> SendOtpResult:
     if not result.accepted:
         raise WhatsappDeliveryError(result.error_code or "unknown")
 
-
     return SendOtpResult(
         challenge_id=challenge_id,
         expires_at=challenge.expires_at,
         masked_phone=mask_phone(phone),
     )
-
-
 
 
 __all__ = [

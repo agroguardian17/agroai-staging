@@ -12,7 +12,6 @@ move to RS256 when we add a mobile-edge process that should verify
 without holding the signing key.
 """
 
-
 from __future__ import annotations
 
 import uuid
@@ -29,7 +28,6 @@ from app.domain.auth import AccessClaims, AuthRole
 class JwtSettings:
     """Subset of app Settings the JWT layer actually reads."""
 
-
     secret: str
     algorithm: str
     issuer: str
@@ -37,15 +35,11 @@ class JwtSettings:
     access_ttl_seconds: int
 
 
-
-
 class JwtIssuer:
     """Concrete :class:`TokenIssuer` over python-jose / HS256."""
 
-
     def __init__(self, settings: JwtSettings) -> None:
         self._s = settings
-
 
     # ------------------------------------------------------------------
     # Issue
@@ -81,7 +75,6 @@ class JwtIssuer:
         )
         return token, claims
 
-
     # ------------------------------------------------------------------
     # Verify
     # ------------------------------------------------------------------
@@ -97,7 +90,6 @@ class JwtIssuer:
         except JWTError as exc:
             raise InvalidTokenError(str(exc)) from exc
 
-
         try:
             subject = uuid.UUID(payload["sub"])
             tenant_id = uuid.UUID(payload["tenant_id"])
@@ -109,7 +101,6 @@ class JwtIssuer:
         except (KeyError, ValueError) as exc:
             raise InvalidTokenError(f"malformed claims: {exc}") from exc
 
-
         return AccessClaims(
             subject=subject,
             tenant_id=tenant_id,
@@ -118,8 +109,6 @@ class JwtIssuer:
             expires_at=exp,
             session_id=session_id,
         )
-
-
 
 
 __all__ = ["JwtIssuer", "JwtSettings"]

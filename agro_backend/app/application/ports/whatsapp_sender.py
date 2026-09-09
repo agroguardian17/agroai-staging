@@ -16,7 +16,6 @@ The send_otp use case calls only :meth:`send_otp_template`; future use
 cases (advisories) will add their own methods to this port.
 """
 
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -27,13 +26,10 @@ from typing import Protocol, runtime_checkable
 class WhatsappSendResult:
     """Outcome of one WhatsApp send. Used by metrics and audit-log breadcrumbs."""
 
-
     accepted: bool
     provider_message_id: str | None
     error_code: str | None = None  # e.g. 'rate_limited', 'invalid_template'
     error_detail: str | None = None
-
-
 
 
 @runtime_checkable
@@ -46,7 +42,6 @@ class WhatsappSender(Protocol):
     "Your AgroGuardian code is {{1}}. It expires in 5 minutes."
     """
 
-
     async def send_otp_template(
         self, *, phone: str, code: str, template_name: str, language_code: str = "en"
     ) -> WhatsappSendResult:
@@ -58,8 +53,6 @@ class WhatsappSender(Protocol):
         decides whether to surface the failure to the client.
         """
         ...
-
-
 
 
 __all__ = ["WhatsappSendResult", "WhatsappSender"]

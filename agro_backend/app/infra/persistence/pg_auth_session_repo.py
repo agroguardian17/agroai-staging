@@ -1,9 +1,9 @@
 """Postgres adapter for :class:`~app.application.ports.auth_session_repo.AuthSessionRepo`."""
 
-
 from __future__ import annotations
 
 import uuid
+from typing import Any, cast
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -16,27 +16,23 @@ _SELECT_COLS = (
 )
 
 
-
-
 def _row_to_session(row: object) -> AuthSession:
+    r: Any = row
     return AuthSession(
-        session_id=row.session_id,
-        tenant_id=row.tenant_id,
-        farmer_id=row.farmer_id,
-        refresh_token_hash=row.refresh_token_hash,
-        expires_at=row.expires_at,
-        revoked_at=row.revoked_at,
-        created_at=row.created_at,
-        last_used_at=row.last_used_at,
+        session_id=r.session_id,
+        tenant_id=r.tenant_id,
+        farmer_id=r.farmer_id,
+        refresh_token_hash=r.refresh_token_hash,
+        expires_at=r.expires_at,
+        revoked_at=r.revoked_at,
+        created_at=r.created_at,
+        last_used_at=r.last_used_at,
     )
-
-
 
 
 class PgAuthSessionRepo:
     def __init__(self, sessionmaker: async_sessionmaker[AsyncSession]) -> None:
         self._sm = sessionmaker
-
 
     async def create(self, s: AuthSession) -> uuid.UUID:
         stmt = text(
@@ -65,8 +61,7 @@ class PgAuthSessionRepo:
             await session.commit()
         if row is None:
             raise RuntimeError("auth_sessions INSERT did not RETURN a row")
-        return row.session_id
-
+        return cast(uuid.UUID, row.session_id)
 
     async def find_by_token_hash(self, token_hash: str) -> AuthSession | None:
         stmt = text(
@@ -77,7 +72,6 @@ class PgAuthSessionRepo:
             row = res.first()
         return None if row is None else _row_to_session(row)
 
-
     async def revoke(self, session_id: uuid.UUID) -> None:
         stmt = text(
             "UPDATE auth_sessions SET revoked_at = NOW() "
@@ -86,7 +80,6 @@ class PgAuthSessionRepo:
         async with self._sm() as session:
             await session.execute(stmt, {"sid": session_id})
             await session.commit()
-
 
     async def revoke_all_for_farmer(self, farmer_id: uuid.UUID) -> int:
         stmt = text(
@@ -100,14 +93,11 @@ class PgAuthSessionRepo:
             await session.commit()
         return len(rows)
 
-
     async def touch(self, session_id: uuid.UUID) -> None:
         stmt = text("UPDATE auth_sessions SET last_used_at = NOW() WHERE session_id = :sid")
         async with self._sm() as session:
             await session.execute(stmt, {"sid": session_id})
             await session.commit()
-
-
 
 
 __all__ = ["PgAuthSessionRepo"]

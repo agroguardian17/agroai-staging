@@ -1,6 +1,5 @@
 """Integration tests for PgFarmerRepo."""
 
-
 from __future__ import annotations
 
 import uuid
@@ -17,8 +16,6 @@ from app.infra.persistence.pg_farmer_repo import PgFarmerRepo
 from .conftest import DB_SKIP_REASON, PILOT_TENANT, db_available
 
 pytestmark = pytest.mark.skipif(not db_available(), reason=DB_SKIP_REASON)
-
-
 
 
 @pytest.fixture
@@ -48,14 +45,10 @@ def seed_farmer(sync_engine: Engine) -> Iterator[tuple[uuid.UUID, str]]:
         conn.execute(text("DELETE FROM farmers WHERE farmer_id = :f"), {"f": farmer_id})
 
 
-
-
 async def test_pg_farmer_repo_satisfies_protocol(
     sessionmaker: async_sessionmaker[AsyncSession],
 ) -> None:
     assert isinstance(PgFarmerRepo(sessionmaker), FarmerRepo)
-
-
 
 
 async def test_find_by_phone_returns_identity(
@@ -72,15 +65,11 @@ async def test_find_by_phone_returns_identity(
     assert out.account_status == "active"
 
 
-
-
 async def test_find_by_phone_unknown_returns_none(
     sessionmaker: async_sessionmaker[AsyncSession],
 ) -> None:
     repo = PgFarmerRepo(sessionmaker)
     assert await repo.find_by_phone("+91999999999") is None
-
-
 
 
 async def test_find_by_id_returns_identity(

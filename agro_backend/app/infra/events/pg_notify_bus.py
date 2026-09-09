@@ -23,7 +23,6 @@ We refuse to publish anything over 7500 to leave margin for the envelope.
 Producers should always emit IDs, not full domain objects (Roadmap 1.3).
 """
 
-
 from __future__ import annotations
 
 import json
@@ -45,15 +44,11 @@ CHANNEL: str = "agro_events"
 MAX_PAYLOAD_BYTES: int = 7500
 
 
-
-
 class PgNotifyEventBus:
     """Concrete :class:`EventBus` over Postgres ``LISTEN``/``NOTIFY``."""
 
-
     def __init__(self, sessionmaker: async_sessionmaker[AsyncSession]) -> None:
         self._sm = sessionmaker
-
 
     async def publish(self, event_name: str, payload: dict[str, Any]) -> None:
         envelope = {
@@ -80,8 +75,6 @@ class PgNotifyEventBus:
         async with self._sm() as session:
             await session.execute(stmt, {"channel": CHANNEL, "body": body})
             await session.commit()
-
-
 
 
 __all__ = ["CHANNEL", "MAX_PAYLOAD_BYTES", "PgNotifyEventBus"]

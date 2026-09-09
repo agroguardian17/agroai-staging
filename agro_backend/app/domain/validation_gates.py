@@ -31,7 +31,6 @@ the historical windows. Validation is observable: every gate that fires
 adds an entry to ``sensor_health_json`` (keyed by field name).
 """
 
-
 from __future__ import annotations
 
 import statistics
@@ -52,13 +51,10 @@ class ValidationFlag(StrEnum):
     canonical gate order: range -> stuck -> outlier -> cross_sensor.
     """
 
-
     RANGE_FAIL = "range_fail"
     STUCK = "stuck"
     OUTLIER = "outlier"
     CROSS_SENSOR = "cross_sensor"
-
-
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,12 +67,9 @@ class GateResult:
     ``sensor_health_json`` map written to ``node_sensor_readings``.
     """
 
-
     field: str
     flag: ValidationFlag
     detail: str  # human-readable for logs / dashboards; never a PII vector
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -109,8 +102,6 @@ RANGES: dict[str, tuple[Decimal, Decimal]] = {
 }
 
 
-
-
 def check_range(field: str, value: Decimal | None) -> GateResult | None:
     """Return a RANGE_FAIL if value is outside the physical bound, else None.
 
@@ -131,8 +122,6 @@ def check_range(field: str, value: Decimal | None) -> GateResult | None:
     return None
 
 
-
-
 # ---------------------------------------------------------------------------
 # Gate 2 — Stuck check
 # ---------------------------------------------------------------------------
@@ -141,8 +130,6 @@ STUCK_MIN_IDENTICAL: int = 4
 the STUCK flag. With ``history_for_stuck_check`` returning up to ~6 rows,
 4 identical means "more than half the trailing window stuck on one
 value" - that's the firmware / probe failure mode we want to catch."""
-
-
 
 
 def is_stuck(history: Sequence[Decimal | None], latest: Decimal | None) -> bool:
@@ -170,8 +157,6 @@ def is_stuck(history: Sequence[Decimal | None], latest: Decimal | None) -> bool:
     return same >= STUCK_MIN_IDENTICAL
 
 
-
-
 # ---------------------------------------------------------------------------
 # Gate 3 — MAD outlier check
 # ---------------------------------------------------------------------------
@@ -186,8 +171,6 @@ MAD_MIN_WINDOW: int = 12
 """Minimum sample count below which MAD is too noisy to trust.
 ~12 samples over a 24-h window means at least one reading every 2 hours,
 which matches the rapid-cadence Sub Node defaults."""
-
-
 
 
 def is_mad_outlier(window: list[Decimal], value: Decimal, k: Decimal = MAD_K) -> bool:
@@ -217,8 +200,6 @@ def is_mad_outlier(window: list[Decimal], value: Decimal, k: Decimal = MAD_K) ->
     return abs(value - median) > k * mad
 
 
-
-
 # ---------------------------------------------------------------------------
 # Gate 4 — Cross-sensor consistency
 # ---------------------------------------------------------------------------
@@ -227,8 +208,6 @@ MOISTURE_DISAGREE_PCT: Decimal = Decimal("15")
 triggers a cross-sensor flag. 15 is the value the ADT Baramati pilot used
 empirically; tighter than 10 (false positives from one probe being closer
 to a drip emitter) and looser than 25 (misses real probe drift)."""
-
-
 
 
 def check_cross_sensor(reading: Reading) -> list[GateResult]:
@@ -251,7 +230,6 @@ def check_cross_sensor(reading: Reading) -> list[GateResult]:
     """
     results: list[GateResult] = []
 
-
     # Moisture probe disagreement
     m1, m2 = reading.soil_moisture_1_pct, reading.soil_moisture_2_pct
     if m1 is not None and m2 is not None and abs(m1 - m2) > MOISTURE_DISAGREE_PCT:
@@ -267,7 +245,6 @@ def check_cross_sensor(reading: Reading) -> list[GateResult]:
             )
         )
 
-
     # Low-battery-flag consistency
     bv = reading.battery_voltage_v
     if bv is not None and bv < LOW_BATTERY_THRESHOLD_V and not reading.low_battery_flag:
@@ -281,7 +258,6 @@ def check_cross_sensor(reading: Reading) -> list[GateResult]:
                 ),
             )
         )
-
 
     # NPK partial-failure detection
     n, p, k = reading.soil_n_mg_kg, reading.soil_p_mg_kg, reading.soil_k_mg_kg
@@ -307,10 +283,7 @@ def check_cross_sensor(reading: Reading) -> list[GateResult]:
             )
         )
 
-
     return results
-
-
 
 
 __all__ = [

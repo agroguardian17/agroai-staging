@@ -36,15 +36,15 @@ from __future__ import annotations
 
 import json
 from datetime import date, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
-import psycopg2
+import psycopg2  # type: ignore[import-untyped]
 from persistence import (  # type: ignore[import-not-found] # flat via sys.path shim
     STATE_VERSION,
     dump_notifier,
     dump_overrides,
 )
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import RealDictCursor  # type: ignore[import-untyped]
 
 # Runtime import order: activate the flat-import shim in ``ginger`` BEFORE
 # reaching into their engine modules for the serializers + STATE_VERSION.
@@ -94,9 +94,7 @@ class PgStateStore:
         ``{'_reset_reason': ...}`` and the caller starts fresh rather than
         half-restoring.
         """
-        with psycopg2.connect(self._dsn) as conn, conn.cursor(
-            cursor_factory=RealDictCursor
-        ) as cur:
+        with psycopg2.connect(self._dsn) as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(
                 "SELECT version, payload FROM engine_state WHERE plot_id = %s",
                 (plot_id,),
@@ -108,14 +106,12 @@ class PgStateStore:
         payload = row["payload"]
         if version != STATE_VERSION:
             return {
-                "_reset_reason": (
-                    f"state version {version} != {STATE_VERSION}; starting clean"
-                )
+                "_reset_reason": (f"state version {version} != {STATE_VERSION}; starting clean")
             }
         # ``payload`` is stored as JSON text in the SQL migration; JSONB would
         # also work. Guard both by decoding only if it is a string.
         if isinstance(payload, str):
-            return json.loads(payload)
+            return cast(dict[str, Any], json.loads(payload))
         return dict(payload)
 
     def save(
@@ -170,9 +166,7 @@ class PgStateStore:
         """
         if not messages:
             return
-        rows = [
-            (plot_id, _iso(day), m.rule_id, m.severity, m.render()) for m in messages
-        ]
+        rows = [(plot_id, _iso(day), m.rule_id, m.severity, m.render()) for m in messages]
         with psycopg2.connect(self._dsn) as conn, conn.cursor() as cur:
             cur.executemany(
                 """
@@ -184,9 +178,7 @@ class PgStateStore:
             )
             conn.commit()
 
-    def history(
-        self, plot_id: str, limit: int = 30
-    ) -> list[tuple[str, str, str]]:
+    def history(self, plot_id: str, limit: int = 30) -> list[tuple[str, str, str]]:
         """Recent (day, rule_id, severity) tuples. Newest first.
 
         Kept for parity with ``SqliteStateStore.history``. The main read

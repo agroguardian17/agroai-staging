@@ -14,7 +14,6 @@ once a Sub Node is provisioned. The actual write happens via the
 not the trigger directly.
 """
 
-
 from __future__ import annotations
 
 import uuid
@@ -27,7 +26,6 @@ from app.domain.plot import DataTier, Plot
 class PlotRepo(Protocol):
     """Operations the read API + crop-change wizard + technician flows need."""
 
-
     async def find(self, plot_id: str) -> Plot | None:
         """Look up one plot by its TEXT primary key. ``None`` if not found.
 
@@ -38,7 +36,6 @@ class PlotRepo(Protocol):
         """
         ...
 
-
     async def for_farmer(self, farmer_id: uuid.UUID) -> list[Plot]:
         """All active+fallow plots a farmer owns, ordered by ``plot_number``.
 
@@ -48,7 +45,6 @@ class PlotRepo(Protocol):
         """
         ...
 
-
     async def for_tenant(self, tenant_id: uuid.UUID) -> list[Plot]:
         """Every plot for a tenant (admin/agronomist scope).
 
@@ -57,7 +53,6 @@ class PlotRepo(Protocol):
         "Operations" view shows them and filters client-side.
         """
         ...
-
 
     async def update_data_tier(self, plot_id: str, tier: DataTier) -> None:
         """Transition a plot's data tier.
@@ -72,8 +67,6 @@ class PlotRepo(Protocol):
         re-shape this port until that flow lands in Round 9.)
         """
         ...
-
-
 
 
 __all__ = ["PlotRepo"]

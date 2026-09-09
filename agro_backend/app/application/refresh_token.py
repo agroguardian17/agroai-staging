@@ -16,7 +16,6 @@ attacker will both eventually present the same revoked token; the
 second one sees a 401 and we know something's wrong).
 """
 
-
 from __future__ import annotations
 
 import uuid
@@ -39,12 +38,8 @@ class RefreshError(Exception):
     pass
 
 
-
-
 class InvalidRefreshTokenError(RefreshError):
     """Token is unknown, revoked, or expired."""
-
-
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,25 +50,20 @@ class RefreshTokenDeps:
     refresh_ttl_seconds: int = 30 * 24 * 3600
 
 
-
-
 async def execute(*, refresh_secret: str, deps: RefreshTokenDeps) -> TokenPair:
     """Rotate the refresh token. Returns a fresh TokenPair."""
     now = datetime.now(UTC)
     token_hash = hash_refresh_token(refresh_secret)
 
-
     old = await deps.session_repo.find_by_token_hash(token_hash)
     if old is None or not old.is_active(now):
         raise InvalidRefreshTokenError()
-
 
     farmer = await deps.farmer_repo.find_by_id(old.farmer_id)
     if farmer is None or farmer.account_status != "active":
         # Revoke the dangling session so future calls don't keep trying.
         await deps.session_repo.revoke(old.session_id)
         raise InvalidRefreshTokenError()
-
 
     # Mint a NEW refresh secret + session, revoke the old.
     new_secret = generate_refresh_secret()
@@ -91,7 +81,6 @@ async def execute(*, refresh_secret: str, deps: RefreshTokenDeps) -> TokenPair:
     new_session_id = await deps.session_repo.create(new_session)
     await deps.session_repo.revoke(old.session_id)
 
-
     access_token, claims = deps.token_issuer.issue_access_token(
         subject=farmer.farmer_id,
         tenant_id=farmer.tenant_id,
@@ -99,15 +88,12 @@ async def execute(*, refresh_secret: str, deps: RefreshTokenDeps) -> TokenPair:
         session_id=new_session_id,
     )
 
-
     return TokenPair(
         access_token=access_token,
         refresh_token=new_secret,
         access_expires_at=claims.expires_at,
         refresh_expires_at=new_expires_at,
     )
-
-
 
 
 __all__ = ["InvalidRefreshTokenError", "RefreshError", "RefreshTokenDeps", "execute"]

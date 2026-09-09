@@ -14,7 +14,6 @@ truncates the working tables before each test so independence is
 preserved.
 """
 
-
 from __future__ import annotations
 
 import os
@@ -38,8 +37,6 @@ ASYNC_URL = os.getenv(
 PILOT_TENANT = "11111111-1111-1111-1111-111111111111"
 
 
-
-
 def db_available() -> bool:
     """Probe whether Postgres at SYNC_URL is reachable.
 
@@ -58,11 +55,7 @@ def db_available() -> bool:
     return True
 
 
-
-
 DB_SKIP_REASON = "Postgres not reachable; run on the Mac dev stack after `alembic upgrade head`."
-
-
 
 
 @pytest.fixture(scope="session")
@@ -71,8 +64,6 @@ def sync_engine() -> Iterator[Engine]:
     eng = create_engine(SYNC_URL, future=True)
     yield eng
     eng.dispose()
-
-
 
 
 @pytest_asyncio.fixture
@@ -94,15 +85,11 @@ async def async_engine() -> AsyncIterator[AsyncEngine]:
     await eng.dispose()
 
 
-
-
 @pytest_asyncio.fixture
 async def sessionmaker(
     async_engine: AsyncEngine,
 ) -> AsyncIterator[async_sessionmaker[AsyncSession]]:
     yield make_sessionmaker(async_engine)
-
-
 
 
 @pytest.fixture
@@ -119,8 +106,6 @@ def clean_telemetry(sync_engine: Engine) -> Iterator[None]:
             )
         )
     yield
-
-
 
 
 __all__ = [

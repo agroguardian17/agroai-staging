@@ -32,7 +32,6 @@ which is the broker's job to surface (its own queue overflow alarms),
 not ours to silently retry.
 """
 
-
 from __future__ import annotations
 
 import asyncio
@@ -42,6 +41,8 @@ import ssl
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
+from typing import Any, cast
 
 import paho.mqtt.client as mqtt
 import structlog
@@ -49,10 +50,16 @@ from pydantic import ValidationError
 
 from app.application.ports.device_calibration_repo import DeviceCalibrationRepo
 from app.application.ports.main_node_reading_repo import MainNodeReadingRepo
+from app.application.ports.weather_station_reading_repo import (
+    WeatherStationReadingRepo,
+)
 from app.application.process_reading import ProcessReadingDeps
 from app.application.process_reading import execute as process_execute
 from app.domain.main_node_reading import MainNodeReading
+from app.domain.weather_station_reading import WeatherStationReading
 from app.infra.mqtt.schemas import (
+    MasterReadings,
+    MasterReadingsHeartbeat,
     TelemetryInRaw,
     TelemetryMaster,
     TopicParseError,
@@ -62,8 +69,6 @@ from app.infra.mqtt.schemas import (
 from app.lib import metrics
 
 log = structlog.get_logger(__name__)
-
-
 
 
 # Asyncio queue depth. ~10k msg/min sustained throughput would still
@@ -82,8 +87,6 @@ MAX_CLOCK_SKEW_FUTURE: timedelta = timedelta(days=1)
 MAX_CLOCK_SKEW_PAST: timedelta = timedelta(days=365)
 
 
-
-
 @dataclass(frozen=True, slots=True)
 class BrokerSettings:
     """Connection parameters for the MQTT broker.
@@ -93,7 +96,6 @@ class BrokerSettings:
     badly-behaved caller can't mutate the broker mid-flight.
     """
 
-
     host: str
     port: int
     username: str | None = None
@@ -102,8 +104,6 @@ class BrokerSettings:
     use_tls: bool = False
     tls_ca_path: str | None = None
     keepalive_seconds: int = 60
-
-
 
 
 class IngestBroker:
@@ -126,7 +126,6 @@ class IngestBroker:
     which is exactly what :meth:`stop` raises by cancelling the task.
     """
 
-
     def __init__(
         self,
         broker_settings: BrokerSettings,
@@ -144,29 +143,37 @@ class IngestBroker:
         # logged (the pre-17.5 behaviour), just not persisted. Keeps every
         # existing test working without touching their broker construction.
         main_node_reading_repo: MainNodeReadingRepo | None = None,
+        # Round 17 (2026-09-05): extract the master_readings block from both
+        # v2-raw (bundled with Sub Node telemetry) and v2-master (heartbeat)
+        # payloads, and persist a weather_station_readings row keyed on
+        # (master_node_id, recorded_at). Idempotent — the same second seen
+        # via both paths lands once. Optional for back-compat with tests.
+        weather_station_reading_repo: WeatherStationReadingRepo | None = None,
         # Test seam: allow callers to inject a fake parser/processor for
         # unit tests. Production callers always use the module defaults.
         # ``ingest_fn`` keeps its historical name (Round 7) for backward
         # compatibility but now defaults to ``process_reading.execute`` —
         # which calls ``ingest_telemetry`` then ``evaluate_rules``.
         parse_fn: Callable[[str, bytes], object] = parse_inbound,
-        ingest_fn: Callable[[object, ProcessReadingDeps], Awaitable[object]] = process_execute,
+        ingest_fn: Callable[[object, ProcessReadingDeps], Awaitable[object]] = cast(
+            Callable[[object, ProcessReadingDeps], Awaitable[object]],
+            process_execute,
+        ),
         max_queue: int = MAX_QUEUE,
     ) -> None:
         self._settings = broker_settings
         self._deps = deps
         self._calibration_repo = calibration_repo
         self._main_node_reading_repo = main_node_reading_repo
+        self._weather_station_reading_repo = weather_station_reading_repo
         self._parse_fn = parse_fn
         self._ingest_fn = ingest_fn
         self._max_queue = max_queue
-
 
         self._client: mqtt.Client | None = None
         self._queue: asyncio.Queue[tuple[str, bytes]] | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
         self._drain_task: asyncio.Task[None] | None = None
-
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -178,11 +185,10 @@ class IngestBroker:
         self._loop = asyncio.get_running_loop()
         self._queue = asyncio.Queue(maxsize=self._max_queue)
 
-
         client = mqtt.Client(
             client_id=self._settings.client_id,
             protocol=mqtt.MQTTv5,
-            callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
+            callback_api_version=mqtt.CallbackAPIVersion.VERSION2,  # type: ignore[attr-defined]
         )
         if self._settings.username:
             client.username_pw_set(self._settings.username, self._settings.password)
@@ -190,17 +196,14 @@ class IngestBroker:
             ctx = ssl.create_default_context(cafile=self._settings.tls_ca_path)
             client.tls_set_context(ctx)
 
-
         client.on_connect = self._on_connect
         client.on_message = self._on_message
         client.on_disconnect = self._on_disconnect
-
 
         # Silence paho-mqtt's noisy "INFO" log; we route everything through
         # structlog so a double log is just noise.
         mqtt_paho_logger = logging.getLogger("paho.mqtt.client")
         mqtt_paho_logger.setLevel(logging.WARNING)
-
 
         # Schedule the first connection without resolving the broker hostname on
         # the FastAPI startup path. The paho network thread will keep retrying
@@ -214,11 +217,9 @@ class IngestBroker:
         client.loop_start()
         self._client = client
 
-
         # Drain task pulls from the queue and ingests on the asyncio loop.
         self._drain_task = asyncio.create_task(self._drain(), name="ingest-drain")
         log.info("ingest_broker.started", host=self._settings.host, port=self._settings.port)
-
 
     async def stop(self) -> None:
         """Disconnect cleanly. Idempotent."""
@@ -233,6 +234,46 @@ class IngestBroker:
             self._client = None
         log.info("ingest_broker.stopped")
 
+    # ------------------------------------------------------------------
+    # Round 17 helper: persist master_readings to weather_station_readings
+    # from either wire schema. Idempotent on (master_node_id, recorded_at)
+    # so the two paths (v2-raw + v2-master) can both fire at similar
+    # times without creating duplicates.
+    # ------------------------------------------------------------------
+    async def _persist_weather(
+        self,
+        tenant_id: object,
+        farm_id: object,
+        master_node_id: str,
+        recorded_at: object,
+        master: MasterReadings | MasterReadingsHeartbeat,
+    ) -> None:
+        if self._weather_station_reading_repo is None:
+            return
+        weather = WeatherStationReading(
+            tenant_id=tenant_id,  # type: ignore[arg-type]
+            farm_id=farm_id,  # type: ignore[arg-type]
+            master_node_id=master_node_id,
+            recorded_at=recorded_at,  # type: ignore[arg-type]
+            air_temp_c=master.bme280_temp_c,
+            humidity_pct=master.bme280_humidity_pct,
+            # BME280 emits pressure in pascals; the DB column is hPa.
+            atmospheric_pressure_hpa=(
+                master.bme280_pressure_pa / Decimal("100")
+                if master.bme280_pressure_pa is not None
+                else None
+            ),
+            weather_station_battery_v=master.ina219_bus_v,
+        )
+        weather = _normalize_clock_skew(weather)  # type: ignore[assignment]
+        result = await self._weather_station_reading_repo.save(weather)
+        if result is None:
+            # Duplicate — same (master_node_id, recorded_at) already saved
+            # by the sibling path. Fine; log at debug volume only.
+            log.debug(
+                "ingest_broker.weather_duplicate",
+                master_node_id=master_node_id,
+            )
 
     # ------------------------------------------------------------------
     # paho callbacks (run on paho's I/O thread - NOT the asyncio thread)
@@ -254,7 +295,6 @@ class IngestBroker:
         client.subscribe(TELEMETRY_TOPIC_FILTER, qos=QOS_AT_LEAST_ONCE)
         log.info("ingest_broker.subscribed", topic=TELEMETRY_TOPIC_FILTER, qos=QOS_AT_LEAST_ONCE)
 
-
     def _on_disconnect(
         self,
         _client: mqtt.Client,
@@ -265,7 +305,6 @@ class IngestBroker:
     ) -> None:
         # paho's loop will auto-reconnect; we just log.
         log.warning("ingest_broker.disconnected", reason=str(reason_code))
-
 
     def _on_message(self, _client: mqtt.Client, _userdata: object, msg: mqtt.MQTTMessage) -> None:
         """Push to the asyncio queue from the paho thread.
@@ -289,7 +328,6 @@ class IngestBroker:
             # Loop already closed during shutdown - drop quietly.
             metrics.ingest_dropped_total.labels(reason="loop_closed").inc()
 
-
     def _enqueue(self, topic: str, raw: bytes) -> None:
         """Inner method invoked on the asyncio loop thread."""
         if self._queue is None:
@@ -300,7 +338,6 @@ class IngestBroker:
         except asyncio.QueueFull:
             metrics.ingest_dropped_total.labels(reason="queue_full").inc()
             log.warning("ingest_broker.queue_full", topic=topic)
-
 
     # ------------------------------------------------------------------
     # Drain loop
@@ -328,12 +365,8 @@ class IngestBroker:
                     # constructs a PgMainNodeReadingRepo). Tests that don't
                     # inject the repo still see identical behaviour to the
                     # pre-17.5 log-only path.
-                    online_label = (
-                        "true" if model.master_readings.sub_node_online else "false"
-                    )
-                    metrics.main_node_heartbeat_total.labels(
-                        sub_node_online=online_label
-                    ).inc()
+                    online_label = "true" if model.master_readings.sub_node_online else "false"
+                    metrics.main_node_heartbeat_total.labels(sub_node_online=online_label).inc()
                     log.info(
                         "ingest_broker.master_heartbeat",
                         topic=topic,
@@ -370,35 +403,26 @@ class IngestBroker:
                         # sensor_health_json, validation_warn) shape as
                         # Reading, so _normalize_clock_skew works duck-typed.
                         heartbeat = _normalize_clock_skew(heartbeat)  # type: ignore[assignment]
-                        reading_id = await self._main_node_reading_repo.save(
-                            heartbeat
-                        )
+                        reading_id = await self._main_node_reading_repo.save(heartbeat)
                         if reading_id is None:
-                            metrics.ingest_dropped_total.labels(
-                                reason="duplicate"
-                            ).inc()
-                            log.info(
-                                "ingest_broker.master_heartbeat_duplicate",
-                                topic=topic,
-                                main_node_id=heartbeat.main_node_id,
-                                recorded_at=heartbeat.recorded_at.isoformat(),
-                            )
-                        else:
-                            log.info(
-                                "ingest_broker.master_heartbeat_saved",
-                                topic=topic,
-                                main_node_id=heartbeat.main_node_id,
-                                reading_id=reading_id,
-                                recorded_at=heartbeat.recorded_at.isoformat(),
-                            )
+                            metrics.ingest_dropped_total.labels(reason="duplicate").inc()
+                    # Round 17: also persist the master_readings block to
+                    # weather_station_readings. Idempotent on
+                    # (master_node_id, recorded_at); the v2-raw path may
+                    # have already saved this second — that's fine.
+                    await self._persist_weather(
+                        tenant_id=model.tenant_id,
+                        farm_id=model.farm_id,
+                        master_node_id=model.main_node_id,
+                        recorded_at=model.recorded_at,
+                        master=model.master_readings,
+                    )
                     continue
                 if isinstance(model, TelemetryInRaw):
                     # Round 16: raw-values payload — apply per-device
                     # calibration before building the Reading.
                     if self._calibration_repo is None:
-                        metrics.ingest_dropped_total.labels(
-                            reason="raw_no_calibration_repo"
-                        ).inc()
+                        metrics.ingest_dropped_total.labels(reason="raw_no_calibration_repo").inc()
                         log.error(
                             "ingest_broker.raw_payload_without_calibration_repo",
                             topic=topic,
@@ -409,9 +433,7 @@ class IngestBroker:
                         str(model.tenant_id), model.node_id
                     )
                     if calibration is None:
-                        metrics.ingest_dropped_total.labels(
-                            reason="missing_calibration"
-                        ).inc()
+                        metrics.ingest_dropped_total.labels(reason="missing_calibration").inc()
                         log.warning(
                             "ingest_broker.missing_calibration",
                             topic=topic,
@@ -420,18 +442,26 @@ class IngestBroker:
                         )
                         continue
                     reading = model.to_domain(calibration)
+                    # Round 17 (2026-09-05): the v2-raw payload carries
+                    # the Main Node's own weather block. Persist it to
+                    # weather_station_readings if a repo is wired.
+                    # main_node_id lives on the model — we only reach
+                    # this branch on the v2-raw path so model is
+                    # TelemetryInRaw and has that attribute.
+                    if model.main_node_id is not None:
+                        await self._persist_weather(
+                            tenant_id=model.tenant_id,
+                            farm_id=model.farm_id,
+                            master_node_id=model.main_node_id,
+                            recorded_at=model.recorded_at,
+                            master=model.master_readings,
+                        )
                 else:
                     reading = model.to_domain()  # type: ignore[attr-defined]
-                reading = _normalize_clock_skew(reading)
+                reading = cast(Any, _normalize_clock_skew(reading))
                 result = await self._ingest_fn(reading, self._deps)
                 if result.reading_id is None:  # type: ignore[attr-defined]
                     metrics.ingest_dropped_total.labels(reason="duplicate").inc()
-                    log.info(
-                        "ingest_broker.reading_duplicate",
-                        topic=topic,
-                        node_id=reading.node_id,
-                        recorded_at=reading.recorded_at.isoformat(),
-                    )
                 else:
                     # Rule-engine accounting. Only fires when the use case
                     # actually ran rule evaluation (ProcessReadingResult);
@@ -469,8 +499,6 @@ class IngestBroker:
                 # CancelledError so :meth:`stop` can still cancel us.
                 metrics.ingest_dropped_total.labels(reason="unexpected").inc()
                 log.exception("ingest_broker.unexpected_error", topic=topic, exc=str(exc))
-
-
 
 
 def _topic_template(topic: str) -> str:
@@ -511,35 +539,44 @@ def _normalize_clock_skew(reading: object, *, now: datetime | None = None) -> ob
     if not (too_future or too_old):
         return reading
 
-    received_at_master = reading.received_at_master
-    if received_at_master.tzinfo is None:
-        received_at_master = received_at_master.replace(tzinfo=UTC)
-    else:
-        received_at_master = received_at_master.astimezone(UTC)
+    received_at_master = getattr(reading, "received_at_master", None)
+    if isinstance(received_at_master, datetime):
+        if received_at_master.tzinfo is None:
+            received_at_master = received_at_master.replace(tzinfo=UTC)
+        else:
+            received_at_master = received_at_master.astimezone(UTC)
 
-    health = dict(getattr(reading, "sensor_health_json", {}))
+    health = dict(getattr(reading, "sensor_health_json", {}) or {})
     health.update(
         {
             "timestamp_corrected": True,
             "timestamp_correction_reason": "future_clock_skew" if too_future else "past_clock_skew",
             "original_recorded_at": recorded_at.isoformat(),
-            "original_received_at_master": received_at_master.isoformat(),
         }
+    )
+    if isinstance(received_at_master, datetime):
+        health["original_received_at_master"] = received_at_master.isoformat()
+
+    device_id = (
+        getattr(reading, "node_id", None)
+        or getattr(reading, "main_node_id", None)
+        or getattr(reading, "master_node_id", None)
+        or "unknown"
     )
     log.warning(
         "ingest_broker.timestamp_corrected",
-        device_id=getattr(reading, "node_id", getattr(reading, "main_node_id", "unknown")),
+        device_id=device_id,
         original_recorded_at=recorded_at.isoformat(),
         corrected_recorded_at=current.isoformat(),
     )
-    return reading.with_(
-        recorded_at=current,
-        received_at_master=current,
-        sensor_health_json=health,
-        validation_warn=True,
-    )
-
-
+    updates: dict[str, object] = {
+        "recorded_at": current,
+        "sensor_health_json": health,
+        "validation_warn": True,
+    }
+    if hasattr(reading, "received_at_master"):
+        updates["received_at_master"] = current
+    return reading.with_(**updates)
 
 
 __all__ = [

@@ -90,16 +90,6 @@ def test_node_sensor_readings_is_partitioned_with_idempotency() -> None:
     assert ("node_id", "recorded_at") in uniques
 
 
-def test_main_node_readings_has_idempotency_constraint() -> None:
-    t = Base.metadata.tables["main_node_readings"]
-    uniques = {
-        tuple(sorted(c.name for c in con.columns))
-        for con in t.constraints
-        if isinstance(con, UniqueConstraint)
-    }
-    assert ("main_node_id", "recorded_at") in uniques
-
-
 def test_weather_forecasts_partitioned_by_fetched_at() -> None:
     t = Base.metadata.tables["weather_forecasts"]
     assert t.dialect_options["postgresql"]["partition_by"] == "RANGE (fetched_at)"

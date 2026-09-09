@@ -148,7 +148,7 @@ Summary:
 
 With both boards powered and physically near each other:
 
-- Every ~5 minutes the Sub Node serial shows a new cycle and `LoRa TX: OK`.
+- Every ~16 seconds the Sub Node serial shows a new cycle and `LoRa TX: OK`.
 - Within a second the Main Node serial shows `[lora] RX (…): NODE=AGR-SN-0001,…`
   followed by `[mqtt] publish OK`.
 - On the VPS, `python agro_backend/scripts/dev/tail_ingest.py` shows the

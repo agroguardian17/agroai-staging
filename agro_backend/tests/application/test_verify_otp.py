@@ -1,6 +1,5 @@
 """Tests for app.application.verify_otp.execute."""
 
-
 from __future__ import annotations
 
 import uuid
@@ -31,8 +30,6 @@ TENANT = uuid.UUID("11111111-1111-1111-1111-111111111111")
 NOW = datetime.now(UTC)
 
 
-
-
 def _farmer(status: str = "active") -> FarmerIdentity:
     return FarmerIdentity(
         farmer_id=uuid.uuid4(),
@@ -42,8 +39,6 @@ def _farmer(status: str = "active") -> FarmerIdentity:
         language_preference="marathi",
         account_status=status,
     )
-
-
 
 
 def _challenge(
@@ -69,21 +64,15 @@ def _challenge(
     )
 
 
-
-
 class _StubFarmerRepo:
     def __init__(self, farmer: FarmerIdentity | None) -> None:
         self._farmer = farmer
 
-
     async def find_by_phone(self, phone: str) -> FarmerIdentity | None:
         return self._farmer
 
-
     async def find_by_id(self, farmer_id: uuid.UUID) -> FarmerIdentity | None:
         return self._farmer
-
-
 
 
 class _StubOtpRepo:
@@ -92,66 +81,50 @@ class _StubOtpRepo:
         self.consumed: list[uuid.UUID] = []
         self.incremented: list[uuid.UUID] = []
 
-
     async def create(self, c: OtpChallenge) -> uuid.UUID:
         raise AssertionError
-
 
     async def find_latest_active(self, phone: str) -> OtpChallenge | None:
         return self.latest
 
-
     async def find_by_id(self, cid: uuid.UUID) -> OtpChallenge | None:
         return None
-
 
     async def increment_attempt(self, cid: uuid.UUID) -> int:
         self.incremented.append(cid)
         return (self.latest.attempt_count + 1) if self.latest else 1
 
-
     async def mark_consumed(self, cid: uuid.UUID) -> None:
         self.consumed.append(cid)
 
-
     async def recent_attempts_count(self, phone: str, since_minutes: int) -> int:
         return 0
-
-
 
 
 class _StubSessionRepo:
     def __init__(self) -> None:
         self.created: list[AuthSession] = []
 
-
     async def create(self, s: AuthSession) -> uuid.UUID:
         self.created.append(s)
         return s.session_id
 
-
     async def find_by_token_hash(self, h: str) -> AuthSession | None:
         return None
-
 
     async def revoke(self, sid: uuid.UUID) -> None:
         pass
 
-
     async def revoke_all_for_farmer(self, farmer_id: uuid.UUID) -> int:
         return 0
-
 
     async def touch(self, sid: uuid.UUID) -> None:
         pass
 
 
-
-
 class _StubTokenIssuer:
     def __init__(self) -> None:
         self.minted: list[uuid.UUID] = []
-
 
     def issue_access_token(
         self,
@@ -171,11 +144,8 @@ class _StubTokenIssuer:
             session_id=session_id,
         )
 
-
     def verify_access_token(self, token: str) -> AccessClaims:
         raise AssertionError
-
-
 
 
 def _deps(
@@ -197,8 +167,6 @@ def _deps(
     )
 
 
-
-
 # ===========================================================================
 # Happy path
 # ===========================================================================
@@ -213,8 +181,6 @@ async def test_verify_otp_correct_code_returns_token_pair() -> None:
     assert sess.created[0].farmer_id == issuer.minted[0]
 
 
-
-
 # ===========================================================================
 # Negative paths
 # ===========================================================================
@@ -224,15 +190,11 @@ async def test_verify_otp_no_active_challenge_raises() -> None:
         await execute(phone=PHONE, code="123456", deps=deps)
 
 
-
-
 async def test_verify_otp_expired_challenge_raises_no_active() -> None:
     chal = _challenge(expires_at=NOW - timedelta(seconds=1))
     deps, _, _, _ = _deps(_farmer(), chal)
     with pytest.raises(NoActiveChallengeError):
         await execute(phone=PHONE, code="123456", deps=deps)
-
-
 
 
 async def test_verify_otp_consumed_challenge_raises_no_active() -> None:
@@ -242,15 +204,11 @@ async def test_verify_otp_consumed_challenge_raises_no_active() -> None:
         await execute(phone=PHONE, code="123456", deps=deps)
 
 
-
-
 async def test_verify_otp_locked_challenge_raises() -> None:
     chal = _challenge(attempt_count=5, max_attempts=5)
     deps, _, _, _ = _deps(_farmer(), chal)
     with pytest.raises(ChallengeLockedError):
         await execute(phone=PHONE, code="000000", deps=deps)
-
-
 
 
 async def test_verify_otp_wrong_code_increments_and_raises() -> None:
@@ -261,8 +219,6 @@ async def test_verify_otp_wrong_code_increments_and_raises() -> None:
     assert chal.challenge_id in otp.incremented
     # 5 - (0+1) = 4 attempts remaining.
     assert exc_info.value.attempts_remaining == 4
-
-
 
 
 async def test_verify_otp_inactive_farmer_raises() -> None:

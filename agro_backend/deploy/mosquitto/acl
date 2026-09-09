@@ -1,2 +1,6 @@
 user service
 topic readwrite agro/#
+
+user main-node-001
+topic readwrite agro/v2/#
+topic read $SYS/#

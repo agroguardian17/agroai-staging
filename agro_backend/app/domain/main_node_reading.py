@@ -21,7 +21,8 @@ Design notes:
   ``docs/SCHEMA_DECISIONS.md`` §13.2).
 
 Schema reference: ``alembic/versions/0013_main_node_readings.py`` and
-``app/infra/persistence/models/main_node.py``.
+``app/infra/persistence/models/main_node_reading.py`` when the SQLAlchemy
+model lands.
 """
 
 from __future__ import annotations

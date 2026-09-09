@@ -41,7 +41,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 from zoneinfo import ZoneInfo
 
 import structlog
@@ -185,7 +185,7 @@ def _load_declared_fields(sync_dsn: str) -> frozenset[str]:
 
     Sync — called via ``asyncio.to_thread`` from the async entry point.
     """
-    import psycopg2
+    import psycopg2  # type: ignore[import-untyped]
 
     with psycopg2.connect(sync_dsn) as conn, conn.cursor() as cur:
         cur.execute("SELECT field_name FROM kb_farm_brain_fields")
@@ -213,7 +213,7 @@ def _invoke_engine(
 
     state_store = PgStateStore(sync_dsn)
     runner = build_runner(PostgresSource(sync_dsn), state_store=state_store)
-    return runner.run_day(plot_id, state, today)
+    return cast(dict[str, Any], runner.run_day(plot_id, state, today))
 
 
 # ---------------------------------------------------------------------------

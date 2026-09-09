@@ -1,6 +1,5 @@
 """Tests for the rule engine in app.domain.rules."""
 
-
 from __future__ import annotations
 
 import uuid
@@ -26,8 +25,6 @@ FARMER = uuid.UUID("22222222-2222-2222-2222-222222222222")
 FARM = uuid.UUID("33333333-3333-3333-3333-333333333333")
 
 
-
-
 def _reading(**over: object) -> Reading:
     base: dict[str, object] = {
         "tenant_id": TENANT,
@@ -43,8 +40,6 @@ def _reading(**over: object) -> Reading:
     return Reading(**base)  # type: ignore[arg-type]
 
 
-
-
 def _metrics(**over: object) -> DerivedMetrics:
     base: dict[str, object] = {
         "moisture_deficit_pct": None,
@@ -58,8 +53,6 @@ def _metrics(**over: object) -> DerivedMetrics:
     return DerivedMetrics(**base)  # type: ignore[arg-type]
 
 
-
-
 def _always_true_rule(rid: str = "always") -> Rule:
     return Rule(
         rule_id=rid,
@@ -68,8 +61,6 @@ def _always_true_rule(rid: str = "always") -> Rule:
         message_template_marathi="अलर्ट",
         predicate=lambda _r, _m: True,
     )
-
-
 
 
 # ===========================================================================
@@ -82,15 +73,11 @@ def test_ruleset_rejects_duplicate_rule_ids() -> None:
         RuleSet(rules=(r1, r2))
 
 
-
-
 def test_ruleset_holds_rules_in_declaration_order() -> None:
     a = _always_true_rule("a")
     b = _always_true_rule("b")
     rs = RuleSet(rules=(a, b))
     assert rs.rules == (a, b)
-
-
 
 
 # ===========================================================================
@@ -101,8 +88,6 @@ def test_evaluate_to_hits_returns_hit_when_predicate_true() -> None:
     hits = evaluate_to_hits(_reading(), _metrics(), rs)
     assert len(hits) == 1
     assert hits[0].rule.rule_id == "always"
-
-
 
 
 def test_evaluate_to_hits_skips_false_predicate() -> None:
@@ -117,8 +102,6 @@ def test_evaluate_to_hits_skips_false_predicate() -> None:
     assert hits == []
 
 
-
-
 def test_evaluate_to_hits_treats_dict_result_as_truthy_with_substitutions() -> None:
     rule = Rule(
         rule_id="bat",
@@ -130,8 +113,6 @@ def test_evaluate_to_hits_treats_dict_result_as_truthy_with_substitutions() -> N
     hits = evaluate_to_hits(_reading(), _metrics(), RuleSet(rules=(rule,)))
     assert len(hits) == 1
     assert hits[0].render_message() == "व्होल्टेज 3.10 पडले"
-
-
 
 
 def test_evaluate_to_hits_renders_template_with_missing_keys_safely() -> None:
@@ -148,8 +129,6 @@ def test_evaluate_to_hits_renders_template_with_missing_keys_safely() -> None:
     assert hits[0].render_message() == "{missing_key}"
 
 
-
-
 # ===========================================================================
 # evaluate - full path to AlertCandidate
 # ===========================================================================
@@ -164,8 +143,6 @@ def test_evaluate_builds_alert_candidate_with_reading_identity() -> None:
     assert c.farmer_id == FARMER
     assert c.device_id == "AGR-001"
     assert c.triggered_at == NOW
-
-
 
 
 def test_evaluate_carries_value_and_threshold_when_supplied() -> None:
@@ -186,8 +163,6 @@ def test_evaluate_carries_value_and_threshold_when_supplied() -> None:
     assert candidates[0].alert_threshold == Decimal("3.30")
 
 
-
-
 def test_evaluate_multiple_rules_emit_multiple_candidates() -> None:
     a = _always_true_rule("a")
     b = Rule(
@@ -201,12 +176,8 @@ def test_evaluate_multiple_rules_emit_multiple_candidates() -> None:
     assert {c.alert_type for c in out} == {AlertType.LOW_BATTERY, AlertType.FROST}
 
 
-
-
 def test_evaluate_empty_ruleset_returns_empty_list() -> None:
     assert evaluate(_reading(), _metrics(), RuleSet(rules=()), now=NOW) == []
-
-
 
 
 def test_evaluate_handles_non_bool_non_dict_predicate_result_as_no_hit() -> None:
@@ -222,8 +193,6 @@ def test_evaluate_handles_non_bool_non_dict_predicate_result_as_no_hit() -> None
     assert evaluate(_reading(), _metrics(), RuleSet(rules=(rule,)), now=NOW) == []
 
 
-
-
 # ===========================================================================
 # alert_id_for
 # ===========================================================================
@@ -232,8 +201,6 @@ def test_alert_id_for_is_deterministic() -> None:
     a = alert_id_for(r, "low_battery")
     b = alert_id_for(r, "low_battery")
     assert a == b
-
-
 
 
 def test_alert_id_for_differs_by_rule() -> None:

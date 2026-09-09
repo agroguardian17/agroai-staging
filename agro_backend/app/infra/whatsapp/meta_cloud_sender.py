@@ -29,10 +29,10 @@ We don't try to enumerate every code; ``error_code`` is set to the
 HTTP status (4xx vs 5xx) plus the provider's ``code`` if present.
 """
 
-
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import httpx
 import structlog
@@ -43,8 +43,6 @@ from app.domain.auth import mask_phone
 log = structlog.get_logger(__name__)
 
 
-
-
 @dataclass(frozen=True, slots=True)
 class MetaCloudSettings:
     graph_version: str  # e.g. "v20.0"
@@ -52,8 +50,6 @@ class MetaCloudSettings:
     access_token: str
     base_url: str = "https://graph.facebook.com"
     timeout_seconds: float = 10.0
-
-
 
 
 class MetaCloudWhatsappSender:
@@ -69,13 +65,11 @@ class MetaCloudWhatsappSender:
         # wired through respx so no real network is touched.
         self._client = client
 
-
     def _url(self) -> str:
         return (
             f"{self._s.base_url.rstrip('/')}/"
             f"{self._s.graph_version}/{self._s.phone_number_id}/messages"
         )
-
 
     def _headers(self) -> dict[str, str]:
         return {
@@ -83,8 +77,9 @@ class MetaCloudWhatsappSender:
             "Content-Type": "application/json",
         }
 
-
-    def _payload(self, *, phone: str, code: str, template_name: str, language_code: str) -> dict:
+    def _payload(
+        self, *, phone: str, code: str, template_name: str, language_code: str
+    ) -> dict[str, Any]:
         # Meta's OTP-button template requires the code in BOTH the body
         # placeholder and in a button "copy_code" parameter.
         return {
@@ -109,7 +104,6 @@ class MetaCloudWhatsappSender:
             },
         }
 
-
     async def send_otp_template(
         self, *, phone: str, code: str, template_name: str, language_code: str = "en"
     ) -> WhatsappSendResult:
@@ -132,11 +126,9 @@ class MetaCloudWhatsappSender:
             if owns_client:
                 await client.aclose()
 
-
         if resp.status_code >= 400:
             return self._failure_from(resp, phone)
         return self._success_from(resp, phone)
-
 
     def _success_from(self, resp: httpx.Response, phone: str) -> WhatsappSendResult:
         try:
@@ -147,7 +139,6 @@ class MetaCloudWhatsappSender:
             msg_id = None
         log.info("whatsapp.meta.sent", phone=mask_phone(phone), provider_message_id=msg_id)
         return WhatsappSendResult(accepted=True, provider_message_id=msg_id)
-
 
     def _failure_from(self, resp: httpx.Response, phone: str) -> WhatsappSendResult:
         try:
@@ -171,8 +162,6 @@ class MetaCloudWhatsappSender:
             error_code=error_code,
             error_detail=message,
         )
-
-
 
 
 __all__ = ["MetaCloudSettings", "MetaCloudWhatsappSender"]

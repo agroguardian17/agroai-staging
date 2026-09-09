@@ -12,7 +12,6 @@ predictable history snapshots. Asserts:
 * The returned Reading is a new instance (input was frozen).
 """
 
-
 from __future__ import annotations
 
 import uuid
@@ -43,8 +42,6 @@ def _r(**over: object) -> Reading:
     return Reading(**base)  # type: ignore[arg-type]
 
 
-
-
 class _StubRepo:
     """Fake ReadingRepo that returns canned history per (node_id, field).
 
@@ -54,7 +51,6 @@ class _StubRepo:
     touch them.
     """
 
-
     def __init__(
         self,
         stuck: dict[str, Sequence[Decimal | None]] | None = None,
@@ -63,38 +59,29 @@ class _StubRepo:
         self._stuck = stuck or {}
         self._mad = mad or {}
 
-
     async def save(self, reading: Reading) -> int | None:  # pragma: no cover
         raise AssertionError("orchestrator must not call save()")
 
-
     async def latest_for_plot(self, plot_id: str, limit: int) -> list[Reading]:  # pragma: no cover
         raise AssertionError("orchestrator must not call latest_for_plot()")
-
 
     async def recent_for_node(
         self, node_id: str, since: datetime
     ) -> list[Reading]:  # pragma: no cover
         raise AssertionError("orchestrator must not call recent_for_node()")
 
-
     async def history_for_stuck_check(
         self, node_id: str, field: str, minutes: int
     ) -> list[Decimal | None]:
         return list(self._stuck.get(field, ()))
 
-
     async def history_for_mad_check(self, node_id: str, field: str, hours: int) -> list[Decimal]:
         return self._mad.get(field, [])
-
-
 
 
 def _assert_runtime_protocol(stub: object) -> None:
     """Sanity: the stub really does satisfy the ReadingRepo Protocol."""
     assert isinstance(stub, ReadingRepo)
-
-
 
 
 # ===========================================================================
@@ -114,8 +101,6 @@ async def test_clean_reading_returns_unchanged() -> None:
     assert out.sensor_health_json == {}
 
 
-
-
 # ===========================================================================
 # Gate 1 - range fail
 # ===========================================================================
@@ -127,15 +112,11 @@ async def test_range_fail_sets_warn_and_flag() -> None:
     assert out.sensor_health_json["soil_ph"] == ValidationFlag.RANGE_FAIL.value
 
 
-
-
 async def test_range_fail_returns_new_instance() -> None:
     repo = _StubRepo()
     reading = _r(soil_ph=Decimal("15"))
     out = await validate_reading.execute(reading, repo)
     assert out is not reading
-
-
 
 
 async def test_two_range_fails_both_flagged() -> None:
@@ -144,8 +125,6 @@ async def test_two_range_fails_both_flagged() -> None:
     out = await validate_reading.execute(reading, repo)
     assert out.sensor_health_json["soil_ph"] == ValidationFlag.RANGE_FAIL.value
     assert out.sensor_health_json["soil_moisture_1_pct"] == ValidationFlag.RANGE_FAIL.value
-
-
 
 
 # ===========================================================================
@@ -159,8 +138,6 @@ async def test_stuck_fires_when_history_repeats() -> None:
     assert out.sensor_health_json["soil_moisture_1_pct"] == ValidationFlag.STUCK.value
 
 
-
-
 async def test_stuck_skipped_when_range_fail_on_same_field() -> None:
     # 99% moisture is range-valid (RANGES says 0-100). Force a real out-of-range
     # to exercise the skip path.
@@ -170,8 +147,6 @@ async def test_stuck_skipped_when_range_fail_on_same_field() -> None:
     out = await validate_reading.execute(reading, repo)
     # Should be range_fail, NOT stuck (range gate runs first and short-circuits).
     assert out.sensor_health_json["soil_moisture_1_pct"] == ValidationFlag.RANGE_FAIL.value
-
-
 
 
 # ===========================================================================
@@ -190,8 +165,6 @@ async def test_mad_outlier_fires_for_clear_deviation() -> None:
     assert out.sensor_health_json["soil_moisture_1_pct"] == ValidationFlag.OUTLIER.value
 
 
-
-
 async def test_mad_skipped_when_window_too_small() -> None:
     # Only 5 samples (below MAD_MIN_WINDOW = 12) -> no opinion.
     window = [Decimal("30")] * 5
@@ -199,8 +172,6 @@ async def test_mad_skipped_when_window_too_small() -> None:
     reading = _r(soil_moisture_1_pct=Decimal("95"))
     out = await validate_reading.execute(reading, repo)
     assert "soil_moisture_1_pct" not in out.sensor_health_json
-
-
 
 
 # ===========================================================================
@@ -216,8 +187,6 @@ async def test_cross_sensor_moisture_disagreement_sets_flag() -> None:
     assert out.sensor_health_json["soil_moisture_avg_pct"] == ValidationFlag.CROSS_SENSOR.value
 
 
-
-
 async def test_cross_sensor_low_battery_inconsistency() -> None:
     repo = _StubRepo()
     reading = _r(
@@ -226,8 +195,6 @@ async def test_cross_sensor_low_battery_inconsistency() -> None:
     )
     out = await validate_reading.execute(reading, repo)
     assert out.sensor_health_json["low_battery_flag"] == ValidationFlag.CROSS_SENSOR.value
-
-
 
 
 # ===========================================================================
@@ -249,8 +216,6 @@ async def test_multiple_disjoint_flags_all_recorded() -> None:
     assert out.sensor_health_json["soil_moisture_avg_pct"] == ValidationFlag.CROSS_SENSOR.value
 
 
-
-
 async def test_existing_sensor_health_is_preserved() -> None:
     # Firmware may have populated sensor_health_json before the cloud gate runs.
     # The orchestrator must merge, not overwrite.
@@ -264,8 +229,6 @@ async def test_existing_sensor_health_is_preserved() -> None:
     assert out.sensor_health_json["soil_ph"] == ValidationFlag.RANGE_FAIL.value
 
 
-
-
 # ===========================================================================
 # Type-safety guard
 # ===========================================================================
@@ -276,7 +239,6 @@ async def test_orchestrator_raises_on_schema_drift() -> None:
     # Reading attribute - this is more of a contract test for the
     # ``_decimal_field`` helper than a runtime path.
     from app.application.validate_reading import _decimal_field
-
 
     reading = _r(plot_id="P1")
     with pytest.raises(TypeError):

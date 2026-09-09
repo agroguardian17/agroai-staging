@@ -1,6 +1,5 @@
 """Integration tests for PgOtpRepo. Uses the conftest sync_engine + sessionmaker."""
 
-
 from __future__ import annotations
 
 import uuid
@@ -21,8 +20,6 @@ from .conftest import DB_SKIP_REASON, PILOT_TENANT, db_available
 pytestmark = pytest.mark.skipif(not db_available(), reason=DB_SKIP_REASON)
 
 
-
-
 @pytest.fixture
 def clean_otp(sync_engine: Engine) -> Iterator[None]:
     with sync_engine.begin() as conn:
@@ -30,8 +27,6 @@ def clean_otp(sync_engine: Engine) -> Iterator[None]:
     yield
     with sync_engine.begin() as conn:
         conn.execute(text("DELETE FROM otp_challenges WHERE phone LIKE '+91900%'"))
-
-
 
 
 def _challenge(phone: str, *, expires_at: datetime | None = None) -> OtpChallenge:
@@ -50,14 +45,10 @@ def _challenge(phone: str, *, expires_at: datetime | None = None) -> OtpChalleng
     )
 
 
-
-
 async def test_pg_otp_repo_satisfies_protocol(
     sessionmaker: async_sessionmaker[AsyncSession],
 ) -> None:
     assert isinstance(PgOtpRepo(sessionmaker), OtpRepo)
-
-
 
 
 async def test_create_then_find_latest_active(
@@ -69,13 +60,10 @@ async def test_create_then_find_latest_active(
     cid = await repo.create(c)
     assert cid == c.challenge_id
 
-
     found = await repo.find_latest_active("+919000000001")
     assert found is not None
     assert found.phone == "+919000000001"
     assert found.code_hash == c.code_hash
-
-
 
 
 async def test_find_latest_active_skips_expired(
@@ -86,8 +74,6 @@ async def test_find_latest_active_skips_expired(
     expired = _challenge("+919000000002", expires_at=datetime.now(UTC) - timedelta(seconds=1))
     await repo.create(expired)
     assert await repo.find_latest_active("+919000000002") is None
-
-
 
 
 async def test_increment_attempt_returns_new_count(
@@ -103,8 +89,6 @@ async def test_increment_attempt_returns_new_count(
     assert n2 == 2
 
 
-
-
 async def test_mark_consumed_makes_latest_active_return_none(
     sessionmaker: async_sessionmaker[AsyncSession],
     clean_otp: None,
@@ -114,8 +98,6 @@ async def test_mark_consumed_makes_latest_active_return_none(
     await repo.create(c)
     await repo.mark_consumed(c.challenge_id)
     assert await repo.find_latest_active("+919000000004") is None
-
-
 
 
 async def test_recent_attempts_count_counts_window(

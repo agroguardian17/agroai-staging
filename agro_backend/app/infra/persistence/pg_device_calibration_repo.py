@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.device_calibration import DeviceCalibration
 
@@ -45,7 +45,7 @@ class PgDeviceCalibrationRepo:
 
     def __init__(
         self,
-        sessionmaker: async_sessionmaker,
+        sessionmaker: async_sessionmaker[AsyncSession],
         *,
         ttl_seconds: float = CACHE_TTL_SECONDS,
     ) -> None:
@@ -76,9 +76,10 @@ class PgDeviceCalibrationRepo:
 
         async with self._sessionmaker() as session:
             row = (
-                await session.execute(
-                    text(
-                        """
+                (
+                    await session.execute(
+                        text(
+                            """
                         SELECT
                             tenant_id::text        AS tenant_id,
                             device_id,
@@ -98,10 +99,13 @@ class PgDeviceCalibrationRepo:
                         WHERE tenant_id = CAST(:tenant AS uuid)
                           AND device_id = :device
                         """
-                    ),
-                    {"tenant": str(tenant_uuid), "device": device_id},
+                        ),
+                        {"tenant": str(tenant_uuid), "device": device_id},
+                    )
                 )
-            ).mappings().first()
+                .mappings()
+                .first()
+            )
 
         if row is None:
             self._cache[key] = _CacheEntry(calibration=None, fetched_at=now)

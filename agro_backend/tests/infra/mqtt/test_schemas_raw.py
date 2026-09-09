@@ -62,15 +62,15 @@ def _raw_payload(**overrides: Any) -> dict[str, Any]:
         "$schema": SCHEMA_TELEMETRY_V2_RAW,
         "tenant_id": "11111111-1111-1111-1111-111111111111",
         "farmer_id": "aaaaaaaa-1111-1111-1111-111111111111",
-        "farm_id":   "bbbbbbbb-2222-2222-2222-222222222222",
-        "plot_id":   "PLOT_PILOT_001",
-        "node_id":   "AGR-SN-0001",
+        "farm_id": "bbbbbbbb-2222-2222-2222-222222222222",
+        "plot_id": "PLOT_PILOT_001",
+        "node_id": "AGR-SN-0001",
         "seq": 42,
-        "recorded_at":        "2026-08-26T10:45:00+00:00",
+        "recorded_at": "2026-08-26T10:45:00+00:00",
         "received_at_master": "2026-08-26T10:45:03+00:00",
-        "transmission_type":  "lora",
+        "transmission_type": "lora",
         "raw_readings": {
-            "soil_adc": 550,       # midpoint between dry=750, wet=350 → 50%
+            "soil_adc": 550,  # midpoint between dry=750, wet=350 → 50%
             "battery_adc": 780,
             "pressure_adc": 340,
             "flow_pulses_window": 12,
@@ -107,6 +107,7 @@ def _raw_payload(**overrides: Any) -> dict[str, Any]:
 
 # ---------- parse_inbound dispatch ----------
 
+
 def test_parse_inbound_routes_raw_schema_to_telemetry_in_raw() -> None:
     payload = _raw_payload()
     model = parse_inbound(PILOT_TOPIC, json.dumps(payload).encode())
@@ -120,12 +121,12 @@ def test_parse_inbound_routes_v2_schema_to_telemetry_in() -> None:
         "$schema": SCHEMA_TELEMETRY_V2,
         "tenant_id": "11111111-1111-1111-1111-111111111111",
         "farmer_id": "aaaaaaaa-1111-1111-1111-111111111111",
-        "farm_id":   "bbbbbbbb-2222-2222-2222-222222222222",
-        "plot_id":   "PLOT_PILOT_001",
-        "node_id":   "AGR-SN-0001",
-        "recorded_at":        "2026-08-26T10:45:00+00:00",
+        "farm_id": "bbbbbbbb-2222-2222-2222-222222222222",
+        "plot_id": "PLOT_PILOT_001",
+        "node_id": "AGR-SN-0001",
+        "recorded_at": "2026-08-26T10:45:00+00:00",
         "received_at_master": "2026-08-26T10:45:03+00:00",
-        "transmission_type":  "lora",
+        "transmission_type": "lora",
     }
     model = parse_inbound(PILOT_TOPIC, json.dumps(payload).encode())
     assert isinstance(model, TelemetryIn)
@@ -143,6 +144,7 @@ def test_parse_inbound_non_object_payload_raises_value_error() -> None:
 
 
 # ---------- to_domain calibration ----------
+
 
 def test_to_domain_applies_soil_moisture_calibration() -> None:
     model = TelemetryInRaw.model_validate(_raw_payload())
@@ -234,6 +236,7 @@ def test_to_domain_firmware_version_prefers_sub_node_string() -> None:
 
 # ---------- Validation guards ----------
 
+
 def test_unknown_field_at_top_level_rejected() -> None:
     payload = _raw_payload(evil="hax")
     with pytest.raises(ValidationError):
@@ -275,6 +278,7 @@ def test_wrong_schema_id_rejected_by_model() -> None:
 
 # ---------- 2026-08-27 v2 firmware: window_s in raw_readings ----------
 
+
 def test_window_s_absent_falls_back_to_calibration_row() -> None:
     """Pre-v2 firmware sends no window_s. Calibrator uses cal.flow_window_seconds."""
     payload = _raw_payload()
@@ -290,7 +294,7 @@ def test_window_s_absent_falls_back_to_calibration_row() -> None:
 def test_window_s_positive_overrides_calibration_row() -> None:
     """v2 firmware steady-state: on-device window trumps the calibration row."""
     payload = copy.deepcopy(_raw_payload())
-    payload["raw_readings"]["window_s"] = 300   # 5-min cadence
+    payload["raw_readings"]["window_s"] = 300  # 5-min cadence
     model = TelemetryInRaw.model_validate(payload)
     assert model.raw_readings.window_s == 300
     reading = model.to_domain(_cal())
@@ -332,6 +336,7 @@ def test_window_s_carried_through_sensor_health() -> None:
 
 # ---------- 2026-08-27 v1/v2 firmware: time_source + sub_node_online in master_readings ----------
 
+
 def test_master_readings_time_source_optional_defaults_none() -> None:
     """Pre-2026-08-27-v1 firmware never sent time_source."""
     payload = _raw_payload()
@@ -357,15 +362,16 @@ def test_master_readings_accepts_sub_node_online_flag() -> None:
 
 # ---------- 2026-08-27 v2 firmware: v2-master heartbeat ----------
 
+
 def _heartbeat_payload(**overrides: Any) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "$schema": SCHEMA_TELEMETRY_V2_MASTER,
         "tenant_id": "11111111-1111-1111-1111-111111111111",
-        "farm_id":   "bbbbbbbb-2222-2222-2222-222222222222",
+        "farm_id": "bbbbbbbb-2222-2222-2222-222222222222",
         "main_node_id": "AGR-MN-0001",
-        "recorded_at":        "2026-08-27T05:00:00+00:00",
+        "recorded_at": "2026-08-27T05:00:00+00:00",
         "received_at_master": "2026-08-27T05:00:00+00:00",
-        "transmission_type":  "heartbeat",
+        "transmission_type": "heartbeat",
         "master_readings": {
             "bme280_temp_c": 32.4,
             "bme280_humidity_pct": 65.1,
@@ -449,3 +455,94 @@ def test_v2_master_defaults_silence_ms_to_zero_when_absent() -> None:
     del payload["master_readings"]["sub_node_silence_ms"]
     model = TelemetryMaster.model_validate(payload)
     assert model.master_readings.sub_node_silence_ms == 0
+
+
+# ---------- 2026-09-05 v2.1 firmware — UP, FLT, backlog_pending, wind gust ----------
+
+
+def test_uptime_seconds_absent_stays_none() -> None:
+    payload = _raw_payload()
+    assert "uptime_seconds" not in payload["raw_readings"]
+    model = TelemetryInRaw.model_validate(payload)
+    assert model.raw_readings.uptime_seconds is None
+
+
+def test_uptime_seconds_threaded_to_reading() -> None:
+    payload = copy.deepcopy(_raw_payload())
+    payload["raw_readings"]["uptime_seconds"] = 3_600
+    model = TelemetryInRaw.model_validate(payload)
+    reading = model.to_domain(_cal())
+    assert reading.uptime_seconds == 3_600
+
+
+def test_uptime_seconds_negative_rejected() -> None:
+    payload = copy.deepcopy(_raw_payload())
+    payload["raw_readings"]["uptime_seconds"] = -1
+    with pytest.raises(ValidationError):
+        TelemetryInRaw.model_validate(payload)
+
+
+def test_fault_flags_absent_stays_none() -> None:
+    payload = _raw_payload()
+    assert "fault_flags" not in payload["raw_readings"]
+    model = TelemetryInRaw.model_validate(payload)
+    assert model.raw_readings.fault_flags is None
+
+
+def test_fault_flags_threaded_to_reading() -> None:
+    payload = copy.deepcopy(_raw_payload())
+    payload["raw_readings"]["fault_flags"] = "npk_crc,ds18_disc"
+    model = TelemetryInRaw.model_validate(payload)
+    reading = model.to_domain(_cal())
+    assert reading.fault_flags == "npk_crc,ds18_disc"
+
+
+def test_fault_flags_too_long_rejected() -> None:
+    payload = copy.deepcopy(_raw_payload())
+    payload["raw_readings"]["fault_flags"] = "x" * 200
+    with pytest.raises(ValidationError):
+        TelemetryInRaw.model_validate(payload)
+
+
+def test_backlog_pending_defaults_false() -> None:
+    payload = _raw_payload()
+    model = TelemetryInRaw.model_validate(payload)
+    assert model.backlog_pending is False
+    reading = model.to_domain(_cal())
+    assert reading.backlog_pending is False
+
+
+def test_backlog_pending_true_threaded_to_reading() -> None:
+    payload = copy.deepcopy(_raw_payload())
+    payload["backlog_pending"] = True
+    model = TelemetryInRaw.model_validate(payload)
+    assert model.backlog_pending is True
+    reading = model.to_domain(_cal())
+    assert reading.backlog_pending is True
+
+
+def test_wind_gust_pulses_max_defaults_zero_on_v2_raw() -> None:
+    payload = _raw_payload()
+    model = TelemetryInRaw.model_validate(payload)
+    assert model.master_readings.wind_gust_pulses_max == 0
+
+
+def test_wind_gust_pulses_max_accepted_on_v2_raw() -> None:
+    payload = copy.deepcopy(_raw_payload())
+    payload["master_readings"]["wind_gust_pulses_max"] = 42
+    model = TelemetryInRaw.model_validate(payload)
+    assert model.master_readings.wind_gust_pulses_max == 42
+
+
+def test_wind_gust_pulses_max_accepted_on_v2_master_heartbeat() -> None:
+    payload = copy.deepcopy(_heartbeat_payload())
+    payload["master_readings"]["wind_gust_pulses_max"] = 17
+    model = TelemetryMaster.model_validate(payload)
+    assert model.master_readings.wind_gust_pulses_max == 17
+
+
+def test_wind_gust_pulses_max_negative_rejected() -> None:
+    payload = copy.deepcopy(_raw_payload())
+    payload["master_readings"]["wind_gust_pulses_max"] = -5
+    with pytest.raises(ValidationError):
+        TelemetryInRaw.model_validate(payload)

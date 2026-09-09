@@ -129,18 +129,14 @@ class PgMainNodeReadingRepo:
             return None
         return int(row.reading_id)
 
-    async def latest_for_node(
-        self, main_node_id: str, limit: int
-    ) -> list[MainNodeReading]:
+    async def latest_for_node(self, main_node_id: str, limit: int) -> list[MainNodeReading]:
         stmt = text(
             f"SELECT {_SELECT_COLUMNS} FROM main_node_readings "
             "WHERE main_node_id = :main_node_id "
             "ORDER BY recorded_at DESC LIMIT :limit"
         )
         async with self._sm() as session:
-            res = await session.execute(
-                stmt, {"main_node_id": main_node_id, "limit": limit}
-            )
+            res = await session.execute(stmt, {"main_node_id": main_node_id, "limit": limit})
             return [_row_to_reading(r) for r in res.all()]
 
     async def most_recent(self, main_node_id: str) -> MainNodeReading | None:

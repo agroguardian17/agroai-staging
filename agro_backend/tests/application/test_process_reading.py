@@ -4,7 +4,6 @@
 Validates the "fresh-insert gate" + the ingest -> rules composition.
 """
 
-
 from __future__ import annotations
 
 import uuid
@@ -25,8 +24,6 @@ NOW = datetime(2026, 6, 20, 12, 0, tzinfo=UTC)
 TENANT = uuid.UUID("11111111-1111-1111-1111-111111111111")
 
 
-
-
 def _reading(**over: object) -> Reading:
     base: dict[str, object] = {
         "tenant_id": TENANT,
@@ -42,8 +39,6 @@ def _reading(**over: object) -> Reading:
     return Reading(**base)  # type: ignore[arg-type]
 
 
-
-
 # ---------------------------------------------------------------------------
 # Stubs
 # ---------------------------------------------------------------------------
@@ -52,39 +47,29 @@ class _StubReadingRepo:
         self._save = save_return
         self.saved: list[Reading] = []
 
-
     async def save(self, r):
         self.saved.append(r)
         return self._save
 
-
     async def latest_for_plot(self, plot_id, limit):
         return []
-
 
     async def recent_for_node(self, node_id, since):
         return []
 
-
     async def history_for_stuck_check(self, node_id, field, minutes):
         return []
 
-
     async def history_for_mad_check(self, node_id, field, hours):
         return []
-
-
 
 
 class _StubEventBus:
     def __init__(self) -> None:
         self.published: list[tuple[str, dict[str, Any]]] = []
 
-
     async def publish(self, name: str, payload: dict[str, Any]) -> None:
         self.published.append((name, payload))
-
-
 
 
 class _StubAlertRepo:
@@ -92,26 +77,20 @@ class _StubAlertRepo:
         self.created: list[AlertCandidate] = []
         self._id = 1
 
-
     async def create(self, c):
         self.created.append(c)
         out = self._id
         self._id += 1
         return out
 
-
     async def last_triggered_at(self, plot_id, alert_type):
         return None
-
 
     async def resolve(self, alert_id, notes=None):
         pass
 
-
     async def list_for_plot(self, plot_id, limit=50):
         return []
-
-
 
 
 def _always_fire_ruleset() -> RuleSet:
@@ -128,12 +107,8 @@ def _always_fire_ruleset() -> RuleSet:
     )
 
 
-
-
 def _silent_ruleset() -> RuleSet:
     return RuleSet(rules=())
-
-
 
 
 def _deps(
@@ -157,8 +132,6 @@ def _deps(
     )
 
 
-
-
 # ===========================================================================
 # Fresh insert -> rules ran
 # ===========================================================================
@@ -177,8 +150,6 @@ async def test_fresh_insert_invokes_rule_evaluation() -> None:
     assert "alert.created" in names
 
 
-
-
 # ===========================================================================
 # Duplicate -> rules skipped
 # ===========================================================================
@@ -190,8 +161,6 @@ async def test_duplicate_row_skips_rule_evaluation() -> None:
     assert alert_repo.created == []
     # No telemetry.ingested event either (ingest_telemetry suppresses it).
     assert bus.published == []
-
-
 
 
 # ===========================================================================
@@ -206,8 +175,6 @@ async def test_silent_ruleset_runs_ingest_with_no_alerts() -> None:
     assert out.rules.created == 0
     assert len(reading_repo.saved) == 1
     assert alert_repo.created == []
-
-
 
 
 # ===========================================================================

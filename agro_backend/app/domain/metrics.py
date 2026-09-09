@@ -33,7 +33,6 @@ tests intentionally pin the constants so a drift is visible in the
 diff.
 """
 
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -74,26 +73,19 @@ DRY_RUN_FLOW_LPM_MAX: Decimal = Decimal("0.2")
 DEFAULT_TARGET_MOISTURE_PCT: Decimal = Decimal("28.0")
 
 
-
-
 # ---------------------------------------------------------------------------
 # Value types
 # ---------------------------------------------------------------------------
 
 
-
-
 class BatteryState(StrEnum):
     """Coarse health bucket for the battery."""
-
 
     HEALTHY = "healthy"
     LOW = "low"
     CRITICAL = "critical"
     DEAD = "dead"
     UNKNOWN = "unknown"  # no battery telemetry on this reading
-
-
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,45 +99,33 @@ class MetricsContext:
     reshaping their function signatures.
     """
 
-
     target_moisture_pct: Decimal = DEFAULT_TARGET_MOISTURE_PCT
-
-
 
 
 @dataclass(frozen=True, slots=True)
 class DerivedMetrics:
     """The interpreted view of one reading. Rules consume this."""
 
-
     # Moisture
     moisture_deficit_pct: Decimal | None  # positive => below target (too dry)
     moisture_below_target: bool
 
-
     # Battery
     battery_state: BatteryState
-
 
     # Environmental risk
     frost_risk: bool
 
-
     # Pump / irrigation
     dry_run_signature: bool
-
 
     # Sensor health
     sensor_health_warn: bool
 
 
-
-
 # ---------------------------------------------------------------------------
 # Pure helper functions - each is unit-testable in isolation.
 # ---------------------------------------------------------------------------
-
-
 
 
 def moisture_deficit(actual_pct: Decimal | None, target_pct: Decimal) -> Decimal | None:
@@ -160,8 +140,6 @@ def moisture_deficit(actual_pct: Decimal | None, target_pct: Decimal) -> Decimal
     return target_pct - actual_pct
 
 
-
-
 def battery_state_from(voltage: Decimal | None, percent: Decimal | None) -> BatteryState:
     """Pick the worst-case bucket across voltage and percent telemetry.
 
@@ -174,9 +152,7 @@ def battery_state_from(voltage: Decimal | None, percent: Decimal | None) -> Batt
     if voltage is None and percent is None:
         return BatteryState.UNKNOWN
 
-
     states: list[BatteryState] = []
-
 
     if voltage is not None:
         if voltage <= BATTERY_DEAD_V:
@@ -191,7 +167,6 @@ def battery_state_from(voltage: Decimal | None, percent: Decimal | None) -> Batt
             # Between LOW and HEALTHY: still "low" until it climbs over.
             states.append(BatteryState.LOW)
 
-
     if percent is not None:
         if percent <= BATTERY_CRITICAL_PCT:
             states.append(BatteryState.CRITICAL)
@@ -202,11 +177,8 @@ def battery_state_from(voltage: Decimal | None, percent: Decimal | None) -> Batt
         else:
             states.append(BatteryState.LOW)
 
-
     # Worst of the two by ordering (DEAD > CRITICAL > LOW > HEALTHY).
     return _worst(states)
-
-
 
 
 _BATTERY_RANK: dict[BatteryState, int] = {
@@ -218,20 +190,14 @@ _BATTERY_RANK: dict[BatteryState, int] = {
 }
 
 
-
-
 def _worst(states: list[BatteryState]) -> BatteryState:
     return max(states, key=_BATTERY_RANK.__getitem__)
-
-
 
 
 def is_frost_risk(soil_temp_c: Decimal | None) -> bool:
     if soil_temp_c is None:
         return False
     return soil_temp_c <= FROST_SOIL_TEMP_C
-
-
 
 
 def is_dry_run_signature(
@@ -253,8 +219,6 @@ def is_dry_run_signature(
     )
 
 
-
-
 def sensor_health_warn_from(reading: Reading) -> bool:
     """True if any validation gate fired or fault flags are present."""
     if reading.validation_warn:
@@ -262,13 +226,9 @@ def sensor_health_warn_from(reading: Reading) -> bool:
     return bool(reading.fault_flags)
 
 
-
-
 # ---------------------------------------------------------------------------
 # Orchestrator
 # ---------------------------------------------------------------------------
-
-
 
 
 def compute(reading: Reading, ctx: MetricsContext | None = None) -> DerivedMetrics:
@@ -292,8 +252,6 @@ def compute(reading: Reading, ctx: MetricsContext | None = None) -> DerivedMetri
         ),
         sensor_health_warn=sensor_health_warn_from(reading),
     )
-
-
 
 
 __all__ = [

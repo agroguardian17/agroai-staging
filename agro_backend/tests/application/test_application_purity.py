@@ -16,7 +16,6 @@ and rejects forbidden imports. Adapter implementations live in
 allowed prefixes; everything else from the forbidden list is rejected.
 """
 
-
 from __future__ import annotations
 
 import ast
@@ -62,12 +61,8 @@ FORBIDDEN_APP_PREFIX = "app.infra"
 APPLICATION_DIR = Path(__file__).resolve().parents[2] / "app" / "application"
 
 
-
-
 def _iter_application_files() -> list[Path]:
     return [p for p in APPLICATION_DIR.rglob("*.py") if p.name != "__init__.py"]
-
-
 
 
 @pytest.mark.parametrize(
@@ -86,8 +81,6 @@ def test_application_file_has_no_forbidden_imports(file_path: Path | None) -> No
             _assert_allowed(node.module, file_path)
 
 
-
-
 def _assert_allowed(module_name: str, source: Path) -> None:
     head = module_name.split(".")[0]
     assert head not in FORBIDDEN_PREFIXES, (
@@ -99,8 +92,6 @@ def _assert_allowed(module_name: str, source: Path) -> None:
         f"application layer must call adapters via Protocols, "
         f"never import from app.infra.* (.cursorrules rule #13)"
     )
-
-
 
 
 def test_application_package_imports_at_runtime() -> None:

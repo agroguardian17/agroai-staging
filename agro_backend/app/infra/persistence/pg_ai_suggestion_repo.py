@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any, cast
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -18,21 +19,22 @@ _SELECT_COLS = (
 
 
 def _row_to_suggestion(row: object) -> AiSuggestion:
+    r: Any = row
     return AiSuggestion(
-        suggestion_id=row.suggestion_id,
-        tenant_id=row.tenant_id,
-        farmer_id=row.farmer_id,
-        farm_id=row.farm_id,
-        plot_id=row.plot_id,
-        season_id=row.season_id,
-        generated_at=row.generated_at,
-        suggestion_type=row.suggestion_type,
-        full_message_marathi=row.full_message_marathi,
-        ai_model_version=row.ai_model_version,
-        tokens_used=row.tokens_used,
-        generation_time_ms=row.generation_time_ms,
-        crop_age_days=row.crop_age_days,
-        crop_stage=row.crop_stage,
+        suggestion_id=r.suggestion_id,
+        tenant_id=r.tenant_id,
+        farmer_id=r.farmer_id,
+        farm_id=r.farm_id,
+        plot_id=r.plot_id,
+        season_id=r.season_id,
+        generated_at=r.generated_at,
+        suggestion_type=r.suggestion_type,
+        full_message_marathi=r.full_message_marathi,
+        ai_model_version=r.ai_model_version,
+        tokens_used=r.tokens_used,
+        generation_time_ms=r.generation_time_ms,
+        crop_age_days=r.crop_age_days,
+        crop_stage=r.crop_stage,
     )
 
 
@@ -79,7 +81,8 @@ class PgAiSuggestionRepo:
             await session.commit()
         if row is None:
             raise RuntimeError("ai_suggestions INSERT did not RETURN a row")
-        return row.suggestion_id
+        r: Any = row
+        return cast(uuid.UUID, r.suggestion_id)
 
     async def find_by_id(self, suggestion_id: uuid.UUID) -> AiSuggestion | None:
         stmt = text(f"SELECT {_SELECT_COLS} FROM ai_suggestions WHERE suggestion_id = :sid LIMIT 1")

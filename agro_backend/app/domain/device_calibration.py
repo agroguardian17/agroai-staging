@@ -37,7 +37,7 @@ ZERO: Decimal = Decimal("0")
 HUNDRED: Decimal = Decimal("100")
 ADC_MAX: Decimal = Decimal("1023")  # 10-bit ADC full-scale
 SECONDS_PER_MINUTE: Decimal = Decimal("60")
-US_CM_PER_MS_CM: Decimal = Decimal("1000")   # µS/cm → mS/cm
+US_CM_PER_MS_CM: Decimal = Decimal("1000")  # µS/cm → mS/cm
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,21 +59,21 @@ class DeviceCalibration:
     soil_wet_adc: int
 
     # Battery voltage
-    battery_vref_v: Decimal          # ADC reference voltage (typ. 3.300 V)
-    battery_divider_ratio: Decimal   # resistor divider (typ. 3.200 for 220k+100k)
+    battery_vref_v: Decimal  # ADC reference voltage (typ. 3.300 V)
+    battery_divider_ratio: Decimal  # resistor divider (typ. 3.200 for 220k+100k)
 
     # Pressure transducer
-    pressure_offset_v: Decimal        # 0.5 V at 0 bar (typ.)
-    pressure_scale_bar_per_v: Decimal # bar per volt above offset (typ. 2.5)
+    pressure_offset_v: Decimal  # 0.5 V at 0 bar (typ.)
+    pressure_scale_bar_per_v: Decimal  # bar per volt above offset (typ. 2.5)
 
     # Flow sensor
-    flow_pulses_per_litre: Decimal    # hall-effect ticks per litre (typ. 450)
-    flow_window_seconds: Decimal      # fallback reporting cadence (typ. 300.0)
+    flow_pulses_per_litre: Decimal  # hall-effect ticks per litre (typ. 450)
+    flow_window_seconds: Decimal  # firmware reporting cadence (typ. 16.0)
 
     # NPK register scaling
-    npk_temp_divisor: Decimal         # register / 10  → °C
-    npk_moisture_divisor: Decimal     # register / 10  → %
-    npk_ph_divisor: Decimal           # register / 100 → pH
+    npk_temp_divisor: Decimal  # register / 10  → °C
+    npk_moisture_divisor: Decimal  # register / 10  → %
+    npk_ph_divisor: Decimal  # register / 100 → pH
 
     # Audit
     calibration_version: int
@@ -84,6 +84,7 @@ class DeviceCalibration:
 # single bad row in Postgres cannot crash the ingest pipeline — it
 # clamps or returns None.
 # ---------------------------------------------------------------------------
+
 
 def calibrate_soil_moisture_pct(raw_adc: int, cal: DeviceCalibration) -> Decimal:
     """Convert soil-moisture ADC to volumetric water content %.
@@ -175,10 +176,7 @@ def calibrate_flow_lpm(
 
     if cal.flow_pulses_per_litre == ZERO or window == ZERO:
         return ZERO
-    return (
-        Decimal(pulses_window) * SECONDS_PER_MINUTE
-        / (window * cal.flow_pulses_per_litre)
-    )
+    return Decimal(pulses_window) * SECONDS_PER_MINUTE / (window * cal.flow_pulses_per_litre)
 
 
 def calibrate_npk_temp_c(raw: int, cal: DeviceCalibration) -> Decimal:

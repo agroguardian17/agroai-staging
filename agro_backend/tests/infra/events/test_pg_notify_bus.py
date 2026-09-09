@@ -12,7 +12,6 @@ on the same channel - small, real, no mocking - because that's the
 behaviour Round 7 consumers will depend on.
 """
 
-
 from __future__ import annotations
 
 import asyncio
@@ -39,8 +38,6 @@ ASYNC_URL = os.getenv(
     "DATABASE_URL",
     "postgresql+asyncpg://agro:agro@localhost:5433/agro",
 )
-
-
 
 
 def _asyncpg_connect_kwargs() -> dict[str, object]:
@@ -71,8 +68,6 @@ def _asyncpg_connect_kwargs() -> dict[str, object]:
     }
 
 
-
-
 def _db_available() -> bool:
     try:
         eng = create_engine(SYNC_URL)
@@ -84,14 +79,10 @@ def _db_available() -> bool:
     return True
 
 
-
-
 pytestmark = pytest.mark.skipif(
     not _db_available(),
     reason="Postgres not reachable; run on the Mac dev stack after `alembic upgrade head`.",
 )
-
-
 
 
 @pytest_asyncio.fixture
@@ -102,8 +93,6 @@ async def bus() -> AsyncIterator[PgNotifyEventBus]:
     await eng.dispose()
 
 
-
-
 @pytest_asyncio.fixture
 async def listener() -> AsyncIterator[asyncpg.Connection]:
     """Raw asyncpg listener on CHANNEL - the realistic Round 7 subscriber shape."""
@@ -112,15 +101,11 @@ async def listener() -> AsyncIterator[asyncpg.Connection]:
     await conn.close()
 
 
-
-
 # ===========================================================================
 # Protocol check
 # ===========================================================================
 async def test_pg_notify_bus_satisfies_protocol(bus: PgNotifyEventBus) -> None:
     assert isinstance(bus, EventBus)
-
-
 
 
 # ===========================================================================
@@ -131,10 +116,8 @@ async def test_publish_emits_notify_on_canonical_channel(
 ) -> None:
     received: list[tuple[str, str]] = []
 
-
     def on_notification(_conn: object, _pid: int, channel: str, payload: str) -> None:
         received.append((channel, payload))
-
 
     await listener.add_listener(CHANNEL, on_notification)
     try:
@@ -148,7 +131,6 @@ async def test_publish_emits_notify_on_canonical_channel(
     finally:
         await listener.remove_listener(CHANNEL, on_notification)
 
-
     assert len(received) == 1
     channel, body = received[0]
     assert channel == CHANNEL
@@ -158,21 +140,16 @@ async def test_publish_emits_notify_on_canonical_channel(
     assert "ts" in envelope
 
 
-
-
 async def test_publish_serialises_uuid_and_decimal_via_default_str(
     bus: PgNotifyEventBus, listener: asyncpg.Connection
 ) -> None:
     import uuid
     from decimal import Decimal
 
-
     received: list[str] = []
-
 
     def on_notification(_conn: object, _pid: int, _channel: str, payload: str) -> None:
         received.append(payload)
-
 
     await listener.add_listener(CHANNEL, on_notification)
     try:
@@ -187,14 +164,11 @@ async def test_publish_serialises_uuid_and_decimal_via_default_str(
     finally:
         await listener.remove_listener(CHANNEL, on_notification)
 
-
     assert len(received) == 1
     env = json.loads(received[0])
     # Stringified to keep JSON happy; subscribers parse back as needed.
     assert env["payload"]["id"] == "11111111-1111-1111-1111-111111111111"
     assert env["payload"]["amount"] == "3.45"
-
-
 
 
 # ===========================================================================
@@ -204,8 +178,6 @@ async def test_publish_rejects_oversized_payload(bus: PgNotifyEventBus) -> None:
     huge = {"blob": "x" * (MAX_PAYLOAD_BYTES + 1000)}
     with pytest.raises(ValueError, match="exceeds"):
         await bus.publish("test.huge", huge)
-
-
 
 
 async def test_max_payload_bytes_well_below_postgres_cap() -> None:

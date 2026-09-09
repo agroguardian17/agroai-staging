@@ -5,7 +5,6 @@ Pure unit tests with stub AlertRepo + EventBus. The pilot ruleset is
 swapped for a minimal one in most tests so the assertions are precise.
 """
 
-
 from __future__ import annotations
 
 import uuid
@@ -32,8 +31,6 @@ FARMER = uuid.UUID("22222222-2222-2222-2222-222222222222")
 FARM = uuid.UUID("33333333-3333-3333-3333-333333333333")
 
 
-
-
 def _reading(**over: object) -> Reading:
     base: dict[str, object] = {
         "tenant_id": TENANT,
@@ -49,8 +46,6 @@ def _reading(**over: object) -> Reading:
     return Reading(**base)  # type: ignore[arg-type]
 
 
-
-
 # ---------------------------------------------------------------------------
 # Stubs
 # ---------------------------------------------------------------------------
@@ -60,37 +55,28 @@ class _StubAlertRepo:
         self.created: list[AlertCandidate] = []
         self._next_id = 1
 
-
     async def create(self, candidate: AlertCandidate) -> int:
         self.created.append(candidate)
         out = self._next_id
         self._next_id += 1
         return out
 
-
     async def last_triggered_at(self, plot_id: str, alert_type: AlertType) -> datetime | None:
         return self._last.get((plot_id, alert_type))
-
 
     async def resolve(self, alert_id: int, notes: str | None = None) -> None:
         raise AssertionError("evaluate_rules must not call resolve()")
 
-
     async def list_for_plot(self, plot_id, limit=50):  # pragma: no cover - read-side
         raise AssertionError
-
-
 
 
 class _StubEventBus:
     def __init__(self) -> None:
         self.published: list[tuple[str, dict[str, Any]]] = []
 
-
     async def publish(self, event_name: str, payload: dict[str, Any]) -> None:
         self.published.append((event_name, payload))
-
-
 
 
 def _deps(
@@ -108,8 +94,6 @@ def _deps(
     return deps, repo, bus
 
 
-
-
 # A minimal "always fires once" ruleset for cooldown tests.
 def _single_rule_set() -> RuleSet:
     return RuleSet(
@@ -124,8 +108,6 @@ def _single_rule_set() -> RuleSet:
             ),
         ),
     )
-
-
 
 
 # ===========================================================================
@@ -154,8 +136,6 @@ async def test_critical_battery_and_frost_emit_three_alerts_no_cooldown() -> Non
         assert name == EVENT_ALERT_CREATED
 
 
-
-
 async def test_persisted_candidate_carries_reading_identity() -> None:
     deps, repo, _ = _deps(ruleset=_single_rule_set())
     await execute(_reading(), deps, now=NOW)
@@ -165,8 +145,6 @@ async def test_persisted_candidate_carries_reading_identity() -> None:
     assert c.farmer_id == FARMER
     assert c.device_id == "AGR-001"
     assert c.triggered_at == NOW
-
-
 
 
 # ===========================================================================
@@ -189,8 +167,6 @@ async def test_clean_reading_creates_no_alerts() -> None:
     assert bus.published == []
 
 
-
-
 # ===========================================================================
 # Cooldown enforcement
 # ===========================================================================
@@ -207,8 +183,6 @@ async def test_recent_alert_within_cooldown_is_suppressed() -> None:
     assert bus.published == []
 
 
-
-
 async def test_alert_outside_cooldown_window_fires_through() -> None:
     deps, repo, _bus = _deps(
         last_triggered={("PLOT_A", AlertType.LOW_BATTERY): NOW - timedelta(hours=2)},
@@ -218,8 +192,6 @@ async def test_alert_outside_cooldown_window_fires_through() -> None:
     assert result.created == 1
     assert result.cooldown_suppressed == 0
     assert len(repo.created) == 1
-
-
 
 
 async def test_cooldown_is_per_alert_type_not_global() -> None:
@@ -255,8 +227,6 @@ async def test_cooldown_is_per_alert_type_not_global() -> None:
     assert repo.created[0].alert_type is AlertType.FROST
 
 
-
-
 # ===========================================================================
 # Event-bus payload shape
 # ===========================================================================
@@ -273,8 +243,6 @@ async def test_published_payload_contains_alert_id_and_rule_id() -> None:
     assert payload["farmer_id"] == str(FARMER)
 
 
-
-
 # ===========================================================================
 # Error propagation (per .cursorrules #4 - no swallowing)
 # ===========================================================================
@@ -283,13 +251,9 @@ class _BoomAlertRepo(_StubAlertRepo):
         raise RuntimeError("DB down")
 
 
-
-
 class _BoomEventBus(_StubEventBus):
     async def publish(self, name, payload):
         raise RuntimeError("bus down")
-
-
 
 
 async def test_repo_create_failure_propagates() -> None:
@@ -300,8 +264,6 @@ async def test_repo_create_failure_propagates() -> None:
     )
     with pytest.raises(RuntimeError, match="DB down"):
         await execute(_reading(), deps, now=NOW)
-
-
 
 
 async def test_bus_publish_failure_propagates_after_persist() -> None:

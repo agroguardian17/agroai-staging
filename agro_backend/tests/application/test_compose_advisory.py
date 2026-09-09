@@ -5,7 +5,6 @@ Pure unit tests with stub repos + the LogOnlyChatModel-shaped stub.
 No real DB, no real LLM call.
 """
 
-
 from __future__ import annotations
 
 import datetime
@@ -32,8 +31,6 @@ FARM = uuid.UUID("33333333-3333-3333-3333-333333333333")
 SEASON = uuid.UUID("44444444-4444-4444-4444-444444444444")
 
 
-
-
 # ---------------------------------------------------------------------------
 # Domain fixtures
 # ---------------------------------------------------------------------------
@@ -57,8 +54,6 @@ def _alert(**over: object) -> AlertFull:
     return AlertFull(**base)  # type: ignore[arg-type]
 
 
-
-
 def _plot(node_id: str = "AGR-001") -> Plot:
     return Plot(
         plot_id="PLOT_AUR_001",
@@ -73,8 +68,6 @@ def _plot(node_id: str = "AGR-001") -> Plot:
         plot_status=PlotStatus.ACTIVE,
         irrigation_valve_id="V_1",
     )
-
-
 
 
 def _season() -> CropSeasonView:
@@ -94,8 +87,6 @@ def _season() -> CropSeasonView:
     )
 
 
-
-
 def _reading() -> Reading:
     return Reading(
         tenant_id=TENANT,
@@ -111,8 +102,6 @@ def _reading() -> Reading:
     )
 
 
-
-
 # ---------------------------------------------------------------------------
 # Stubs
 # ---------------------------------------------------------------------------
@@ -120,111 +109,83 @@ class _StubAlertRepo:
     def __init__(self, alert: AlertFull | None) -> None:
         self._alert = alert
 
-
     async def create(self, c):
         return 1
-
 
     async def last_triggered_at(self, p, a):
         return None
 
-
     async def resolve(self, a, n=None):
         pass
-
 
     async def list_for_plot(self, p, limit=50):
         return []
 
-
     async def find_by_id(self, alert_id: int) -> AlertFull | None:
         return self._alert
-
-
 
 
 class _StubPlotRepo:
     def __init__(self, plots: list[Plot]) -> None:
         self.plots = plots
 
-
     async def find(self, plot_id):
         return next((p for p in self.plots if p.plot_id == plot_id), None)
-
 
     async def for_farmer(self, farmer_id):
         return self.plots
 
-
     async def for_tenant(self, tenant_id):
         return self.plots
 
-
     async def update_data_tier(self, p, t):
         pass
-
-
 
 
 class _StubCropSeasonRepo:
     def __init__(self, season: CropSeasonView | None) -> None:
         self._season = season
 
-
     async def find_active_for_plot(self, plot_id: str):
         return self._season if (self._season and self._season.plot_id == plot_id) else None
-
-
 
 
 class _StubReadingRepo:
     def __init__(self, readings: list[Reading]) -> None:
         self._readings = readings
 
-
     async def save(self, r):
         return 1
-
 
     async def latest_for_plot(self, plot_id: str, limit: int):
         return self._readings[:limit]
 
-
     async def recent_for_node(self, *args, **kw):
         return []
-
 
     async def history_for_stuck_check(self, *args, **kw):
         return []
 
-
     async def history_for_mad_check(self, *args, **kw):
         return []
-
-
 
 
 class _StubAiSuggestionRepo:
     def __init__(self) -> None:
         self.created: list[AiSuggestion] = []
 
-
     async def create(self, s: AiSuggestion) -> uuid.UUID:
         self.created.append(s)
         return s.suggestion_id
 
-
     async def find_by_id(self, suggestion_id):
         return None
-
-
 
 
 class _CapturingChatModel:
     def __init__(self, response_text: str = "बॅटरी बदला. ओलावा कमी आहे. पाणी द्या.") -> None:
         self.response_text = response_text
         self.calls: list[ChatRequest] = []
-
 
     async def complete(self, request: ChatRequest) -> ChatResponse:
         self.calls.append(request)
@@ -238,11 +199,7 @@ class _CapturingChatModel:
         )
 
 
-
-
 _DEPS_UNSET = object()
-
-
 
 
 def _deps(
@@ -271,8 +228,6 @@ def _deps(
     return deps, chat, suggestion_repo
 
 
-
-
 # ===========================================================================
 # Happy path
 # ===========================================================================
@@ -298,16 +253,12 @@ async def test_compose_persists_suggestion_with_claude_response() -> None:
     assert "कापूस" in req.user  # crop_name_marathi in user prompt
 
 
-
-
 async def test_user_prompt_includes_alert_value_and_threshold() -> None:
     deps, chat, _ = _deps()
     await execute(alert_id=7, deps=deps, now=NOW)
     user_prompt = chat.calls[0].user
     assert "3.10" in user_prompt
     assert "3.30" in user_prompt
-
-
 
 
 async def test_user_prompt_includes_latest_reading_when_available() -> None:
@@ -317,8 +268,6 @@ async def test_user_prompt_includes_latest_reading_when_available() -> None:
     assert "28.5" in user_prompt  # soil_moisture_avg_pct from _reading()
 
 
-
-
 async def test_compose_handles_missing_latest_reading() -> None:
     deps, chat, _ = _deps(readings=[])
     out = await execute(alert_id=7, deps=deps, now=NOW)
@@ -326,8 +275,6 @@ async def test_compose_handles_missing_latest_reading() -> None:
     # User prompt should still include alert + crop info even without
     # a recent reading.
     assert "कापूस" in chat.calls[0].user
-
-
 
 
 # ===========================================================================
@@ -351,8 +298,6 @@ async def test_compose_skips_when_alert_not_found() -> None:
     assert repo.created == []
 
 
-
-
 async def test_compose_skips_when_plot_cannot_be_resolved() -> None:
     # Empty plot list -> resolver returns None.
     deps, chat, _repo = _deps(plots=[])
@@ -360,8 +305,6 @@ async def test_compose_skips_when_plot_cannot_be_resolved() -> None:
     assert out.suggestion is None
     assert out.skip_reason == "plot_not_found"
     assert chat.calls == []
-
-
 
 
 async def test_compose_skips_when_no_active_season() -> None:
@@ -373,15 +316,11 @@ async def test_compose_skips_when_no_active_season() -> None:
     assert repo.created == []
 
 
-
-
 async def test_compose_skips_when_alert_device_id_is_null() -> None:
     deps, chat, _ = _deps(alert=_alert(device_id=None))
     out = await execute(alert_id=7, deps=deps, now=NOW)
     assert out.skip_reason == "plot_not_found"
     assert chat.calls == []
-
-
 
 
 # ===========================================================================

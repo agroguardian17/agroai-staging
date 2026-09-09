@@ -6,7 +6,6 @@ The other mode - "log out everywhere" - is exposed through
 the user posts /auth/logout?everywhere=true.
 """
 
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -18,8 +17,6 @@ from app.domain.auth import hash_refresh_token
 @dataclass(frozen=True, slots=True)
 class LogoutDeps:
     session_repo: AuthSessionRepo
-
-
 
 
 async def logout_one(*, refresh_secret: str, deps: LogoutDeps) -> bool:
@@ -37,15 +34,11 @@ async def logout_one(*, refresh_secret: str, deps: LogoutDeps) -> bool:
     return True
 
 
-
-
 async def logout_everywhere(*, farmer_id: object, deps: LogoutDeps) -> int:
     """Revoke ALL active sessions for a farmer. Returns the count revoked."""
     # ``farmer_id`` is ``uuid.UUID`` at the call sites; typing it as
     # ``object`` here avoids importing uuid into a 30-line module.
     return await deps.session_repo.revoke_all_for_farmer(farmer_id)  # type: ignore[arg-type]
-
-
 
 
 __all__ = ["LogoutDeps", "logout_everywhere", "logout_one"]

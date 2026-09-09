@@ -7,7 +7,6 @@ Meta business account. Production code MUST use
 this class refuses to ``accept`` in production via an explicit guard.
 """
 
-
 from __future__ import annotations
 
 from uuid import uuid4
@@ -20,15 +19,11 @@ from app.domain.auth import mask_phone
 log = structlog.get_logger(__name__)
 
 
-
-
 class LogOnlyWhatsappSender:
     """No-network sender. Logs the OTP and pretends it was delivered."""
 
-
     def __init__(self, *, allow_in_production: bool = False) -> None:
         self._allow_prod = allow_in_production
-
 
     async def send_otp_template(
         self, *, phone: str, code: str, template_name: str, language_code: str = "en"
@@ -44,8 +39,6 @@ class LogOnlyWhatsappSender:
             accepted=True,
             provider_message_id=f"log-{uuid4().hex[:12]}",
         )
-
-
 
 
 __all__ = ["LogOnlyWhatsappSender"]

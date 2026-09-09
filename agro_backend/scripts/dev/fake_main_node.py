@@ -37,7 +37,6 @@ Values are drawn from a stable random walk so adjacent readings look
 realistic (no jumps from moisture=15 to moisture=85 in one cycle).
 """
 
-
 from __future__ import annotations
 
 import argparse
@@ -61,12 +60,9 @@ SCHEMA_TELEMETRY_V2 = "agro-guardian/telemetry/v2"
 CADENCE_MODES = ("normal", "rapid", "low_power", "storm", "maintenance")
 
 
-
-
 @dataclass
 class _SensorState:
     """Random-walk state for one node so adjacent samples are correlated."""
-
 
     soil_moisture_1: float = 35.0
     soil_moisture_2: float = 36.0
@@ -78,8 +74,6 @@ class _SensorState:
     last_cadence_swap: int = 0
     cadence: str = "normal"
     rng: random.Random = field(default_factory=random.Random)
-
-
 
 
 def _step(state: _SensorState) -> None:
@@ -99,12 +93,8 @@ def _step(state: _SensorState) -> None:
         state.last_cadence_swap = state.seq
 
 
-
-
 def _bounded(x: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, x))
-
-
 
 
 def _build_payload(
@@ -149,12 +139,8 @@ def _build_payload(
     }
 
 
-
-
 def _topic(tenant_id: str, farm_id: str, node_id: str) -> str:
     return f"agro/v2/{tenant_id}/{farm_id}/{node_id}/telemetry"
-
-
 
 
 async def run(args: argparse.Namespace) -> int:
@@ -168,21 +154,17 @@ async def run(args: argparse.Namespace) -> int:
     client.connect(args.broker_host, args.broker_port, keepalive=60)
     client.loop_start()
 
-
     topic = _topic(args.tenant_id, args.farm_id, args.node_id)
     period = 1.0 / args.rate
     deadline = None if args.duration <= 0 else asyncio.get_running_loop().time() + args.duration
     sent = 0
     stop = asyncio.Event()
 
-
     def _on_signal(*_: object) -> None:
         stop.set()
 
-
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, _on_signal)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, _on_signal)
-
 
     try:
         while not stop.is_set():
@@ -212,8 +194,6 @@ async def run(args: argparse.Namespace) -> int:
         client.disconnect()
     print(f"fake_main_node: sent {sent} messages to {topic}")
     return 0
-
-
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
@@ -249,13 +229,9 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
-
-
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(sys.argv[1:] if argv is None else argv)
     return asyncio.run(run(args))
-
-
 
 
 if __name__ == "__main__":

@@ -31,6 +31,7 @@ from app.config import get_settings
 from app.infra.http import alerts as alert_routes
 from app.infra.http import auth as auth_routes
 from app.infra.http import health
+from app.infra.http import main_nodes as main_node_routes
 from app.infra.http import plots as plot_routes
 from app.infra.http.deps import shutdown_engine
 from app.jobs.ginger_scheduler import build_and_start_scheduler, stop_scheduler
@@ -137,6 +138,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_routes.me_router)
     app.include_router(plot_routes.router)
     app.include_router(alert_routes.router)
+    app.include_router(main_node_routes.router)
 
     # Prometheus exposition. In production, Caddy gates this to Tailscale only.
     @app.get("/metrics", include_in_schema=False)

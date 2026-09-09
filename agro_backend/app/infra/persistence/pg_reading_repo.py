@@ -30,7 +30,6 @@ Three things this implementation enforces that the Protocol can't:
    to keep precision contracts intact.
 """
 
-
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -97,8 +96,6 @@ _INSERT_COLUMNS: tuple[str, ...] = (
 )
 
 
-
-
 def _insert_sql() -> str:
     cols = ", ".join(_INSERT_COLUMNS)
     placeholders = ", ".join(
@@ -119,11 +116,7 @@ def _insert_sql() -> str:
     )
 
 
-
-
 _SELECT_COLUMNS = "reading_id, " + ", ".join(_INSERT_COLUMNS)
-
-
 
 
 def _row_to_reading(row: Any) -> Reading:
@@ -177,8 +170,6 @@ def _row_to_reading(row: Any) -> Reading:
     )
 
 
-
-
 def _to_decimal(v: float | int | Decimal | None) -> Decimal | None:
     """Storage -> domain Decimal conversion (via str to dodge float artefacts)."""
     if v is None:
@@ -186,8 +177,6 @@ def _to_decimal(v: float | int | Decimal | None) -> Decimal | None:
     if isinstance(v, Decimal):
         return v
     return Decimal(str(v))
-
-
 
 
 def _bind_params(reading: Reading) -> dict[str, Any]:
@@ -243,12 +232,8 @@ def _bind_params(reading: Reading) -> dict[str, Any]:
     }
 
 
-
-
 def _decimal_to_float(v: Decimal | None) -> float | None:
     return None if v is None else float(v)
-
-
 
 
 def _jsonb_param(d: dict[str, Any]) -> str:
@@ -267,8 +252,6 @@ def _jsonb_param(d: dict[str, Any]) -> str:
     return json.dumps(d, default=default)
 
 
-
-
 class PgReadingRepo:
     """Concrete :class:`ReadingRepo` against Postgres.
 
@@ -281,10 +264,8 @@ class PgReadingRepo:
     repos themselves stay independent.
     """
 
-
     def __init__(self, sessionmaker: async_sessionmaker[AsyncSession]) -> None:
         self._sm = sessionmaker
-
 
     # ------------------------------------------------------------------
     # save - idempotent UPSERT
@@ -299,7 +280,6 @@ class PgReadingRepo:
             return None
         return int(row.reading_id)
 
-
     # ------------------------------------------------------------------
     # latest_for_plot
     # ------------------------------------------------------------------
@@ -313,7 +293,6 @@ class PgReadingRepo:
             res = await session.execute(stmt, {"plot_id": plot_id, "limit": limit})
             return [_row_to_reading(r) for r in res.all()]
 
-
     # ------------------------------------------------------------------
     # recent_for_node
     # ------------------------------------------------------------------
@@ -326,7 +305,6 @@ class PgReadingRepo:
         async with self._sm() as session:
             res = await session.execute(stmt, {"node_id": node_id, "since": since})
             return [_row_to_reading(r) for r in res.all()]
-
 
     # ------------------------------------------------------------------
     # history_for_stuck_check
@@ -358,7 +336,6 @@ class PgReadingRepo:
         rows.reverse()
         return [None if r.v is None else _to_decimal(r.v) for r in rows]
 
-
     # ------------------------------------------------------------------
     # history_for_mad_check
     # ------------------------------------------------------------------
@@ -379,8 +356,6 @@ class PgReadingRepo:
         return [Decimal(str(r.v)) for r in rows]
 
 
-
-
 def _assert_allowed_field(field: str) -> str:
     """Validate a field name against the Round-4 allowlist (SQL-injection guard)."""
     if field not in ALLOWED_HISTORY_FIELDS:
@@ -389,8 +364,6 @@ def _assert_allowed_field(field: str) -> str:
             "(SQL-injection guard; see app.application.ports.reading_repo)"
         )
     return field
-
-
 
 
 __all__ = ["PgReadingRepo"]

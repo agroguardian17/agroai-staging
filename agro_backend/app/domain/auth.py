@@ -21,7 +21,6 @@ verification, not a password hash). The OTP TTL is short (default
 5 minutes) so the slow-hash trade-off doesn't apply.
 """
 
-
 from __future__ import annotations
 
 import hashlib
@@ -37,8 +36,6 @@ from enum import StrEnum
 # ---------------------------------------------------------------------------
 
 
-
-
 class AuthRole(StrEnum):
     """Role claim carried in the JWT access token.
 
@@ -48,11 +45,8 @@ class AuthRole(StrEnum):
     an admin (us).
     """
 
-
     FARMER = "farmer"
     ADMIN = "admin"
-
-
 
 
 class OtpTransport(StrEnum):
@@ -65,12 +59,9 @@ class OtpTransport(StrEnum):
     Meta business account is verified.
     """
 
-
     WHATSAPP = "whatsapp"
     SMS = "sms"
     LOG_ONLY = "log_only"
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -78,20 +69,15 @@ class OtpTransport(StrEnum):
 # ---------------------------------------------------------------------------
 
 
-
-
 @dataclass(frozen=True, slots=True)
 class TokenPair:
     """Access + refresh tokens. Returned by login and refresh endpoints."""
-
 
     access_token: str
     refresh_token: str
     access_expires_at: datetime
     refresh_expires_at: datetime
     token_type: str = "bearer"
-
-
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,7 +91,6 @@ class AccessClaims:
     without depending on python-jose.
     """
 
-
     subject: uuid.UUID  # farmer_id or admin user id
     tenant_id: uuid.UUID
     role: AuthRole
@@ -114,13 +99,9 @@ class AccessClaims:
     session_id: uuid.UUID | None = None  # ties access to refresh session
 
 
-
-
 # ---------------------------------------------------------------------------
 # Entities
 # ---------------------------------------------------------------------------
-
-
 
 
 @dataclass(frozen=True, slots=True)
@@ -133,7 +114,6 @@ class OtpChallenge:
     line (dev mode only).
     """
 
-
     challenge_id: uuid.UUID
     tenant_id: uuid.UUID
     phone: str  # E.164, e.g. +918123456789
@@ -145,24 +125,18 @@ class OtpChallenge:
     max_attempts: int
     created_at: datetime
 
-
     def is_expired(self, now: datetime) -> bool:
         return now >= self.expires_at
 
-
     def is_consumed(self) -> bool:
         return self.consumed_at is not None
-
 
     def is_locked(self) -> bool:
         """Too many wrong guesses; the row is dead even before expiry."""
         return self.attempt_count >= self.max_attempts
 
-
     def can_attempt(self, now: datetime) -> bool:
         return not (self.is_expired(now) or self.is_consumed() or self.is_locked())
-
-
 
 
 @dataclass(frozen=True, slots=True)
@@ -171,7 +145,6 @@ class AuthSession:
     the random secret; the plain secret is only ever in the response
     body of /auth/verify_otp and /auth/refresh.
     """
-
 
     session_id: uuid.UUID
     tenant_id: uuid.UUID
@@ -182,11 +155,8 @@ class AuthSession:
     created_at: datetime
     last_used_at: datetime
 
-
     def is_active(self, now: datetime) -> bool:
         return self.revoked_at is None and now < self.expires_at
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -204,8 +174,6 @@ OTP_CODE_LENGTH: int = 6
 _HASH_SEP: str = "$"
 
 
-
-
 def generate_otp_code(rng: secrets.SystemRandom | None = None) -> str:
     """Return a fresh 6-digit OTP code as a zero-padded decimal string.
 
@@ -219,13 +187,9 @@ def generate_otp_code(rng: secrets.SystemRandom | None = None) -> str:
     return f"{n:0{OTP_CODE_LENGTH}d}"
 
 
-
-
 def generate_refresh_secret(num_bytes: int = 32) -> str:
     """Return a URL-safe random refresh secret. Caller hashes for storage."""
     return secrets.token_urlsafe(num_bytes)
-
-
 
 
 def hash_otp_code(code: str, salt: str) -> str:
@@ -243,8 +207,6 @@ def hash_otp_code(code: str, salt: str) -> str:
     return f"sha256{_HASH_SEP}{salt}{_HASH_SEP}{h.hexdigest()}"
 
 
-
-
 def verify_otp_code(code: str, code_hash: str) -> bool:
     """Constant-time compare of a candidate code against a stored hash."""
     try:
@@ -257,15 +219,11 @@ def verify_otp_code(code: str, code_hash: str) -> bool:
     return hmac.compare_digest(candidate, code_hash)
 
 
-
-
 def hash_refresh_token(secret: str) -> str:
     """SHA-256 of the refresh secret (hex-encoded). No salt because the
     secret itself is 32 random bytes - a salt adds nothing.
     """
     return hashlib.sha256(secret.encode("utf-8")).hexdigest()
-
-
 
 
 def mask_phone(phone: str) -> str:
@@ -275,12 +233,8 @@ def mask_phone(phone: str) -> str:
     return phone[0] + "*" * (len(phone) - 5) + phone[-4:]
 
 
-
-
 def otp_expires_at(now: datetime, ttl_seconds: int) -> datetime:
     return now + timedelta(seconds=ttl_seconds)
-
-
 
 
 __all__ = [

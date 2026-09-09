@@ -11,7 +11,6 @@ Covers:
 * parse_inbound topic dispatch + the two error paths.
 """
 
-
 from __future__ import annotations
 
 import json
@@ -57,14 +56,10 @@ _FULL_PAYLOAD: dict[str, object] = {
 _TOPIC = "agro/v2/pilot/FARM_001/AGR-MH-0001/telemetry"
 
 
-
-
 def _payload(**over: object) -> dict[str, object]:
     p = dict(_FULL_PAYLOAD)
     p.update(over)
     return p
-
-
 
 
 # ===========================================================================
@@ -76,8 +71,6 @@ def test_telemetry_parses_full_payload() -> None:
     assert m.plot_id == "PLOT_AUR_001_Z1"
     assert m.transmission_type is TransmissionType.LORA
     assert m.cadence_mode is CadenceMode.NORMAL
-
-
 
 
 def test_telemetry_parses_with_only_required_fields() -> None:
@@ -99,8 +92,6 @@ def test_telemetry_parses_with_only_required_fields() -> None:
     assert m.sensor_health_json == {}
 
 
-
-
 # ===========================================================================
 # Decimal precision preservation
 # ===========================================================================
@@ -111,14 +102,10 @@ def test_floats_on_wire_become_decimals_via_string() -> None:
     assert isinstance(m.battery_voltage_v, Decimal)
 
 
-
-
 def test_ints_become_decimals_too() -> None:
     m = TelemetryIn.model_validate(_payload(soil_n_mg_kg=142))
     assert m.soil_n_mg_kg == Decimal("142")
     assert isinstance(m.soil_n_mg_kg, Decimal)
-
-
 
 
 def test_decimal_string_preserved() -> None:
@@ -126,15 +113,11 @@ def test_decimal_string_preserved() -> None:
     assert m.soil_ph == Decimal("6.85")
 
 
-
-
 def test_boolean_rejected_for_decimal_field() -> None:
     with pytest.raises(ValidationError):
         # True is an int subclass; without the explicit reject our
         # BeforeValidator would convert it to Decimal(1).
         TelemetryIn.model_validate(_payload(soil_ph=True))
-
-
 
 
 # ===========================================================================
@@ -145,15 +128,11 @@ def test_wrong_schema_value_rejected() -> None:
         TelemetryIn.model_validate(_payload(**{"$schema": "agro-guardian/telemetry/v1"}))
 
 
-
-
 def test_missing_schema_field_rejected() -> None:
     p = dict(_FULL_PAYLOAD)
     del p["$schema"]
     with pytest.raises(ValidationError):
         TelemetryIn.model_validate(p)
-
-
 
 
 # ===========================================================================
@@ -164,21 +143,15 @@ def test_naive_recorded_at_rejected() -> None:
         TelemetryIn.model_validate(_payload(recorded_at="2026-05-01T12:00:00"))
 
 
-
-
 def test_aware_datetime_normalised_to_utc() -> None:
     m = TelemetryIn.model_validate(_payload(recorded_at="2026-05-01T17:30:00+05:30"))
     assert m.recorded_at.tzinfo == UTC
     assert m.recorded_at == datetime(2026, 5, 1, 12, 0, tzinfo=UTC)
 
 
-
-
 def test_zulu_suffix_accepted() -> None:
     m = TelemetryIn.model_validate(_payload(recorded_at="2026-05-01T12:00:00Z"))
     assert m.recorded_at.tzinfo is not None
-
-
 
 
 # ===========================================================================
@@ -189,13 +162,9 @@ def test_signal_rssi_out_of_range() -> None:
         TelemetryIn.model_validate(_payload(signal_rssi_dbm=-200))
 
 
-
-
 def test_npk_bucket_out_of_range() -> None:
     with pytest.raises(ValidationError):
         TelemetryIn.model_validate(_payload(soil_n_bucket=99))  # bound 0..63
-
-
 
 
 def test_uptime_negative_rejected() -> None:
@@ -203,14 +172,9 @@ def test_uptime_negative_rejected() -> None:
         TelemetryIn.model_validate(_payload(uptime_seconds=-1))
 
 
-
-
-
 def test_invalid_transmission_type_rejected() -> None:
     with pytest.raises(ValidationError):
         TelemetryIn.model_validate(_payload(transmission_type="bluetooth"))
-
-
 
 
 def test_invalid_cadence_mode_rejected() -> None:
@@ -218,14 +182,10 @@ def test_invalid_cadence_mode_rejected() -> None:
         TelemetryIn.model_validate(_payload(cadence_mode="turbo"))
 
 
-
-
 def test_extra_field_rejected() -> None:
     # We use extra="forbid" - typo'd fields must fail loudly, not silently drop.
     with pytest.raises(ValidationError):
         TelemetryIn.model_validate(_payload(unknown_field=1))
-
-
 
 
 # ===========================================================================
@@ -235,8 +195,6 @@ def test_model_is_frozen() -> None:
     m = TelemetryIn.model_validate(_FULL_PAYLOAD)
     with pytest.raises(ValidationError):
         m.plot_id = "tampered"  # type: ignore[misc]
-
-
 
 
 # ===========================================================================
@@ -256,8 +214,6 @@ def test_to_domain_returns_reading_with_matching_fields() -> None:
     assert r.battery_voltage_v == Decimal("3.45")
 
 
-
-
 def test_to_domain_copies_sensor_health_json_defensively() -> None:
     # Mutating the result's sensor_health_json must not affect the source.
     m = TelemetryIn.model_validate(_payload(sensor_health_json={"npk": "ok"}))
@@ -269,15 +225,11 @@ def test_to_domain_copies_sensor_health_json_defensively() -> None:
     assert m.sensor_health_json["npk"] == "ok"
 
 
-
-
 def test_to_domain_aware_datetime_preserved() -> None:
     m = TelemetryIn.model_validate(_payload(recorded_at="2026-05-01T17:30:00+05:30"))
     r = m.to_domain()
     assert r.recorded_at.tzinfo is not None
     assert r.recorded_at.tzinfo.utcoffset(None) == UTC.utcoffset(None)
-
-
 
 
 # ===========================================================================
@@ -288,8 +240,6 @@ def test_parse_inbound_telemetry_topic() -> None:
     m = parse_inbound(_TOPIC, raw)
     assert isinstance(m, TelemetryIn)
     assert m.node_id == "AGR-MH-0001"
-
-
 
 
 def test_parse_inbound_rejects_malformed_topic() -> None:
@@ -303,14 +253,10 @@ def test_parse_inbound_rejects_malformed_topic() -> None:
         parse_inbound("agro/v2/pilot//AGR-MH-0001/telemetry", raw)
 
 
-
-
 def test_parse_inbound_unknown_kind() -> None:
     raw = json.dumps(_FULL_PAYLOAD).encode()
     with pytest.raises(UnknownTopicKindError):
         parse_inbound("agro/v2/pilot/farm/node/weather", raw)
-
-
 
 
 def test_parse_inbound_invalid_json() -> None:
@@ -318,15 +264,11 @@ def test_parse_inbound_invalid_json() -> None:
         parse_inbound(_TOPIC, b"not json")
 
 
-
-
 def test_parse_inbound_invalid_payload() -> None:
     bad = dict(_FULL_PAYLOAD)
     bad["soil_ph"] = "not a number"
     with pytest.raises(ValidationError):
         parse_inbound(_TOPIC, json.dumps(bad).encode())
-
-
 
 
 # ===========================================================================

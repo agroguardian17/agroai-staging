@@ -6,7 +6,6 @@ without touching the registry plumbing. Metrics are namespaced ``agro_*`` so
 they're easy to find in Grafana.
 """
 
-
 from __future__ import annotations
 
 from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram
@@ -14,8 +13,6 @@ from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram
 # Use a dedicated registry rather than the global one so we can reset it in
 # unit tests without touching prometheus-client internals.
 REGISTRY = CollectorRegistry(auto_describe=True)
-
-
 
 
 # ----- HTTP --------------------------------------------------------------
@@ -34,8 +31,6 @@ http_request_duration_seconds = Histogram(
     buckets=(0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0),
     registry=REGISTRY,
 )
-
-
 
 
 # ----- Ingest (Phase 2 will fill these in) -------------------------------
@@ -68,8 +63,6 @@ main_node_heartbeat_total = Counter(
 )
 
 
-
-
 # ----- LLM (Phase 5 will fill these in) ----------------------------------
 llm_calls_total = Counter(
     "agro_llm_calls_total",
@@ -95,8 +88,6 @@ llm_cost_inr_total = Counter(
 )
 
 
-
-
 # ----- Auth / OTP (Phase 3 will fill these in) ---------------------------
 auth_otp_total = Counter(
     "agro_auth_otp_total",
@@ -104,8 +95,6 @@ auth_otp_total = Counter(
     ["event", "transport"],
     registry=REGISTRY,
 )
-
-
 
 
 # ----- Notifications (Phase 7 will fill these in) ------------------------
@@ -117,16 +106,12 @@ dispatch_total = Counter(
 )
 
 
-
-
 # ----- Background queue depth -------------------------------------------
 ingest_queue_depth = Gauge(
     "agro_ingest_queue_depth",
     "Current depth of the in-process MQTT ingest queue.",
     registry=REGISTRY,
 )
-
-
 
 
 # ----- Rule engine (Phase 4) ---------------------------------------------
@@ -158,8 +143,6 @@ alerts_cooldown_suppressed_total = Counter(
 )
 
 
-
-
 # ----- Ginger engine (daily advisory job) --------------------------------
 ginger_engine_run_seconds = Histogram(
     "agro_ginger_engine_run_seconds",
@@ -183,8 +166,6 @@ ginger_engine_errors_total = Counter(
     ["reason"],
     registry=REGISTRY,
 )
-
-
 
 
 __all__ = [

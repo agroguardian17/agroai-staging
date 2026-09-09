@@ -110,7 +110,7 @@ def _extract_text(msg: object) -> str:
 
 
 # Verify the adapter satisfies the Protocol (helps catch shape drift).
-_PROTOCOL_CHECK: type[ChatModel] = ClaudeChatModel  # type: ignore[assignment]
+_PROTOCOL_CHECK: type[ChatModel] = ClaudeChatModel
 
 
 __all__ = ["ClaudeChatModel", "ClaudeSettings"]

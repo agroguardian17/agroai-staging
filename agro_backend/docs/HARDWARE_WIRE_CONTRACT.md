@@ -571,3 +571,42 @@ Two Prometheus rules (in `deploy/prometheus/alerts.yml`):
 
 - **`MainNodeDown`**: `rate(agro_main_node_heartbeat_total[15m]) == 0` for 15 min — no heartbeat in the last quarter hour.
 - **`SubNodeDown`**: `sum(rate(agro_main_node_heartbeat_total{sub_node_online="false"}[15m])) > 0` for 15 min — Main Node is alive but every heartbeat it sent reports the Sub Node as silent.
+
+
+## 13. 2026-09-05 v2.1 firmware — additive wire changes
+
+
+All optional / default-safe. Pre-v2.1 producers continue to validate without change.
+
+
+### 13.1 `raw_readings.uptime_seconds`
+
+
+Sub Node's `millis() / 1000` at TX. Integer, `Field(ge=0)`, optional. `null` on pre-v2.1 producers. Rules use it for reboot detection and stability scoring — a device that just rebooted has stale calibration state that hasn't warmed up yet. Emitted in the CSV as `UP=<seconds>`.
+
+
+### 13.2 `raw_readings.fault_flags`
+
+
+Comma-separated fault tags from the Sub Node's current cycle. Empty string or `null` = healthy cycle. Optional, `Field(max_length=80)`. Emitted only when non-empty as `FLT=<tags>` in the CSV. Tags today:
+
+| Tag | Meaning |
+|---|---|
+| `npk_short` | NPK Modbus reply shorter than expected `NPK_RESPONSE_LEN` |
+| `npk_hdr` | NPK Modbus header bytes wrong (slave/function/count) |
+| `npk_crc` | NPK Modbus CRC16 mismatch |
+| `ds18_disc` | DS18B20 returned `DEVICE_DISCONNECTED_C` |
+
+Rules can fire per-tag: `sensor_fault` on `ds18_disc`, an ops ticket on any `npk_*` pattern that persists more than an hour.
+
+
+### 13.3 `TelemetryInRaw.backlog_pending` (top-level)
+
+
+Boolean, default `false`. Set to `true` by the Main Node's SD outbox drainer when replaying a packet queued during an earlier MQTT outage. Backend writes it to `Reading.backlog_pending` so downstream tooling can distinguish "live at recorded_at" from "queued at recorded_at, delivered later". Not present on v2-master heartbeats — heartbeats aren't queued (freshness matters more than history).
+
+
+### 13.4 `master_readings.wind_gust_pulses_max` (both wire schemas)
+
+
+Integer count, `Field(ge=0)`, default 0. Max wind pulses seen in any 3-second bucket over the reporting window. Backend calibration converts to km/h gust; spray-suitability and structural-damage rules care about gusts, not averages. Present on both v2-raw `master_readings` and v2-master `master_readings` blocks. On pre-v2.1 firmware it defaults to 0 (indistinguishable from "no wind at all"; the anemometer_fault detector reports genuine sensor failure via a different signal).

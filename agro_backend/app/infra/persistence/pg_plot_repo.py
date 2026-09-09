@@ -13,7 +13,6 @@ directly. The BEFORE trigger ``plots_set_data_tier`` (migration 0004) keeps
 method; the trigger is the source of truth for the enum.
 """
 
-
 from __future__ import annotations
 
 import uuid
@@ -30,8 +29,6 @@ _SELECT_COLUMNS = (
     "gps_boundary_geojson, node_id, soil_type_override, crop_current_season_id, "
     "drip_line_count, plot_status, plot_name, data_tier"
 )
-
-
 
 
 def _row_to_plot(row: Any) -> Plot:
@@ -55,8 +52,6 @@ def _row_to_plot(row: Any) -> Plot:
     )
 
 
-
-
 def _resolve_valve_id(row: Any) -> str:
     """``irrigation_valve_id`` is non-null in the schema but Plot dataclass
     requires it. If a future seed leaves it null somehow, default to empty
@@ -66,15 +61,11 @@ def _resolve_valve_id(row: Any) -> str:
     return getattr(row, "irrigation_valve_id", None) or ""
 
 
-
-
 class PgPlotRepo:
     """Concrete :class:`PlotRepo` against Postgres."""
 
-
     def __init__(self, sessionmaker: async_sessionmaker[AsyncSession]) -> None:
         self._sm = sessionmaker
-
 
     # ------------------------------------------------------------------
     async def find(self, plot_id: str) -> Plot | None:
@@ -85,7 +76,6 @@ class PgPlotRepo:
             res = await session.execute(stmt, {"plot_id": plot_id})
             row = res.first()
         return None if row is None else _row_to_plot(row)
-
 
     # ------------------------------------------------------------------
     async def for_farmer(self, farmer_id: uuid.UUID) -> list[Plot]:
@@ -106,7 +96,6 @@ class PgPlotRepo:
             res = await session.execute(stmt, {"farmer_id": farmer_id})
             return [_row_to_plot(r) for r in res.all()]
 
-
     # ------------------------------------------------------------------
     async def for_tenant(self, tenant_id: uuid.UUID) -> list[Plot]:
         stmt = text(
@@ -117,7 +106,6 @@ class PgPlotRepo:
         async with self._sm() as session:
             res = await session.execute(stmt, {"tenant_id": tenant_id})
             return [_row_to_plot(r) for r in res.all()]
-
 
     # ------------------------------------------------------------------
     async def update_data_tier(self, plot_id: str, tier: DataTier) -> None:
@@ -142,8 +130,6 @@ class PgPlotRepo:
         async with self._sm() as session:
             await session.execute(stmt, {"plot_id": plot_id})
             await session.commit()
-
-
 
 
 __all__ = ["PgPlotRepo"]

@@ -82,6 +82,16 @@ volatile unsigned long g_rainLastMs      = 0;
 volatile unsigned long g_windPulsesTotal = 0;
 volatile unsigned long g_windLastUs      = 0;
 
+// v2.1 firmware (2026-09-05) — wind gust tracking. Every wind pulse also
+// increments a "current bucket" counter; a ~3 s ticker (checked from the
+// snapshot helper) rolls the bucket into a rolling ring, and we report
+// the MAX bucket seen in the last MASTER_HEARTBEAT_MS window. Spray-
+// suitability rules want max gust, not average wind.
+volatile unsigned long g_windGustBucketCount = 0;
+volatile unsigned long g_windGustBucketStartMs = 0;
+static unsigned long   g_windGustRing[WIND_GUST_HISTORY] = {0};
+static uint8_t         g_windGustRingHead = 0;
+
 void IRAM_ATTR rainISR() {
   unsigned long now = millis();
   if (now - g_rainLastMs >= 200) {   // 200 ms debounce
@@ -94,15 +104,38 @@ void IRAM_ATTR windISR() {
   unsigned long now = micros();
   if (now - g_windLastUs >= 5000) {  // 5 ms debounce
     g_windPulsesTotal++;
+    g_windGustBucketCount++;
     g_windLastUs = now;
   }
 }
 
+// Roll the current 3 s bucket into the ring. Non-ISR context.
+// Called from snapshotRainWindDelta so we roll on every heartbeat/telemetry
+// cycle at minimum — buckets that would span more than 3 s of wall clock
+// are truncated (acceptable — gust semantics are inherently coarse).
+static void _rollWindGustBucketIfDue(unsigned long now) {
+  if (g_windGustBucketStartMs == 0) {
+    g_windGustBucketStartMs = now;
+    return;
+  }
+  if (now - g_windGustBucketStartMs < WIND_GUST_BUCKET_MS) return;
+  noInterrupts();
+  unsigned long bucket = g_windGustBucketCount;
+  g_windGustBucketCount = 0;
+  interrupts();
+  g_windGustRing[g_windGustRingHead] = bucket;
+  g_windGustRingHead = (g_windGustRingHead + 1) % WIND_GUST_HISTORY;
+  g_windGustBucketStartMs = now;
+}
+
 // Snapshot helpers — copy-and-clear atomically w.r.t. the ISR.
+// Also returns the max wind-gust bucket count seen since the last snapshot.
 static void snapshotRainWindDelta(unsigned long& rainDelta,
-                                  unsigned long& windDelta) {
+                                  unsigned long& windDelta,
+                                  unsigned long& windGustMax) {
   static unsigned long lastRain = 0;
   static unsigned long lastWind = 0;
+  _rollWindGustBucketIfDue(millis());
   noInterrupts();
   unsigned long rain = g_rainPulsesTotal;
   unsigned long wind = g_windPulsesTotal;
@@ -111,6 +144,13 @@ static void snapshotRainWindDelta(unsigned long& rainDelta,
   windDelta = wind - lastWind;
   lastRain  = rain;
   lastWind  = wind;
+  // Compute max over the ring; reset the ring so each heartbeat reports
+  // the max seen SINCE THE LAST heartbeat rather than lifetime max.
+  windGustMax = 0;
+  for (uint8_t i = 0; i < WIND_GUST_HISTORY; i++) {
+    if (g_windGustRing[i] > windGustMax) windGustMax = g_windGustRing[i];
+    g_windGustRing[i] = 0;
+  }
 }
 
 // ================================================================
@@ -408,6 +448,11 @@ static String modemSendGet(const char* cmd, uint32_t timeoutMs) {
 // ================================================================
 // MODEM — BRING-UP, NTP, MQTT
 // ================================================================
+// Forward declarations for functions defined further down the file that
+// this section needs to call. Without these the compiler rejects the
+// reference inside modemNtpSync() as an "unknown identifier".
+static void syncRtcFromModemOnce();
+
 static bool modemBoot() {
   Serial.println(F("[modem] wake…"));
   for (int i = 0; i < BOOT_MODEM_RETRIES; i++) {
@@ -649,6 +694,9 @@ struct SubReading {
   // measured on-device (WDT-timed sleep is ±10-15% vs nominal 300 s).
   // 0 on the first cycle after boot => backend treats flow rate as unknown.
   uint32_t window_s;
+  // v2.1 firmware (2026-09-05): Sub Node's `millis()/1000` at TX. 0 = pre-v2.1
+  // firmware or first cycle. Detects reboots and feeds stability scoring.
+  uint32_t uptime_seconds;
   int      soil_adc;
   int      bat_adc;
   int      press_adc;
@@ -665,14 +713,20 @@ struct SubReading {
   int      npk_p;
   int      npk_k;
   char     fw[32];
+  // v2.1 firmware (2026-09-05): comma-separated fault tags from the Sub
+  // Node this cycle. Empty when the cycle was healthy. Copied verbatim
+  // into raw_readings.fault_flags on the JSON payload.
+  char     fault_flags[80];
 };
 
 // Set field on the struct. Returns true if key was known.
 static bool subApply(SubReading& s, const char* key, const char* val) {
   if      (!strcmp(key, "NODE")) { strncpy(s.node_id, val, sizeof(s.node_id) - 1); s.node_id[sizeof(s.node_id)-1] = '\0'; }
-  else if (!strcmp(key, "SEQ"))   s.seq          = (uint32_t)strtoul(val, nullptr, 10);
-  else if (!strcmp(key, "WIN"))   s.window_s     = (uint32_t)strtoul(val, nullptr, 10);
-  else if (!strcmp(key, "SOIL"))  s.soil_adc     = atoi(val);
+  else if (!strcmp(key, "SEQ"))   s.seq            = (uint32_t)strtoul(val, nullptr, 10);
+  else if (!strcmp(key, "WIN"))   s.window_s       = (uint32_t)strtoul(val, nullptr, 10);
+  else if (!strcmp(key, "UP"))    s.uptime_seconds = (uint32_t)strtoul(val, nullptr, 10);
+  else if (!strcmp(key, "FLT"))   { strncpy(s.fault_flags, val, sizeof(s.fault_flags) - 1); s.fault_flags[sizeof(s.fault_flags)-1] = '\0'; }
+  else if (!strcmp(key, "SOIL"))  s.soil_adc       = atoi(val);
   else if (!strcmp(key, "BAT"))   s.bat_adc      = atoi(val);
   else if (!strcmp(key, "PRESS")) s.press_adc    = atoi(val);
   else if (!strcmp(key, "FLOW"))  s.flow_pulses  = (uint16_t)atoi(val);
@@ -746,8 +800,10 @@ static bool buildTelemetryJson(const SubReading& s,
                                bool   ina_ok,
                                unsigned long rain_delta,
                                unsigned long wind_delta,
+                               unsigned long wind_gust_max,
                                int    wind_dir_adc,
                                TimeSource time_source,
+                               bool   backlog_pending,
                                char*  out, size_t outSize) {
   char ds_val[16];
   if (s.has_ds_temp) snprintf(ds_val, sizeof(ds_val), "%.2f", s.ds_temp_c);
@@ -787,6 +843,8 @@ static bool buildTelemetryJson(const SubReading& s,
       "\"transmission_type\":\"lora\","
       "\"raw_readings\":{"
         "\"window_s\":%lu,"
+        "\"uptime_seconds\":%lu,"
+        "\"fault_flags\":\"%s\","
         "\"soil_adc\":%d,"
         "\"battery_adc\":%d,"
         "\"pressure_adc\":%d,"
@@ -812,18 +870,22 @@ static bool buildTelemetryJson(const SubReading& s,
         "\"rain_pulses_window\":%lu,"
         "\"wind_pulses_window\":%lu,"
         "\"wind_dir_adc\":%d,"
+        "\"wind_gust_pulses_max\":%lu,"
         "\"lora_rssi_dbm\":%d,"
         "\"lora_snr_db\":%.2f,"
         "\"time_source\":\"%s\","
         "\"sub_node_online\":true"
       "},"
       "\"firmware_version\":\"%s\","
-      "\"main_node_id\":\"%s\""
+      "\"main_node_id\":\"%s\","
+      "\"backlog_pending\":%s"
     "}",
     PILOT_TENANT_ID, PILOT_FARMER_ID, PILOT_FARM_ID,
     plotId, s.node_id, (unsigned long)s.seq,
     recordedIso.c_str(), nowIso.c_str(),
     (unsigned long)s.window_s,
+    (unsigned long)s.uptime_seconds,
+    s.fault_flags,
     s.soil_adc, s.bat_adc, s.press_adc,
     (unsigned)s.flow_pulses, (unsigned long)s.flow_total,
     ds_val,
@@ -833,10 +895,11 @@ static bool buildTelemetryJson(const SubReading& s,
     s.fw,
     bme_temp, bme_hum, bme_press,
     ina_v, ina_c,
-    rain_delta, wind_delta, wind_dir_adc,
+    rain_delta, wind_delta, wind_dir_adc, wind_gust_max,
     lora_rssi_dbm, lora_snr_db,
     timeSourceLabel(time_source),
-    FIRMWARE_VERSION, MAIN_NODE_ID);
+    FIRMWARE_VERSION, MAIN_NODE_ID,
+    backlog_pending ? "true" : "false");
   return n > 0 && n < (int)outSize;
 }
 
@@ -856,6 +919,7 @@ static bool buildMasterHeartbeatJson(const String& nowIso,
                                      float ina_bus_v, float ina_curr_ma,
                                      unsigned long rain_delta,
                                      unsigned long wind_delta,
+                                     unsigned long wind_gust_max,
                                      int   wind_dir_adc,
                                      bool  sub_node_online,
                                      unsigned long sub_node_silence_ms,
@@ -899,6 +963,7 @@ static bool buildMasterHeartbeatJson(const String& nowIso,
         "\"rain_pulses_window\":%lu,"
         "\"wind_pulses_window\":%lu,"
         "\"wind_dir_adc\":%d,"
+        "\"wind_gust_pulses_max\":%lu,"
         "\"time_source\":\"%s\","
         "\"sub_node_online\":%s,"
         "\"sub_node_silence_ms\":%lu"
@@ -909,7 +974,7 @@ static bool buildMasterHeartbeatJson(const String& nowIso,
     nowIso.c_str(), nowIso.c_str(),
     bme_temp, bme_hum, bme_press,
     ina_v, ina_c,
-    rain_delta, wind_delta, wind_dir_adc,
+    rain_delta, wind_delta, wind_dir_adc, wind_gust_max,
     timeSourceLabel(time_source),
     sub_node_online ? "true" : "false",
     sub_node_silence_ms,
@@ -1010,6 +1075,22 @@ static int sdDrainOutbox(int maxLines) {
     // Trim trailing '}' from wrapper.
     int plen = (int)strlen(payload);
     if (plen > 0 && payload[plen - 1] == '}') payload[plen - 1] = '\0';
+
+    // v2.1 firmware (2026-09-05): patch backlog_pending=false → true in the
+    // queued payload so the backend can distinguish replayed rows from live
+    // ones. Payload was written with backlog_pending=false at queue time;
+    // in-place substring swap is cheap and safe because the JSON is our own
+    // format (no user-controlled substrings match the key). Master heartbeats
+    // don't carry backlog_pending — the strstr returns NULL and we publish
+    // as-is. "false" is 5 chars, "true" is 4, so shift the tail 1 byte left
+    // after overwriting.
+    char* fPos = strstr(payload, "\"backlog_pending\":false");
+    if (fPos) {
+      fPos += strlen("\"backlog_pending\":");   // skip past the key + colon
+      memcpy(fPos, "true", 4);
+      size_t tailLen = strlen(fPos + 5);        // bytes after "false"
+      memmove(fPos + 4, fPos + 5, tailLen + 1); // includes trailing '\0'
+    }
 
     esp_task_wdt_reset();
     bool ok = mqttPublish(topic, payload);
@@ -1196,7 +1277,12 @@ void setup() {
 // ================================================================
 // Publish a Sub-Node-triggered v2-raw telemetry payload after a successful
 // LoRa RX. Returns true on publish success.
-static bool publishSubNodeTelemetry(const SubReading& s, int rssi, float snr) {
+// `backlog_pending` is TRUE only when this call originates from a drain
+// of the SD outbox (a packet queued during an earlier MQTT outage).
+// Backend uses the flag to distinguish live vs replayed data.
+// Live-RX path passes FALSE.
+static bool publishSubNodeTelemetry(const SubReading& s, int rssi, float snr,
+                                    bool backlog_pending = false) {
   const char* plotId = plotIdFor(s.node_id);
   if (!plotId) {
     Serial.printf("[map]  unknown NODE_ID %s — dropping\n", s.node_id);
@@ -1207,8 +1293,8 @@ static bool publishSubNodeTelemetry(const SubReading& s, int rssi, float snr) {
   bool  bme_ok_now = g_bmeOk && bmeRead(bt, bh, bp);
   float ibv = 0, imA = 0;
   if (g_inaOk) inaRead(ibv, imA);
-  unsigned long rainDelta = 0, windDelta = 0;
-  snapshotRainWindDelta(rainDelta, windDelta);
+  unsigned long rainDelta = 0, windDelta = 0, windGustMax = 0;
+  snapshotRainWindDelta(rainDelta, windDelta, windGustMax);
   int windDirAdc = analogRead(WIND_DIR_PIN);
 
   TimeSource ts = TS_NONE;
@@ -1220,8 +1306,8 @@ static bool publishSubNodeTelemetry(const SubReading& s, int rssi, float snr) {
                           rssi, snr,
                           bt, bh, bp, bme_ok_now,
                           ibv, imA, g_inaOk,
-                          rainDelta, windDelta, windDirAdc,
-                          ts,
+                          rainDelta, windDelta, windGustMax, windDirAdc,
+                          ts, backlog_pending,
                           json, sizeof(json))) {
     Serial.println(F("[json] build FAILED (buffer too small)"));
     return false;
@@ -1263,8 +1349,8 @@ static bool publishMasterHeartbeat() {
   bool  bme_ok_now = g_bmeOk && bmeRead(bt, bh, bp);
   float ibv = 0, imA = 0;
   if (g_inaOk) inaRead(ibv, imA);
-  unsigned long rainDelta = 0, windDelta = 0;
-  snapshotRainWindDelta(rainDelta, windDelta);
+  unsigned long rainDelta = 0, windDelta = 0, windGustMax = 0;
+  snapshotRainWindDelta(rainDelta, windDelta, windGustMax);
   int windDirAdc = analogRead(WIND_DIR_PIN);
 
   TimeSource ts = TS_NONE;
@@ -1279,7 +1365,7 @@ static bool publishMasterHeartbeat() {
   if (!buildMasterHeartbeatJson(nowIso,
                                 bme_ok_now, bt, bh, bp,
                                 g_inaOk, ibv, imA,
-                                rainDelta, windDelta, windDirAdc,
+                                rainDelta, windDelta, windGustMax, windDirAdc,
                                 subOnline, silenceMs, ts,
                                 json, sizeof(json))) {
     Serial.println(F("[json] heartbeat build FAILED"));

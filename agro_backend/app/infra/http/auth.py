@@ -1,6 +1,5 @@
 """Auth routes: /auth/send_otp, /auth/verify_otp, /auth/refresh, /auth/logout, /me."""
 
-
 from __future__ import annotations
 
 import uuid
@@ -34,15 +33,11 @@ from app.infra.http.deps import (
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
-
-
 # ---------------------------------------------------------------------------
 # Request / response shapes
 # ---------------------------------------------------------------------------
 class SendOtpRequest(BaseModel):
     phone: str = Field(min_length=8, max_length=16, description="E.164, e.g. +918123456789")
-
-
 
 
 class SendOtpResponse(BaseModel):
@@ -51,13 +46,9 @@ class SendOtpResponse(BaseModel):
     masked_phone: str
 
 
-
-
 class VerifyOtpRequest(BaseModel):
     phone: str = Field(min_length=8, max_length=16)
     code: str = Field(min_length=4, max_length=10)
-
-
 
 
 class TokenPairResponse(BaseModel):
@@ -68,12 +59,8 @@ class TokenPairResponse(BaseModel):
     token_type: str = "bearer"
 
 
-
-
 class RefreshRequest(BaseModel):
     refresh_token: str
-
-
 
 
 class LogoutRequest(BaseModel):
@@ -81,15 +68,11 @@ class LogoutRequest(BaseModel):
     everywhere: bool = False
 
 
-
-
 class WhoAmIResponse(BaseModel):
     farmer_id: uuid.UUID
     tenant_id: uuid.UUID
     role: str
     session_id: uuid.UUID | None
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -102,8 +85,6 @@ def _otp_transport(settings: Settings) -> DomainOtpTransport:
     if settings.OTP_TRANSPORT is OtpTransport.SMS:
         return DomainOtpTransport.SMS
     return DomainOtpTransport.LOG_ONLY
-
-
 
 
 @router.post(
@@ -155,8 +136,6 @@ async def send_otp(
         expires_at=result.expires_at,
         masked_phone=result.masked_phone,
     )
-
-
 
 
 # ---------------------------------------------------------------------------
@@ -219,8 +198,6 @@ async def verify_otp(
     )
 
 
-
-
 # ---------------------------------------------------------------------------
 # /auth/refresh
 # ---------------------------------------------------------------------------
@@ -257,15 +234,11 @@ async def refresh(
     )
 
 
-
-
 # ---------------------------------------------------------------------------
 # /auth/logout - revoke this device, or all devices.
 # ---------------------------------------------------------------------------
 class LogoutResponse(BaseModel):
     revoked: int
-
-
 
 
 @router.post(
@@ -291,14 +264,10 @@ async def logout(
     return LogoutResponse(revoked=1 if ok else 0)
 
 
-
-
 # ---------------------------------------------------------------------------
 # /api/v1/me - convenience for the mobile client to confirm its token works.
 # ---------------------------------------------------------------------------
 me_router = APIRouter(prefix="/api/v1", tags=["auth"])
-
-
 
 
 @me_router.get(
@@ -311,8 +280,6 @@ async def me(claims: ClaimsDep) -> WhoAmIResponse:
         role=claims.role.value,
         session_id=claims.session_id,
     )
-
-
 
 
 __all__ = ["me_router", "router"]

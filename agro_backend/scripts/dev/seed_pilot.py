@@ -59,9 +59,6 @@ you can copy them into ``fake_main_node.py`` + the OTP curl + the Main
 Node firmware config.
 """
 
-
-
-
 from __future__ import annotations
 
 import os
@@ -73,13 +70,9 @@ from sqlalchemy import create_engine, text
 PILOT_TENANT = "11111111-1111-1111-1111-111111111111"
 
 
-
-
 # Stable identifiers - re-running won't multiply rows.
 FARMER_ID = uuid.UUID("aaaaaaaa-1111-1111-1111-111111111111")
 FARM_ID = uuid.UUID("bbbbbbbb-2222-2222-2222-222222222222")
-
-
 
 
 # ----- Hardware identities (aggregate mode) -----
@@ -87,12 +80,8 @@ MAIN_NODE_ID = "AGR-MN-0001"
 SUB_NODE_1_ID = "AGR-SN-0001"
 
 
-
-
 # ----- Backward-compat sub node (used by earlier tests + fake_main_node.py) -----
 LEGACY_DEVICE_ID = "AGR-MH-0001"
-
-
 
 
 # ----- Plots + seasons -----
@@ -118,20 +107,24 @@ _NO_SUB_NODE: str | None = None
 
 PLOTS = [
     # (plot_id, sub_node_device_id_or_None, season_id, crop_marathi, crop_english)
-    ("PLOT_PILOT_001", SUB_NODE_1_ID,  uuid.UUID("cccccccc-3333-3333-3333-000000000001"), "आले", "Ginger"),
-    ("PLOT_PILOT_002", _NO_SUB_NODE,   uuid.UUID("cccccccc-3333-3333-3333-000000000002"), "आले", "Ginger"),
+    (
+        "PLOT_PILOT_001",
+        SUB_NODE_1_ID,
+        uuid.UUID("cccccccc-3333-3333-3333-000000000001"),
+        "आले",
+        "Ginger",
+    ),
+    (
+        "PLOT_PILOT_002",
+        _NO_SUB_NODE,
+        uuid.UUID("cccccccc-3333-3333-3333-000000000002"),
+        "आले",
+        "Ginger",
+    ),
 ]
 
 
-
-
 PHONE = os.environ.get("PILOT_PHONE", "+919999999999")
-
-
-
-
-
-
 
 
 def main() -> int:
@@ -144,9 +137,6 @@ def main() -> int:
             file=sys.stderr,
         )
         return 1
-
-
-
 
     eng = create_engine(sync_url, future=True)
     with eng.begin() as conn:
@@ -172,9 +162,6 @@ def main() -> int:
             {"fid": FARMER_ID, "tenant": PILOT_TENANT, "phone": PHONE},
         )
 
-
-
-
         # ---- Farm ----
         conn.execute(
             text(
@@ -192,9 +179,6 @@ def main() -> int:
             ),
             {"farm": FARM_ID, "tenant": PILOT_TENANT, "farmer": FARMER_ID},
         )
-
-
-
 
         # ---- Legacy sub node (backward compat with older tests + fake_main_node.py) ----
         conn.execute(
@@ -215,9 +199,6 @@ def main() -> int:
             {"dev": LEGACY_DEVICE_ID, "tenant": PILOT_TENANT, "farm": FARM_ID},
         )
 
-
-
-
         # ---- Main Node (holds the MQTT credential) ----
         conn.execute(
             text(
@@ -236,9 +217,6 @@ def main() -> int:
             ),
             {"dev": MAIN_NODE_ID, "tenant": PILOT_TENANT, "farm": FARM_ID},
         )
-
-
-
 
         # ---- Sub Nodes (LoRa endpoints) ----
         # Only one instrumented plot in the current pilot; add more entries here
@@ -270,9 +248,6 @@ def main() -> int:
                     "qr": qr_tail,
                 },
             )
-
-
-
 
         # ---- Device calibration (Round 16 — raw-payload firmware) ----
         # Seed default calibration for every Sub Node so the v2-raw
@@ -366,9 +341,6 @@ def main() -> int:
                 },
             )
 
-
-
-
     print()
     print("=========================================")
     print("Pilot data seeded successfully")
@@ -398,12 +370,5 @@ def main() -> int:
     return 0
 
 
-
-
-
-
-
-
 if __name__ == "__main__":
     raise SystemExit(main())
-

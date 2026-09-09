@@ -26,7 +26,6 @@ The split between this composer and the two use cases is deliberate:
   don't change.
 """
 
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -42,14 +41,11 @@ class ProcessReadingDeps:
     evaluate_deps: evaluate_rules.EvaluateRulesDeps
 
 
-
-
 @dataclass(frozen=True, slots=True)
 class ProcessReadingResult:
     ingest: ingest_telemetry.IngestResult
     # ``rules`` is None when rules were skipped (duplicate row).
     rules: evaluate_rules.EvaluateRulesResult | None
-
 
     @property
     def reading_id(self) -> int | None:
@@ -60,8 +56,6 @@ class ProcessReadingResult:
         return (Round 7 wiring) or a ProcessReadingResult (Round 10).
         """
         return self.ingest.reading_id
-
-
 
 
 async def execute(
@@ -85,12 +79,9 @@ async def execute(
         # ingested. Skip to avoid duplicate alert rows.
         return ProcessReadingResult(ingest=ingest_result, rules=None)
 
-
     eval_now = now or datetime.now(UTC)
     rules_result = await evaluate_rules.execute(reading, deps.evaluate_deps, now=eval_now)
     return ProcessReadingResult(ingest=ingest_result, rules=rules_result)
-
-
 
 
 __all__ = ["ProcessReadingDeps", "ProcessReadingResult", "execute"]

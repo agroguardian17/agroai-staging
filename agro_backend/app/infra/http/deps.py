@@ -15,16 +15,20 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from app.application.ports.ai_suggestion_repo import AiSuggestionRepo
 from app.application.ports.alert_repo import AlertRepo
 from app.application.ports.auth_session_repo import AuthSessionRepo
 from app.application.ports.farmer_repo import FarmerRepo
+from app.application.ports.main_node_reading_repo import MainNodeReadingRepo
 from app.application.ports.otp_repo import OtpRepo
 from app.application.ports.plot_repo import PlotRepo
 from app.application.ports.reading_repo import ReadingRepo
 from app.application.ports.token_issuer import InvalidTokenError, TokenIssuer
+from app.application.ports.weather_station_reading_repo import (
+    WeatherStationReadingRepo,
+)
 from app.application.ports.whatsapp_sender import WhatsappSender
 from app.config import AppEnv, Settings, get_settings
 from app.domain.auth import AccessClaims
@@ -34,9 +38,13 @@ from app.infra.persistence.pg_ai_suggestion_repo import PgAiSuggestionRepo
 from app.infra.persistence.pg_alert_repo import PgAlertRepo
 from app.infra.persistence.pg_auth_session_repo import PgAuthSessionRepo
 from app.infra.persistence.pg_farmer_repo import PgFarmerRepo
+from app.infra.persistence.pg_main_node_reading_repo import PgMainNodeReadingRepo
 from app.infra.persistence.pg_otp_repo import PgOtpRepo
 from app.infra.persistence.pg_plot_repo import PgPlotRepo
 from app.infra.persistence.pg_reading_repo import PgReadingRepo
+from app.infra.persistence.pg_weather_station_reading_repo import (
+    PgWeatherStationReadingRepo,
+)
 from app.infra.whatsapp.log_only_sender import LogOnlyWhatsappSender
 from app.infra.whatsapp.meta_cloud_sender import (
     MetaCloudSettings,
@@ -47,10 +55,10 @@ from app.infra.whatsapp.meta_cloud_sender import (
 # Singletons. Created lazily on first request; the app lifespan disposes them.
 # ---------------------------------------------------------------------------
 _engine: AsyncEngine | None = None
-_sessionmaker: async_sessionmaker | None = None
+_sessionmaker: async_sessionmaker[AsyncSession] | None = None
 
 
-def _ensure_engine(settings: Settings) -> async_sessionmaker:
+def _ensure_engine(settings: Settings) -> async_sessionmaker[AsyncSession]:
     global _engine, _sessionmaker
     if _sessionmaker is None:
         _engine = make_async_engine(
@@ -77,11 +85,11 @@ async def shutdown_engine() -> None:
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
 
-def get_sessionmaker(settings: SettingsDep) -> async_sessionmaker:
+def get_sessionmaker(settings: SettingsDep) -> async_sessionmaker[AsyncSession]:
     return _ensure_engine(settings)
 
 
-SessionmakerDep = Annotated[async_sessionmaker, Depends(get_sessionmaker)]
+SessionmakerDep = Annotated[async_sessionmaker[AsyncSession], Depends(get_sessionmaker)]
 
 
 def get_farmer_repo(sm: SessionmakerDep) -> FarmerRepo:
@@ -110,6 +118,16 @@ def get_alert_repo(sm: SessionmakerDep) -> AlertRepo:
 
 def get_ai_suggestion_repo(sm: SessionmakerDep) -> AiSuggestionRepo:
     return PgAiSuggestionRepo(sm)
+
+
+def get_main_node_reading_repo(sm: SessionmakerDep) -> MainNodeReadingRepo:
+    """Round 17.5: read Main Node heartbeat history for the ops API."""
+    return PgMainNodeReadingRepo(sm)
+
+
+def get_weather_station_reading_repo(sm: SessionmakerDep) -> WeatherStationReadingRepo:
+    """Round 17: read Main Node weather-station history for the ops API."""
+    return PgWeatherStationReadingRepo(sm)
 
 
 def get_token_issuer(settings: SettingsDep) -> TokenIssuer:

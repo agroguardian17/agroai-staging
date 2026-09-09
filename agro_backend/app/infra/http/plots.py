@@ -184,6 +184,7 @@ async def get_plot_readings(
     readings = await reading_repo.latest_for_plot(plot_id, limit)
     return [ReadingResponse.from_domain(r) for r in readings]
 
+
 # ---------------------------------------------------------------------------
 # GET /plots/{plot_id}/alerts?limit=50
 # ---------------------------------------------------------------------------

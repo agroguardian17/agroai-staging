@@ -1,6 +1,5 @@
 """Integration tests for :class:`~app.infra.persistence.pg_alert_repo.PgAlertRepo`."""
 
-
 from __future__ import annotations
 
 import uuid
@@ -20,8 +19,6 @@ from app.infra.persistence.pg_alert_repo import PgAlertRepo
 from .conftest import DB_SKIP_REASON, PILOT_TENANT, db_available
 
 pytestmark = pytest.mark.skipif(not db_available(), reason=DB_SKIP_REASON)
-
-
 
 
 def _seed(eng: Engine) -> tuple[uuid.UUID, uuid.UUID, str, str]:
@@ -108,8 +105,6 @@ def _seed(eng: Engine) -> tuple[uuid.UUID, uuid.UUID, str, str]:
     return farmer_id, farm_id, plot_id, device_id
 
 
-
-
 @pytest.fixture
 def seed(
     sync_engine: Engine, clean_telemetry: None
@@ -128,8 +123,6 @@ def seed(
         conn.execute(text("DELETE FROM device_registry WHERE device_id = :d"), {"d": device_id})
         conn.execute(text("DELETE FROM farms WHERE farm_id = :f"), {"f": farm_id})
         conn.execute(text("DELETE FROM farmers WHERE farmer_id = :f"), {"f": farmer_id})
-
-
 
 
 def _make_candidate(
@@ -154,8 +147,6 @@ def _make_candidate(
     )
 
 
-
-
 # ===========================================================================
 # Protocol check
 # ===========================================================================
@@ -163,8 +154,6 @@ async def test_pg_alert_repo_satisfies_protocol(
     sessionmaker: async_sessionmaker[AsyncSession],
 ) -> None:
     assert isinstance(PgAlertRepo(sessionmaker), AlertRepo)
-
-
 
 
 # ===========================================================================
@@ -193,8 +182,6 @@ async def test_create_returns_alert_id_and_pending_status(
     assert row.severity == "warning"
 
 
-
-
 # ===========================================================================
 # last_triggered_at
 # ===========================================================================
@@ -206,8 +193,6 @@ async def test_last_triggered_at_returns_none_when_no_alerts(
     repo = PgAlertRepo(sessionmaker)
     out = await repo.last_triggered_at(plot_id, AlertType.LOW_BATTERY)
     assert out is None
-
-
 
 
 async def test_last_triggered_at_returns_latest_for_alert_type(
@@ -223,8 +208,6 @@ async def test_last_triggered_at_returns_latest_for_alert_type(
     out = await repo.last_triggered_at(plot_id, AlertType.LOW_BATTERY)
     assert out is not None
     assert out == t2
-
-
 
 
 async def test_last_triggered_at_filters_by_alert_type(
@@ -247,8 +230,6 @@ async def test_last_triggered_at_filters_by_alert_type(
     # Asking about LOW_BATTERY should return t1, not t2.
     out = await repo.last_triggered_at(plot_id, AlertType.LOW_BATTERY)
     assert out == t1
-
-
 
 
 # ===========================================================================

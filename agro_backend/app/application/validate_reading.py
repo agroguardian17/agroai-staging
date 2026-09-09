@@ -25,7 +25,6 @@ ingest use case (Round 7), which may persist, drop, or alert based on the
 flags. Round 5 stops at "produce the validated Reading".
 """
 
-
 from __future__ import annotations
 
 from decimal import Decimal
@@ -50,15 +49,11 @@ STUCK_WINDOW_MINUTES: int = 90
 MAD_WINDOW_HOURS: int = 24
 
 
-
-
 # The gates ONLY check fields in this list. Fields not here (e.g. flags
 # like ``low_battery_flag``, identity columns, JSONB) get no range/stuck/MAD
 # treatment. Cross-sensor is handled separately and inspects the Reading
 # as a whole, so its field set is implicit.
 _NUMERIC_FIELDS_TO_CHECK: tuple[str, ...] = tuple(RANGES.keys())
-
-
 
 
 async def execute(reading: Reading, repo: ReadingRepo) -> Reading:
@@ -85,14 +80,12 @@ async def execute(reading: Reading, repo: ReadingRepo) -> Reading:
     """
     flags: dict[str, str] = {}
 
-
     # ----- Gate 1: range -----
     for field in _NUMERIC_FIELDS_TO_CHECK:
         value = _decimal_field(reading, field)
         result = check_range(field, value)
         if result is not None:
             flags[field] = result.flag.value
-
 
     # ----- Gate 2: stuck (skip fields already flagged) -----
     for field in _NUMERIC_FIELDS_TO_CHECK:
@@ -105,7 +98,6 @@ async def execute(reading: Reading, repo: ReadingRepo) -> Reading:
         if is_stuck(history, value):
             flags[field] = ValidationFlag.STUCK.value
 
-
     # ----- Gate 3: MAD outlier (skip fields already flagged) -----
     for field in _NUMERIC_FIELDS_TO_CHECK:
         if field in flags:
@@ -117,7 +109,6 @@ async def execute(reading: Reading, repo: ReadingRepo) -> Reading:
         if is_mad_outlier(window, value, MAD_K):
             flags[field] = ValidationFlag.OUTLIER.value
 
-
     # ----- Gate 4: cross-sensor (pure, last so it can observe earlier flags) -----
     for result in check_cross_sensor(reading):
         # Cross-sensor doesn't override an earlier per-field flag - the
@@ -125,17 +116,13 @@ async def execute(reading: Reading, repo: ReadingRepo) -> Reading:
         # that it likely caused.
         flags.setdefault(result.field, result.flag.value)
 
-
     if not flags:
         return reading
-
 
     # Merge new flags with anything already in sensor_health_json (the
     # firmware may have already populated it from its on-device checks).
     merged: dict[str, Any] = {**reading.sensor_health_json, **flags}
     return reading.with_(validation_warn=True, sensor_health_json=merged)
-
-
 
 
 def _decimal_field(reading: Reading, field: str) -> Decimal | None:
@@ -159,8 +146,6 @@ def _decimal_field(reading: Reading, field: str) -> Decimal | None:
         f"Reading.{field} is {type(val).__name__}, not Decimal | None - "
         f"validation_gates.RANGES drifted from Reading dataclass"
     )
-
-
 
 
 __all__ = ["MAD_WINDOW_HOURS", "STUCK_WINDOW_MINUTES", "execute"]

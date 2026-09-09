@@ -47,9 +47,7 @@ def test_pg_state_store_log_advisory_noop_on_empty_list() -> None:
     """An empty messages list must NOT open a connection or issue SQL."""
     from app.infra.ginger.pg_state_store import PgStateStore
 
-    with patch(
-        "app.infra.ginger.pg_state_store.psycopg2.connect"
-    ) as mock_connect:
+    with patch("app.infra.ginger.pg_state_store.psycopg2.connect") as mock_connect:
         store = PgStateStore("postgresql://x")
         store.log_advisory("PLOT_PILOT_001", date(2026, 8, 3), [])
         mock_connect.assert_not_called()
