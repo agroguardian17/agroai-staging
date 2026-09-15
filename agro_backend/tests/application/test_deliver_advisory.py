@@ -15,6 +15,7 @@ from typing import Any, cast
 from app.application.deliver_advisory import (
     DEFAULT_BACKOFF_SECONDS,
     DeliverAdvisoryDeps,
+    _meta_language,
     execute,
 )
 from app.application.ports.ai_suggestion_repo import AiSuggestion
@@ -43,13 +44,13 @@ def _suggestion(message: str = "पाणी द्या.") -> AiSuggestion:
     )
 
 
-def _farmer() -> FarmerIdentity:
+def _farmer(language_preference: str = "marathi") -> FarmerIdentity:
     return FarmerIdentity(
         farmer_id=FARMER_ID,
         tenant_id=uuid.UUID("11111111-1111-1111-1111-111111111111"),
         phone="+919999999999",
         full_name="Test Farmer",
-        language_preference="mr",
+        language_preference=language_preference,
         account_status="active",
     )
 
@@ -271,6 +272,27 @@ async def test_sender_raising_is_treated_as_transient() -> None:
 
     assert out.outcome == "transient_retry"
     assert repo.last["status"] == "pending"
+
+
+# --- Language mapping (DB word -> Meta/ISO code) ----------------------------
+def test_language_preference_maps_to_meta_code() -> None:
+    assert _meta_language("marathi", "mr") == "mr"
+    assert _meta_language("hindi", "mr") == "hi"
+    assert _meta_language("english", "mr") == "en"
+    assert _meta_language("MARATHI", "mr") == "mr"  # case-insensitive
+    assert _meta_language("klingon", "mr") == "mr"  # unknown -> default
+    assert _meta_language(None, "en") == "en"
+
+
+async def test_send_uses_mapped_language_code() -> None:
+    repo = _FakeSuggestionRepo(claim_attempts=0)
+    sender = _FakeSender(_OK)
+    await execute(
+        suggestion_id=SID,
+        deps=_deps(repo, _FakeFarmerRepo(_farmer("hindi")), sender),
+        now=NOW,
+    )
+    assert sender.calls[0]["language_code"] == "hi"
 
 
 # --- Review gating is forwarded to the claim --------------------------------
