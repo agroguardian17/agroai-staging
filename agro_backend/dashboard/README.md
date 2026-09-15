@@ -1,85 +1,74 @@
-# AgroGuardian Operations Dashboard
+# AgroGuardian — Internal Ops Dashboard
 
-A small Streamlit app over the AgroGuardian read API. Three pages:
+A team-internal Streamlit dashboard for watching the whole system: every table,
+the advisory pipeline end-to-end, and live activity. It reads Postgres
+**directly and read-only** (cross-tenant, no RLS session vars) so it can surface
+everything without a farmer-facing endpoint per view.
 
-| Page | What it shows |
+> This is **not** the farmer app. It shows all tenants and all raw data, so it
+> must sit behind auth (Caddy basic-auth in prod — see below).
+
+## Pages
+| Page | Shows |
 |---|---|
-| Farmer Overview | All plots in the caller's scope, side-by-side cards |
-| Plot Detail | Pick a plot from the sidebar; tabs for Readings (chart), Alerts, AI Advisories |
-| Operations Queue | All alerts for the tenant, filterable, with Resolve buttons |
+| System overview (landing) | migration head, relation counts, headline metrics |
+| System Health | ingest freshness, device last-seen, dead-letter queue, state machines |
+| Data Explorer | **every** relation — row counts, recent rows, CSV export |
+| Telemetry | Sub-Node + Main-Node + weather readings, charted |
+| Advisory Pipeline | alert → compose → WhatsApp delivery → farmer reply funnel |
+| Devices & Calibration | registry, calibration, installs, maintenance |
+| Ginger Knowledge Base | the loaded rule engine (rules, fields, golden tests) |
+| Farmers & Farms | tenants, farmers, farms, plots, seasons, billing |
+| Live Activity | rolling event timeline, auto-refresh |
 
-The dashboard never touches Postgres directly — every screen goes
-through `/api/v1/*`. This means the dashboard works just as well from
-another machine, behind Caddy, as it does on your laptop.
+Most operational tables are empty until hardware and farmer activity flow — the
+dashboard shows that plainly (empty-state notes), so it doubles as a
+"what's-flowing-yet" board.
 
-## One-time setup
+## Run locally
 
 ```bash
-# A separate venv keeps Streamlit's transitive deps out of the backend env.
-python3 -m venv .venv-dashboard
-source .venv-dashboard/bin/activate
+python3 -m venv .venv-dashboard && source .venv-dashboard/bin/activate
 pip install -r dashboard/requirements.txt
+
+# Point it at a database. Either a full URL:
+export DASHBOARD_DATABASE_URL="postgresql+psycopg://agro:<pw>@localhost:5433/agro"
+# ...or the standard pieces (host defaults to `postgres`, i.e. the compose net):
+#   export POSTGRES_USER=agro POSTGRES_PASSWORD=<pw> PGHOST=localhost PGPORT=5433 POSTGRES_DB=agro
+
+streamlit run dashboard/app.py      # opens http://localhost:8501
 ```
 
-## Configure auth
+No JWT/OTP needed — it talks to Postgres, not the API. Every connection is
+opened `default_transaction_read_only=on`, so the dashboard physically cannot
+write.
 
-Mint a JWT once via the API (the OTP flow lives in the backend at
-`/api/v1/auth/send_otp` + `/api/v1/auth/verify_otp`):
+## Run on the cloud (staging)
 
-```bash
-# 1. Trigger an OTP. The code prints to the app log in development
-#    (LogOnlyWhatsappSender only; never use that sender in production).
-curl -X POST http://localhost:8000/api/v1/auth/send_otp \
-  -H "Content-Type: application/json" \
-  -d '{"phone":"+91XXXXXXXXXX"}'
+The dashboard ships as a compose service (`dashboard`, network alias
+`streamlit`) that Caddy publishes at `https://dashboard-<IP-with-dashes>.sslip.io`
+behind basic-auth. One-time setup on the VPS:
 
-# 2. Read the code from the uvicorn log, then:
-curl -X POST http://localhost:8000/api/v1/auth/verify_otp \
-  -H "Content-Type: application/json" \
-  -d '{"phone":"+91XXXXXXXXXX","code":"123456"}'
+1. **Pick credentials and hash the password** (bcrypt):
+   ```bash
+   docker run --rm caddy:2.11.4-alpine caddy hash-password --plaintext 'a-strong-password'
+   ```
+2. **Add to `.env`** (the Caddy + dashboard containers read it):
+   ```dotenv
+   DASHBOARD_USER=ops
+   DASHBOARD_PASSWORD_HASH=$2a$14$....the-hash-from-step-1....
+   ```
+3. **Re-render the Caddyfile and bring the stack up** (from the deploy dir):
+   ```bash
+   make caddyfile-prod IP=<STATIC_IP>
+   docker compose -f docker-compose.prod.yml up -d --build dashboard caddy
+   ```
+4. Open `https://dashboard-<IP-with-dashes>.sslip.io` and log in.
 
-# Copy the access_token from the response.
-```
+The dashboard container connects to `postgres:5432` on the internal network with
+the `POSTGRES_*` creds from `.env`; nothing new is exposed on the host firewall
+(traffic goes through Caddy on 443).
 
-Export it (only the access token, not the refresh):
-
-```bash
-export ACCESS_TOKEN=eyJ...
-# Optional - default is http://localhost:8000
-export AGRO_API_BASE_URL=http://localhost:8000
-```
-
-## Launch
-
-```bash
-streamlit run dashboard/app.py
-```
-
-Open the URL Streamlit prints (default http://localhost:8501). The
-welcome page shows your /me identity card; the sidebar lists the
-three pages.
-
-## Common gotchas
-
-- **"ACCESS_TOKEN env var is missing"** — re-export the token in the
-  shell that runs Streamlit. Streamlit's own auto-reload doesn't pick
-  up env-var changes; restart `streamlit run` after exporting.
-- **API 401** — the access token has expired (default 15 minutes).
-  Re-run `/auth/verify_otp` (or `/auth/refresh` with the refresh
-  token) and re-export.
-- **Empty pages** — no data yet. Run `scripts/dev/fake_main_node.py` to seed
-  readings. Alerts are created only when a fresh reading matches a pilot rule
-  and `CALIBRATION_MODE=false`. Persisted AI suggestions require separate
-  advisory-worker wiring; the current MQTT startup path does not create them
-  automatically.
-
-## What this round does NOT yet do
-
-- **Live tail.** The dashboard fetches on page load + reruns; there is no
-  WebSocket push or automatic polling. Refresh the Streamlit page to see new
-  data; a future round can add SSE.
-- **Acknowledge (vs resolve).** Round 12 only ships Resolve. An
-  "Acknowledged but not closed" state would need a new column on
-  `alerts_notifications`.
-- **OTP login screen.** Static JWT only. Round 12.5 will swap the env
-  var for an in-app OTP login form.
+> Prefer to keep it off the public internet entirely? Drop the `dashboard-*`
+> site block into the Tailscale-gated pattern the Prometheus/Grafana blocks use,
+> instead of basic-auth.

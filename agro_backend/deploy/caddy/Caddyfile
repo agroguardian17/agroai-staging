@@ -83,6 +83,12 @@ mqtts-IP-WITH-DASHES.sslip.io {
 # ----- Streamlit dashboard ----------------------------------------------
 dashboard-IP-WITH-DASHES.sslip.io {
     encode zstd gzip
+    # Internal, cross-tenant data — gate behind basic-auth. Set DASHBOARD_USER
+    # and DASHBOARD_PASSWORD_HASH in .env (generate the hash with
+    # `docker run --rm caddy:2.11.4-alpine caddy hash-password --plaintext '<pw>'`).
+    basic_auth {
+        {$DASHBOARD_USER} {$DASHBOARD_PASSWORD_HASH}
+    }
     reverse_proxy streamlit:8501
 }
 

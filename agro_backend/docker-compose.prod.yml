@@ -214,6 +214,44 @@ services:
           memory: 256M
     networks: [internal]
 
+  # Internal ops dashboard (Streamlit). Reads Postgres read-only, all tenants.
+  # Caddy publishes it at dashboard-<IP>.sslip.io behind basic-auth (see the
+  # Caddyfile + DASHBOARD_USER / DASHBOARD_PASSWORD_HASH in .env); the `streamlit`
+  # network alias is the upstream name Caddy reverse-proxies to.
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    image: agro-dashboard:staging
+    container_name: agro_dashboard
+    restart: always
+    env_file:
+      - .env
+    environment:
+      # db.py builds the read-only URL from POSTGRES_* (from .env); pin the host
+      # to the compose service so it never inherits a dev localhost value.
+      PGHOST: postgres
+      PGPORT: "5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        ["CMD-SHELL",
+         "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health', timeout=3)\" || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 384M
+    networks:
+      internal:
+        aliases: [streamlit]
+
 volumes:
   pgdata:
   mosquitto_data:
