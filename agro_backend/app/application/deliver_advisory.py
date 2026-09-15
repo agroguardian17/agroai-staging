@@ -52,6 +52,16 @@ def _is_transient(error_code: str | None) -> bool:
     return error_code.startswith("http_5")
 
 
+# farmers.language_preference stores a full word ('marathi'/'hindi'/'english',
+# migration 0001), but a WhatsApp template's language must be the Meta/ISO code
+# ('mr'/'hi'/'en'). Map it; unknown/blank falls back to the deps default.
+_META_LANG = {"marathi": "mr", "hindi": "hi", "english": "en"}
+
+
+def _meta_language(preference: str | None, default: str) -> str:
+    return _META_LANG.get((preference or "").strip().lower(), default)
+
+
 @dataclass(frozen=True, slots=True)
 class DeliverAdvisoryDeps:
     ai_suggestion_repo: AiSuggestionRepo
@@ -108,7 +118,7 @@ async def execute(
         )
         return DeliverAdvisoryResult(outcome="failed_permanent", attempts=attempts)
 
-    language = farmer.language_preference or deps.default_language
+    language = _meta_language(farmer.language_preference, deps.default_language)
     try:
         result = await deps.sender.send_template(
             phone=farmer.phone,
