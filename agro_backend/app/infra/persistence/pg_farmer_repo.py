@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -42,6 +42,13 @@ class PgFarmerRepo:
             res = await session.execute(stmt, {"fid": farmer_id})
             row = res.first()
         return None if row is None else _row_to_identity(row)
+
+    async def owner_of_farm(self, farm_id: uuid.UUID) -> uuid.UUID | None:
+        stmt = text("SELECT farmer_id FROM farms WHERE farm_id = :fid LIMIT 1")
+        async with self._sm() as session:
+            res = await session.execute(stmt, {"fid": farm_id})
+            row = res.first()
+        return None if row is None else cast(uuid.UUID, cast(Any, row).farmer_id)
 
 
 __all__ = ["PgFarmerRepo"]

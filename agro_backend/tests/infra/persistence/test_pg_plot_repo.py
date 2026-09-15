@@ -221,13 +221,15 @@ async def test_update_data_tier_to_satellite_only_clears_node(
     assert p_after.node_id is None
 
 
-async def test_update_data_tier_to_sub_node_not_implemented(
+async def test_update_data_tier_to_sub_node_is_rejected(
     sessionmaker: async_sessionmaker[AsyncSession],
     seed: tuple[uuid.UUID, uuid.UUID, str, str],
 ) -> None:
+    # update_data_tier only clears to satellite_only; the sub_node direction
+    # goes through assign_sub_node (Round 9).
     _, _, plot_id, _ = seed
     repo = PgPlotRepo(sessionmaker)
-    with pytest.raises(NotImplementedError, match="Round 9"):
+    with pytest.raises(ValueError, match="assign_sub_node"):
         await repo.update_data_tier(plot_id, DataTier.SUB_NODE)
 
 
