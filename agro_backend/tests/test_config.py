@@ -66,3 +66,14 @@ def test_trailing_slashes_stripped_from_urls() -> None:
     )
     assert s.OPEN_METEO_BASE_URL == "https://api.open-meteo.com/v1"
     assert s.IMD_BASE_URL == "https://mausam.imd.gov.in/api"
+
+
+def test_model_id_for_resolves_roles() -> None:
+    from app.config import ModelRole, Settings
+
+    s = Settings(
+        ANTHROPIC_MODEL_SONNET="claude-sonnet-x",
+        ANTHROPIC_MODEL_HAIKU="claude-haiku-x",
+    )
+    assert s.model_id_for(ModelRole.PRIMARY) == "claude-sonnet-x"
+    assert s.model_id_for(ModelRole.TRIAGE) == "claude-haiku-x"

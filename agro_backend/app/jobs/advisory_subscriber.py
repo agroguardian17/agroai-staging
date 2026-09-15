@@ -30,6 +30,7 @@ from app.application.compose_advisory import ComposeAdvisoryDeps
 from app.application.dispatch_advisory import DispatchAdvisoryDeps
 from app.application.ports.chat_model import ChatModel
 from app.application.ports.event_bus import EVENT_ALERT_CREATED
+from app.config import ModelRole
 from app.infra.events.pg_notify_bus import CHANNEL, PgNotifyEventBus
 from app.infra.events.pg_notify_listener import PgNotifyListener
 from app.infra.http.deps import _ensure_engine
@@ -74,7 +75,7 @@ async def build_and_start_advisory_subscriber(
         reading_repo=PgReadingRepo(sm),
         ai_suggestion_repo=PgAiSuggestionRepo(sm),
         chat_model=_build_chat_model(settings),
-        chat_model_name=settings.ANTHROPIC_MODEL_SONNET,
+        chat_model_name=settings.model_id_for(ModelRole.PRIMARY),
     )
     deps = DispatchAdvisoryDeps(
         alert_repo=alert_repo, compose_deps=compose_deps, event_bus=event_bus
