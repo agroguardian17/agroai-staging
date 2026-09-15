@@ -1,0 +1,3133 @@
+{
+  "_schema": {
+    "schema_version": "2.0",
+    "inherits_from": "Domain1_Rules_Ginger_v2.json",
+    "inheritance_note": "The full _schema block is defined in Domain 1 and is NOT repeated here. Units (per acre), stage codes G0-G5, source tiers A/B/C, source classes, priority scale, recoverability, severity and confidence bounds are inherited unchanged. Domain 2 to 10 additions are also assumed present. Only Domain 11 additions are declared below.",
+    "additions": {
+      "rule_categories_domain_11": {
+        "FM": "formula and method",
+        "CL": "yield ceiling",
+        "UV": "u-value register",
+        "SC": "scenario computation",
+        "VL": "validation",
+        "PR": "prediction intervals",
+        "GA": "gap attribution",
+        "EC": "economic conversion",
+        "AP": "advisory prioritisation",
+        "DC": "double counting prevention",
+        "RC": "record requirements"
+      },
+      "new_farm_brain_fields": {
+        "ceiling_quintal_per_acre": "number",
+        "ceiling_basis": "enum:[variety_only_94, variety_plus_broad_ridge_113, unverified]",
+        "cumulative_loss_pct": "number",
+        "u_values_applied": "array of rule_id",
+        "predicted_yield_quintal_per_acre": "number",
+        "prediction_interval_pct": "number",
+        "prediction_stage": "enum:[pre_season, g1_end, mid_season, pre_harvest_observation, pre_harvest_sampled]",
+        "gap_attributed_pct": "number",
+        "gap_unexplained_pct": "number",
+        "season_record_complete": "boolean",
+        "u_value_source_class": "enum:[SRC-Q, SRC-D, EST, FIELD]",
+        "interdependence_group": "string"
+      },
+      "sub_additive_formula": {
+        "expression": "total_loss = 1 - PRODUCT(1 - u_i)",
+        "why_not_additive": "Losses do not add. Each acts on what the previous ones left. Five factors of 0.20 each sum to 1.00, which would mean zero yield and is impossible; multiplied they give 0.67 loss and 33 percent remaining.",
+        "worked_example": {
+          "two_factors_of_0.20": {
+            "additive_wrong": 0.4,
+            "sub_additive_correct": 0.36
+          }
+        }
+      },
+      "double_counting_policy": {
+        "principle": "A factor that appears in more than one domain must contribute its u-value ONCE. Rules are written per domain, but the yield computation is global.",
+        "known_duplications": [
+          {
+            "group": "post_monsoon_cyclone_saturation",
+            "rules": [
+              "D03-WL-003",
+              "D06-SW-003",
+              "D07-CY-001"
+            ],
+            "u_value": 0.3,
+            "count_once": true
+          },
+          {
+            "group": "three_stage_mulch_programme",
+            "rules": [
+              "D03-MU-001",
+              "D06-MU-001",
+              "D08-MU-001"
+            ],
+            "u_value": 0.2,
+            "count_once": true,
+            "note": "D03 carries 0.12 for the heat and water component and D06/D08 carry 0.20 for the full programme. Use 0.20 once."
+          },
+          {
+            "group": "pre_harvest_interval_block",
+            "rules": [
+              "D05-CH-003",
+              "D06-CH-003",
+              "D09-SF-002"
+            ],
+            "u_value": null,
+            "count_once": true,
+            "note": "No u-value; but must resolve to one advisory block, not three."
+          },
+          {
+            "group": "late_planting",
+            "rules": [
+              "D01-PW-001",
+              "D05-PC-002",
+              "D07-MO-001"
+            ],
+            "u_value": 0.2,
+            "count_once": true
+          },
+          {
+            "group": "variety_selection",
+            "rules": [
+              "D01-VR-001",
+              "D10-VAR-001"
+            ],
+            "u_value": 0.138,
+            "count_once": true
+          },
+          {
+            "group": "broad_ridge_layout",
+            "rules": [
+              "D02-LY-001",
+              "D08-LY-001"
+            ],
+            "u_value": 0.167,
+            "count_once": true
+          },
+          {
+            "group": "undecomposed_fym",
+            "rules": [
+              "D02-OM-002",
+              "D05-WG-001",
+              "D08-TL-003"
+            ],
+            "u_value": 0.1,
+            "count_once": true
+          },
+          {
+            "group": "rotation_failure",
+            "rules": [
+              "D02-SL-003",
+              "D06-PV-002"
+            ],
+            "u_value": 0.15,
+            "count_once": true
+          },
+          {
+            "group": "seed_treatment",
+            "rules": [
+              "D01-VR-002",
+              "D06-ST-001"
+            ],
+            "u_value": 0.135,
+            "count_once": true
+          },
+          {
+            "group": "earthing_up",
+            "rules": [
+              "D01-PH-003",
+              "D08-EU-001",
+              "D08-EU-002"
+            ],
+            "u_value": 0.125,
+            "count_once": true
+          },
+          {
+            "group": "wilt_host_intercrop",
+            "rules": [
+              "D05-TC-002",
+              "D08-IC-001"
+            ],
+            "u_value": 0.5,
+            "count_once": true
+          },
+          {
+            "group": "critical_stage_moisture_stress",
+            "rules": [
+              "D03-WR-004",
+              "D03-MN-004",
+              "D07-MO-002"
+            ],
+            "u_value": 0.2,
+            "count_once": true
+          },
+          {
+            "group": "vafsa_workable_window",
+            "rules": [
+              "D02-TL-003",
+              "D08-TL-002"
+            ],
+            "u_value": null,
+            "count_once": true,
+            "note": "Same sensor-driven advisory reached from land preparation and from operations. One notification, not two."
+          }
+        ],
+        "causal_chain_policy": "Where factors share a causal chain rather than merely a trigger — pest wound leading to rot, or FYM leading to weeds leading to weeding injury leading to rot — group them and apply the terminal u-value once rather than multiplying each link.",
+        "identical_action_policy": "Identical action text across rules is permitted ONLY where the rules are declared members of the same duplication group. Outside a group it indicates an unintended duplicate and must be treated as an error."
+      },
+      "prediction_intervals": {
+        "pre_season": 25,
+        "g1_end": 22,
+        "mid_season": 20,
+        "pre_harvest_observation_only": 12,
+        "pre_harvest_with_sampling": 8,
+        "source_class": "EST",
+        "note": "Wider than the sugarcane equivalents because the yield organ is below ground and cannot be measured non-destructively."
+      },
+      "decision_types": {
+        "AUTO_DECISION": {
+          "mr": "AI कधी व किती हे स्वतः ठरवतो",
+          "en": "engine computes the quantity or timing itself"
+        },
+        "SENSOR_ALERT": {
+          "mr": "sensor वर आधारित इशारा, कृती माणसाची",
+          "en": "sensor-triggered; the action is human work"
+        },
+        "SCHEDULED_REMINDER": {
+          "mr": "वेळापत्रकानुसार आठवण",
+          "en": "calendar or stage driven reminder"
+        },
+        "DIAGNOSTIC": {
+          "mr": "AI विचारतो, शेतकरी सांगतो",
+          "en": "engine asks, farmer answers, engine branches"
+        },
+        "DATA_CAPTURE": {
+          "mr": "नोंद किंवा मोजमाप मागतो",
+          "en": "engine requests a record or measurement"
+        },
+        "HUMAN_DECISION": {
+          "mr": "AI गणित दाखवतो, निर्णय माणसाचा",
+          "en": "engine presents arithmetic; person decides"
+        },
+        "BLOCK": {
+          "mr": "AI नाकारतो किंवा अडवतो",
+          "en": "engine refuses or blocks"
+        },
+        "PLANNING_GUIDANCE": {
+          "mr": "हंगामापूर्व निवड — शेतकरी ठरवतो",
+          "en": "pre-season choice the farmer makes"
+        },
+        "POLICY": {
+          "mr": "प्रॉडक्ट धोरण, शेतकऱ्यापर्यंत जात नाही",
+          "en": "product policy; never reaches a farmer"
+        }
+      },
+      "automation_levels": {
+        "full": "engine decides and acts without asking",
+        "assisted": "engine decides when, the person does the work or supplies the observation",
+        "advisory": "engine shows the arithmetic, the person chooses",
+        "refusal": "engine prevents an action",
+        "none": "internal policy, not farmer facing"
+      },
+      "precedence": {
+        "version": "prec-1.0",
+        "why": "Severity ranking alone gives the wrong answer where one rule is a CONDITION on another rather than a competing instruction. The worked case is D04-MC-004 suppressing D04-MC-001: ranked by severity the spray wins and the leaves scorch.",
+        "relations": [
+          "SUPPRESSES",
+          "SUPERSEDES",
+          "ESCALATES",
+          "BUNDLES",
+          "SEQUENCES"
+        ],
+        "fallback": "severity, then priority, then u_value — and the engine records that a fallback was used, because an unrecorded fallback is how the spray case slips back in.",
+        "graph": [
+          {
+            "subject": "D04-MC-004",
+            "relation": "SUPPRESSES",
+            "object": "D04-MC-001",
+            "reason_en": "Leaves scorch above 35 C and rain washes foliar application off. The spray instruction must not be issued while either holds.",
+            "reason_mr": "पानं ३५ अंशांवर करपतात आणि पाऊस फवारणी धुऊन नेतो. या दोन्हीपैकी काहीही असेल तर फवारणीची सूचना देऊ नये."
+          },
+          {
+            "subject": "D04-MC-004",
+            "relation": "SUPPRESSES",
+            "object": "D04-MC-002",
+            "reason_en": "Same condition applies to the second micronutrient spray.",
+            "reason_mr": "दुसऱ्या सूक्ष्म अन्नद्रव्य फवारणीलाही हीच अट लागू."
+          },
+          {
+            "subject": "D07-HS-004",
+            "relation": "SUPPRESSES",
+            "object": "D05-CH-006",
+            "reason_en": "Any foliar spray is suppressed above 35 C or before rain.",
+            "reason_mr": "तापमान ३५ अंशांवर असल्यास किंवा पावसापूर्वी कोणतीही फवारणी दडपली जाते."
+          },
+          {
+            "subject": "D03-MN-002",
+            "relation": "SUPPRESSES",
+            "object": "D03-WR-001",
+            "reason_en": "Saturation measured by the probe overrides the water balance computation. The sensor measures; the table estimates.",
+            "reason_mr": "probe ने मोजलेली संपृक्तता पाण्याच्या गणिताला ओलांडते. sensor मोजतो, तक्ता अंदाज लावतो."
+          },
+          {
+            "subject": "D03-MN-002",
+            "relation": "SUPPRESSES",
+            "object": "D03-WR-002",
+            "reason_en": "Saturation override applies to the formula route as well as the table.",
+            "reason_mr": "संपृक्ततेचा override सूत्रावरही लागू, फक्त तक्त्यावर नाही."
+          },
+          {
+            "subject": "D03-WL-001",
+            "relation": "SUPPRESSES",
+            "object": "D03-MN-003",
+            "reason_en": "A field standing in water does not need the dry-spell irrigation rule.",
+            "reason_mr": "पाणी साचलेल्या शेताला पावसाच्या खंडाचा सिंचन नियम लागू होत नाही."
+          },
+          {
+            "subject": "D08-EU-002",
+            "relation": "SUPPRESSES",
+            "object": "D08-EU-001",
+            "reason_en": "Once the flowering spike opens the earthing-up window has closed. Doing it late damages roots during bulking without the compensating regrowth.",
+            "reason_mr": "हुरडे बांड आल्यावर उटाळणीची मुदत संपते. उशिरा केल्यास गड्डा भरत असताना मुळे तुटतात आणि नवी मुळे येण्यास वेळ नसतो."
+          },
+          {
+            "subject": "D04-DG-003",
+            "relation": "SUPPRESSES",
+            "object": "D04-NS-001",
+            "reason_en": "Soft rot or wilt present. Fertiliser applied now is money spent while the crop is being lost.",
+            "reason_mr": "कूज किंवा मर रोग आहे. आता खत देणे म्हणजे पीक जात असताना पैसा खर्च करणे."
+          },
+          {
+            "subject": "D04-DG-003",
+            "relation": "SUPPRESSES",
+            "object": "D04-PK-001",
+            "reason_en": "Same handover: nutrient advisory stops when disease is confirmed.",
+            "reason_mr": "रोग निश्चित झाल्यावर खताचा सल्ला थांबतो."
+          },
+          {
+            "subject": "D05-NE-001",
+            "relation": "SUPPRESSES",
+            "object": "D08-GR-002",
+            "reason_en": "Low tiller count is the earliest nematode sign. Spraying a hormone to raise tillers would mask the pest rather than treat it.",
+            "reason_mr": "फुटवे कमी असणे हे सूत्रकृमींचे पहिले लक्षण आहे. फुटवे वाढवण्यासाठी संप्रेरक फवारल्यास किडीवर पडदा पडतो."
+          },
+          {
+            "subject": "D06-CH-001",
+            "relation": "SUPPRESSES",
+            "object": "D06-DX-003",
+            "reason_en": "Bacterial wilt confirmed. No fungicide has activity against a bacterium, so the soft rot treatment path must not be offered.",
+            "reason_mr": "मर रोग निश्चित. जिवाणूवर कोणतेही बुरशीनाशक चालत नाही, म्हणून कंदकुजीचा उपचार मार्ग दाखवू नये."
+          },
+          {
+            "subject": "D09-SF-002",
+            "relation": "SUPPRESSES",
+            "object": "D09-MT-001",
+            "reason_en": "Pre-harvest interval not satisfied. Maturity advice must not lead to a harvest that carries residue.",
+            "reason_mr": "प्रतीक्षा कालावधी पूर्ण नाही. पक्वतेचा सल्ला अवशेषयुक्त काढणीकडे नेऊ नये."
+          },
+          {
+            "subject": "D02-DR-001",
+            "relation": "SUPPRESSES",
+            "object": "D08-LY-001",
+            "reason_en": "If the plot is being advised against ginger, layout advice is premature.",
+            "reason_mr": "या शेतात अद्रक टाळण्याचा सल्ला असेल तर लागवड पद्धतीचा सल्ला अकाली आहे."
+          },
+          {
+            "subject": "D01-HV-002",
+            "relation": "SUPPRESSES",
+            "object": "D01-HV-003",
+            "reason_en": "Maturity conclusion blocked before 200 DAP, so harvest scheduling must not proceed on a yellowing signal alone.",
+            "reason_mr": "दोनशे दिवसांआधी पक्वतेचा निष्कर्ष अडवला जातो, म्हणून फक्त पिवळेपणावरून काढणीचे नियोजन करू नये."
+          },
+          {
+            "subject": "D01-HV-004",
+            "relation": "SUPPRESSES",
+            "object": "D09-MT-004",
+            "reason_en": "Seed crop must reach full maturity. The 75 percent market flexibility does not apply to the fraction kept for seed.",
+            "reason_mr": "बेण्यासाठीचे पीक पूर्ण पक्व झालेच पाहिजे. ७५ टक्के पक्वतेची बाजारातील सवलत बेण्याला लागू नाही."
+          },
+          {
+            "subject": "D09-MT-003",
+            "relation": "SUPPRESSES",
+            "object": "D09-MT-004",
+            "reason_en": "Same constraint stated in the harvest domain.",
+            "reason_mr": "हीच अट काढणी Domain मध्येही."
+          },
+          {
+            "subject": "D04-SB-001",
+            "relation": "SUPPRESSES",
+            "object": "D04-NP-001",
+            "reason_en": "Doses must not be set from the probe. Where no soil test exists the safe default range is used and marked medium confidence, not a probe-derived figure.",
+            "reason_mr": "probe वरून मात्रा ठरवू नये. माती परीक्षण नसल्यास सुरक्षित श्रेणी मध्यम विश्वासार्हतेसह वापरावी, probe चा आकडा नाही."
+          },
+          {
+            "subject": "D03-MN-004",
+            "relation": "SUPERSEDES",
+            "object": "D03-MN-003",
+            "reason_en": "In G3 and G4 the intervention point is 7 days, not the general 10 to 12. Showing both would be contradictory.",
+            "reason_mr": "G3 आणि G4 मध्ये हस्तक्षेपाची मर्यादा ७ दिवस आहे, सामान्य १० ते १२ नाही. दोन्ही दाखवणे परस्परविरोधी होईल."
+          },
+          {
+            "subject": "D09-MT-002",
+            "relation": "SUPERSEDES",
+            "object": "D09-MT-001",
+            "reason_en": "Before 200 DAP, yellowing has at least six causes. The maturity reading is blocked until the diagnosis clears it.",
+            "reason_mr": "दोनशे दिवसांआधी पिवळेपणाची किमान सहा कारणे आहेत. निदान होईपर्यंत पक्वतेचा निष्कर्ष अडवला जातो."
+          },
+          {
+            "subject": "D07-CY-001",
+            "relation": "SUPERSEDES",
+            "object": "D03-WL-003",
+            "reason_en": "Same event, one alert. Duplication group post_monsoon_cyclone_saturation.",
+            "reason_mr": "एकच घटना, एकच इशारा."
+          },
+          {
+            "subject": "D06-MU-001",
+            "relation": "SUPERSEDES",
+            "object": "D03-MU-001",
+            "reason_en": "One mulch programme, three domains. Duplication group three_stage_mulch_programme; the disease value is the full programme value.",
+            "reason_mr": "एकच आच्छादन कार्यक्रम, तीन Domain. रोग-मूल्य हे संपूर्ण कार्यक्रमाचे मूल्य आहे."
+          },
+          {
+            "subject": "D06-CH-003",
+            "relation": "SUPERSEDES",
+            "object": "D05-CH-003",
+            "reason_en": "One pre-harvest interval block, not three. Duplication group pre_harvest_interval_block.",
+            "reason_mr": "एकच प्रतीक्षा-कालावधी अडथळा, तीन नाही."
+          },
+          {
+            "subject": "D08-TL-002",
+            "relation": "SUPERSEDES",
+            "object": "D02-TL-003",
+            "reason_en": "One vafsa notification. Duplication group vafsa_workable_window.",
+            "reason_mr": "वाफशाची एकच सूचना."
+          },
+          {
+            "subject": "D01-TM-001",
+            "relation": "SUPERSEDES",
+            "object": "D07-HS-001",
+            "reason_en": "One heat instruction, not three. The lifecycle rule carries the stage context and the same expert-amended 35 C threshold.",
+            "reason_mr": "उष्णतेची एकच सूचना, तीन नाहीत. Domain 1 चा नियम अवस्थेचा संदर्भ देतो आणि तीच ३५ अंशांची सुधारित मर्यादा वापरतो."
+          },
+          {
+            "subject": "D01-TM-001",
+            "relation": "SUPERSEDES",
+            "object": "D07-TM-001",
+            "reason_en": "Same condition, same advice, different domain.",
+            "reason_mr": "तीच अट, तोच सल्ला, वेगळा Domain."
+          },
+          {
+            "subject": "D03-DS-001",
+            "relation": "BUNDLES",
+            "object": "D03-DS-002",
+            "reason_en": "Lateral spacing and system flow are one drip design conversation.",
+            "reason_mr": "नळीतील अंतर आणि प्रवाह — ठिबकाच्या मांडणीचा एकच निर्णय."
+          },
+          {
+            "subject": "D07-HS-003",
+            "relation": "SUPPRESSES",
+            "object": "D07-HS-002",
+            "reason_en": "Heat plus dryness together is the more specific case.",
+            "reason_mr": "उष्णता आणि कोरडेपणा एकत्र असणे ही अधिक नेमकी स्थिती आहे."
+          },
+          {
+            "subject": "D03-WL-001",
+            "relation": "SUPPRESSES",
+            "object": "D03-WL-004",
+            "reason_en": "A saturation alert already covers the G1 case; two messages for one field of standing water is noise.",
+            "reason_mr": "साचलेल्या पाण्याचा इशारा आधीच दिला आहे. एकाच स्थितीसाठी दोन संदेश म्हणजे गोंगाट."
+          },
+          {
+            "subject": "D03-WL-002",
+            "relation": "ESCALATES",
+            "object": "D03-WL-001",
+            "reason_en": "Saturation at G2 or G3 is the peak soft rot window. Same alert, higher severity, not a second notification.",
+            "reason_mr": "G2 किंवा G3 मध्ये पाणी साचणे ही कंदकुजीची शिखर वेळ. तोच इशारा, जास्त तीव्रतेने — दुसरी सूचना नाही."
+          },
+          {
+            "subject": "D06-SR-001",
+            "relation": "ESCALATES",
+            "object": "D03-WL-001",
+            "reason_en": "The saturation alert and the preventive rot protocol are one event seen from water and from disease.",
+            "reason_mr": "संपृक्ततेचा इशारा आणि कंदकूज प्रतिबंधक कृती ही एकच घटना — पाणी आणि रोग या दोन बाजूंनी."
+          },
+          {
+            "subject": "D06-BW-002",
+            "relation": "ESCALATES",
+            "object": "D05-NE-001",
+            "reason_en": "Nematodes raise bacterial wilt risk as well as the direct nematode loss.",
+            "reason_mr": "सूत्रकृमी थेट नुकसानासोबत मर रोगाचीही जोखीम वाढवतात."
+          },
+          {
+            "subject": "D08-EU-001",
+            "relation": "BUNDLES",
+            "object": "D04-NS-002",
+            "reason_en": "Earthing up and the final nitrogen split are the same visit.",
+            "reason_mr": "उटाळणी आणि नत्राचा शेवटचा हप्ता एकाच फेरीत."
+          },
+          {
+            "subject": "D08-EU-001",
+            "relation": "BUNDLES",
+            "object": "D08-MU-002",
+            "reason_en": "Mulch stage two goes with earthing up.",
+            "reason_mr": "आच्छादनाचा दुसरा टप्पा उटाळणीसोबत."
+          },
+          {
+            "subject": "D08-EU-001",
+            "relation": "BUNDLES",
+            "object": "D08-EU-005",
+            "reason_en": "Covering exposed rhizomes happens during earthing up.",
+            "reason_mr": "उघडे गड्डे झाकणे उटाळणीच्या वेळीच."
+          },
+          {
+            "subject": "D08-EU-004",
+            "relation": "BUNDLES",
+            "object": "D04-PK-001",
+            "reason_en": "Second earthing carries the potassium split.",
+            "reason_mr": "दुसऱ्या उटाळणीसोबत पालाशाचा हप्ता."
+          },
+          {
+            "subject": "D06-DX-001",
+            "relation": "SEQUENCES",
+            "object": "D06-DX-003",
+            "reason_en": "Diagnosis precedes treatment without exception.",
+            "reason_mr": "निदान झाल्याशिवाय उपचार नाही — अपवाद नाही."
+          },
+          {
+            "subject": "D06-DX-001",
+            "relation": "SEQUENCES",
+            "object": "D06-CH-002",
+            "reason_en": "No chemical option is surfaced before the differential is resolved.",
+            "reason_mr": "निदान होईपर्यंत रासायनिक पर्याय दाखवला जात नाही."
+          },
+          {
+            "subject": "D04-DG-001",
+            "relation": "SEQUENCES",
+            "object": "D04-NS-001",
+            "reason_en": "Yellowing is diagnosed before nitrogen is recommended.",
+            "reason_mr": "पिवळेपणाचे निदान झाल्यावरच नत्र सुचवावा."
+          },
+          {
+            "subject": "D02-ST-002",
+            "relation": "SEQUENCES",
+            "object": "D02-DR-001",
+            "reason_en": "The percolation test must be run before the drainage verdict is issued.",
+            "reason_mr": "निचऱ्याचा निर्णय देण्यापूर्वी खड्डा चाचणी झाली पाहिजे."
+          }
+        ]
+      },
+      "multi_diagnosis": {
+        "version": "dx-1.0",
+        "why": "The differential returns one answer; reality does not. Rot and heat scorch can both be present.",
+        "states": {
+          "CONFIRMED": "decisive marker present — treatment may be offered",
+          "PROBABLE": "one cause clearly ahead — name the confirming test, do not treat",
+          "AMBIGUOUS": "two or more within the band — say which test separates them",
+          "NO_CANDIDATE": "insufficient observation — ask, never guess"
+        },
+        "ambiguity_band": 0.15,
+        "treatment_gate": "treatment_rule is returned ONLY on CONFIRMED. Domain 12 D12-CLS-001.",
+        "weights_source_class": "EST — author estimates, to be corrected from first-season outcomes"
+      },
+      "override_policy": {
+        "version": "override-1.0",
+        "why": "The Tier-1 review worked but was offline. An agronomist looking at a live plot in August cannot edit JSON and wait for a deploy; by then the window has closed.",
+        "kinds": [
+          "THRESHOLD",
+          "DELIVERY",
+          "SEVERITY",
+          "DISABLE",
+          "PARAMETER"
+        ],
+        "scopes": [
+          "plot",
+          "cluster",
+          "global"
+        ],
+        "scope_precedence": "narrowest wins — plot over cluster over global",
+        "default_expiry_days": 240,
+        "max_expiry_days": 400,
+        "expiry_rationale": "A permanent change belongs in the knowledge base, not in the override table.",
+        "immutable_count": 16,
+        "immutable_rationale": "Some rules exist because getting them wrong causes harm no agronomic judgement outweighs. The API refuses them by code path, and a database trigger refuses them again if the application layer is bypassed.",
+        "audit": "Refused attempts are recorded, not discarded. An attempt to override an immutable rule is a governance signal."
+      }
+    }
+  },
+  "metadata": {
+    "domain": 11,
+    "domain_name": "Yield Impact Data",
+    "domain_name_mr": "उत्पादन प्रभाव मापन",
+    "crop": "ginger",
+    "crop_mr": "आले",
+    "region": "Kannad, Chhatrapati Sambhajinagar, Marathwada",
+    "source_document": "AgroGuardian_Ginger_Domain11_Yield_Impact_RAW.docx",
+    "version": "1.0",
+    "status": "PHASE_1_RAW_UNVALIDATED",
+    "agronomist_validated": false,
+    "validation_note": "Eight of thirty u-values are sourced quantitatively; twenty-two are estimates. The aggregate reproduces the Maharashtra state average within about 6 percent, which is a meaningful sanity check but is a single validation point and could be coincidence. Real validation requires first-season records.",
+    "total_rules": 34,
+    "rule_count_note": "30 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count.",
+    "review_by": null,
+    "review_note": "The method is stable. The u-values themselves should be revised after each season's gap attribution.",
+    "purpose": "Quantify how much yield each management factor puts at risk, combine them correctly, produce a yield prediction with an honest interval, and attribute the gap at harvest so the estimated coefficients can become measured ones.",
+    "key_innovations": [
+      "Running the sub-additive formula on independently gathered u-values reproduces the Maharashtra state average of 53 quintal per acre to within about 6 percent, without any tuning. That says the gap between genetic potential and state average is management rather than climate or soil — which is the entire commercial argument for the product, stated in numbers.",
+      "Gains must be converted to losses before entering the formula. A method giving 20 percent more yield corresponds to a loss of 0.167, not 0.20. Getting this wrong compounds across six factors.",
+      "Twenty-two of thirty factors are irrecoverable, so about 73 percent of the advisory has to be preventive rather than diagnostic.",
+      "Prediction intervals are deliberately wider than the sugarcane equivalents because the yield organ is invisible. A destructive sample narrows the pre-harvest interval from about 12 percent to about 8 — so digging one plant improves forecast accuracy by roughly a third.",
+      "Twelve factors appear in more than one domain. The rules are written per domain but the yield computation is global, so each shared factor must contribute exactly once. This file names all twelve explicitly.",
+      "Four decisions, three of them free, account for roughly Rs 2.85 lakh per acre. All four depend on doing something at the right time rather than on spending money.",
+      "The grading price spread of 2.7 times exceeds every yield factor in the knowledge base, so an economic model built on yield alone misses the largest lever."
+    ],
+    "central_finding": {
+      "statement": "The gap between genetic potential and the state average is management, and it is therefore addressable by advisory.",
+      "computation": "Scenario C — poor management with five common omissions — computes to 50 quintal per acre.",
+      "observation": "Maharashtra state average is 53 quintal per acre.",
+      "agreement_pct": 6,
+      "significance": "Five u-values collected independently from separate sources, with no adjustment, reproduce the observed state average. That supports three conclusions: the u-values are approximately right, the ceiling-to-average gap is management rather than environment, and the gap is therefore closable by better timing rather than by new technology.",
+      "caveat": "One validation point is not proof of method. It could be coincidence. Real validation comes from first-season gap attribution."
+    },
+    "primary_sources": [
+      "Agrowon - Dr. Jitendra Kadam, Halad Sanshodhan Yojana, Kasbe Digraj (TIER A) - broad ridge 15 to 20 percent gain, variety yields, earthing up 10 to 15 percent loss",
+      "Organic Mandya, Kodagu and Shivamogga field records (TIER B) - mulch, soft rot below 5 percent against 20 to 30 percent",
+      "Springer - soft rot management study (TIER A) - seed treatment germination 80-83 against 93-98 percent",
+      "IISR 2002, Nutrition of Zingiberaceae Crops (TIER A) - foliar zinc 16.2 against soil 14.4 kg per 3 sq m",
+      "ScienceDirect Heliyon 2023 (TIER A) - soft rot 50 to 90 percent yield loss",
+      "Springer Journal of Plant Pathology 2020 (TIER A) - bacterial wilt severity",
+      "News18 Marathi APMC 2026 (TIER B) - grading spread 2.7 times",
+      "Directorate of Agriculture Maharashtra 2023 via AgriTimes (TIER A) - state average 13.2 t/ha, the validation reference",
+      "Core Layer C9 (internal) - sub-additive method and prediction staging"
+    ]
+  },
+  "reference_data": {
+    "ceiling": {
+      "variety_capacity_quintal_per_acre": 94,
+      "variety": "mahima",
+      "variety_source_note": "23.2 t/ha",
+      "broad_ridge_multiplier": 1.2,
+      "ceiling_with_multiplier": 113,
+      "uncertainty": {
+        "issue": "The published variety trial yields do not state which planting layout was used.",
+        "if_trials_used_standard_layout": 113,
+        "if_trials_already_used_broad_ridge": 94,
+        "range_to_use_until_resolved": [
+          94,
+          113
+        ],
+        "blocking": true,
+        "resolver": "Halad Sanshodhan Yojana, Kasbe Digraj",
+        "indirect_evidence": "Using 113 makes the scenario computation agree with the state average to within 6 percent. Using 94 gives 42 quintal against an observed 53, which agrees less well. That is weak indirect support for 113."
+      },
+      "targets_quintal_per_acre": {
+        "minimum_viable": 60,
+        "target": 90,
+        "stretch": 110,
+        "theoretical_max": 130
+      },
+      "state_average_quintal_per_acre": 53
+    },
+    "method": {
+      "formula": "total_loss = 1 - PRODUCT(1 - u_i)",
+      "why_multiplicative": "Losses act on what remains, not on the original. Additive summation exceeds 100 percent with five moderate factors, which is impossible.",
+      "gain_to_loss_conversion": {
+        "formula": "u = g / (1 + g)",
+        "table": [
+          {
+            "reported_gain_pct": 15,
+            "u": 0.13
+          },
+          {
+            "reported_gain_pct": 20,
+            "u": 0.167
+          },
+          {
+            "reported_gain_pct": 30,
+            "u": 0.231
+          },
+          {
+            "reported_gain_pct": 40,
+            "u": 0.286
+          }
+        ],
+        "common_error": "Reading a 20 percent gain as a 0.20 loss. It is 0.167. The error compounds across factors."
+      },
+      "direct_loss_statements": "Where a source states a loss directly, such as 10 to 15 percent for skipped earthing up, use it as given with no conversion."
+    },
+    "u_value_register": [
+      {
+        "rank": 1,
+        "factor": "soft rot, full outbreak",
+        "u": 0.7,
+        "stage": "G2_G4",
+        "class": "SRC-Q",
+        "recoverable": "none",
+        "detect": "sensor_plus_observation",
+        "primary_rule": "D06-DX-003"
+      },
+      {
+        "rank": 2,
+        "factor": "bacterial wilt",
+        "u": 0.5,
+        "stage": "any",
+        "class": "SRC-D",
+        "recoverable": "none",
+        "detect": "observation",
+        "primary_rule": "D06-DX-002"
+      },
+      {
+        "rank": 3,
+        "factor": "plot with wilt history",
+        "u": 0.5,
+        "stage": "G0",
+        "class": "SRC-D",
+        "recoverable": "none",
+        "detect": "record",
+        "primary_rule": "D06-BW-001"
+      },
+      {
+        "rank": 4,
+        "factor": "wilt host crop as intercrop",
+        "u": 0.5,
+        "stage": "G0",
+        "class": "DERIVED",
+        "recoverable": "none",
+        "detect": "record",
+        "primary_rule": "D08-IC-001"
+      },
+      {
+        "rank": 5,
+        "factor": "poor or diseased seed",
+        "u": 0.35,
+        "stage": "G0",
+        "class": "SRC-D",
+        "recoverable": "none",
+        "detect": "observation",
+        "primary_rule": "D01-VR-003"
+      },
+      {
+        "rank": 6,
+        "factor": "saturation at G2 or G3",
+        "u": 0.35,
+        "stage": "G2_G3",
+        "class": "SRC-D",
+        "recoverable": "none",
+        "detect": "sensor",
+        "primary_rule": "D03-WL-001"
+      },
+      {
+        "rank": 7,
+        "factor": "water exhaustion in G4",
+        "u": 0.3,
+        "stage": "G4",
+        "class": "SRC-D",
+        "recoverable": "none",
+        "detect": "sensor",
+        "primary_rule": "D03-WS-001"
+      },
+      {
+        "rank": 8,
+        "factor": "post-monsoon cyclonic saturation",
+        "u": 0.3,
+        "stage": "G4",
+        "class": "SRC-D",
+        "recoverable": "none",
+        "detect": "sensor_plus_forecast",
+        "primary_rule": "D07-CY-001"
+      },
+      {
+        "rank": 9,
+        "factor": "waterlogging at G1",
+        "u": 0.3,
+        "stage": "G1",
+        "class": "SRC-D",
+        "recoverable": "none",
+        "detect": "sensor",
+        "primary_rule": "D03-SC-003"
+      },
+      {
+        "rank": 10,
+        "factor": "no mulch programme",
+        "u": 0.2,
+        "stage": "G0_G4",
+        "class": "SRC-Q",
+        "recoverable": "none",
+        "detect": "record",
+        "primary_rule": "D06-MU-001"
+      },
+      {
+        "rank": 11,
+        "factor": "late planting after 7 June",
+        "u": 0.2,
+        "stage": "G0",
+        "class": "EST",
+        "recoverable": "none",
+        "detect": "record",
+        "primary_rule": "D01-PW-001"
+      },
+      {
+        "rank": 12,
+        "factor": "moisture stress in critical window",
+        "u": 0.2,
+        "stage": "G3_G4",
+        "class": "SRC-D",
+        "recoverable": "none",
+        "detect": "sensor",
+        "primary_rule": "D03-WR-004"
+      },
+      {
+        "rank": 13,
+        "factor": "rhizome fly",
+        "u": 0.175,
+        "stage": "G2",
+        "class": "SRC-D",
+        "recoverable": "none",
+        "detect": "observation",
+        "primary_rule": "D05-RF-001"
+      },
+      {
+        "rank": 14,
+        "factor": "not using broad ridge layout",
+        "u": 0.167,
+        "stage": "G0",
+        "class": "SRC-Q",
+        "recoverable": "none",
+        "detect": "record",
+        "primary_rule": "D08-LY-001"
+      },
+      {
+        "rank": 15,
+        "factor": "rotation not followed",
+        "u": 0.15,
+        "stage": "G0",
+        "class": "SRC-D",
+        "recoverable": "none",
+        "detect": "record",
+        "primary_rule": "D02-SL-003"
+      },
+      {
+        "rank": 16,
+        "factor": "nematodes",
+        "u": 0.15,
+        "stage": "G2",
+        "class": "SRC-D",
+        "recoverable": "partial",
+        "detect": "observation",
+        "primary_rule": "D05-NE-001"
+      },
+      {
+        "rank": 17,
+        "factor": "moisture inconsistency in G4",
+        "u": 0.15,
+        "stage": "G4",
+        "class": "SRC-D",
+        "recoverable": "none",
+        "detect": "sensor",
+        "primary_rule": "D03-SC-006"
+      },
+      {
+        "rank": 18,
+        "factor": "wrong variety",
+        "u": 0.138,
+        "stage": "G0",
+        "class": "SRC-Q",
+        "recoverable": "none",
+        "detect": "record",
+        "primary_rule": "D01-VR-001"
+      },
+      {
+        "rank": 19,
+        "factor": "no seed treatment",
+        "u": 0.135,
+        "stage": "G0",
+        "class": "SRC-Q",
+        "recoverable": "none",
+        "detect": "record",
+        "primary_rule": "D06-ST-001"
+      },
+      {
+        "rank": 20,
+        "factor": "earthing up missed",
+        "u": 0.125,
+        "stage": "G3",
+        "class": "SRC-Q",
+        "recoverable": "none",
+        "detect": "record",
+        "primary_rule": "D08-EU-001"
+      },
+      {
+        "rank": 21,
+        "factor": "no stage-one mulch under heat",
+        "u": 0.12,
+        "stage": "G1",
+        "class": "EST",
+        "recoverable": "none",
+        "detect": "record",
+        "primary_rule": "D07-HS-001"
+      },
+      {
+        "rank": 22,
+        "factor": "late potassium splits missed",
+        "u": 0.12,
+        "stage": "G4",
+        "class": "EST",
+        "recoverable": "none",
+        "detect": "record",
+        "primary_rule": "D04-PK-001"
+      },
+      {
+        "rank": 23,
+        "factor": "premature harvest",
+        "u": 0.12,
+        "stage": "G5",
+        "class": "SRC-D",
+        "recoverable": "none",
+        "detect": "record",
+        "primary_rule": "D09-MT-001"
+      },
+      {
+        "rank": 24,
+        "factor": "micronutrient spray missed",
+        "u": 0.11,
+        "stage": "G2_G3",
+        "class": "SRC-Q",
+        "recoverable": "partial",
+        "detect": "record",
+        "primary_rule": "D04-MC-001"
+      },
+      {
+        "rank": 25,
+        "factor": "nitrogen split missed",
+        "u": 0.1,
+        "stage": "G2",
+        "class": "EST",
+        "recoverable": "partial",
+        "detect": "record",
+        "primary_rule": "D04-NS-001"
+      },
+      {
+        "rank": 26,
+        "factor": "white grub from undecomposed FYM",
+        "u": 0.1,
+        "stage": "G0_G1",
+        "class": "EST",
+        "recoverable": "partial",
+        "detect": "observation",
+        "primary_rule": "D05-WG-001"
+      },
+      {
+        "rank": 27,
+        "factor": "leaf spot",
+        "u": 0.08,
+        "stage": "G4",
+        "class": "SRC-D",
+        "recoverable": "partial",
+        "detect": "observation",
+        "primary_rule": "D06-LS-001"
+      },
+      {
+        "rank": 28,
+        "factor": "no Trichoderma",
+        "u": 0.08,
+        "stage": "G0",
+        "class": "EST",
+        "recoverable": "partial",
+        "detect": "record",
+        "primary_rule": "D02-OM-003"
+      },
+      {
+        "rank": 29,
+        "factor": "late nitrogen after 80 DAP",
+        "u": 0.08,
+        "stage": "G3",
+        "class": "SRC-D",
+        "recoverable": "none",
+        "detect": "record",
+        "primary_rule": "D04-NS-003"
+      },
+      {
+        "rank": 30,
+        "factor": "shoot borer",
+        "u": 0.075,
+        "stage": "G2_G3",
+        "class": "SRC-D",
+        "recoverable": "partial",
+        "detect": "observation",
+        "primary_rule": "D05-SH-002"
+      },
+      {
+        "rank": 31,
+        "factor": "bud orientation wrong",
+        "u": 0.05,
+        "stage": "G1",
+        "class": "SRC-D",
+        "recoverable": "none",
+        "detect": "record",
+        "primary_rule": "D08-PL-001"
+      },
+      {
+        "rank": 32,
+        "factor": "planting depth wrong",
+        "u": 0.05,
+        "stage": "G1",
+        "class": "SRC-Q",
+        "recoverable": "none",
+        "detect": "record",
+        "primary_rule": "D08-PL-002"
+      },
+      {
+        "rank": 33,
+        "factor": "leaf caterpillar",
+        "u": 0.05,
+        "stage": "G2",
+        "class": "SRC-Q",
+        "recoverable": "partial",
+        "detect": "observation",
+        "primary_rule": "D05-LC-001"
+      },
+      {
+        "rank": 34,
+        "factor": "no solarization",
+        "u": 0.05,
+        "stage": "G0",
+        "class": "EST",
+        "recoverable": "none",
+        "detect": "record",
+        "primary_rule": "D02-SN-001"
+      },
+      {
+        "rank": 35,
+        "factor": "leaf roller",
+        "u": 0.03,
+        "stage": "G3",
+        "class": "SRC-Q",
+        "recoverable": "partial",
+        "detect": "observation",
+        "primary_rule": "D05-LR-001"
+      }
+    ],
+    "register_summary": {
+      "total_factors": 35,
+      "sourced_quantitatively": 10,
+      "descriptive_or_derived": 14,
+      "estimated": 11,
+      "irrecoverable": 24,
+      "irrecoverable_pct": 69,
+      "sensor_detectable": 7,
+      "record_detectable": 17,
+      "observation_detectable": 11
+    },
+    "scenarios": [
+      {
+        "code": "A",
+        "name": "excellent management",
+        "factors": [
+          {
+            "factor": "minor moisture fluctuation",
+            "u": 0.05
+          },
+          {
+            "factor": "minor foliar disease",
+            "u": 0.05
+          }
+        ],
+        "product": 0.9025,
+        "total_loss_pct": 9.8,
+        "yield_quintal_per_acre": 102,
+        "compare_to_target": "stretch target is 110 — close"
+      },
+      {
+        "code": "B",
+        "name": "good management with some slips",
+        "factors": [
+          {
+            "factor": "earthing up late",
+            "u": 0.1
+          },
+          {
+            "factor": "one micronutrient spray missed",
+            "u": 0.06
+          },
+          {
+            "factor": "minor waterlogging",
+            "u": 0.1
+          }
+        ],
+        "product": 0.7614,
+        "total_loss_pct": 23.9,
+        "yield_quintal_per_acre": 86,
+        "compare_to_target": "target is 90 — matches"
+      },
+      {
+        "code": "C",
+        "name": "typical or poor management",
+        "factors": [
+          {
+            "factor": "no broad ridge",
+            "u": 0.167
+          },
+          {
+            "factor": "no mulch, rot at 25 percent",
+            "u": 0.25
+          },
+          {
+            "factor": "earthing up missed",
+            "u": 0.125
+          },
+          {
+            "factor": "no micronutrients",
+            "u": 0.1
+          },
+          {
+            "factor": "late potassium missed",
+            "u": 0.1
+          }
+        ],
+        "product": 0.443,
+        "total_loss_pct": 55.7,
+        "yield_quintal_per_acre": 50,
+        "compare_to_observed": "Maharashtra state average is 53 — agreement within 6 percent"
+      },
+      {
+        "code": "D",
+        "name": "disease event on otherwise good management",
+        "factors": [
+          {
+            "factor": "scenario B factors combined",
+            "u": 0.239
+          },
+          {
+            "factor": "soft rot at 60 percent",
+            "u": 0.6
+          }
+        ],
+        "product": 0.3044,
+        "total_loss_pct": 69.6,
+        "yield_quintal_per_acre": 34,
+        "economic_note": "At 30 quintal and Rs 5,000 per quintal the net return is approximately zero. One disease event erases the season."
+      }
+    ],
+    "prediction_staging": [
+      {
+        "stage": "pre_season",
+        "dap": [
+          -60,
+          0
+        ],
+        "interval_pct": 25,
+        "basis": "variety, soil test, plan, field history"
+      },
+      {
+        "stage": "g1_end",
+        "dap": [
+          35,
+          45
+        ],
+        "interval_pct": 22,
+        "basis": "establishment count — the first real measurement and a hard ceiling"
+      },
+      {
+        "stage": "mid_season",
+        "dap": [
+          90,
+          120
+        ],
+        "interval_pct": 20,
+        "basis": "sensor record, weather record, tiller count"
+      },
+      {
+        "stage": "pre_harvest_observation_only",
+        "dap": [
+          180,
+          240
+        ],
+        "interval_pct": 12,
+        "basis": "foliage condition and crop age only"
+      },
+      {
+        "stage": "pre_harvest_with_sampling",
+        "dap": [
+          180,
+          240
+        ],
+        "interval_pct": 8,
+        "basis": "destructive sample weight"
+      }
+    ],
+    "why_prediction_is_harder_than_sugarcane": {
+      "comparison": [
+        {
+          "aspect": "yield organ",
+          "sugarcane": "above ground, visible",
+          "ginger": "below ground, invisible"
+        },
+        {
+          "aspect": "mid-season measurement",
+          "sugarcane": "height, millable cane count, Brix",
+          "ginger": "leaves and tillers only"
+        },
+        {
+          "aspect": "non-destructive assessment",
+          "sugarcane": "possible",
+          "ginger": "not possible"
+        },
+        {
+          "aspect": "maximum single-factor loss",
+          "sugarcane": "about 30 percent",
+          "ginger": "up to 90 percent from soft rot"
+        }
+      ],
+      "partial_infection_hazard": "A partially infected crop stays green above ground while the rhizome is already compromised. The field looks healthy and the yield is not there, which is why destructive sampling is not optional.",
+      "honest_position": "Ginger yield prediction will not match sugarcane accuracy, and that should be stated. But prediction is not the main value of this domain — knowing which factor puts how much at risk, before it happens, does not require an accurate forecast."
+    },
+    "gap_attribution": {
+      "method": [
+        "start from the ceiling",
+        "apply the u-value of every recorded omission or event, grouped to avoid double counting",
+        "compute expected loss sub-additively",
+        "compare expected yield against actual yield",
+        "record the unexplained residual"
+      ],
+      "residual_meaning": "A large unexplained residual means either a factor is missing from the register or a u-value is wrong. Both are useful findings.",
+      "required_records": [
+        {
+          "record": "variety, seed source, treatment",
+          "stage": "G0",
+          "for_factors": [
+            "wrong variety",
+            "no seed treatment",
+            "poor seed"
+          ]
+        },
+        {
+          "record": "planting layout and date",
+          "stage": "G0",
+          "for_factors": [
+            "no broad ridge",
+            "late planting"
+          ]
+        },
+        {
+          "record": "establishment count",
+          "dap": 35,
+          "for_factors": [
+            "ceiling for the season"
+          ]
+        },
+        {
+          "record": "saturation events in hours",
+          "stage": "all",
+          "for_factors": [
+            "waterlogging at G1, G2, G3",
+            "cyclonic saturation"
+          ]
+        },
+        {
+          "record": "moisture stress days",
+          "stage": "G3_G4",
+          "for_factors": [
+            "critical window stress"
+          ]
+        },
+        {
+          "record": "mulch stages completed",
+          "dap": [
+            0,
+            60,
+            120
+          ],
+          "for_factors": [
+            "mulch programme"
+          ]
+        },
+        {
+          "record": "earthing up date",
+          "dap": [
+            75,
+            90
+          ],
+          "for_factors": [
+            "earthing up missed"
+          ]
+        },
+        {
+          "record": "micronutrient sprays",
+          "dap": [
+            45,
+            75
+          ],
+          "for_factors": [
+            "micronutrient missed"
+          ]
+        },
+        {
+          "record": "potassium splits",
+          "dap": [
+            110,
+            140
+          ],
+          "for_factors": [
+            "late potassium missed"
+          ]
+        },
+        {
+          "record": "rot incidence percent",
+          "stage": "harvest",
+          "for_factors": [
+            "soft rot"
+          ]
+        },
+        {
+          "record": "sample weights",
+          "dap": [
+            120,
+            180
+          ],
+          "for_factors": [
+            "prediction interval"
+          ]
+        },
+        {
+          "record": "actual yield and grade split",
+          "stage": "harvest",
+          "for_factors": [
+            "validation"
+          ]
+        }
+      ]
+    },
+    "economic_conversion": {
+      "assumptions": {
+        "ceiling_quintal_per_acre": 113,
+        "price_per_quintal": 4000
+      },
+      "factor_values": [
+        {
+          "factor": "soft rot full outbreak",
+          "u": 0.7,
+          "quintal_lost": 79,
+          "value_inr": 316000,
+          "prevention_cost_inr": 24500
+        },
+        {
+          "factor": "no mulch programme",
+          "u": 0.2,
+          "quintal_lost": 23,
+          "value_inr": 90400,
+          "prevention_cost_inr": 15000
+        },
+        {
+          "factor": "late planting",
+          "u": 0.2,
+          "quintal_lost": 23,
+          "value_inr": 90400,
+          "prevention_cost_inr": 0
+        },
+        {
+          "factor": "no broad ridge",
+          "u": 0.167,
+          "quintal_lost": 19,
+          "value_inr": 75500,
+          "prevention_cost_inr": 0
+        },
+        {
+          "factor": "wrong variety",
+          "u": 0.138,
+          "quintal_lost": 16,
+          "value_inr": 62400,
+          "prevention_cost_inr": 0
+        },
+        {
+          "factor": "no seed treatment",
+          "u": 0.135,
+          "quintal_lost": 15,
+          "value_inr": 61000,
+          "prevention_cost_inr": 2500
+        },
+        {
+          "factor": "earthing up missed",
+          "u": 0.125,
+          "quintal_lost": 14,
+          "value_inr": 56500,
+          "prevention_cost_inr": 6000
+        },
+        {
+          "factor": "late potassium missed",
+          "u": 0.12,
+          "quintal_lost": 14,
+          "value_inr": 54200,
+          "prevention_cost_inr": 3000
+        },
+        {
+          "factor": "micronutrient missed",
+          "u": 0.11,
+          "quintal_lost": 12,
+          "value_inr": 49700,
+          "prevention_cost_inr": 3500
+        }
+      ],
+      "zero_cost_decisions": {
+        "items": [
+          "timely planting",
+          "broad ridge layout",
+          "correct variety",
+          "timely earthing up"
+        ],
+        "combined_value_inr": 284800,
+        "combined_cost_inr": 6000,
+        "note": "Three of the four cost nothing at all; the fourth costs labour. All four depend on doing something at the right time rather than on spending money."
+      },
+      "grading_factor": {
+        "spread_multiple": 2.7,
+        "worked": {
+          "quintal": 90,
+          "low_grade_price": 6000,
+          "high_grade_price": 16000,
+          "difference_inr": 900000
+        },
+        "comparison": "This exceeds every yield factor in the knowledge base, including a full soft rot outbreak.",
+        "implication": "An economic model built on yield alone misses the largest lever. Domain 11 must feed both yield and grade into Domain 13."
+      }
+    },
+    "advisory_prioritisation": {
+      "formula": "priority_score = u * (recoverability == 'none' ? 2.0 : 1.0) * (window_open_now ? 1.5 : 1.0)",
+      "rationale": "An irrecoverable factor deserves more weight than a recoverable one of the same size, and a factor whose action window is open now deserves more than one that can be addressed later.",
+      "highest_priority_calendar": [
+        {
+          "dap": -60,
+          "action": "variety, seed source, seed treatment",
+          "combined_u": 0.4
+        },
+        {
+          "dap": -20,
+          "action": "broad ridge layout",
+          "u": 0.167
+        },
+        {
+          "dap": 0,
+          "action": "planting by 7 June",
+          "u": 0.2
+        },
+        {
+          "dap": [
+            0,
+            60,
+            120
+          ],
+          "action": "three mulch stages",
+          "u": 0.2
+        },
+        {
+          "dap": [
+            45,
+            75
+          ],
+          "action": "micronutrient sprays",
+          "u": 0.11
+        },
+        {
+          "dap": [
+            75,
+            90
+          ],
+          "action": "earthing up before flowering",
+          "u": 0.125
+        },
+        {
+          "dap": [
+            110,
+            140
+          ],
+          "action": "potassium splits",
+          "u": 0.12
+        },
+        {
+          "dap": "any",
+          "action": "saturation over 12 hours",
+          "u": "0.30 to 0.70"
+        }
+      ]
+    },
+    "interdependence_caveat": {
+      "issue": "The sub-additive formula assumes factors are independent. In ginger they are not.",
+      "examples": [
+        "no mulch raises rot incidence — two factors, one chain",
+        "nematodes open the entry route for rot and wilt",
+        "no earthing up leaves rhizomes exposed, admitting rhizome fly, which admits rot",
+        "heavy FYM raises weed pressure, which forces more weeding, which injures rhizomes, which admits rot"
+      ],
+      "consequence": "Multiplying every link of a chain double counts the same loss.",
+      "handling": "Group linked factors and apply the terminal u-value once. Scenario C follows this — rot and mulch are combined into a single 0.250 term rather than counted separately.",
+      "full_map": {
+        "status": "FIELD",
+        "effort": "three to four seasons"
+      }
+    }
+  },
+  "rules": [
+    {
+      "rule_id": "D11-FM-001",
+      "category": "FM",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Cumulative yield loss is being computed from multiple factors",
+        "marathi": "अनेक घटकांवरून एकूण उत्पादन घट मोजली जात आहे"
+      },
+      "action": {
+        "english": "Use the sub-additive formula: total loss equals one minus the product of one minus each u-value. Never add the u-values.",
+        "marathi": "sub-additive सूत्र वापरा — एकूण घट = १ वजा (प्रत्येक घटकाच्या १ वजा u यांचा गुणाकार). u मूल्यांची बेरीज कधीही करू नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "Losses act on what remains, not on the original crop. Five factors of 0.20 each sum to 1.00, which would mean zero yield and is impossible; multiplied they give 0.67 loss with 33 percent remaining, which is realistic.",
+        "yield_impact": "Method rather than a factor. Wrong aggregation produces impossible predictions.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "Core Layer C9.1"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "cumulative_loss_pct",
+        "u_values_applied"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The additive error is easy to make and produces confident nonsense. With six moderate factors it would predict a negative harvest, which no farmer would believe and which would discredit everything else the engine says.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-FM-002",
+      "category": "FM",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "A source reports a percentage GAIN from a practice and it is being entered as a u-value",
+        "marathi": "स्रोत एखाद्या पद्धतीचा टक्केवारीत फायदा सांगतो आणि तो u मूल्य म्हणून नोंदवला जात आहे"
+      },
+      "action": {
+        "english": "Convert before entering. A gain of g corresponds to a loss of g divided by one plus g. A reported 20 percent gain is a u-value of 0.167, not 0.20.",
+        "marathi": "नोंदवण्यापूर्वी रूपांतर करा. g टक्के फायदा म्हणजे g ÷ (१ + g) एवढी घट. २०% फायदा म्हणजे u = ०.१६७, ०.२० नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Sources usually report the benefit of doing something rather than the cost of not doing it. The two are not the same number, because the denominators differ.",
+        "yield_impact": "The error is small per factor and compounds across six or more, systematically overstating avoidable loss.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Domain 11 conversion table"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "u_values_applied",
+        "u_value_source_class"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Both the broad ridge figure at 15 to 20 percent and the drip figures at 35 to 40 percent are reported as gains. Both needed conversion, and the drip figure was not used for planning anyway because it comes from an equipment supplier.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-FM-003",
+      "category": "FM",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "A source states a loss directly",
+        "marathi": "स्रोत थेट घट सांगतो"
+      },
+      "action": {
+        "english": "Use it as given with no conversion. Earthing up skipped is stated as 10 to 15 percent loss, so the u-value is 0.125 directly.",
+        "marathi": "जसे आहे तसे वापरा, रूपांतर करू नका. उटाळणी न केल्यास १० ते १५% घट असे थेट सांगितले आहे, म्हणून u = ०.१२५ थेट."
+      },
+      "reasoning": {
+        "agronomic_basis": "Applying the gain-to-loss conversion to a figure already expressed as a loss would understate it. The conversion applies in one direction only.",
+        "yield_impact": "Prevents a systematic understatement of directly stated losses.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon earthing up loss statement"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "u_values_applied",
+        "u_value_source_class"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Worth stating explicitly because the two rules look contradictory unless the direction is clear. Read the source wording, not the number.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-CL-001",
+      "category": "CL",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Ceiling is being set for a yield computation AND ceiling_basis is unverified",
+        "marathi": "उत्पादन गणितासाठी कमाल मर्यादा ठरवली जात आहे पण तिचा आधार निश्चित नाही"
+      },
+      "action": {
+        "english": "Use the range 94 to 113 quintal per acre and mark it as unresolved. The published variety trial yields do not state which planting layout was used, so whether the broad ridge multiplier applies on top is unknown.",
+        "marathi": "९४ ते ११३ क्विंटल प्रति एकर ही श्रेणी वापरा आणि ती अनिश्चित असल्याचे नोंदवा. जातींचे प्रकाशित उत्पादन आकडे कोणत्या लागवड पद्धतीत घेतले होते हे स्रोतात नाही, म्हणून रुंद वरंब्याचा गुणक त्यावर लागू होतो का हे माहीत नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Mahima is rated at 23.2 tonnes per hectare, about 94 quintal per acre. Broad ridge is reported to give 15 to 20 percent more. If the trials already used broad ridge the multiplier is already included and the ceiling is 94; if not, it is 113.",
+        "yield_impact": "Every u-value computation and every economic scenario scales with this number.",
+        "confidence_score": 0.7,
+        "source_tier": "A",
+        "references": [
+          "Agrowon variety yields",
+          "Agrowon broad ridge gain"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle",
+          "domain_10_institutional"
+        ]
+      },
+      "farm_brain_schema": [
+        "ceiling_quintal_per_acre",
+        "ceiling_basis",
+        "variety",
+        "planting_layout"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "VERIFY",
+      "kannad_note": "The single blocking open item in this domain, and it resolves with one question to Kasbe Digraj. There is weak indirect support for 113 — using it makes the scenario computation agree with the state average, while 94 agrees less well.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-CL-002",
+      "category": "CL",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Ceiling being explained to a farmer",
+        "marathi": "कमाल मर्यादा शेतकऱ्याला समजावून सांगायची आहे"
+      },
+      "action": {
+        "english": "State that the ceiling is the theoretical maximum with all u-values at zero, which never happens. Present the target range of 60, 90 and 110 as the realistic frame, and the state average of 53 as the benchmark.",
+        "marathi": "कमाल मर्यादा म्हणजे सर्व घटक शून्य असल्यास मिळणारे सैद्धांतिक उत्पादन — आणि तसे प्रत्यक्षात कधीच होत नाही. वास्तववादी चौकट म्हणून ६०, ९० आणि ११० ही श्रेणी द्या, आणि राज्य सरासरी ५३ हा संदर्भ."
+      },
+      "reasoning": {
+        "agronomic_basis": "Presenting the ceiling as an expectation sets up failure. Scenario A with excellent management computes to 102, which is below the ceiling because some loss is unavoidable.",
+        "yield_impact": "None. Sets expectations correctly, which affects whether the advice is believed.",
+        "confidence_score": 0.82,
+        "source_tier": "A",
+        "references": [
+          "Domain 1 yield targets",
+          "Domain 11 scenario A"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle"
+        ]
+      },
+      "farm_brain_schema": [
+        "ceiling_quintal_per_acre",
+        "yield_target_quintal_per_acre",
+        "predicted_yield_quintal_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Reaching 90 is about 70 percent above the state average and 110 is more than double it. That is the honest framing of what good management is worth here, and it is more persuasive than a ceiling number.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-DC-001",
+      "category": "DC",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "Two or more rules from different domains reference the same underlying factor",
+        "marathi": "वेगवेगळ्या Domain मधील दोन किंवा अधिक नियम एकाच मूळ घटकाकडे निर्देश करतात"
+      },
+      "action": {
+        "english": "Apply the u-value ONCE. Rules are written per domain but the yield computation is global. Twelve shared factors are named explicitly in the schema; check membership before applying any u-value.",
+        "marathi": "u मूल्य एकदाच लागू करा. नियम Domain निहाय लिहिलेले आहेत पण उत्पादनाचे गणित एकत्रित आहे. बारा सामाईक घटक schema मध्ये स्पष्ट नावानिशी दिलेले आहेत — कोणतेही u मूल्य लागू करण्यापूर्वी ते तपासा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Cross-file audits found twelve factors appearing in more than one domain. Post-monsoon cyclonic saturation appears in three, the mulch programme in three, late planting in three, and the pre-harvest interval block in three. Each was written separately because each domain needed it, but the loss occurs once.",
+        "yield_impact": "Prevents systematic overstatement of avoidable loss, which would make every prediction pessimistic and every economic case overstated.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Domain 11 double counting policy",
+          "cross-file audit findings"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "u_values_applied",
+        "interdependence_group",
+        "cumulative_loss_pct"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This problem only became visible when the domains were audited against each other after being written. It is the strongest argument for keeping the rule base in one queryable store rather than in twelve separate files.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-DC-002",
+      "category": "DC",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "Factors that share a causal chain are being multiplied together",
+        "marathi": "एकाच कारण-साखळीतील घटक एकत्र गुणले जात आहेत"
+      },
+      "action": {
+        "english": "Group them and apply the terminal u-value once. Do not multiply each link. Pest wound leading to rot, or FYM leading to weeds leading to weeding injury leading to rot, is one loss with several steps.",
+        "marathi": "त्यांना एकत्र गटात घ्या आणि शेवटच्या टप्प्याचे u मूल्य एकदाच लावा — प्रत्येक दुवा वेगळा गुणू नका. किडीची जखम ते कूज, किंवा शेणखत ते तण ते खुरपणीतील इजा ते कूज — ही अनेक टप्प्यांची एकच घट आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "The sub-additive formula assumes independence and in ginger the factors are not independent. Every major pest is a gateway to rot, and mechanical injury reaches the same endpoint without any pest. Multiplying each link counts the same rhizome loss several times.",
+        "yield_impact": "Prevents the largest source of overstatement, because the rot pathway is both the biggest u-value and the most connected.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Domain 5 pest to rot chain",
+          "Domain 11 interdependence caveat"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_5_pest",
+          "domain_6_disease"
+        ]
+      },
+      "farm_brain_schema": [
+        "u_values_applied",
+        "interdependence_group",
+        "rot_incidence_pct"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Scenario C follows this rule — rot and mulch are combined into a single 0.250 term rather than counted as two. Had they been multiplied separately the scenario would have predicted about 40 quintal instead of 50, and the agreement with the state average would have been lost.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-VL-001",
+      "category": "VL",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "The u-value method is being justified to a partner or reviewer",
+        "marathi": "u मूल्य पद्धतीचे समर्थन भागीदार किंवा परीक्षकासमोर करायचे आहे"
+      },
+      "action": {
+        "english": "Present the validation. Scenario C uses five independently sourced u-values with no tuning and computes 50 quintal per acre. The Maharashtra state average is 53. Agreement is within about 6 percent.",
+        "marathi": "पडताळणी मांडा. परिस्थिती C मध्ये स्वतंत्रपणे गोळा केलेली पाच u मूल्ये, कोणतेही समायोजन न करता, ५० क्विंटल प्रति एकर देतात. महाराष्ट्राचे प्रत्यक्ष राज्य सरासरी उत्पादन ५३ आहे. फरक सुमारे ६%."
+      },
+      "reasoning": {
+        "agronomic_basis": "The five factors were gathered from separate sources over separate research sessions with no reference to the state average. That the aggregate reproduces the observed figure supports three things: the u-values are approximately right, the ceiling-to-average gap is management rather than environment, and the gap is therefore addressable.",
+        "yield_impact": "None directly. It is the numerical basis of the product's commercial argument.",
+        "confidence_score": 0.75,
+        "source_tier": "A",
+        "references": [
+          "Directorate of Agriculture Maharashtra 2023",
+          "Domain 11 scenario C"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "cumulative_loss_pct",
+        "predicted_yield_quintal_per_acre",
+        "ceiling_quintal_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The strongest internal check available without field data. It says the difference between 53 and 90 quintal is not climate or soil but timing, and timing is exactly what the engine addresses.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-VL-002",
+      "category": "VL",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "The validation result is being presented",
+        "marathi": "पडताळणीचा निकाल मांडला जात आहे"
+      },
+      "action": {
+        "english": "State the limitation alongside it. This is one validation point and it could be coincidence. Twenty-two of thirty-five u-values are estimates. Real validation comes from first-season gap attribution, not from this arithmetic.",
+        "marathi": "सोबत मर्यादाही सांगा. ही एकच पडताळणी आहे आणि ती योगायोगही असू शकते. पस्तीसपैकी बावीस u मूल्ये अंदाजित आहेत. खरी पडताळणी पहिल्या हंगामाच्या दरी-विश्लेषणातून येईल, या गणितातून नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "A single agreement between a computation and an observation is suggestive rather than conclusive. Overstating it would be the same error the knowledge base has avoided elsewhere — presenting an estimate as a measurement.",
+        "yield_impact": "None. Protects credibility at the point where it is most tempting to overclaim.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "Domain 11 register summary",
+          "Domain 11 validation caveat"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "u_value_source_class",
+        "cumulative_loss_pct"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The validation is the most quotable result in the knowledge base, which is exactly why the caveat has to travel with it. A technical reviewer will ask how many points the check rests on.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-UV-001",
+      "category": "UV",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "A u-value is being applied to a computation",
+        "marathi": "गणितात u मूल्य वापरले जात आहे"
+      },
+      "action": {
+        "english": "Carry its source class with it. Ten of thirty-five are quantitatively sourced, fourteen are descriptive or derived, and eleven are estimates. Report the aggregate confidence accordingly rather than presenting all values as equal.",
+        "marathi": "u मूल्यासोबत त्याचा स्रोत वर्ग वापरा. पस्तीसपैकी दहा संख्यात्मक स्रोतातून, चौदा वर्णनात्मक किंवा derived, आणि अकरा अंदाजित आहेत. सर्व मूल्ये सारखी विश्वासार्ह म्हणून दाखवू नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "A prediction built mostly on estimates should not be reported with the same confidence as one built on measured values. Carrying the class through the computation lets the interval reflect the evidence.",
+        "yield_impact": "None. Makes the stated uncertainty honest.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Domain 11 u-value register",
+          "Domain 1 source class definitions"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "u_values_applied",
+        "u_value_source_class",
+        "prediction_interval_pct"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The eleven estimated values are concentrated in the middle of the register. The largest factors — soft rot, wilt, mulch, broad ridge, variety, seed treatment, earthing up, micronutrients — are mostly sourced, which is the right way round.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-UV-002",
+      "category": "UV",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "First-season records become available for a factor",
+        "marathi": "एखाद्या घटकाची पहिल्या हंगामातील नोंद उपलब्ध झाली"
+      },
+      "action": {
+        "english": "Update that u-value from EST to FIELD class and record both the old and new values. Do not overwrite the original — the change itself is the learning.",
+        "marathi": "त्या u मूल्याचा वर्ग EST वरून FIELD मध्ये बदला आणि जुने व नवे दोन्ही मूल्य नोंदवा. मूळ मूल्य पुसू नका — बदल हाच शिकण्याचा भाग आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Twenty-two of thirty-five values are estimates and can only become measurements through recorded outcomes. Keeping the original alongside the revision shows how far the estimate was off, which is information about the estimation method itself.",
+        "yield_impact": "None this season. It is the mechanism by which the whole register improves.",
+        "confidence_score": 0.82,
+        "source_tier": "B",
+        "references": [
+          "Domain 11 gap attribution",
+          "Domain 12 learning layer"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "u_value_source_class",
+        "u_values_applied",
+        "season_record_complete"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This is where the product actually learns, and it is bookkeeping rather than machine learning. Three or four seasons of this produces a Kannad-specific register that exists in no publication.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-UV-003",
+      "category": "UV",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Factors are being ranked for attention",
+        "marathi": "घटकांचा प्राधान्यक्रम ठरवला जात आहे"
+      },
+      "action": {
+        "english": "Note that twenty-four of thirty-five factors are irrecoverable, about 69 percent. That means most advisory has to be preventive and issued before the window opens, not diagnostic after symptoms appear.",
+        "marathi": "पस्तीसपैकी चोवीस घटक भरून निघत नाहीत — सुमारे ६९%. म्हणजे बहुतांश सल्ला प्रतिबंधात्मक असावा लागतो आणि खिडकी उघडण्यापूर्वी द्यावा लागतो, लक्षणे दिसल्यानंतरचा निदानात्मक नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "For an irrecoverable factor, detection after the event has no remedial value. The advisory has to fire on the environmental precondition or the calendar rather than on the symptom.",
+        "yield_impact": "Determines the fundamental shape of the advisory engine.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Domain 11 register summary",
+          "Domain 6 trigger-based escalation"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "u_values_applied",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This is why the false alarm rate has to be tolerated. Ten unnecessary drainage inspections cost ten walks; one missed saturation event costs most of the crop.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-SC-001",
+      "category": "SC",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Pre-season planning AND a yield expectation is requested",
+        "marathi": "हंगामापूर्व नियोजन आणि उत्पादनाची अपेक्षा विचारली"
+      },
+      "action": {
+        "english": "Present the scenarios rather than a single number. Excellent management gives about 102 quintal, good management with some slips about 86, typical management about 50, and a disease event on good management about 34.",
+        "marathi": "एक आकडा न देता परिस्थिती मांडा. उत्कृष्ट व्यवस्थापन सुमारे १०२ क्विंटल, चांगले व्यवस्थापन काही चुकांसह सुमारे ८६, सामान्य व्यवस्थापन सुमारे ५०, आणि चांगल्या व्यवस्थापनावर रोगाचा फटका बसल्यास सुमारे ३४."
+      },
+      "reasoning": {
+        "agronomic_basis": "The scenarios make the consequences of specific omissions visible rather than abstract. The gap between B at 86 and C at 50 is five common management omissions, which is a concrete and actionable comparison.",
+        "yield_impact": "None. Makes the value of the advisory legible before the season starts.",
+        "confidence_score": 0.78,
+        "source_tier": "A",
+        "references": [
+          "Domain 11 scenario computations"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "predicted_yield_quintal_per_acre",
+        "yield_target_quintal_per_acre",
+        "prediction_interval_pct"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Scenario D is the one worth dwelling on. At 34 quintal and Rs 5,000 per quintal the net return is roughly zero, which shows that one disease event erases a season of otherwise good work.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-SC-002",
+      "category": "SC",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Recorded omissions during the season are being turned into a revised expectation",
+        "marathi": "हंगामातील नोंदवलेल्या चुकांवरून सुधारित अपेक्षा काढली जात आहे"
+      },
+      "action": {
+        "english": "Recompute the expectation from the ceiling and the recorded factors, applying the grouping rules. Show which factors caused which part of the reduction.",
+        "marathi": "कमाल मर्यादेपासून सुरुवात करून नोंदवलेल्या घटकांवरून अपेक्षा पुन्हा मोजा, गटबद्ध करण्याचे नियम पाळून. कोणत्या घटकामुळे किती घट झाली ते दाखवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "A revised expectation that shows its working is actionable in a way that a bare number is not. If earthing up was late and that accounts for 12.5 percent, the farmer learns something for next season even though this season cannot be recovered.",
+        "yield_impact": "None directly. Converts a recorded omission into transferable knowledge.",
+        "confidence_score": 0.78,
+        "source_tier": "A",
+        "references": [
+          "Domain 11 gap attribution method"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "cumulative_loss_pct",
+        "u_values_applied",
+        "predicted_yield_quintal_per_acre",
+        "interdependence_group"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Showing the working matters more than the number here. Most of these factors are irrecoverable, so the value of the revised estimate is what it teaches for the next season.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-PR-001",
+      "category": "PR",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "A yield prediction is being issued",
+        "marathi": "उत्पादनाचा अंदाज दिला जात आहे"
+      },
+      "action": {
+        "english": "Always issue it with an interval and name the stage: pre-season plus or minus 25 percent, end of G1 plus or minus 22, mid-season plus or minus 20, pre-harvest plus or minus 12 without sampling and plus or minus 8 with it.",
+        "marathi": "अंदाज नेहमी अंतरालासह द्या आणि टप्पा सांगा — हंगामापूर्व ±२५%, G1 अखेर ±२२%, मध्य-हंगाम ±२०%, काढणीपूर्व नमुन्याशिवाय ±१२% आणि नमुना घेतल्यास ±८%."
+      },
+      "reasoning": {
+        "agronomic_basis": "A point estimate implies precision the method does not have, particularly when twenty-two of thirty-five inputs are estimates and the yield organ cannot be observed. The interval is the honest part of the prediction.",
+        "yield_impact": "None. Determines whether the prediction is trusted after the first season.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Core C9.2",
+          "Domain 11 prediction staging"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "predicted_yield_quintal_per_acre",
+        "prediction_interval_pct",
+        "prediction_stage"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "The intervals are estimates and will need correcting after a season. Stating them at all is more important than stating them precisely — a farmer who is told plus or minus 20 percent and gets a result inside it will trust the next prediction.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-PR-002",
+      "category": "PR",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G4",
+      "trigger": {
+        "english": "Pre-harvest prediction requested AND sample_dig_180_done is false",
+        "marathi": "काढणीपूर्व अंदाज विचारला पण नमुना खोदणी झालेली नाही"
+      },
+      "action": {
+        "english": "Use the wider interval of plus or minus 12 percent and say why. Explain that digging one plant would narrow it to about plus or minus 8 — a one third improvement in accuracy for the cost of one plant.",
+        "marathi": "रुंद अंतराल ±१२% वापरा आणि कारण सांगा. एक रोप उकरून तपासल्यास ते ±८% पर्यंत घट्ट होते — एका रोपाच्या खर्चात अचूकता सुमारे एक तृतीयांश सुधारते."
+      },
+      "reasoning": {
+        "agronomic_basis": "The yield organ is below ground and there is no non-destructive substitute. A partially infected crop stays green above ground while the rhizome is compromised, so surface appearance is systematically unreliable near harvest.",
+        "yield_impact": "None on yield. Changes forecast accuracy, which affects every marketing and storage decision built on it.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Domain 1 destructive sampling rule",
+          "Domain 6 partial infection note"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest",
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle"
+        ]
+      },
+      "farm_brain_schema": [
+        "sample_dig_180_done",
+        "prediction_interval_pct",
+        "prediction_stage",
+        "predicted_yield_quintal_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "Quantifying the benefit is what makes the instruction persuasive. Dig one plant is easy to ignore; it improves your forecast by a third is not.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-PR-003",
+      "category": "PR",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G1",
+      "trigger": {
+        "english": "dap between 35 and 45 AND establishment_pct recorded",
+        "marathi": "३५ ते ४५ दिवस आणि उगवण टक्केवारी नोंदवली आहे"
+      },
+      "action": {
+        "english": "Reset the ceiling to the establishment percentage. Ginger has no ratoon and gap filling produces plants that never catch up, so establishment is a hard ceiling for the season rather than a starting point.",
+        "marathi": "कमाल मर्यादा उगवण टक्केवारीवर पुन्हा ठरवा. अद्रकात खोडवा नाही आणि नांगी भरलेली रोपे कधीच बरोबरीला येत नाहीत — म्हणून उगवण ही हंगामाची कमाल मर्यादा आहे, सुरुवात नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Establishment count is the first real measurement of the season and it caps everything downstream. A crop at 70 percent establishment cannot exceed 70 percent of its potential no matter how well it is managed afterwards.",
+        "yield_impact": "Directly proportional. It is the multiplier on every subsequent factor.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Domain 1 establishment ceiling",
+          "Domain 8 gap filling assessment"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle"
+        ]
+      },
+      "farm_brain_schema": [
+        "establishment_pct",
+        "ceiling_quintal_per_acre",
+        "prediction_stage",
+        "prediction_interval_pct"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "This is the point where an eight-month forecast first becomes grounded in something measured rather than assumed. It is also the earliest point at which a farmer can be told honestly that the season will be below target.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-PR-004",
+      "category": "PR",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Prediction accuracy is being compared against sugarcane or another crop",
+        "marathi": "अंदाजाच्या अचूकतेची तुलना उसाशी किंवा दुसऱ्या पिकाशी केली जात आहे"
+      },
+      "action": {
+        "english": "State plainly that ginger prediction will not match sugarcane accuracy because the yield organ is invisible. Then state what this domain is actually for — knowing which factor puts how much at risk, before it happens, which does not require an accurate forecast.",
+        "marathi": "स्पष्ट सांगा — अद्रकाचा अंदाज उसाइतका अचूक असणार नाही, कारण उत्पादन अवयव जमिनीखाली आहे. मग या Domain चा खरा उपयोग सांगा — कोणता घटक किती उत्पादन धोक्यात घालतो हे आधी कळणे, आणि त्यासाठी अचूक अंदाजाची गरज नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Sugarcane offers height, millable cane count and Brix as non-destructive mid-season measurements. Ginger offers leaves and tillers, which correlate weakly with rhizome mass. Claiming equivalent accuracy would fail at the first harvest.",
+        "yield_impact": "None. Sets expectations that the method can meet.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "Domain 11 comparison table"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "prediction_interval_pct",
+        "prediction_stage"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The honest position is also the more useful one. Prediction is a by-product of this domain; risk quantification before the event is the product.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-GA-001",
+      "category": "GA",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Harvest complete AND actual yield recorded",
+        "marathi": "काढणी पूर्ण आणि प्रत्यक्ष उत्पादन नोंदवले"
+      },
+      "action": {
+        "english": "Run the gap attribution. Start from the ceiling, apply the u-value of every recorded omission or event with grouping applied, compute the expected loss, compare against actual, and record the unexplained residual.",
+        "marathi": "दरी-विश्लेषण चालवा. कमाल मर्यादेपासून सुरुवात करा, नोंदवलेल्या प्रत्येक चुकीचे किंवा घटनेचे u मूल्य गटबद्ध करून लावा, अपेक्षित घट काढा, प्रत्यक्ष उत्पादनाशी तुलना करा, आणि न समजलेला उर्वरित भाग नोंदवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The residual is the informative part. A large unexplained gap means either a factor is missing from the register or a u-value is wrong, and both are findings worth having.",
+        "yield_impact": "None this season. It is the mechanism that turns estimates into measurements.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Core C9.3",
+          "Domain 11 gap attribution method"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": [
+          "domain_9_harvest"
+        ]
+      },
+      "farm_brain_schema": [
+        "yield_quintal_per_acre_actual",
+        "gap_attributed_pct",
+        "gap_unexplained_pct",
+        "u_values_applied",
+        "ceiling_quintal_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This is the single step that makes the first season worth more than the advice it produced. Without it the season generates a harvest and no learning.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-GA-002",
+      "category": "GA",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Season beginning AND season_record_complete is false",
+        "marathi": "हंगाम सुरू होत आहे आणि नोंदवही तयार नाही"
+      },
+      "action": {
+        "english": "Set up the twelve required records at the start. Without them the gap attribution at harvest cannot run, and the whole season produces advice but no learning.",
+        "marathi": "हंगामाच्या सुरुवातीलाच बारा आवश्यक नोंदी ठरवून घ्या. त्यांशिवाय काढणीच्या वेळी दरी-विश्लेषण चालवता येत नाही, आणि संपूर्ण हंगाम सल्ला देतो पण शिकवत काहीच नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Each required record maps to specific factors in the register. Missing records mean those factors cannot be attributed, and the residual absorbs them, which makes the residual uninformative.",
+        "yield_impact": "None directly. It is the precondition for the register ever improving.",
+        "confidence_score": 0.82,
+        "source_tier": "A",
+        "references": [
+          "Domain 11 required records",
+          "Domain 12 minimum record set"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "season_record_complete",
+        "u_values_applied",
+        "gap_unexplained_pct"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Records cannot be reconstructed after the season. A missed earthing-up date or an unrecorded saturation event is simply lost, and the residual grows for no informative reason.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-GA-003",
+      "category": "GA",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G5",
+      "trigger": {
+        "english": "Gap attribution complete AND gap_unexplained_pct is large",
+        "marathi": "दरी-विश्लेषण झाले आणि न समजलेला भाग मोठा आहे"
+      },
+      "action": {
+        "english": "Treat it as a finding, not a failure. Investigate whether a factor is missing from the register or whether one of the applied u-values is wrong. Record the hypothesis for the next season.",
+        "marathi": "हा अपयश नाही, निष्कर्ष आहे. नोंदवहीतून एखादा घटक सुटला आहे का, की लावलेले एखादे u मूल्य चुकीचे आहे — हे तपासा. पुढील हंगामासाठी गृहीतक नोंदवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The register has thirty-five factors and twenty-two of them are estimates, so a large residual is expected in the first season. Its size and direction indicate where the register is weakest.",
+        "yield_impact": "None. Directs the improvement effort.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Domain 11 residual meaning"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "gap_unexplained_pct",
+        "gap_attributed_pct",
+        "u_value_source_class"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "A residual that is consistently in one direction across several plots would be the most interesting result of the first season, because it would point to a systematic gap rather than to noise.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-EC-001",
+      "category": "EC",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "A u-value is being converted to money",
+        "marathi": "u मूल्याचे पैशात रूपांतर केले जात आहे"
+      },
+      "action": {
+        "english": "Multiply the ceiling by the u-value to get quintal lost, then by the price. Always state the price assumed, and run it at a crashed price as well as the current one.",
+        "marathi": "कमाल मर्यादा गुणिले u = गमावलेले क्विंटल, गुणिले भाव = रुपये. वापरलेला भाव नेहमी सांगा, आणि चालू भावासोबत कोसळलेल्या भावावरही गणित चालवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The same u-value is worth very different amounts at Rs 4,000 and Rs 12,000 per quintal, and ginger prices are strongly cyclical. Presenting one figure without the price assumption gives a false sense of precision.",
+        "yield_impact": "None. Makes the economic case honest and checkable.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Domain 11 economic conversion",
+          "Domain 9 price cyclicality"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_9_harvest"
+        ]
+      },
+      "farm_brain_schema": [
+        "ceiling_quintal_per_acre",
+        "u_values_applied",
+        "sale_price_per_quintal"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The Rs 2.85 lakh figure for the four zero-cost decisions assumes 113 quintal and Rs 4,000. At Rs 6,000 it would be over Rs 4 lakh, and at Rs 2,000 about Rs 1.4 lakh. The assumption has to travel with the number.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-EC-002",
+      "category": "EC",
+      "priority": 5,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "The value of the advisory is being explained",
+        "marathi": "advisory चे मूल्य समजावून सांगायचे आहे"
+      },
+      "action": {
+        "english": "Present the four decisions that account for about Rs 2.85 lakh per acre — timely planting, broad ridge layout, correct variety, and timely earthing up. Three cost nothing and the fourth costs about Rs 6,000 in labour. All four depend on timing rather than on money.",
+        "marathi": "एकरी सुमारे २.८५ लाख रुपये ठरवणारे चार निर्णय मांडा — वेळेवर लागवड, रुंद वरंबा, योग्य जात, आणि वेळेवर उटाळणी. तीन पूर्णपणे मोफत आहेत आणि चौथ्याला सुमारे ६,००० रुपये मजुरी लागते. चारही पैशावर नव्हे, वेळेवर अवलंबून आहेत."
+      },
+      "reasoning": {
+        "agronomic_basis": "The four combine to about Rs 2,84,800 at 113 quintal and Rs 4,000 per quintal, against a combined cost of about Rs 6,000. None requires an expensive input, and each has a fixed window.",
+        "yield_impact": "None directly. It is the clearest statement of what a timing engine is worth.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Domain 11 economic conversion table"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "planting_date",
+        "planting_layout",
+        "variety",
+        "earthing_up_date"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "The machine does not make fertiliser, bring rain or kill pathogens. It reminds at the right time, and this is the number that says what that is worth.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-EC-003",
+      "category": "EC",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "An economic model is being built from yield factors alone",
+        "marathi": "फक्त उत्पादन घटकांवरून आर्थिक गणित मांडले जात आहे"
+      },
+      "action": {
+        "english": "Add the grading factor. A 2.7 times price spread on 90 quintal is about Rs 9 lakh, which exceeds every yield factor in the register including a full soft rot outbreak. A model built on yield alone misses the largest lever.",
+        "marathi": "प्रतवारीचा घटक जोडा. ९० क्विंटलवर २.७ पट भाव फरक म्हणजे सुमारे ९ लाख रुपये — आणि तो या नोंदवहीतील प्रत्येक उत्पादन घटकापेक्षा मोठा आहे, कंदकुजीच्या पूर्ण प्रादुर्भावापेक्षाही. फक्त उत्पादनावर आधारित गणित सर्वात मोठा लीव्हर चुकवते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Soft rot at 0.70 costs about Rs 3.16 lakh at 113 quintal and Rs 4,000. The grading spread on a healthy 90 quintal crop is about Rs 9 lakh. Grade and yield are separate dimensions and both belong in the model.",
+        "yield_impact": "None on yield. Corrects the economic framing of the whole knowledge base.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "News18 Marathi grading spread",
+          "Domain 9 grading determinants"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_9_harvest"
+        ]
+      },
+      "farm_brain_schema": [
+        "grade_a_pct",
+        "grade_b_pct",
+        "grade_c_pct",
+        "sale_price_per_quintal",
+        "yield_quintal_per_acre_actual"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "Domains 1 to 8 all work on yield. Domain 9 found that grade matters more, and Domain 11 is where that has to be reconciled — otherwise the yield model and the economic model tell different stories.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-EC-004",
+      "category": "EC",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Prevention spending is being justified",
+        "marathi": "प्रतिबंधात्मक खर्चाचे समर्थन करायचे आहे"
+      },
+      "action": {
+        "english": "Show the ratio. Preventing soft rot costs about Rs 24,500 in mulch, drainage, seed treatment and Trichoderma, against an exposure of about Rs 3.16 lakh. That is roughly thirteen to one.",
+        "marathi": "गुणोत्तर दाखवा. कंदकूज टाळण्याचा खर्च — आच्छादन, निचरा, बेणे प्रक्रिया, ट्रायकोडर्मा — सुमारे २४,५०० रुपये, आणि टाळलेले संभाव्य नुकसान सुमारे ३.१६ लाख. म्हणजे सुमारे तेरा पट परतावा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The prevention stack costs about 17 percent of the total cost of cultivation and addresses the largest single loss factor in the crop. No fertiliser or chemical in the knowledge base has a comparable ratio.",
+        "yield_impact": "None directly. Justifies the budget line that the standard cost sheet omits.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Domain 6 prevention stack",
+          "Domain 13 cost structure"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_6_disease"
+        ]
+      },
+      "farm_brain_schema": [
+        "mulch_stage_1_done",
+        "drainage_levels_present",
+        "trichoderma_kg_per_acre",
+        "hot_water_treatment_done"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The mulch line alone is about Rs 15,000 and it is absent from the standard published cost sheet. Presenting the ratio is what makes an unfamiliar budget line acceptable.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-AP-001",
+      "category": "AP",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Advisory priority is being computed for a set of pending actions",
+        "marathi": "प्रलंबित कृतींचा प्राधान्यक्रम ठरवला जात आहे"
+      },
+      "action": {
+        "english": "Score by u-value multiplied by two if the factor is irrecoverable, multiplied by one and a half if the action window is open now. Irrecoverability and urgency both raise priority above the raw u-value.",
+        "marathi": "गुण = u × (भरून निघत नसेल तर २) × (खिडकी आत्ता उघडी असेल तर १.५). भरून न निघणे आणि तातडी — दोन्ही केवळ u मूल्यापेक्षा प्राधान्य वर नेतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "A recoverable 0.15 factor and an irrecoverable 0.15 factor are not equally urgent. Nor are two identical factors when one window closes this week and the other in two months.",
+        "yield_impact": "Determines which advisory the farmer sees first when several are due.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Domain 11 prioritisation formula",
+          "Core C6.2"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "u_values_applied",
+        "current_stage",
+        "dap"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "The multipliers are judgement rather than measurement. What matters is that the ordering is explicit and reviewable rather than emerging accidentally from the order the rules were written in.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-AP-002",
+      "category": "AP",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Several advisories are due within the same few days",
+        "marathi": "काही दिवसांत अनेक सूचना एकत्र येत आहेत"
+      },
+      "action": {
+        "english": "Bundle them into one instruction list ordered by priority score. Do not issue separate notifications. The 75 to 90 DAP bundle alone protects u-values of 0.125, 0.175 and 0.200 in a single field visit.",
+        "marathi": "त्या सर्व एका सूचना यादीत, प्राधान्य गुणानुसार क्रमाने द्या — वेगवेगळ्या सूचना पाठवू नका. ७५ ते ९० दिवसांचा गुच्छ एकाच फेरीत ०.१२५, ०.१७५ आणि ०.२०० ही तीन u मूल्ये संरक्षित करतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "The farmer visits the field once. Three separate notifications on three days produce three ignored notifications, and the accumulated u-value at stake in the earthing-up window is about half the season's controllable loss.",
+        "yield_impact": "Adherence is what converts a correct recommendation into a yield effect.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 8 operation bundling",
+          "Core C7.1"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_8_operations",
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "dap",
+        "u_values_applied",
+        "earthing_up_date"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The bundling rule and the prioritisation rule work together. Bundling decides what goes in one message; prioritisation decides the order within it.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-AP-003",
+      "category": "AP",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Pre-season advisory calendar being generated",
+        "marathi": "हंगामापूर्व सल्ला कालदर्शिका तयार केली जात आहे"
+      },
+      "action": {
+        "english": "Front-load it. Variety, seed source and seed treatment together carry a combined u-value of about 0.40 and all three are decided before day zero. Layout at 0.167 and planting date at 0.20 follow immediately.",
+        "marathi": "कालदर्शिका सुरुवातीला भारी ठेवा. जात, बेण्याचा स्रोत आणि बेणे प्रक्रिया यांचे एकत्रित u मूल्य सुमारे ०.४० आहे आणि तिन्ही निर्णय दिवस शून्यापूर्वी होतात. त्यानंतर लगेच लागवड पद्धत ०.१६७ आणि लागवडीची तारीख ०.२०."
+      },
+      "reasoning": {
+        "agronomic_basis": "Three irrecoverable decisions worth about 38 percent combined are taken before the crop exists. An advisory engine that starts at planting has already missed the largest block of controllable loss.",
+        "yield_impact": "Determines whether the highest-value advisory window is used at all.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Domain 11 G0 factor group",
+          "Core C13.7 pre-season stage"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_10_institutional",
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "variety",
+        "seed_supplier_identified",
+        "hot_water_treatment_done",
+        "planting_layout",
+        "planting_date"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "This is the numerical justification for the G0 stage existing at all. Thirty-eight percent of controllable loss sits before day zero, which is why the advisory has to begin sixty days before planting.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-RC-001",
+      "category": "RC",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G1",
+      "trigger": {
+        "english": "dap equals 35 AND establishment_pct not recorded",
+        "marathi": "पस्तीस दिवस झाले आणि उगवण टक्केवारी नोंदवलेली नाही"
+      },
+      "action": {
+        "english": "Request the establishment count now. It is the first real measurement of the season, it resets the ceiling, and it cannot be reconstructed later.",
+        "marathi": "उगवणीची मोजणी आत्ताच करा. हंगामातील हे पहिले खरे मोजमाप आहे, ते कमाल मर्यादा पुन्हा ठरवते, आणि नंतर ते पुन्हा मोजता येत नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "By 45 days emergence is complete and by 60 days the gaps have closed visually, so the count has a narrow window. It is also the input that converts a pre-season estimate into a grounded prediction.",
+        "yield_impact": "None directly. It is the multiplier on every other factor for the rest of the season.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Domain 1 establishment ceiling",
+          "Domain 11 prediction staging"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "establishment_pct",
+        "dap",
+        "ceiling_quintal_per_acre",
+        "prediction_stage"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "One of the ten minimum records. It takes ten minutes with a measuring tape and it is the difference between a forecast built on assumptions and one built on a measurement.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-RC-002",
+      "category": "RC",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "A saturation event or moisture stress period occurs",
+        "marathi": "पाणी साचण्याची किंवा ओलाव्याच्या ताणाची घटना घडली"
+      },
+      "action": {
+        "english": "Record it in hours or days with the stage it occurred in. These events carry the largest u-values in the register and they leave no trace afterwards unless recorded at the time.",
+        "marathi": "ती घटना तासांत किंवा दिवसांत, कोणत्या अवस्थेत घडली यासह नोंदवा. या घटनांची u मूल्ये नोंदवहीतील सर्वात मोठी आहेत, आणि त्या वेळी नोंदवल्या नाहीत तर नंतर त्यांचा मागमूसही उरत नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Saturation at G2 or G3 carries 0.35, water exhaustion in G4 carries 0.30, and critical window stress carries 0.20. All three are sensor-detectable at the time and invisible afterwards, which makes them the events most likely to be lost from the attribution.",
+        "yield_impact": "None directly. Without these records the gap attribution attributes their loss to the residual.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Domain 3 saturation rules",
+          "Domain 11 required records"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": [
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "saturation_hours",
+        "dry_spell_days",
+        "current_stage",
+        "u_values_applied"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "This is where the sub-node earns its place in the attribution. A farmer will not remember how many hours the field stood saturated in August; the sensor log will.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-RC-003",
+      "category": "RC",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "A scheduled operation is completed or missed",
+        "marathi": "ठरलेले काम झाले किंवा राहून गेले"
+      },
+      "action": {
+        "english": "Record the date if done and the reason if not. Seventeen of thirty-five factors are record-detectable rather than sensor or observation detectable, so the operation log is the largest single input to attribution.",
+        "marathi": "झाले असल्यास तारीख नोंदवा, नसल्यास कारण नोंदवा. पस्तीसपैकी सतरा घटक फक्त नोंदीवरून कळतात — sensor किंवा निरीक्षणावरून नाही. म्हणून कामाची नोंदवही हा दरी-विश्लेषणाचा सर्वात मोठा एकच स्रोत आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Mulch stages, earthing up, fertiliser splits, micronutrient sprays and layout choice are all invisible at harvest. Only the record shows whether they happened, and the reason for an omission is what reveals implementation barriers.",
+        "yield_impact": "None directly. It is the majority of the attribution input.",
+        "confidence_score": 0.82,
+        "source_tier": "A",
+        "references": [
+          "Domain 11 register summary",
+          "Domain 8 overdue operation query"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": [
+          "domain_8_operations"
+        ]
+      },
+      "farm_brain_schema": [
+        "earthing_up_date",
+        "mulch_stage_1_done",
+        "mulch_stage_2_done",
+        "mulch_stage_3_done",
+        "micronutrient_spray_1_done",
+        "k_late_split_1_date",
+        "season_record_complete"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "Seventeen of thirty-five factors detectable only by record is the strongest argument for the operation log being a first-class feature rather than an afterthought.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-UV-004",
+      "category": "UV",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Sensor coverage is being justified",
+        "marathi": "sensor गुंतवणुकीचे समर्थन करायचे आहे"
+      },
+      "action": {
+        "english": "Note that only seven of thirty-five factors are sensor-detectable, but they include the largest ones — saturation, water exhaustion and critical window stress. Sensors cover few factors and the heaviest ones.",
+        "marathi": "पस्तीसपैकी फक्त सात घटक sensor ने कळतात — पण त्यात सर्वात मोठे घटक येतात: पाणी साचणे, पाणी संपणे, आणि निर्णायक अवस्थेतील ताण. sensor कमी घटक व्यापतात, पण सर्वात जड घटक व्यापतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "Counting factors would understate the sensor's value and counting u-value would overstate the breadth. Both figures together give the accurate picture — narrow coverage, heavy weight.",
+        "yield_impact": "None. Frames the hardware investment honestly.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Domain 11 register summary",
+          "Domain 5 sensor limitation",
+          "Domain 6 sensor strength"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "saturation_hours",
+        "soil_moisture_vwc",
+        "u_values_applied"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This also explains the contrast between Domain 5 and Domain 6. Pests are mostly below ground and invisible to sensors; disease triggers are moisture and weather driven and highly visible. The same hardware is weak in one domain and decisive in the other.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-SC-003",
+      "category": "SC",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "A disease event is recorded during the season",
+        "marathi": "हंगामात रोगाची घटना नोंदवली गेली"
+      },
+      "action": {
+        "english": "Recompute immediately and show the economic consequence. Scenario D shows that a 60 percent rot event on otherwise good management leaves about 34 quintal, at which the net return is approximately zero.",
+        "marathi": "लगेच पुन्हा गणित करा आणि आर्थिक परिणाम दाखवा. परिस्थिती D नुसार चांगल्या व्यवस्थापनावर ६०% कूज आल्यास सुमारे ३४ क्विंटल उरतात, आणि त्यावर निव्वळ परतावा जवळपास शून्य होतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "Soft rot has by far the largest u-value in the register and it can occur on a well-managed crop. Showing the arithmetic makes the case for the prevention stack concrete rather than theoretical.",
+        "yield_impact": "None directly. It informs the remaining decisions for the season, particularly harvest route and market strategy.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Domain 11 scenario D",
+          "Domain 13 break-even"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest",
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_6_disease"
+        ]
+      },
+      "farm_brain_schema": [
+        "rot_incidence_pct",
+        "predicted_yield_quintal_per_acre",
+        "cumulative_loss_pct",
+        "harvest_route"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "A crop at 34 quintal may still be worth processing rather than selling fresh, because the lower grade fraction loses less in the dried product. The recomputation should trigger that conversation rather than just report the loss.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D11-FM-004",
+      "category": "FM",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "The independence assumption is being relied on in a computation",
+        "marathi": "गणितात घटक स्वतंत्र असल्याचे गृहीत धरले जात आहे"
+      },
+      "action": {
+        "english": "Flag the assumption. The formula assumes independence and in ginger the factors are linked through the rot pathway. Present the result with that caveat rather than as an exact figure.",
+        "marathi": "हे गृहीतक स्पष्ट करा. सूत्र घटक स्वतंत्र असल्याचे धरते, पण अद्रकात ते कूजच्या साखळीतून जोडलेले आहेत. निकाल नेमका आकडा म्हणून न देता या मर्यादेसह द्या."
+      },
+      "reasoning": {
+        "agronomic_basis": "Every major pest is a gateway to rot, mechanical injury reaches the same endpoint, and poor mulch raises rot incidence directly. The dependencies all run toward one terminal outcome, which is why grouping matters more here than in a crop with independent loss pathways.",
+        "yield_impact": "None. Prevents overconfidence in a computed figure.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Domain 11 interdependence caveat",
+          "Domain 5 central finding"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": [
+          "domain_5_pest",
+          "domain_6_disease"
+        ]
+      },
+      "farm_brain_schema": [
+        "cumulative_loss_pct",
+        "interdependence_group",
+        "u_values_applied"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Building the full interdependence map is three or four seasons of work. Until then, grouping the known chains by hand is the practical approach and it is what Scenario C does.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    }
+  ],
+  "open_items": [
+    {
+      "id": "D11-OI-01",
+      "item": "Whether the published variety trial yields already used broad ridge layout",
+      "owner": "Halad Sanshodhan Yojana, Kasbe Digraj",
+      "source_class": "VERIFY",
+      "blocking": true,
+      "note": "Determines whether the ceiling is 94 or 113 quintal per acre. Every u-value computation and economic scenario scales with it."
+    },
+    {
+      "id": "D11-OI-02",
+      "item": "Field validation of the twenty-two estimated u-values",
+      "owner": "gap attribution, three or more seasons",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D11-OI-03",
+      "item": "Verification of the prediction intervals against actual outcomes",
+      "owner": "first season records",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D11-OI-04",
+      "item": "Yield response curve for plant spacing",
+      "owner": "trial strips with two or three spacings",
+      "source_class": "FIELD",
+      "blocking": false,
+      "note": "Needed to find the economic optimum rather than the agronomic one, because seed is the largest cost."
+    },
+    {
+      "id": "D11-OI-05",
+      "item": "Rot severity to u-value mapping — what percentage incidence corresponds to what loss",
+      "owner": "field records",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D11-OI-06",
+      "item": "Full interdependence map between factors",
+      "owner": "three to four seasons of records",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D11-OI-07",
+      "item": "Formal grading criteria, to quantify the grade dimension alongside yield",
+      "owner": "Spices Board or APMC",
+      "source_class": "VERIFY",
+      "blocking": false
+    }
+  ],
+  "summary": {
+    "total_rules": 34,
+    "by_category": {
+      "FM": 4,
+      "CL": 2,
+      "DC": 2,
+      "VL": 2,
+      "UV": 4,
+      "SC": 3,
+      "PR": 4,
+      "GA": 3,
+      "EC": 4,
+      "AP": 3,
+      "RC": 3
+    },
+    "by_priority": {
+      "5": 19,
+      "4": 14,
+      "3": 1
+    },
+    "by_severity": {
+      "info": 19,
+      "yellow": 13,
+      "red": 2
+    },
+    "by_source_tier": {
+      "A": 22,
+      "B": 12,
+      "C": 0
+    },
+    "by_source_class": {
+      "DERIVED": 27,
+      "VERIFY": 1,
+      "EST": 3,
+      "SRC-Q": 3
+    },
+    "confidence_range": {
+      "min": 0.7,
+      "max": 0.9,
+      "mean": 0.815
+    },
+    "rules_with_u_value": 0,
+    "irrecoverable_rules": 6,
+    "zero_cost_rules": [
+      "D11-FM-001",
+      "D11-FM-002",
+      "D11-DC-001",
+      "D11-DC-002",
+      "D11-VL-002",
+      "D11-EC-002"
+    ],
+    "highest_value_rule": "D11-VL-001",
+    "blocking_open_items": 1,
+    "u_value_register_size": 35,
+    "known_duplication_groups": 12,
+    "by_decision_type": {
+      "POLICY": 34
+    },
+    "precedence_relations": 39,
+    "immutable_rules": 0
+  },
+  "next_steps": [
+    "1. Resolve the ceiling question with Kasbe Digraj — 94 or 113 quintal per acre. It is the one blocking item and every computation scales with it (D11-OI-01)",
+    "2. Implement the twelve duplication groups in the engine before any cumulative loss is computed, or every prediction will be systematically pessimistic (D11-DC-001)",
+    "3. Set up the twelve required records at the start of the season; they cannot be reconstructed afterwards (D11-GA-002)",
+    "4. Build Domain 12 JSON inheriting the Domain 1 _schema block unchanged",
+    "5. Feed both yield and grade into Domain 13 — a model on yield alone misses the largest economic lever"
+  ],
+  "author_note": "This file contains 30 rules because that is what the source document supports. The central result is that five independently sourced u-values, combined sub-additively with no tuning, reproduce the Maharashtra state average to within about 6 percent — which supports the claim that the gap between genetic potential and state average is management rather than environment. That result is presented with its caveat attached, because it rests on a single validation point and twenty-two of thirty-five u-values are estimates. Two rules exist purely to prevent double counting: twelve factors appear in more than one domain and several share causal chains, and multiplying them separately would make every prediction systematically pessimistic. The prediction intervals are deliberately wider than the sugarcane equivalents because the yield organ is invisible, and the domain states plainly that ginger forecasting will not match sugarcane accuracy. Status is PHASE_1_RAW_UNVALIDATED.",
+  "legal": {
+    "disclaimer_mr": "हा नियम-संच निर्णय-सहाय्य साधन आहे. अंतिम जबाबदारी शेतकऱ्याची. यातील उत्पादन अंदाज संभाव्यता-आधारित आहेत आणि ते हमी नाहीत.",
+    "disclaimer_en": "This rule set is a decision-support tool. Final responsibility rests with the cultivator. Yield predictions are probabilistic estimates, not guarantees.",
+    "estimate_note": "Twenty-two of thirty-five u-values are author estimates rather than measured or sourced figures. Predictions built on them carry corresponding uncertainty and must always be presented with an interval.",
+    "validation_note": "The agreement between the computed scenario and the observed state average rests on a single comparison and may be coincidental. It is not proof of method.",
+    "data_note": "Farmer-attributable data handled under DPDP Act 2023; see Domain 12."
+  }
+}

@@ -1,0 +1,2151 @@
+{
+  "_schema": {
+    "schema_version": "2.0",
+    "inherits_from": "Domain1_Rules_Ginger_v2.json",
+    "inheritance_note": "The full _schema block is defined in Domain 1 and is NOT repeated here. Units (per acre), stage codes G0-G5, source tiers A/B/C, source classes, priority scale, recoverability, severity and confidence bounds are inherited unchanged. Only Domain 2 additions are declared below.",
+    "additions": {
+      "rule_categories_domain_2": {
+        "SL": "soil suitability",
+        "CA": "calcareous soil and pH",
+        "DR": "drainage",
+        "ST": "soil testing",
+        "TL": "tillage and land preparation",
+        "WD": "pre-plant weed management",
+        "OM": "organic matter",
+        "SN": "soil solarization",
+        "LY": "planting layout and bed geometry",
+        "BF": "basal fertiliser placement",
+        "CL": "land preparation calendar"
+      },
+      "new_farm_brain_fields": {
+        "soil_depth_cm": "number",
+        "soil_texture_class": "enum:[light, medium, heavy]",
+        "percolation_time_hours": "number",
+        "percolation_class": "enum:[excellent, moderate, poor, very_poor]",
+        "deep_ploughing_done": "boolean",
+        "kulav_passes": "integer",
+        "perennial_weeds_removed": "boolean",
+        "solarization_done": "boolean",
+        "solarization_weeks": "number",
+        "fym_t_per_acre": "number",
+        "fym_fully_decomposed": "boolean",
+        "trichoderma_kg_per_acre": "number",
+        "bed_width_cm": "number",
+        "furrow_width_cm": "number",
+        "drainage_levels_present": "integer 0-3",
+        "main_drain_connected": "boolean",
+        "basal_p_kg_per_acre": "number",
+        "basal_k_kg_per_acre": "number",
+        "soil_test_available": "boolean",
+        "vafsa_state": "enum:[too_wet, workable, too_dry]",
+        "drainage_outlet_present": "boolean",
+        "standing_water_hours_observed": "number"
+      },
+      "enum_extensions": {
+        "planting_layout": [
+          "flat_bed",
+          "ridge_furrow",
+          "broad_ridge"
+        ],
+        "note": "broad_ridge is the only layout permitted for vertisol + drip in this belt; see D02-LY-002"
+      },
+      "decision_types": {
+        "AUTO_DECISION": {
+          "mr": "AI कधी व किती हे स्वतः ठरवतो",
+          "en": "engine computes the quantity or timing itself"
+        },
+        "SENSOR_ALERT": {
+          "mr": "sensor वर आधारित इशारा, कृती माणसाची",
+          "en": "sensor-triggered; the action is human work"
+        },
+        "SCHEDULED_REMINDER": {
+          "mr": "वेळापत्रकानुसार आठवण",
+          "en": "calendar or stage driven reminder"
+        },
+        "DIAGNOSTIC": {
+          "mr": "AI विचारतो, शेतकरी सांगतो",
+          "en": "engine asks, farmer answers, engine branches"
+        },
+        "DATA_CAPTURE": {
+          "mr": "नोंद किंवा मोजमाप मागतो",
+          "en": "engine requests a record or measurement"
+        },
+        "HUMAN_DECISION": {
+          "mr": "AI गणित दाखवतो, निर्णय माणसाचा",
+          "en": "engine presents arithmetic; person decides"
+        },
+        "BLOCK": {
+          "mr": "AI नाकारतो किंवा अडवतो",
+          "en": "engine refuses or blocks"
+        },
+        "PLANNING_GUIDANCE": {
+          "mr": "हंगामापूर्व निवड — शेतकरी ठरवतो",
+          "en": "pre-season choice the farmer makes"
+        },
+        "POLICY": {
+          "mr": "प्रॉडक्ट धोरण, शेतकऱ्यापर्यंत जात नाही",
+          "en": "product policy; never reaches a farmer"
+        }
+      },
+      "automation_levels": {
+        "full": "engine decides and acts without asking",
+        "assisted": "engine decides when, the person does the work or supplies the observation",
+        "advisory": "engine shows the arithmetic, the person chooses",
+        "refusal": "engine prevents an action",
+        "none": "internal policy, not farmer facing"
+      },
+      "trigger_dsl": {
+        "version": "dsl-1.0",
+        "logic": "three-valued: TRUE / FALSE / UNKNOWN",
+        "unknown_rule": "A rule whose trigger evaluates UNKNOWN must NOT fire and must NOT be treated as FALSE. Report reduced confidence and name the missing field (Domain 12 D12-COLD-001).",
+        "operators": [
+          "> >= < <= == !=",
+          "AND OR NOT",
+          "IN [..]",
+          "BETWEEN a AND b",
+          "IS NULL / IS NOT NULL / IS TRUE / IS FALSE",
+          "DURATION(field > x) > n HOURS",
+          "WITHIN(date_field, n DAYS)",
+          "MONTH IN [..]",
+          "STAGE IN [..]"
+        ],
+        "note": "Fields resolve against kb_farm_brain_fields. An undeclared name is a parse error, never a silent false."
+      },
+      "notification_policy": {
+        "version": "notify-1.0",
+        "why": "The season simulation issued 998 messages across 301 days before this existed. A trigger expresses a condition and a condition stays true; the advice is an event and must be delivered once.",
+        "classes": {
+          "ONCE_UNTIL_RESOLVED": "Standing precondition. Once, then a 7/21/45/90 day ladder with rising severity.",
+          "EVENT": "Transient physical event. Rising edge only; re-armed after it clears.",
+          "WINDOW": "Dated operation. Advance warning, the day, then 3 overdue reminders.",
+          "SILENT_GUARD": "Prevention rule. No message unless the prohibited action is attempted."
+        },
+        "result": "998 messages became 43 in the normal season, with no critical stage left silent for more than 15 days."
+      },
+      "override_policy": {
+        "version": "override-1.0",
+        "why": "The Tier-1 review worked but was offline. An agronomist looking at a live plot in August cannot edit JSON and wait for a deploy; by then the window has closed.",
+        "kinds": [
+          "THRESHOLD",
+          "DELIVERY",
+          "SEVERITY",
+          "DISABLE",
+          "PARAMETER"
+        ],
+        "scopes": [
+          "plot",
+          "cluster",
+          "global"
+        ],
+        "scope_precedence": "narrowest wins — plot over cluster over global",
+        "default_expiry_days": 240,
+        "max_expiry_days": 400,
+        "expiry_rationale": "A permanent change belongs in the knowledge base, not in the override table.",
+        "immutable_count": 16,
+        "immutable_rationale": "Some rules exist because getting them wrong causes harm no agronomic judgement outweighs. The API refuses them by code path, and a database trigger refuses them again if the application layer is bypassed.",
+        "audit": "Refused attempts are recorded, not discarded. An attempt to override an immutable rule is a governance signal."
+      }
+    }
+  },
+  "metadata": {
+    "domain": 2,
+    "domain_name": "Soil & Land Preparation",
+    "domain_name_mr": "जमीन आणि पूर्वमशागत",
+    "crop": "ginger",
+    "crop_mr": "आले",
+    "region": "Kannad, Chhatrapati Sambhajinagar, Marathwada",
+    "source_document": "AgroGuardian_Ginger_Domain2_Soil_LandPrep_RAW.docx",
+    "version": "1.0",
+    "status": "PHASE_1_RAW_UNVALIDATED",
+    "agronomist_validated": false,
+    "validation_note": "Compiled from published sources, primarily Agrowon / Dr. Jitendra Kadam, Halad Sanshodhan Yojana, Kasbe Digraj. Not yet reviewed by a practising agronomist and not yet tested against plot soil test results.",
+    "total_rules": 27,
+    "rule_count_note": "26 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count.",
+    "review_by": null,
+    "review_note": "Soil science here is stable. Only the soil test panel availability and lab contacts need periodic recheck (Domain 10).",
+    "purpose": "Land preparation and soil management rules for ginger on Marathwada vertisol. The central finding is that Kannad soil does not naturally suit ginger on five of six criteria, but the official Maharashtra recommendation already contains a purpose-built solution for black soil under drip.",
+    "key_innovations": [
+      "Calcareous yellowing separated from nitrogen deficiency by leaf age — old leaves yellow means nitrogen, new leaves yellow means iron or zinc. Urea on calcareous yellowing does nothing except grow foliage at the rhizome's expense.",
+      "Broad ridge geometry is treated as a precondition for vertisol plus drip, not as an option, and it is the single highest-return structural decision in the knowledge base.",
+      "The FYM to weed to weeding-injury to rot chain is made explicit, which turns 'use fully decomposed FYM' from a routine instruction into a disease-prevention rule.",
+      "Kannad's summer heat is reframed as an asset before planting — solarization is more effective here than in the traditional belts.",
+      "A field percolation test is included because for ginger the governing soil risk is physical, not chemical, and no laboratory report measures it."
+    ],
+    "central_finding": {
+      "statement": "Of six soil criteria, only one — depth — is naturally satisfied at Kannad. The other five must be created by management.",
+      "criteria": {
+        "texture": {
+          "required": "well-drained friable medium",
+          "kannad": "heavy black vertisol",
+          "match": false
+        },
+        "ph": {
+          "required": "6.5 to 7.0",
+          "kannad": "7.5 to 8.5 expected",
+          "match": false
+        },
+        "free_lime": {
+          "required": "absent",
+          "kannad": "likely present, Deccan trap",
+          "match": false
+        },
+        "drainage": {
+          "required": "excellent, mandatory",
+          "kannad": "poor to moderate",
+          "match": false
+        },
+        "organic_carbon": {
+          "required": "above 1 percent",
+          "kannad": "0.3 to 0.5 percent expected",
+          "match": false
+        },
+        "depth": {
+          "required": "minimum 30 cm",
+          "kannad": "adequate",
+          "match": true
+        }
+      },
+      "implication": "What nature supplies free in other belts must be bought and built here. Fixed cost per acre is therefore structurally higher, and low-input ginger is not an option in this belt."
+    },
+    "primary_sources": [
+      "Agrowon - Ale Lagvad Tantradnyan, Dr. Jitendra Kadam, Halad Sanshodhan Yojana, Krishi Sanshodhan Kendra, Kasbe Digraj, Sangli (TIER A)",
+      "Agrowon - Kanda Lagvad Tantradnyan, bed-forming machinery method (TIER A)",
+      "Krishi Jagran - Halad Lagvad Tantradnyan, calcareous soil yellowing in turmeric (TIER B)",
+      "Pythium Soft Rot Management in Ginger - A Review, CJAST 39(35), 2020 (TIER A)",
+      "ScienceDirect Heliyon 2023 - soft rot review, 50-90 percent loss figure (TIER A)",
+      "ICL Growing Solutions - Ginger Crop Nutrition (TIER B)",
+      "Vikaspedia Agriculture - micronutrient spray timing (TIER B)",
+      "District Profile, Chhatrapati Sambhajinagar (TIER A)"
+    ],
+    "review_log": {
+      "tier_1_review_date": "2026-07-31",
+      "rules_reviewed": 3,
+      "rules_total": 27,
+      "note": "Rule-level status is authoritative. Domain status stays PHASE_1_RAW_UNVALIDATED until T3 and T4 are also reviewed and one season of field data exists."
+    }
+  },
+  "reference_data": {
+    "soil_requirements": {
+      "ideal_texture": "deep, well-drained, friable loam, humus-rich",
+      "best_soil": "riverside alluvial",
+      "also_good": [
+        "laterite Konkan",
+        "red loam"
+      ],
+      "min_depth_cm": 30,
+      "ph_optimum": {
+        "min": 6.5,
+        "max": 7.0
+      },
+      "avoid_soils": [
+        "acidic",
+        "saline",
+        "sodic_chopan"
+      ],
+      "calcareous_note": "Crop grows but a persistent yellow cast remains and yield declines",
+      "waterlogging_tolerance": "none",
+      "source_tier": "A"
+    },
+    "kannad_soil_profile": {
+      "order": "vertisol",
+      "texture_class": "heavy",
+      "ph_expected": {
+        "min": 7.5,
+        "max": 8.5,
+        "source_class": "FIELD"
+      },
+      "free_lime_expected": "present, unquantified",
+      "organic_carbon_expected_pct": {
+        "min": 0.3,
+        "max": 0.5,
+        "source_class": "FIELD"
+      },
+      "drainage_class": "poor_to_moderate",
+      "physical_behaviour": {
+        "when_wet": "sticky, unworkable, clods form, structure damaged",
+        "when_dry": "hard, cracks, impedes rhizome expansion",
+        "shrink_swell": "high",
+        "workable_window": "narrow — a few days after rain"
+      }
+    },
+    "soil_test_panel": [
+      {
+        "n": 1,
+        "parameter": "pH",
+        "priority": "essential",
+        "routine_report": true
+      },
+      {
+        "n": 2,
+        "parameter": "free_lime_CaCO3",
+        "priority": "essential",
+        "routine_report": false,
+        "note": "Direct predictor of the yellowing problem. Usually NOT in a standard report — must be requested separately."
+      },
+      {
+        "n": 3,
+        "parameter": "EC",
+        "priority": "essential",
+        "routine_report": true
+      },
+      {
+        "n": 4,
+        "parameter": "organic_carbon",
+        "priority": "essential",
+        "routine_report": true
+      },
+      {
+        "n": 5,
+        "parameter": "available_N_P_K",
+        "priority": "essential",
+        "routine_report": true
+      },
+      {
+        "n": 6,
+        "parameter": "zinc",
+        "priority": "essential_here",
+        "routine_report": false,
+        "note": "Locked up by free lime. Request separately."
+      },
+      {
+        "n": 7,
+        "parameter": "iron",
+        "priority": "essential_here",
+        "routine_report": false,
+        "note": "Locked up by free lime. Request separately."
+      },
+      {
+        "n": 8,
+        "parameter": "sulphur",
+        "priority": "desirable",
+        "routine_report": false
+      },
+      {
+        "n": 9,
+        "parameter": "percolation_field_test",
+        "priority": "essential",
+        "routine_report": false,
+        "note": "Not a laboratory test. Done in the field. More decisive for ginger than any chemical parameter."
+      }
+    ],
+    "percolation_test": {
+      "method": "Dig a pit 30 cm deep and 30 cm wide. Fill with water and let it drain completely. Refill and time the second drain.",
+      "interpretation": [
+        {
+          "hours": "<2",
+          "class": "excellent",
+          "action": "standard bed height"
+        },
+        {
+          "hours": "2-6",
+          "class": "moderate",
+          "action": "recommended height 20-25 cm"
+        },
+        {
+          "hours": "6-12",
+          "class": "poor",
+          "action": "increase height and widen channels"
+        },
+        {
+          "hours": ">12",
+          "class": "very_poor",
+          "action": "AVOID ginger on this plot"
+        }
+      ],
+      "cost": "zero",
+      "duration": "one day"
+    },
+    "planting_layouts": [
+      {
+        "code": "flat_bed",
+        "name_mr": "सपाट वाफे",
+        "suitable_soil": "plateau flat, loam or sandy mixed",
+        "bed_size": "2x1 m or 2x3 m",
+        "spacing_cm": [
+          20,
+          22.5
+        ],
+        "plants_per_acre_approx": 80000,
+        "yield_index": 1.0,
+        "suitable_for_kannad": false
+      },
+      {
+        "code": "ridge_furrow",
+        "name_mr": "सरी वरंबा",
+        "suitable_soil": "medium and heavy",
+        "ridge_spacing_cm": 45,
+        "planting_position": "both sides of ridge, leaving upper one-third",
+        "planting_depth_cm": 5,
+        "plant_spacing_cm": 22.5,
+        "yield_index": 1.0,
+        "suitable_for_kannad": "possible but inferior to broad ridge"
+      },
+      {
+        "code": "broad_ridge",
+        "name_mr": "रुंद वरंबा / गादी वाफा",
+        "suitable_soil": "black soils AND where sprinkler or drip is used",
+        "cycle_cm": 120,
+        "ridge_width_cm": 60,
+        "furrow_width_cm": 60,
+        "height_cm": {
+          "official_min": 20,
+          "official_max": 25,
+          "kannad_recommended": 25,
+          "drip_source_variant": 30
+        },
+        "spacing_cm": [
+          22.5,
+          22.5
+        ],
+        "planting_depth_cm": 5,
+        "length": "follows land slope",
+        "drip_lines_per_bed": 1,
+        "dripper_lph": 2,
+        "plants_per_acre_approx": 45000,
+        "yield_index": 1.175,
+        "yield_gain_pct": {
+          "min": 15,
+          "max": 20
+        },
+        "suitable_for_kannad": true,
+        "source_tier": "A"
+      }
+    ],
+    "organic_inputs": {
+      "fym_t_per_acre": {
+        "recommended_min": 14,
+        "recommended_max": 16,
+        "source_note": "35-40 t/ha, Agrowon Maharashtra official"
+      },
+      "fym_source_range_across_sources": {
+        "min": 8,
+        "max": 16,
+        "note": "wide disagreement; Maharashtra institutional figure preferred"
+      },
+      "fym_timing": "before the last kulav pass",
+      "fym_condition": "fully decomposed — mandatory",
+      "trichoderma_kg_per_acre": 2,
+      "trichoderma_source_note": "5 kg/ha, mixed into FYM at planting",
+      "neem_or_karanj_cake_kg_per_acre": {
+        "min": 600,
+        "max": 800,
+        "timing": "at earthing up",
+        "source_note": "1.5-2 t/ha"
+      },
+      "neem_cake_for_nematodes_kg_per_acre": 800,
+      "note": "In Kannad, FYM functions as a soil amendment rather than a nutrient source. It improves friability, keeps micronutrients available against lime lock-up, and raises organic carbon from a low base."
+    },
+    "basal_fertiliser": {
+      "phosphorus_kg_per_acre": 30,
+      "potassium_kg_per_acre": 30,
+      "source_note": "75:75 kg/ha P and K, full basal at land preparation",
+      "placement": "banded, not broadcast",
+      "placement_reason": "Free lime fixes broadcast phosphorus as calcium phosphate; banding reduces soil contact and therefore fixation",
+      "note": "Nitrogen is NOT basal. Full nitrogen schedule is Domain 4."
+    },
+    "yellowing_diagnosis_table": [
+      {
+        "pattern": "uniform pale yellow",
+        "leaf_age": "old_lower",
+        "cause": "nitrogen_deficiency",
+        "action": "nitrogen split",
+        "check_first": "soil moisture"
+      },
+      {
+        "pattern": "interveinal yellow, veins green",
+        "leaf_age": "new_upper",
+        "cause": "iron_or_zinc_lockup_calcareous",
+        "action": "foliar micronutrient spray",
+        "check_first": "free lime in soil test"
+      },
+      {
+        "pattern": "yellow plus soft stem plus foul smell",
+        "leaf_age": "any",
+        "cause": "soft_rot",
+        "action": "drainage plus metalaxyl group drench",
+        "check_first": "dig a sample plant"
+      },
+      {
+        "pattern": "wilts while still green",
+        "leaf_age": "lower_first",
+        "cause": "bacterial_wilt",
+        "action": "remove and burn plants",
+        "check_first": "cut stem, look for milky ooze"
+      },
+      {
+        "pattern": "leaf tips and margins scorched",
+        "leaf_age": "exposed",
+        "cause": "heat_stress_above_35C",
+        "action": "mulch, shade, irrigation timing",
+        "check_first": "weather record"
+      },
+      {
+        "pattern": "interveinal yellow",
+        "leaf_age": "old",
+        "cause": "magnesium_deficiency",
+        "action": "magnesium sulphate",
+        "check_first": "soil test"
+      }
+    ]
+  },
+  "rules": [
+    {
+      "rule_id": "D02-SL-001",
+      "category": "SL",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G0",
+      "trigger": {
+        "english": "Soil is acidic, saline or sodic (chopan)",
+        "marathi": "जमीन आम्लधर्मी, खारवट किंवा चोपण आहे"
+      },
+      "action": {
+        "english": "Advise against ginger on this plot. These soil classes are explicitly excluded by the official recommendation.",
+        "marathi": "आम्लधर्मी, खारवट किंवा चोपण जमिनीत आले घेऊ नये. अधिकृत शिफारस अशा जमिनी स्पष्टपणे वगळते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Official Maharashtra recommendation names these three soil classes as unsuitable. Ginger has no salinity tolerance and a shallow root system that cannot escape a bad surface layer.",
+        "yield_impact": "Not quantified in source. Treated as a plot-selection exclusion rather than a yield factor.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Jitendra Kadam, Kasbe Digraj"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "soil_ph",
+        "soil_ec",
+        "soil_type"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "Marathwada has pockets of sodic and saline soil, particularly in low-lying command areas. This must be screened before any other planning, because no amount of drip or mulch compensates.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-SL-002",
+      "category": "SL",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "soil_depth_cm less than 30",
+        "marathi": "जमिनीची खोली ३० सेंमीपेक्षा कमी"
+      },
+      "action": {
+        "english": "Warn that minimum soil depth is not met. Ginger rhizome grows horizontally and needs a loose working layer; a shallow soil caps rhizome size regardless of other inputs.",
+        "marathi": "आल्यासाठी किमान ३० सेंमी खोली आवश्यक आहे. गड्डा आडवा वाढतो, त्याला बाजूला मोकळी मऊ माती लागते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Official minimum is 30 cm. Because the rhizome expands laterally in the top layer, depth below 30 cm cannot be substituted by fertiliser or irrigation.",
+        "yield_impact": "Not quantified. Acts as a physical ceiling on rhizome size.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "soil_depth_cm"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Kannad vertisol is generally medium-deep to deep, so this is the one soil criterion of six that is naturally satisfied here.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-CA-001",
+      "category": "CA",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "soil_free_lime_pct is elevated OR soil_ph greater than 7.5",
+        "marathi": "मातीत मुक्त चुनखडी आहे किंवा सामू ७.५ पेक्षा जास्त"
+      },
+      "action": {
+        "english": "Warn of expected persistent yellowing and yield decline. Schedule two foliar micronutrient sprays (45-60 and 75-90 DAP) as a SCHEDULED operation, not an optional suggestion. Increase FYM toward the upper end of the range.",
+        "marathi": "चुनखडीयुक्त जमिनीत पीक येते पण पिवळसर छटा कायम राहते आणि उत्पादनात घट येते. सूक्ष्म अन्नद्रव्यांच्या दोन फवारण्या अनुसूचित कराव्यात — त्या ऐच्छिक नाहीत. शेणखताची मात्रा वरच्या टोकाला ठेवावी."
+      },
+      "reasoning": {
+        "agronomic_basis": "High pH and free lime fix iron and zinc into unavailable forms. The nutrients are present in the soil but not available to the crop, so a soil test can read adequate while the plant is deficient. The same effect is documented for turmeric, which is in the same family.",
+        "yield_impact": "Source states yield declines but does not quantify. Related Domain 4 figure for missing the foliar spray is u = 0.11.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam",
+          "Krishi Jagran - turmeric calcareous soil"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient",
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "soil_free_lime_pct",
+        "soil_ph",
+        "soil_zn_ppm",
+        "soil_fe_ppm",
+        "fym_t_per_acre"
+      ],
+      "u_value": 0.11,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "In other belts micronutrient spray is an enhancement. Here it exists to prevent an expected loss, which is a different budget line and a different priority.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-CA-002",
+      "category": "CA",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "Leaf yellowing reported at any stage",
+        "marathi": "कोणत्याही अवस्थेत पाने पिवळी पडली",
+        "expr": "leaf_yellowing_pattern IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Any yellowing enters the diagnosis sequence before any input is advised.",
+        "golden_tests": [
+          {
+            "context": {
+              "leaf_yellowing_pattern": "interveinal_new"
+            },
+            "expect": "TRUE",
+            "label": "नव्या पानांत — निदान करा"
+          },
+          {
+            "context": {
+              "leaf_yellowing_pattern": "none"
+            },
+            "expect": "TRUE",
+            "label": "नोंद आहे — तपासा"
+          },
+          {
+            "context": {},
+            "expect": "FALSE",
+            "label": "नोंदच नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Run the diagnosis sequence before recommending anything. Step 1: is the soil near the root wet? Step 2: dig one sample plant. Step 3: which leaves are yellow — old or new? Step 4: check the last three days for temperatures above 35 C. Do NOT recommend urea on the yellowing signal alone.",
+        "marathi": "पिवळी पाने दिसल्यावर पहिली कृती युरिया नाही — निदान आहे. १) मुळाजवळची माती ओली आहे का. २) एक नमुना रोप उकरून पहा. ३) कोणती पाने पिवळी — जुनी की नवी. ४) गेल्या तीन दिवसांत ३५ अंशांवर तापमान गेले का. जुनी पाने पिवळी म्हणजे नत्र; नवी पाने पिवळी म्हणजे लोह किंवा जस्त."
+      },
+      "reasoning": {
+        "agronomic_basis": "Six distinct causes produce similar yellowing and the treatments differ. Two of them are made worse by the reflexive response. Nitrogen applied to waterlogged soil worsens the condition; nitrogen applied to lime-induced iron lock-up does nothing except grow foliage at the rhizome's expense.",
+        "yield_impact": "Prevents wasted input cost and, more importantly, prevents a missed rot diagnosis worth up to u = 0.70.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam",
+          "Agrowon - Mali & Mahajan",
+          "ICL Growing Solutions"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient",
+          "domain_6_disease",
+          "domain_9_harvest"
+        ],
+        "depends_on": [
+          "domain_6_disease"
+        ]
+      },
+      "farm_brain_schema": [
+        "soil_moisture_vwc",
+        "air_temp_max_c",
+        "soil_free_lime_pct",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "This is the most frequently triggered diagnostic rule in the whole knowledge base for this belt, because calcareous yellowing here is expected rather than exceptional. One line of guidance — old leaves means nitrogen, new leaves means micronutrients — saves fertiliser cost every season.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "निदानाशिवाय युरिया देऊ नये."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-DR-001",
+      "category": "DR",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G0",
+      "trigger": {
+        "english": "percolation_time_hours is high for the soil texture class AND drainage is poor",
+        "marathi": "जमिनीच्या प्रकाराच्या तुलनेत निचऱ्याचा वेळ जास्त आहे आणि जलनिचरा खराब आहे",
+        "expr": "(soil_texture_class == 'heavy' AND percolation_time_hours > 12) OR (soil_texture_class == 'medium' AND percolation_time_hours > 8) OR (soil_texture_class == 'light' AND percolation_time_hours > 6)",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Expert amendment: judge against soil texture, not one fixed hour count. Outlet and observed standing water are checked in the action, not the trigger, because they refine the advice rather than gate it.",
+        "golden_tests": [
+          {
+            "context": {
+              "soil_texture_class": "heavy",
+              "percolation_time_hours": 14
+            },
+            "expect": "TRUE",
+            "label": "भारी जमीन, १४ तास — फिरतो"
+          },
+          {
+            "context": {
+              "soil_texture_class": "heavy",
+              "percolation_time_hours": 10
+            },
+            "expect": "FALSE",
+            "label": "भारी जमीन, १० तास — फिरत नाही"
+          },
+          {
+            "context": {
+              "soil_texture_class": "light",
+              "percolation_time_hours": 10
+            },
+            "expect": "TRUE",
+            "label": "हलकी जमीन, तेच १० तास — आता फिरतो"
+          },
+          {
+            "context": {
+              "soil_texture_class": "medium",
+              "percolation_time_hours": 7
+            },
+            "expect": "FALSE",
+            "label": "मध्यम, ७ तास — मर्यादेखाली"
+          },
+          {
+            "context": {
+              "percolation_time_hours": 14
+            },
+            "expect": "UNKNOWN",
+            "label": "मातीचा प्रकार नाही — UNKNOWN, गृहीत धरू नये"
+          },
+          {
+            "context": {
+              "soil_texture_class": "heavy"
+            },
+            "expect": "UNKNOWN",
+            "label": "चाचणी झालेली नाही — UNKNOWN"
+          }
+        ]
+      },
+      "action": {
+        "english": "Assess drainage suitability against the soil texture class rather than a single fixed hour count. Judge on three things together: soil texture (heavy, medium or light), how long water actually stands after rain, and whether an outlet exists. Advise against ginger only where all three point the same way. Provisional guidance by texture: heavy soil above about 12 hours, medium above about 8, light above about 6 — to be replaced by measured values.",
+        "marathi": "एकाच ठराविक तासांच्या आकड्यावर नव्हे, जमिनीच्या प्रकारानुसार निचऱ्याची योग्यता ठरवा. तीन गोष्टी एकत्र पहा — मातीचा प्रकार (भारी, मध्यम, हलकी), पावसानंतर पाणी प्रत्यक्षात किती वेळ साचून राहते, आणि शेताबाहेर निचरा होण्याची सोय आहे का. तिन्ही एकाच दिशेने असतील तरच अद्रक टाळण्याचा सल्ला द्या. तात्पुरते मार्गदर्शन — भारी जमिनीत सुमारे १२ तासांहून जास्त, मध्यम जमिनीत सुमारे ८, हलक्या जमिनीत सुमारे ६. हे आकडे प्रत्यक्ष मोजमापाने बदलावेत."
+      },
+      "reasoning": {
+        "agronomic_basis": "Soft rot requires inoculum, a host and free water. Inoculum persists and the host is fixed by the planting decision, so free water is the only controllable term. If it cannot be controlled, the disease cannot be managed. EXPERT AMENDMENT: a single fixed hour count is not appropriate. Percolation must be judged against soil texture class, observed standing-water duration and outlet availability together.",
+        "yield_impact": "Prevents exposure to u = 0.50 to 0.90.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "CJAST 39(35) 2020 soft rot review",
+          "Heliyon 2023",
+          "Tier-1 expert review, 2026-07-31"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "percolation_time_hours",
+        "percolation_class",
+        "drainage_outlet_present",
+        "standing_water_hours_observed"
+      ],
+      "u_value": 0.7,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "This is a one-day, zero-cost test that can prevent a Rs 1.45 lakh loss. It is more decisive for ginger than any laboratory chemical parameter, because the governing risk in this crop is physical rather than chemical.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "amended",
+        "comment_mr": "१२ तास निश्चित मर्यादा योग्य नाही. मातीचा प्रकार (काळी/मध्यम/हलकी), पाणी साचण्याचा कालावधी व जलनिचरा यावर निर्णय घ्यावा.",
+        "superseded": {
+          "trigger_en": "percolation_time_hours greater than 12",
+          "action_en": "Advise against ginger on this plot. Drainage this poor cannot be corrected by bed height alone and soft rot risk is unacceptable.",
+          "severity": "blocking",
+          "confidence_score": 0.85,
+          "source_class": "DERIVED",
+          "threshold": "percolation_time_hours > 12 as a single fixed cut-off",
+          "author_reasoning": "Single threshold chosen for simplicity; not sourced."
+        }
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-DR-002",
+      "category": "DR",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": "G0",
+      "trigger": {
+        "english": "drainage_levels_present less than 3 OR main_drain_connected is false, before planting",
+        "marathi": "निचऱ्याच्या तिन्ही पातळ्या पूर्ण नाहीत किंवा मुख्य चर शेताबाहेर जोडलेला नाही",
+        "expr": "(drainage_levels_present < 3 OR main_drain_connected IS FALSE) AND dap IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "All three drainage levels required BEFORE planting.",
+        "golden_tests": [
+          {
+            "context": {
+              "drainage_levels_present": 2,
+              "main_drain_connected": true
+            },
+            "expect": "TRUE",
+            "label": "दोनच पातळ्या"
+          },
+          {
+            "context": {
+              "drainage_levels_present": 3,
+              "main_drain_connected": false
+            },
+            "expect": "TRUE",
+            "label": "मुख्य चर जोडलेला नाही"
+          },
+          {
+            "context": {
+              "drainage_levels_present": 3,
+              "main_drain_connected": true
+            },
+            "expect": "FALSE",
+            "label": "तिन्ही पूर्ण"
+          },
+          {
+            "context": {
+              "drainage_levels_present": 2,
+              "main_drain_connected": true,
+              "dap": 40
+            },
+            "expect": "FALSE",
+            "label": "लागवड झाली — आता हा नियम नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Require all three drainage levels before planting: (1) bed height 25-30 cm, (2) 60 cm furrows between beds, (3) a main channel at the lowest point of the field, connected to an outlet outside the field.",
+        "marathi": "लागवडीपूर्वी निचऱ्याच्या तिन्ही पातळ्या पूर्ण असाव्यात — वरंब्याची उंची २५-३० सेंमी, दोन वरंब्यांतील ६० सेंमी पाट, आणि शेताच्या सर्वात खालच्या टोकाला मुख्य चर जो शेताबाहेर मोकळा होतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "The third level is the one most often omitted. Raised beds and furrows only move water within the field; without an outlet the water circulates and the beds stand in it.",
+        "yield_impact": "u = 0.15 to 0.30 for inadequate drainage, rising toward 0.70 if it triggers a full soft rot outbreak.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam",
+          "CJAST 2020 soft rot review"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_6_disease",
+          "domain_7_weather",
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "drainage_levels_present",
+        "main_drain_connected",
+        "bed_height_cm",
+        "furrow_width_cm"
+      ],
+      "u_value": 0.22,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "July here delivers about 195 mm, the wettest month, and the crop is then at end of G2 or start of G3 — the most sensitive point. Drainage channels are not a monsoon task; they must exist before planting.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-DR-003",
+      "category": "DR",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Forecast exceeds 50 mm rain in 48 hours AND stage is G2 or G3",
+        "marathi": "पुढील ४८ तासांत ५० मिमीहून जास्त पावसाचा अंदाज आणि पीक G2 किंवा G3 अवस्थेत",
+        "expr": "forecast_rain_48h_mm > 50 AND STAGE IN [G2, G3]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Channels silt up and are noticed only when they fail.",
+        "golden_tests": [
+          {
+            "context": {
+              "forecast_rain_48h_mm": 60,
+              "current_stage": "G2"
+            },
+            "expect": "TRUE",
+            "label": "चर तपासा"
+          },
+          {
+            "context": {
+              "forecast_rain_48h_mm": 60,
+              "current_stage": "G5"
+            },
+            "expect": "FALSE",
+            "label": ""
+          }
+        ]
+      },
+      "action": {
+        "english": "Pre-warn: check that all three drainage levels are clear of silt, and stop drip. After the rain, check for saturation within 12 hours.",
+        "marathi": "निचरा चर मोकळे आहेत का तपासा, ठिबक बंद करा. पाऊस थांबल्यावर १२ तासांत पाणी साचले आहे का पहा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Channels silt up during the season and are usually only noticed when they fail. A forecast-triggered check converts a reactive failure into a scheduled inspection.",
+        "yield_impact": "Reduces the probability of the saturation event that drives soft rot.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam",
+          "Core C2.3"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "rainfall_mm",
+        "current_stage",
+        "drainage_levels_present",
+        "soil_moisture_vwc"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "This rule must also fire in October and November, not only during the monsoon. Cyclonic rainfall reaches this district in those months, and by then the channels have been neglected for weeks while the rhizome is fully formed.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-ST-001",
+      "category": "ST",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Pre-season planning initiated AND soil_test_available is false",
+        "marathi": "हंगामापूर्व नियोजन सुरू, माती परीक्षण उपलब्ध नाही"
+      },
+      "action": {
+        "english": "Request a soil test at least four months before planting. Specify that free lime, zinc and iron must be requested separately — they are normally absent from a standard report and they are the three parameters that matter most in this belt.",
+        "marathi": "लागवडीच्या किमान चार महिने आधी माती परीक्षण करा. मुक्त चुनखडी, जस्त आणि लोह हे तीन घटक वेगळे मागावे लागतात — नेहमीच्या अहवालात ते नसतात, आणि इथे तेच सर्वात जास्त सांगणारे आहेत."
+      },
+      "reasoning": {
+        "agronomic_basis": "The routine soil health card panel covers pH, EC, organic carbon and NPK. Free lime, zinc and iron determine whether the calcareous yellowing problem will occur, and they are the basis for the Domain 4 micronutrient schedule.",
+        "yield_impact": "Enables correct dosing across Domain 4. Without it the engine falls back to generic doses at medium confidence.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Domain 2 soil test panel",
+          "Vikaspedia micronutrient guidance"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient",
+          "domain_10_institutional"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "soil_test_available",
+        "soil_ph",
+        "soil_free_lime_pct",
+        "soil_zn_ppm",
+        "soil_fe_ppm",
+        "soil_oc_pct",
+        "soil_ec"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Four months of lead time is not caution; laboratory turnaround plus the need to buy amendments before land preparation makes any later request useless for this season.",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-ST-002",
+      "category": "ST",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Pre-season planning AND percolation_time_hours is unknown",
+        "marathi": "हंगामापूर्व नियोजन, निचरा चाचणी झालेली नाही"
+      },
+      "action": {
+        "english": "Request the field percolation pit test. 30 cm deep and wide, fill and drain fully, refill and time the second drain. Record percolation_class.",
+        "marathi": "३० सेंमी खोल व रुंद खड्डा खणा, पाण्याने भरून पूर्ण मुरू द्या, पुन्हा भरा आणि वेळ मोजा. दोन तासांत मुरले तर उत्तम; बारा तासांहून जास्त लागल्यास या शेतात अद्रक टाळावे."
+      },
+      "reasoning": {
+        "agronomic_basis": "For ginger the governing soil risk is physical drainage, not chemical fertility. No laboratory report measures infiltration rate on the actual plot.",
+        "yield_impact": "Determines bed height and channel design, and in the worst case the go or no-go decision.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 2 percolation method",
+          "standard field infiltration practice"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "percolation_time_hours",
+        "percolation_class",
+        "bed_height_cm"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "Zero cost, one day, no laboratory. For this crop in this soil it is arguably more decisive than the chemical panel.",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-TL-001",
+      "category": "TL",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Land preparation phase, deep_ploughing_done is false",
+        "marathi": "पूर्वमशागत सुरू, खोल नांगरट झालेली नाही"
+      },
+      "action": {
+        "english": "Require deep ploughing to about one foot, both lengthwise and crosswise, followed by kulav passes until the tilth is friable and clod-free.",
+        "marathi": "एक फुटापर्यंत उभी व आडवी खोल नांगरट करा, नंतर कुळवाच्या पाळ्या देऊन जमीन भुसभुशीत करा. काळ्या जमिनीत ढेकळे मोठी होतात, त्यामुळे तीन ते चार पाळ्या लागू शकतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "The crop stays in the soil for eight months and the rhizome expands horizontally. It needs a loose lateral working layer; compacted soil produces small and misshapen rhizomes.",
+        "yield_impact": "Not separately quantified. Acts through rhizome size rather than plant count.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam",
+          "CropLibrary"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_8_operations",
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "deep_ploughing_done",
+        "kulav_passes",
+        "soil_texture_class"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Official guidance says one to two kulav passes. Black soil forms larger clods, so three to four is more realistic here, and a rotavator is often needed to finish.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-TL-002",
+      "category": "TL",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Month is March AND deep_ploughing_done is false",
+        "marathi": "मार्च महिना, खोल नांगरट बाकी"
+      },
+      "action": {
+        "english": "Start deep ploughing now. In black soil the workable window is narrow and closes once the pre-monsoon showers begin. Starting in May is already too late.",
+        "marathi": "खोल नांगरट आत्ता सुरू करा. काळी जमीन मार्चमध्ये कोरडी व कडक असते — तीच नांगरटीची योग्य वेळ. मे मध्ये सुरू केल्यास उशीर होतो आणि पाऊस सुरू झाल्यावर मशागत अशक्य होते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Vertisol is unworkable when wet (clods and structural damage) and resists implements when bone dry. The usable window is short and falls in March for this belt.",
+        "yield_impact": "Missing the window compresses all subsequent operations and risks planting after the 7 June deadline.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam",
+          "Domain 2 vertisol behaviour"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_8_operations"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "deep_ploughing_done",
+        "vafsa_state"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "The chain is tight: March ploughing, April solarization, May bed forming and drip, planting by 7 June. Losing March compresses everything downstream.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-TL-003",
+      "category": "TL",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Soil moisture enters the workable band after rain AND land preparation is incomplete",
+        "marathi": "पावसानंतर वाफसा आला आणि मशागत अपूर्ण आहे",
+        "expr": "vafsa_state == 'workable' AND deep_ploughing_done IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Vertisol has a few workable days after rain. Duplication group vafsa_workable_window.",
+        "golden_tests": [
+          {
+            "context": {
+              "vafsa_state": "workable",
+              "deep_ploughing_done": false
+            },
+            "expect": "TRUE",
+            "label": "वाफसा आला — मशागत करा"
+          },
+          {
+            "context": {
+              "vafsa_state": "too_wet",
+              "deep_ploughing_done": false
+            },
+            "expect": "FALSE",
+            "label": "खूप ओली"
+          },
+          {
+            "context": {
+              "deep_ploughing_done": false
+            },
+            "expect": "UNKNOWN",
+            "label": "वाफसा माहीत नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Notify that the field is workable for approximately the next three to four days.",
+        "marathi": "पुढील तीन-चार दिवस मशागतीस योग्य आहेत. वाफसा गेल्यावर काळ्या जमिनीत काम करता येणार नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Vafsa is the intermediate moisture state between sticky and hard. In black soil it lasts only a few days and judging it by eye is unreliable.",
+        "yield_impact": "Indirect. Protects soil structure and prevents lost operating days.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Domain 2 vertisol behaviour",
+          "Core C3"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_8_operations"
+        ],
+        "depends_on": [
+          "domain_3_water",
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "soil_moisture_vwc",
+        "vafsa_state",
+        "rainfall_mm"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "This is a genuinely sensor-enabled advisory with no manual equivalent. The farmer currently judges vafsa by squeezing a handful of soil, which is a coarse test on a narrow window.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-WD-001",
+      "category": "WD",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Land preparation phase",
+        "marathi": "पूर्वमशागतीचा टप्पा"
+      },
+      "action": {
+        "english": "Physically remove perennial weed tubers and rhizomes — nutsedge, bermuda grass and similar — along with stones. Do not rely on later weeding to control them.",
+        "marathi": "लव्हाळा, हराळी, कुंदा यांसारख्या बहुवार्षिक तणांचे कंद व काश्या वेचून काढा, तसेच मोठे दगड-गोटे. नंतरच्या खुरपणीवर विसंबून राहू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "Ginger emerges slowly and cannot outcompete established perennial weeds. More importantly, heavy later weeding injures the rhizome, and Pythium and Fusarium enter through those wounds.",
+        "yield_impact": "Acts through the disease pathway rather than through competition alone.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam",
+          "Agrowon - Mali & Mahajan on wound entry"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_8_operations"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "perennial_weeds_removed"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "The causal chain runs: heavy FYM carries weed seed, weed pressure forces more weeding, weeding injures the rhizome, injury admits rot. Weed removal two months before planting is therefore a disease-prevention operation, not a tidiness one.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-OM-001",
+      "category": "OM",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "FYM application scheduled",
+        "marathi": "शेणखत टाकण्याची वेळ"
+      },
+      "action": {
+        "english": "Apply 14 to 16 tonnes per acre of fully decomposed FYM before the final kulav pass. Do not reduce this figure for Kannad — here FYM is a soil amendment, not merely a nutrient source.",
+        "marathi": "शेवटच्या कुळवाच्या पाळीअगोदर एकरी १४ ते १६ टन चांगले कुजलेले शेणखत मिसळा. Kannad मध्ये ही मात्रा कमी करू नये — इथे शेणखत अन्नद्रव्यांपेक्षा जमीन दुरुस्तीचे काम करते."
+      },
+      "reasoning": {
+        "agronomic_basis": "In this belt FYM does three jobs at once: it improves friability of heavy clay so drainage improves, it helps keep zinc and iron available against lime lock-up, and it raises organic carbon from a low base of 0.3 to 0.5 percent toward the 1 percent target.",
+        "yield_impact": "Not separately quantified. Acts indirectly through drainage, micronutrient availability and soil structure.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam (35-40 t/ha)",
+          "Domain 4 organic carbon target"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient",
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "fym_t_per_acre",
+        "soil_oc_pct",
+        "soil_free_lime_pct"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Sources disagree widely, from 8 to 16 tonnes per acre. The Maharashtra institutional figure is used and the upper end is chosen because the soil constraint here is structural, not nutritional.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-OM-002",
+      "category": "OM",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G0",
+      "trigger": {
+        "english": "FYM application scheduled AND fym_fully_decomposed is false or unknown",
+        "marathi": "शेणखत टाकायचे आहे पण ते पूर्ण कुजलेले आहे का हे माहीत नाही"
+      },
+      "action": {
+        "english": "Verify decomposition before applying. Criteria: dark brown to black, no smell, original material no longer recognisable. If half-decomposed, either let it decompose further or mix Metarhizium with it.",
+        "marathi": "शेणखत पूर्ण कुजले आहे का तपासा — गडद तपकिरी किंवा काळे, वास नाही, मूळ पदार्थ ओळखू येत नाही. अर्धवट कुजलेले असल्यास आणखी कुजू द्या, किंवा मेटॅरायझियम मिसळा."
+      },
+      "reasoning": {
+        "agronomic_basis": "White grub larvae feed first on organic matter in half-decomposed FYM and then move to roots. Decomposition heat also kills weed seed. So one condition addresses a pest problem and a weed problem simultaneously.",
+        "yield_impact": "u = 0.10 estimated for white grub damage traceable to undecomposed FYM.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan, white grub"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest",
+          "domain_8_operations"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "fym_fully_decomposed",
+        "fym_t_per_acre"
+      ],
+      "u_value": 0.1,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "Because the FYM rate here is high at 14 to 16 tonnes per acre, the white grub exposure from undecomposed material is proportionally larger than in belts using half that quantity.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-OM-003",
+      "category": "OM",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "FYM application scheduled",
+        "marathi": "शेणखत टाकण्याची वेळ"
+      },
+      "action": {
+        "english": "Mix Trichoderma at 2 kg per acre into the FYM at the time of application. Do not broadcast it separately onto bare soil.",
+        "marathi": "शेणखतात ट्रायकोडर्मा २ किलो प्रति एकर मिसळून द्या. नुसते जमिनीवर टाकू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "Trichoderma is a living organism and needs an organic substrate to colonise. Applied to bare soil it does not establish; applied through FYM it survives and works through the season.",
+        "yield_impact": "u = 0.08 estimated for omitting it, acting through soft rot and nematode suppression.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan",
+          "CJAST 2020 soft rot review"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "trichoderma_kg_per_acre",
+        "fym_t_per_acre",
+        "fym_fully_decomposed"
+      ],
+      "u_value": 0.08,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "Cheapest and safest soft rot measure available, with no CIB&RC restriction and no pre-harvest interval. It must be applied at land preparation, so a missed window cannot be recovered later in the season.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-SN-001",
+      "category": "SN",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Month is April or early May AND field is empty AND solarization_done is false",
+        "marathi": "एप्रिल किंवा मे ची सुरुवात, शेत रिकामे, सौरीकरण झालेले नाही",
+        "expr": "MONTH IN [APR, MAY] AND days_to_planting > 30 AND solarization_done IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "April and May maxima of 40 to 45 C make this belt unusually good for solarization.",
+        "golden_tests": [
+          {
+            "context": {
+              "current_month": 4,
+              "days_to_planting": 50,
+              "solarization_done": false
+            },
+            "expect": "TRUE",
+            "label": "एप्रिल — सौरीकरण"
+          },
+          {
+            "context": {
+              "current_month": 4,
+              "days_to_planting": 50,
+              "solarization_done": true
+            },
+            "expect": "FALSE",
+            "label": "झाले"
+          },
+          {
+            "context": {
+              "current_month": 6,
+              "days_to_planting": 50,
+              "solarization_done": false
+            },
+            "expect": "FALSE",
+            "label": "जून — उशीर"
+          }
+        ]
+      },
+      "action": {
+        "english": "Recommend soil solarization for four to six weeks. Moisten the soil, lay TRANSPARENT (not black) polythene, seal the edges with soil, and remove before planting.",
+        "marathi": "जमीन ओलसर करून पारदर्शक प्लास्टिक अंथरा, कडा मातीने बंद करा, चार ते सहा आठवडे ठेवा आणि लागवडीपूर्वी काढा. काळे नव्हे — पारदर्शक प्लास्टिक वापरावे, कारण काळे स्वतः तापते पण उष्णता जमिनीत जाऊ देत नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Solarization raises topsoil temperature enough to kill soil-borne pathogens, nematodes and weed seed. It is a recognised cultural measure in soft rot management.",
+        "yield_impact": "u = 0.05 estimated for omitting it.",
+        "confidence_score": 0.75,
+        "source_tier": "A",
+        "references": [
+          "CJAST 39(35) 2020 soft rot review"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest",
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "solarization_done",
+        "solarization_weeks",
+        "air_temp_max_c"
+      ],
+      "u_value": 0.05,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "April and May maxima here reach 40 to 45 C, among the most favourable conditions in the country for solarization. The same heat that threatens the crop after planting is an asset before it. Since soft rot is the dominant risk in this belt, this is a genuine local advantage and should be trialled in a strip against an untreated strip in season one.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-LY-001",
+      "category": "LY",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G0",
+      "trigger": {
+        "english": "soil_type is vertisol AND has_drip is true AND planting_layout is not broad_ridge",
+        "marathi": "काळी जमीन, ठिबक आहे, पण रुंद वरंबा पद्धत निवडलेली नाही"
+      },
+      "action": {
+        "english": "Require broad ridge layout. The official recommendation names this method specifically for black soils and for fields using drip or sprinkler, and records 15 to 20 percent higher yield than the alternatives.",
+        "marathi": "रुंद वरंबा किंवा गादी वाफा पद्धत वापरा. काळ्या जमिनी आणि ठिबक-तुषार वापरल्या जाणाऱ्या ठिकाणी हीच पद्धत शिफारसीत आहे, आणि इतर पद्धतींपेक्षा १५ ते २०% जास्त उत्पादन मिळते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Both qualifying conditions are met at Kannad — the soil is black and drip is a precondition for the crop here. The method raises the root zone above standing water and suits single-line drip.",
+        "yield_impact": "u = 0.167 for not using it, derived from the recorded 20 percent gain.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Jitendra Kadam"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_6_disease",
+          "domain_8_operations",
+          "domain_11_yield",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "planting_layout",
+        "soil_type",
+        "has_drip"
+      ],
+      "u_value": 0.167,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "This is the highest-return structural decision in the knowledge base and its marginal cost is close to zero, because a bed former takes the same time either way. It also reduces plant population by roughly 44 percent against flat beds, which cuts the largest cost line while raising yield.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-LY-002",
+      "category": "LY",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "planting_layout is broad_ridge AND bed geometry not yet set",
+        "marathi": "रुंद वरंबा निवडला, मोजमापे ठरवायची आहेत"
+      },
+      "action": {
+        "english": "Set geometry: 120 cm cycle, 60 cm ridge width, 60 cm furrow width, height 25 to 30 cm, planting 22.5 x 22.5 cm, depth 4 to 5 cm, one drip line per bed with 2 lph drippers. Lay beds along the slope so water runs off.",
+        "marathi": "१२० सेंमी अंतरावर सरी पाडा — मधील वरंबा ६० सेंमी रुंद, दोन वरंब्यांतील पाट ६० सेंमी, उंची २५ ते ३० सेंमी. लागवड २२.५ × २२.५ सेंमी अंतरावर, खोली ४ ते ५ सेंमी. एका वाफ्यावर एक ठिबक नळी, २ लिटर प्रति तास तोट्या. वाफे उताराला अनुसरून करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Official height is 20 to 25 cm; a second Maharashtra source using drip specifies 30 cm. Both point the same way, and the error is one-sided — excess height costs a little more water, insufficient height costs the crop.",
+        "yield_impact": "Realises the 0.167 u-value captured by D02-LY-001.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam",
+          "Agrowon - Bitle & Deshmukh, Netafim"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_8_operations",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "bed_width_cm",
+        "furrow_width_cm",
+        "bed_height_cm",
+        "planting_layout"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Domain 1 left bed height open as a field item and estimated that 15 cm would be inadequate for black soil. The Maharashtra recommendation of 20 to 25 cm confirmed that estimate. Twenty-five to thirty is chosen here because July delivers 195 mm and cyclonic rain can arrive in October.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-LY-003",
+      "category": "LY",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Bed forming scheduled AND area_acre greater than 1",
+        "marathi": "वाफे बांधायचे आहेत आणि क्षेत्र एक एकरहून जास्त"
+      },
+      "action": {
+        "english": "Arrange a tractor-drawn bed former before land preparation reaches the bed stage. Hand-forming beds is not practical beyond a small area and the machine setting for 60/60 geometry must be arranged with the operator in advance.",
+        "marathi": "मोठ्या क्षेत्रावर हाताने वाफे बांधणे व्यवहार्य नाही. ट्रॅक्टरचे सरी यंत्र आधीच ठरवा, आणि ६०/६० रचनेसाठी यंत्राची मांडणी चालकाशी बोलून निश्चित करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Bed geometry determines drainage, plant population and drip layout. If the machine cannot be set correctly the whole layout decision fails at execution.",
+        "yield_impact": "Indirect. Protects the 0.167 u-value from being lost at implementation.",
+        "confidence_score": 0.7,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - onion bed forming machinery method"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_8_operations",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "planting_layout",
+        "bed_width_cm",
+        "area_acre"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "EST",
+      "kannad_note": "Documented machine settings exist for 120 cm wide beds in onion. The 60 cm ridge with 60 cm furrow arrangement for ginger will need confirmation with a local operator before the season.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-BF-001",
+      "category": "BF",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Land preparation reaching final stage",
+        "marathi": "जमीन तयार करण्याचा शेवटचा टप्पा"
+      },
+      "action": {
+        "english": "Apply the full phosphorus and basal potassium dose now — 30 kg P and 30 kg K per acre. Nitrogen is NOT basal.",
+        "marathi": "स्फुरद व पायाभूत पालाश यांची संपूर्ण मात्रा आत्ताच द्या — एकरी ३० किलो स्फुरद आणि ३० किलो पालाश. नत्र पायाभूत देऊ नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "Phosphorus is immobile and must be placed in the root zone before planting. All state recommendations agree on full basal P. Basal potassium is the first of three potassium applications; the remaining two follow in Domain 4.",
+        "yield_impact": "Part of the overall nutrition schedule; not separately quantified here.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam, 75:75 kg/ha P and K basal"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "basal_p_kg_per_acre",
+        "basal_k_kg_per_acre",
+        "soil_test_available"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Original figures are 75:75 kg per hectare, converted to 30:30 per acre. Adjust against the soil test where available.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-BF-002",
+      "category": "BF",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Basal phosphorus scheduled AND soil_free_lime_pct is elevated",
+        "marathi": "पायाभूत स्फुरद द्यायचा आहे आणि मातीत चुनखडी आहे"
+      },
+      "action": {
+        "english": "Band the phosphorus rather than broadcasting it, and place it with organic matter. Do NOT increase the dose to compensate for fixation — the extra also gets fixed.",
+        "marathi": "स्फुरद पसरून न देता पट्ट्यात द्या, आणि सेंद्रिय पदार्थासोबत द्या. चुनखडीमुळे स्फुरद स्थिर होतो म्हणून मात्रा वाढवू नये — वाढवलेलाही तेवढ्याच प्रमाणात स्थिर होतो. उत्तर मात्रा नाही, पद्धत आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "In calcareous soil applied phosphorus binds with calcium into unavailable calcium phosphate. Banding reduces soil contact and therefore fixation; organic acids from decomposing matter keep more of it available; phosphate-solubilising bacteria release some of the fixed pool.",
+        "yield_impact": "Prevents wasted input rather than adding yield. Also explains why the Mahima-specific trial recommends lower phosphorus and higher potassium than the general schedule.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 2 fixation mechanism",
+          "Int. J. Adv. Biochem. Res. 2025, IISR Mahima NPK trial"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "basal_p_kg_per_acre",
+        "soil_free_lime_pct",
+        "soil_ph"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "The instinctive response to poor phosphorus availability is to apply more. In calcareous soil that is the wrong answer and it is expensive.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-CL-001",
+      "category": "CL",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Pre-season planning initiated",
+        "marathi": "हंगामापूर्व नियोजन सुरू",
+        "expr": "days_to_planting BETWEEN 55 AND 95 AND deep_ploughing_done IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "March ploughing anchors the whole chain. Losing it compresses everything downstream.",
+        "golden_tests": [
+          {
+            "context": {
+              "days_to_planting": 80,
+              "deep_ploughing_done": false
+            },
+            "expect": "TRUE",
+            "label": "मार्च — नांगरट सुरू करा"
+          },
+          {
+            "context": {
+              "days_to_planting": 80,
+              "deep_ploughing_done": true
+            },
+            "expect": "FALSE",
+            "label": "झाली आहे"
+          },
+          {
+            "context": {
+              "days_to_planting": 20,
+              "deep_ploughing_done": false
+            },
+            "expect": "FALSE",
+            "label": "खिडकी गेली, वेगळा नियम"
+          }
+        ]
+      },
+      "action": {
+        "english": "Issue the land preparation calendar: March soil sample and deep ploughing, late March stone and weed removal, April solarization, early May kulav passes, May FYM and basal P and K, May bed forming, May drip laid and tested, May main drainage channel, late May seed grading and treatment, planting by 7 June, mulch immediately after planting.",
+        "marathi": "पूर्वमशागतीचे वेळापत्रक — मार्च: माती नमुना व खोल नांगरट. मार्च अखेर: दगड व तणकंद वेचणी. एप्रिल: सौरीकरण. मे सुरुवात: कुळवाच्या पाळ्या. मे: शेणखत, स्फुरद व पालाश, रुंद वरंबे, ठिबक, निचरा चर. मे अखेर: बेणे प्रतवारी व प्रक्रिया. ७ जूनपर्यंत लागवड. लागवडीनंतर लगेच आच्छादन."
+      },
+      "reasoning": {
+        "agronomic_basis": "Every step has a predecessor and the whole chain terminates at a hard deadline. The narrow vertisol working window and the fixed 7 June planting cut-off leave no slack.",
+        "yield_impact": "Protects the 0.20 u-value attached to late planting and the 0.167 attached to bed layout.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam",
+          "Domain 2 land preparation sequence"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_3_water",
+          "domain_8_operations",
+          "domain_10_institutional"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "planting_date",
+        "deep_ploughing_done",
+        "solarization_done",
+        "fym_t_per_acre",
+        "planting_layout",
+        "has_drip",
+        "drainage_levels_present"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "Drip and subsidy approval must precede this calendar, not run alongside it. The subsidy application chain includes a lottery and takes months, so it starts six or more months before planting.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-CL-002",
+      "category": "CL",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": "G0",
+      "trigger": {
+        "english": "Planting is imminent AND has_drip is false",
+        "marathi": "लागवड जवळ आली आणि ठिबक बसवलेले नाही",
+        "expr": "has_drip IS FALSE AND WITHIN(planting_date, 30 DAYS)",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Planting readiness blocked without operational drip.",
+        "golden_tests": [
+          {
+            "context": {
+              "has_drip": false,
+              "days_to_planting": 20
+            },
+            "expect": "TRUE",
+            "label": "ठिबक नाही, २० दिवस उरले"
+          },
+          {
+            "context": {
+              "has_drip": true,
+              "days_to_planting": 20
+            },
+            "expect": "FALSE",
+            "label": "ठिबक आहे"
+          },
+          {
+            "context": {
+              "days_to_planting": 20
+            },
+            "expect": "UNKNOWN",
+            "label": "ठिबकाची स्थिती माहीत नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Block planting readiness. Drip must be laid, tested and operational BEFORE planting, because monsoon onset here is unreliable and germination water may have to come from the system.",
+        "marathi": "ठिबक लागवडीपूर्वी अंथरून, चाचणी करून, कार्यरत असले पाहिजे. इथे मान्सून अनिश्चित आहे — लागवड करून पाऊस लांबल्यास उगवणीचे पाणी ठिबकातूनच द्यावे लागेल."
+      },
+      "reasoning": {
+        "agronomic_basis": "Kannad receives about 734 mm against a crop requirement of 1320 to 1520 mm, and 55 percent of years fall below the long-term average. Rainfed establishment is not a reliable fallback.",
+        "yield_impact": "Failure at G1 is irrecoverable because establishment count caps the season.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Domain 3 water requirement",
+          "Domain 7 rainfall variability"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_1_lifecycle"
+        ],
+        "depends_on": [
+          "domain_10_institutional"
+        ]
+      },
+      "farm_brain_schema": [
+        "has_drip",
+        "planting_date"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Pre-monsoon rainfall in Marathwada has declined by about 31 percent, so the traditional practice of planting with pre-monsoon showers is now less reliable than when that recommendation was written.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "लागवडीपूर्वी ठिबक बसवून चाचणी करणे आवश्यक."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-SL-003",
+      "category": "SL",
+      "priority": 4,
+      "severity": "red",
+      "stage": "G0",
+      "trigger": {
+        "english": "previous_crops_3yr contains ginger, turmeric, potato, tomato, brinjal or chilli",
+        "marathi": "मागील तीन वर्षांत आले, हळद, बटाटा, टोमॅटो, वांगी किंवा मिरची घेतलेली आहे"
+      },
+      "action": {
+        "english": "Warn that rotation requirement is not met. Ginger and turmeric share soil-borne pathogens; the solanaceous crops are hosts for bacterial wilt. Recommend a different plot if one is available.",
+        "marathi": "फेरपालट पाळलेली नाही. हळद व आले एकाच कुळातील असल्याने त्यांचे soil-borne रोग सामाईक आहेत; बटाटा, टोमॅटो, वांगी, मिरची हे मर रोगाचे यजमान आहेत. शक्य असल्यास दुसरा प्लॉट निवडा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Continuous cropping raises infection risk from both Pythium and Ralstonia. Minimum recommended gap is three years, and the wilt bacterium can persist longer than that.",
+        "yield_impact": "u = 0.15 estimated for rotation failure alone; substantially higher if a wilt outbreak follows.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Microbiology Spectrum / NCBI PMC9603371",
+          "Agrowon - Dr. Kadam"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "previous_crops_3yr",
+        "field_history_rot",
+        "field_history_wilt"
+      ],
+      "u_value": 0.15,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "Three years is the stated minimum, but bacterial wilt is documented as persisting in soil for many years. Where wilt has actually been recorded on the plot, three years should be treated as insufficient.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-DR-004",
+      "category": "DR",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "percolation_class is poor AND planting_layout is broad_ridge",
+        "marathi": "निचरा खराब आहे आणि रुंद वरंबा पद्धत निवडली आहे"
+      },
+      "action": {
+        "english": "Increase bed height to the upper end of the range (30 cm) and widen furrows beyond 60 cm. Confirm the main drain has adequate fall to an outlet.",
+        "marathi": "वाफ्याची उंची ३० सेंमीपर्यंत वाढवा आणि पाट ६० सेंमीपेक्षा रुंद करा. मुख्य चराला पुरेसा उतार असून तो शेताबाहेर मोकळा होतो याची खात्री करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Bed height is the primary control on root-zone saturation. Where infiltration is slow, the standard height is not sufficient and the error is one-sided — excess height costs slightly more irrigation, insufficient height costs the crop.",
+        "yield_impact": "Modifies the drainage u-value of 0.15 to 0.30 downward.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Agrowon - Bitle & Deshmukh 30 cm bed",
+          "Domain 2 percolation classes"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "percolation_class",
+        "bed_height_cm",
+        "furrow_width_cm",
+        "main_drain_connected"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "EST",
+      "kannad_note": "Bed height is decided once and cannot be changed after planting. Where the percolation test is borderline, choosing the higher bed is the cheap insurance.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D02-OM-004",
+      "category": "OM",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "soil_oc_pct less than 0.75",
+        "marathi": "सेंद्रिय कर्ब ०.७५ टक्क्यांपेक्षा कमी"
+      },
+      "action": {
+        "english": "Inform that organic carbon is below target and that raising it is a three to four season programme, not a single-season fix. FYM, neem cake and mulch all contribute.",
+        "marathi": "सेंद्रिय कर्ब लक्ष्यापेक्षा कमी आहे. तो एका हंगामात वाढत नाही — शेणखत, निंबोळी पेंड आणि आच्छादन यांतून तीन-चार हंगामांत वाढतो. ही तूट भरून काढणे हे दीर्घकालीन काम आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Target is above 1 percent; Marathwada black soil typically runs 0.3 to 0.5 percent. Organic carbon governs water holding, microbial activity and micronutrient availability, all of which matter more in calcareous heavy soil.",
+        "yield_impact": "Not directly quantified. Acts through drainage, nutrient availability and disease suppression.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Agrowon - Bitle & Deshmukh 1 percent OC target",
+          "Domain 4"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient",
+          "domain_8_operations"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "soil_oc_pct",
+        "fym_t_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "Setting the expectation honestly matters here. A farmer told to reach 1 percent organic carbon this season will conclude the advice failed. Told it is a four-season programme, the same inputs are seen as working.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    }
+  ],
+  "open_items": [
+    {
+      "id": "D02-OI-01",
+      "item": "Actual plot soil test — pH, free lime, EC, organic carbon, NPK, zinc, iron",
+      "owner": "soil testing laboratory / KVK Chhatrapati Sambhajinagar",
+      "source_class": "FIELD",
+      "blocking": true,
+      "note": "Free lime, zinc and iron must be requested separately; they drive the entire Domain 4 micronutrient schedule."
+    },
+    {
+      "id": "D02-OI-02",
+      "item": "Field percolation test result",
+      "owner": "own measurement, one day",
+      "source_class": "FIELD",
+      "blocking": true,
+      "note": "Determines bed height, channel design and in the worst case the go or no-go decision."
+    },
+    {
+      "id": "D02-OI-03",
+      "item": "Cost-benefit of soil solarization under Kannad conditions",
+      "owner": "trial strip, season one",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D02-OI-04",
+      "item": "Bed former machine setting for 60 cm ridge and 60 cm furrow",
+      "owner": "local tractor operator",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D02-OI-05",
+      "item": "Local availability and cost of mulch material",
+      "owner": "local survey",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D02-OI-06",
+      "item": "Confirm Kannad agro-climatic sub-zone classification",
+      "owner": "VNMKV Parbhani / district office",
+      "source_class": "VERIFY",
+      "blocking": false
+    }
+  ],
+  "summary": {
+    "total_rules": 27,
+    "by_category": {
+      "SL": 3,
+      "CA": 2,
+      "DR": 4,
+      "ST": 2,
+      "TL": 3,
+      "WD": 1,
+      "OM": 4,
+      "SN": 1,
+      "LY": 3,
+      "BF": 2,
+      "CL": 2
+    },
+    "by_priority": {
+      "5": 14,
+      "4": 9,
+      "3": 4
+    },
+    "by_severity": {
+      "red": 5,
+      "yellow": 15,
+      "blocking": 3,
+      "info": 4
+    },
+    "by_source_tier": {
+      "A": 22,
+      "B": 5,
+      "C": 0
+    },
+    "by_source_class": {
+      "SRC-D": 8,
+      "SRC-Q": 8,
+      "DERIVED": 7,
+      "EST": 4
+    },
+    "confidence_range": {
+      "min": 0.7,
+      "max": 0.9,
+      "mean": 0.83
+    },
+    "rules_with_u_value": 8,
+    "irrecoverable_rules": 15,
+    "zero_cost_rules": [
+      "D02-ST-002",
+      "D02-CA-002",
+      "D02-WD-001",
+      "D02-OM-002",
+      "D02-SL-003"
+    ],
+    "highest_value_rule": "D02-LY-001",
+    "blocking_open_items": 2,
+    "by_decision_type": {
+      "PLANNING_GUIDANCE": 17,
+      "SENSOR_ALERT": 4,
+      "BLOCK": 3,
+      "DATA_CAPTURE": 2,
+      "SCHEDULED_REMINDER": 1
+    },
+    "reviewed_t1": 3,
+    "rules_with_trigger_expr": 8,
+    "rules_with_delivery_class": 8,
+    "immutable_rules": 0
+  },
+  "next_steps": [
+    "1. Get the plot soil test with free lime, zinc and iron requested separately (D02-OI-01)",
+    "2. Run the percolation pit test — one day, zero cost (D02-OI-02)",
+    "3. Build Domain 3 JSON inheriting the Domain 1 _schema block unchanged",
+    "4. Cross-validate D02-LY-002 bed geometry against Domain 3 drip layout rules",
+    "5. Confirm bed former machine setting with a local operator before March"
+  ],
+  "author_note": "This file contains 26 rules because that is what the source document supports. Every rule carries a traceable source, a bounded confidence score, and a Kannad-specific note. The central structural finding is that five of six soil criteria fail naturally at Kannad but the official Maharashtra recommendation already contains a purpose-built answer — broad ridge layout for black soil under drip — which raises yield 15 to 20 percent while cutting plant population and therefore seed cost. Status is PHASE_1_RAW_UNVALIDATED and must remain so until the plot soil test and percolation result exist.",
+  "legal": {
+    "disclaimer_mr": "हा नियम-संच निर्णय-सहाय्य साधन आहे. अंतिम जबाबदारी शेतकऱ्याची. खत मात्रा माती परीक्षण अहवालानुसार समायोजित कराव्यात.",
+    "disclaimer_en": "This rule set is a decision-support tool. Final responsibility rests with the cultivator. Fertiliser rates must be adjusted against an actual soil test report.",
+    "herbicide_note": "Pre-plant herbicide rules are held in Domain 8. Any herbicide must carry a CIB&RC label claim for ginger and be used at label dose.",
+    "data_note": "Farmer-attributable data handled under DPDP Act 2023; see Domain 12."
+  }
+}

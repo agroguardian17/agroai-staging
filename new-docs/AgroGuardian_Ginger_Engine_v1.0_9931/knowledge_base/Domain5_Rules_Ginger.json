@@ -1,0 +1,2816 @@
+{
+  "_schema": {
+    "schema_version": "2.0",
+    "inherits_from": "Domain1_Rules_Ginger_v2.json",
+    "inheritance_note": "The full _schema block is defined in Domain 1 and is NOT repeated here. Units (per acre), stage codes G0-G5, source tiers A/B/C, source classes, priority scale, recoverability, severity and confidence bounds are inherited unchanged. Domain 2, 3 and 4 additions are also assumed present. Only Domain 5 additions are declared below.",
+    "additions": {
+      "rule_categories_domain_5": {
+        "PC": "pest calendar and general",
+        "RF": "rhizome fly",
+        "SH": "shoot borer",
+        "LR": "leaf roller",
+        "LC": "leaf eating caterpillar",
+        "NE": "nematodes",
+        "WG": "white grub",
+        "TC": "trap crops and traps",
+        "IP": "IPM escalation",
+        "CH": "chemical control and regulatory",
+        "SC": "scouting and thresholds",
+        "SW": "sensor and weather binding"
+      },
+      "new_farm_brain_fields": {
+        "pest_scouting_date": "date",
+        "rhizome_fly_incidence_pct": "number",
+        "shoot_borer_incidence_pct": "number",
+        "leaf_roller_incidence_pct": "number",
+        "leaf_caterpillar_observed": "boolean",
+        "nematode_suspected": "boolean",
+        "white_grub_suspected": "boolean",
+        "castor_bait_prepared_date": "date",
+        "castor_bait_units_per_acre": "integer",
+        "light_trap_installed": "boolean",
+        "light_trap_count_nightly": "integer",
+        "marigold_planted": "boolean",
+        "metarhizium_kg_per_acre": "number",
+        "exposed_rhizomes_observed": "boolean",
+        "plant_pulls_easily": "boolean",
+        "stem_hole_with_webbing": "boolean",
+        "straight_line_holes_in_whorl": "boolean",
+        "soft_rhizome_found": "boolean",
+        "last_insecticide_date": "date",
+        "last_insecticide_group": "string",
+        "phi_days_remaining": "integer",
+        "cluster_pest_alert_active": "boolean",
+        "insecticide_group_repeated": "boolean — the last two applications shared a mode-of-action group"
+      },
+      "chemical_blocklist": {
+        "note": "These molecules appear in older online extension and government pages for this crop. They must NEVER be emitted by the engine.",
+        "molecules": [
+          {
+            "name": "BHC",
+            "aka": [
+              "lindane",
+              "benzene hexachloride"
+            ],
+            "reason": "banned in India",
+            "found_in": "older state agriculture department page, white grub recommendation"
+          },
+          {
+            "name": "monocrotophos",
+            "reason": "highly restricted; banned for many crops",
+            "found_in": "commercial extension page, shoot borer recommendation"
+          }
+        ],
+        "principle": "Availability online does not mean current legality. Every molecule must be checked against the live CIB&RC list."
+      },
+      "pesticide_emission_policy": {
+        "order": [
+          "cultural",
+          "mechanical",
+          "biological",
+          "chemical"
+        ],
+        "chemical_requires": "explicit record of why the preceding tiers were insufficient",
+        "dose_policy": "Name and group may be emitted with the source-reported dose for reference. The engine must append that CIB&RC label claim for ginger must be verified and label dose followed.",
+        "phi_default": "If pre-harvest interval is unknown, block all chemical spray advisory within 30 days of expected harvest."
+      },
+      "decision_types": {
+        "AUTO_DECISION": {
+          "mr": "AI कधी व किती हे स्वतः ठरवतो",
+          "en": "engine computes the quantity or timing itself"
+        },
+        "SENSOR_ALERT": {
+          "mr": "sensor वर आधारित इशारा, कृती माणसाची",
+          "en": "sensor-triggered; the action is human work"
+        },
+        "SCHEDULED_REMINDER": {
+          "mr": "वेळापत्रकानुसार आठवण",
+          "en": "calendar or stage driven reminder"
+        },
+        "DIAGNOSTIC": {
+          "mr": "AI विचारतो, शेतकरी सांगतो",
+          "en": "engine asks, farmer answers, engine branches"
+        },
+        "DATA_CAPTURE": {
+          "mr": "नोंद किंवा मोजमाप मागतो",
+          "en": "engine requests a record or measurement"
+        },
+        "HUMAN_DECISION": {
+          "mr": "AI गणित दाखवतो, निर्णय माणसाचा",
+          "en": "engine presents arithmetic; person decides"
+        },
+        "BLOCK": {
+          "mr": "AI नाकारतो किंवा अडवतो",
+          "en": "engine refuses or blocks"
+        },
+        "PLANNING_GUIDANCE": {
+          "mr": "हंगामापूर्व निवड — शेतकरी ठरवतो",
+          "en": "pre-season choice the farmer makes"
+        },
+        "POLICY": {
+          "mr": "प्रॉडक्ट धोरण, शेतकऱ्यापर्यंत जात नाही",
+          "en": "product policy; never reaches a farmer"
+        }
+      },
+      "automation_levels": {
+        "full": "engine decides and acts without asking",
+        "assisted": "engine decides when, the person does the work or supplies the observation",
+        "advisory": "engine shows the arithmetic, the person chooses",
+        "refusal": "engine prevents an action",
+        "none": "internal policy, not farmer facing"
+      },
+      "trigger_dsl": {
+        "version": "dsl-1.0",
+        "logic": "three-valued: TRUE / FALSE / UNKNOWN",
+        "unknown_rule": "A rule whose trigger evaluates UNKNOWN must NOT fire and must NOT be treated as FALSE. Report reduced confidence and name the missing field (Domain 12 D12-COLD-001).",
+        "operators": [
+          "> >= < <= == !=",
+          "AND OR NOT",
+          "IN [..]",
+          "BETWEEN a AND b",
+          "IS NULL / IS NOT NULL / IS TRUE / IS FALSE",
+          "DURATION(field > x) > n HOURS",
+          "WITHIN(date_field, n DAYS)",
+          "MONTH IN [..]",
+          "STAGE IN [..]"
+        ],
+        "note": "Fields resolve against kb_farm_brain_fields. An undeclared name is a parse error, never a silent false."
+      },
+      "notification_policy": {
+        "version": "notify-1.0",
+        "why": "The season simulation issued 998 messages across 301 days before this existed. A trigger expresses a condition and a condition stays true; the advice is an event and must be delivered once.",
+        "classes": {
+          "ONCE_UNTIL_RESOLVED": "Standing precondition. Once, then a 7/21/45/90 day ladder with rising severity.",
+          "EVENT": "Transient physical event. Rising edge only; re-armed after it clears.",
+          "WINDOW": "Dated operation. Advance warning, the day, then 3 overdue reminders.",
+          "SILENT_GUARD": "Prevention rule. No message unless the prohibited action is attempted."
+        },
+        "result": "998 messages became 43 in the normal season, with no critical stage left silent for more than 15 days."
+      },
+      "override_policy": {
+        "version": "override-1.0",
+        "why": "The Tier-1 review worked but was offline. An agronomist looking at a live plot in August cannot edit JSON and wait for a deploy; by then the window has closed.",
+        "kinds": [
+          "THRESHOLD",
+          "DELIVERY",
+          "SEVERITY",
+          "DISABLE",
+          "PARAMETER"
+        ],
+        "scopes": [
+          "plot",
+          "cluster",
+          "global"
+        ],
+        "scope_precedence": "narrowest wins — plot over cluster over global",
+        "default_expiry_days": 240,
+        "max_expiry_days": 400,
+        "expiry_rationale": "A permanent change belongs in the knowledge base, not in the override table.",
+        "immutable_count": 16,
+        "immutable_rationale": "Some rules exist because getting them wrong causes harm no agronomic judgement outweighs. The API refuses them by code path, and a database trigger refuses them again if the application layer is bypassed.",
+        "audit": "Refused attempts are recorded, not discarded. An attempt to override an immutable rule is a governance signal."
+      }
+    }
+  },
+  "metadata": {
+    "domain": 5,
+    "domain_name": "Pest Management",
+    "domain_name_mr": "कीड व्यवस्थापन",
+    "crop": "ginger",
+    "crop_mr": "आले",
+    "region": "Kannad, Chhatrapati Sambhajinagar, Marathwada",
+    "source_document": "AgroGuardian_Ginger_Domain5_Pest_Management_RAW.docx",
+    "version": "1.0",
+    "status": "PHASE_1_RAW_UNVALIDATED",
+    "agronomist_validated": false,
+    "validation_note": "Pest descriptions and control measures are from the same institutional centre as Domains 2, 4 and 6. Economic threshold levels are NOT published for ginger pests and the provisional levels in this file are estimates that must be replaced by first-season records.",
+    "total_rules": 33,
+    "rule_count_note": "32 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count.",
+    "review_by": null,
+    "review_note": "Pest biology is stable. The chemical blocklist and CIB&RC status must be rechecked annually.",
+    "purpose": "Pest management for ginger in the Kannad belt, organised around the finding that pest control in this crop is primarily disease prevention. Every major pest wounds the rhizome or roots, and those wounds are the entry route for soft rot and bacterial wilt.",
+    "key_innovations": [
+      "Pest success is measured by rot incidence, not by pest counts. Every major pest in this crop opens a wound that fungi and bacteria enter, so the two management areas cannot be budgeted separately.",
+      "Castor seed bait is a documented, institution-endorsed, zero-regulation control for the primary pest — but it needs 8 to 10 days to develop, so it must be started before the pest appears. That timing rule is the engine's contribution.",
+      "Earthing up performs three jobs at once, one of which is covering exposed rhizomes against rhizome fly. The 10 to 15 percent yield loss recorded for skipping it is therefore partly a pest loss.",
+      "Fewer tillers than expected for the variety is the earliest visible nematode symptom, and it is routinely misread as nitrogen deficiency.",
+      "Half-decomposed farmyard manure is white grub food. Since the FYM rate here is high, that exposure is proportionally larger than in belts using half the quantity.",
+      "White grub control only works community-wide because the beetles fly. The cluster architecture already in place makes that possible, and a single farmer with an app cannot achieve it."
+    ],
+    "central_finding": {
+      "statement": "In ginger, pest management and disease management are the same problem.",
+      "chain": [
+        "pest wounds rhizome or roots",
+        "Pythium and Fusarium enter through the wound",
+        "soft rot",
+        "50 to 90 percent yield loss"
+      ],
+      "documented_links": [
+        {
+          "pest": "rhizome fly",
+          "evidence": "larvae entering the rhizome are followed by pathogenic fungi and nematodes; rhizome softens, exudes water and rots"
+        },
+        {
+          "pest": "nematodes",
+          "evidence": "pathogenic fungi enter through nematode wounds, causing rhizome rot"
+        },
+        {
+          "pest": "shoot borer",
+          "evidence": "bores stem and rhizome, creating wounds"
+        },
+        {
+          "pest": "white grub",
+          "evidence": "gnaws roots and rhizomes"
+        }
+      ],
+      "parallel_pathway": "Mechanical injury during weeding or earthing up creates the same wounds without any pest involved.",
+      "implication": "The objective is not killing insects. It is preventing wounds on the rhizome. Domain 11 should keep the pest and rot u-values linked rather than separate."
+    },
+    "primary_sources": [
+      "Agrowon - Halad, Ale pikatil kid-rog niyantran; Dr. Manoj Mali (officer in charge) and Dr. Sachin Mahajan (plant pathologist), Halad Sanshodhan Yojana, Krishi Sanshodhan Kendra, Kasbe Digraj, Sangli (TIER A) - all six pests, castor bait, light trap, Metarhizium, Trichoderma",
+      "Agrowon - Ale Lagvad Tantradnyan, Dr. Jitendra Kadam, same centre (TIER A) - pest calendar, seed treatment, planting deadline",
+      "Krishi Jagran - rhizome fly in turmeric and ginger (TIER B)",
+      "Krishi app blog - marigold trap crop, Trichoderma and neem cake rates (TIER B)",
+      "AgroWorld - Ale lagvad (TIER C) - shoot borer timing; NOT used for chemical recommendations",
+      "Maharashtra Department of Agriculture, older page (TIER A source, OUTDATED content) - used only to identify banned molecules for the blocklist"
+    ],
+    "review_log": {
+      "tier_1_review_date": "2026-07-31",
+      "rules_reviewed": 3,
+      "rules_total": 33,
+      "note": "Rule-level status is authoritative. Domain status stays PHASE_1_RAW_UNVALIDATED until T3 and T4 are also reviewed and one season of field data exists."
+    }
+  },
+  "reference_data": {
+    "pest_calendar": [
+      {
+        "pest": "rhizome_fly",
+        "name_mr": "कंदमाशी",
+        "months": [
+          "July",
+          "August"
+        ],
+        "stages": [
+          "G2"
+        ],
+        "severity": "highest",
+        "wound_type": "rhizome",
+        "detectable": "late"
+      },
+      {
+        "pest": "shoot_borer",
+        "name_mr": "खोड पोखरणारी अळी",
+        "months": [
+          "July",
+          "August",
+          "September",
+          "October"
+        ],
+        "stages": [
+          "G2",
+          "G3"
+        ],
+        "severity": "high",
+        "wound_type": "stem_and_rhizome",
+        "detectable": "early"
+      },
+      {
+        "pest": "leaf_roller",
+        "name_mr": "पाने गुंडाळणारी अळी",
+        "months": [
+          "late August",
+          "September",
+          "October",
+          "November"
+        ],
+        "stages": [
+          "G3",
+          "G4"
+        ],
+        "severity": "medium",
+        "wound_type": "foliage_only",
+        "detectable": "early"
+      },
+      {
+        "pest": "nematodes",
+        "name_mr": "सूत्रकृमी",
+        "months": [
+          "all"
+        ],
+        "stages": [
+          "G1",
+          "G2",
+          "G3",
+          "G4"
+        ],
+        "severity": "high",
+        "wound_type": "roots_and_rhizome",
+        "detectable": "indirect"
+      },
+      {
+        "pest": "white_grub",
+        "name_mr": "हुमणी",
+        "months": [
+          "monsoon"
+        ],
+        "stages": [
+          "G1",
+          "G2"
+        ],
+        "severity": "site_dependent",
+        "wound_type": "roots_and_rhizome",
+        "detectable": "medium"
+      },
+      {
+        "pest": "leaf_caterpillar",
+        "name_mr": "पाने खाणारी अळी",
+        "months": [
+          "monsoon"
+        ],
+        "stages": [
+          "G2"
+        ],
+        "severity": "low_medium",
+        "wound_type": "foliage_only",
+        "detectable": "very_early"
+      }
+    ],
+    "weather_pest_link": {
+      "favourable_conditions": [
+        "high relative humidity",
+        "cloudy weather",
+        "lower temperature"
+      ],
+      "source_statement": "During the monsoon, tillering is vigorous and the combination of atmospheric humidity, cloudy weather and lower temperature causes various pests and diseases to appear.",
+      "measurable_at_station": true,
+      "source_tier": "A",
+      "engine_use": "forecast pest pressure and raise scouting frequency before symptoms appear, because prophylactic action taken early is cheaper and more effective"
+    },
+    "pests": {
+      "rhizome_fly": {
+        "appearance": "resembles a mosquito but larger, dark coloured",
+        "damaging_stage": "larva",
+        "entry_routes": [
+          "exposed rhizomes",
+          "tender pseudostem into the rhizome"
+        ],
+        "symptom_sequence": [
+          "larva enters rhizome, nothing visible from outside",
+          "fungi and nematodes follow into the tunnelled rhizome",
+          "stem and rhizome soften, rhizome exudes water",
+          "leaves turn yellow",
+          "whole plant dries",
+          "larvae consume the rhizome entirely, leaving soil"
+        ],
+        "critical_note": "By the time leaves yellow, the rhizome is already damaged. This pest cannot be managed on symptoms; it must be managed on calendar and prevention.",
+        "controls_ranked": [
+          {
+            "tier": "cultural",
+            "measure": "plant by 7 June so the crop is 60 to 90 days old and robust when the pest peaks"
+          },
+          {
+            "tier": "cultural",
+            "measure": "timely earthing up to cover exposed rhizomes"
+          },
+          {
+            "tier": "biological",
+            "measure": "castor seed bait"
+          },
+          {
+            "tier": "chemical",
+            "measure": "quinalphos 25 EC 2 ml/L or dimethoate 30 EC 1 ml/L at 15 day intervals as needed"
+          }
+        ],
+        "source_tier": "A"
+      },
+      "castor_bait": {
+        "preparation": "plastic containers with 200 g crushed castor seed and 1.5 litres of water",
+        "development_days": {
+          "min": 8,
+          "max": 10
+        },
+        "mechanism": "after 8 to 10 days a characteristic smell develops which attracts rhizome flies, and they die",
+        "source_assessment": "extremely simple, effective and low cost",
+        "regulatory_status": "no CIB&RC restriction, no pre-harvest interval",
+        "units_per_acre": {
+          "value": 8,
+          "source_class": "EST",
+          "note": "source does not state a number; 8 to 10 evenly spaced is a starting point to be recorded in season one"
+        },
+        "timing_rule": "must be started around 20 June because the pest peaks in July and the bait takes 8 to 10 days to develop",
+        "source_tier": "A"
+      },
+      "shoot_borer": {
+        "damage": [
+          "eats chlorophyll from leaf margins",
+          "bores into stem and rhizome"
+        ],
+        "diagnostic_signs": [
+          "hole in the pseudostem means the larva is alive inside",
+          "webbing visible over the hole",
+          "central leaf of the shoot turns yellow",
+          "shoot begins to dry"
+        ],
+        "detectability": "high - farmer can verify directly, so this pest is scouting-driven rather than calendar-driven",
+        "controls_ranked": [
+          {
+            "tier": "mechanical",
+            "measure": "one light trap per acre"
+          },
+          {
+            "tier": "mechanical",
+            "measure": "remove and destroy affected shoots"
+          },
+          {
+            "tier": "chemical",
+            "measure": "quinalphos 25 EC at 15 day intervals as needed"
+          }
+        ],
+        "source_tier": "A"
+      },
+      "leaf_roller": {
+        "behaviour": "rolls the leaf, feeds inside, and pupates inside the same roll",
+        "control_advantage": "removing the rolled leaf destroys larva and pupa together",
+        "controls_ranked": [
+          {
+            "tier": "mechanical",
+            "measure": "collect and destroy larvae and pupae"
+          },
+          {
+            "tier": "mechanical",
+            "measure": "pluck rolled leaves with the larva inside"
+          },
+          {
+            "tier": "chemical",
+            "measure": "quinalphos 25 EC as needed"
+          }
+        ],
+        "source_tier": "A"
+      },
+      "leaf_caterpillar": {
+        "behaviour": "feeds while the leaf is still in the whorl and makes a hole through the rolled tissue",
+        "diagnostic_sign": "when the whorl leaf unfurls, holes appear in a straight line",
+        "detectability": "very high and highly specific; strong candidate for image recognition",
+        "controls_ranked": [
+          {
+            "tier": "mechanical",
+            "measure": "collect and destroy larvae and pupae"
+          },
+          {
+            "tier": "chemical",
+            "measure": "dimethoate 30 EC 1 ml/L or quinalphos 25 EC 2 ml/L"
+          }
+        ],
+        "source_tier": "A"
+      },
+      "nematodes": {
+        "damage_sequence": [
+          "live around roots and suck root sap",
+          "plant growth stunted, tiller number reduced",
+          "shoot tip wilts initially",
+          "plant yellows and dies",
+          "pest later enters the rhizome and rots it; rotted rhizomes appear brown",
+          "pathogenic fungi enter through the wounds the pest has made, causing rhizome rot"
+        ],
+        "earliest_visible_symptom": "fewer tillers than expected for the variety",
+        "misdiagnosis_risk": "stunting and yellowing are commonly read as nitrogen deficiency",
+        "controls_ranked": [
+          {
+            "tier": "cultural",
+            "measure": "nematode resistant variety - Mahima"
+          },
+          {
+            "tier": "cultural",
+            "measure": "marigold as a trap crop"
+          },
+          {
+            "tier": "biological",
+            "measure": "Trichoderma Plus powder 2 kg per acre mixed into 250 kg FYM"
+          },
+          {
+            "tier": "biological",
+            "measure": "neem cake 8 quintal per acre at earthing up"
+          },
+          {
+            "tier": "chemical",
+            "measure": "phorate granules - regulatory status must be verified"
+          }
+        ],
+        "trichoderma_rate_conflict": "2 kg/acre in 250 kg FYM in one source, 2.5 to 3 kg/acre in 200 to 250 kg FYM in another",
+        "neem_cake_rate_conflict": "8 quintal/acre for nematode suppression against 300 to 400 kg/acre for general nutrition; the dose is condition-dependent and the engine must not hold it fixed",
+        "source_tier": "A"
+      },
+      "white_grub": {
+        "damage_sequence": [
+          "larvae initially feed on organic matter, specifically farmyard manure",
+          "later gnaw roots",
+          "plant yellows and dries",
+          "in heavy infestation the rhizomes are gnawed as well"
+        ],
+        "diagnostic_sign": "affected plants pull out of the soil easily",
+        "critical_link": "half decomposed farmyard manure must not be used, because it is the larval food source",
+        "controls_ranked": [
+          {
+            "tier": "community",
+            "measure": "integrated pest management carried out collectively is beneficial"
+          },
+          {
+            "tier": "mechanical",
+            "measure": "collect beetles in the evening and destroy them in kerosene-mixed water"
+          },
+          {
+            "tier": "biological",
+            "measure": "Metarhizium anisopliae 2 kg per acre mixed into FYM"
+          },
+          {
+            "tier": "chemical",
+            "measure": "chlorpyriphos drench"
+          }
+        ],
+        "metarhizium_rate_note": "5 kg/ha in one source, 2 kg/acre in another; these are approximately the same figure",
+        "source_tier": "A"
+      }
+    },
+    "traps": {
+      "light_trap": {
+        "rate": "one per acre",
+        "target": "shoot borer",
+        "placement": "field centre, slightly above crop height",
+        "operation": "on at dusk, off before dawn; do not run all night because beneficial insects are also caught",
+        "product_opportunity": "Nightly catch count is a direct measure of pest pressure and is currently discarded. A simple counter on the sub-node would turn every trap into a sensor, and aggregated across a cluster it would produce a local pest pressure map and forecast. Logged in the Core C10.5 capability gap register. Manual counting should begin in season one because the data cannot be collected retrospectively.",
+        "source_tier": "A"
+      },
+      "marigold": {
+        "role": "trap crop for nematodes",
+        "mechanism": "root exudates suppress nematodes; nematodes are attracted but cannot reproduce on it",
+        "secondary_benefits": [
+          "early cash flow at 2 to 3 months against ginger's 8 months",
+          "attracts beneficial insects",
+          "already a recommended intercrop"
+        ],
+        "placement_guidance": "bed ends and field bunds first, where competition with ginger is least",
+        "placement_source_class": "EST",
+        "source_tier": "B"
+      },
+      "yellow_sticky_trap": {
+        "rate": "6 to 8 per acre",
+        "timing_dap": 60,
+        "target": "rhizome fly adults",
+        "source_tier": "C",
+        "note": "from a commercial source; treated as supplementary to the castor bait rather than as a replacement"
+      }
+    },
+    "ipm_ladder": {
+      "cultural": [
+        {
+          "measure": "plant by 7 June",
+          "targets": [
+            "rhizome_fly"
+          ],
+          "cost": "zero"
+        },
+        {
+          "measure": "timely earthing up",
+          "targets": [
+            "rhizome_fly"
+          ],
+          "cost": "labour"
+        },
+        {
+          "measure": "fully decomposed FYM only",
+          "targets": [
+            "white_grub"
+          ],
+          "cost": "zero"
+        },
+        {
+          "measure": "three year rotation",
+          "targets": [
+            "nematodes"
+          ],
+          "cost": "opportunity"
+        },
+        {
+          "measure": "summer deep ploughing and solarization",
+          "targets": [
+            "soil_borne"
+          ],
+          "cost": "low"
+        },
+        {
+          "measure": "nematode resistant variety Mahima",
+          "targets": [
+            "nematodes"
+          ],
+          "cost": "zero"
+        }
+      ],
+      "mechanical": [
+        {
+          "measure": "collect larvae and pupae",
+          "targets": [
+            "leaf_roller",
+            "leaf_caterpillar"
+          ],
+          "cost": "labour"
+        },
+        {
+          "measure": "light trap one per acre",
+          "targets": [
+            "shoot_borer"
+          ],
+          "cost": "low"
+        },
+        {
+          "measure": "collect beetles in the evening",
+          "targets": [
+            "white_grub"
+          ],
+          "cost": "labour"
+        },
+        {
+          "measure": "remove and destroy affected shoots",
+          "targets": [
+            "shoot_borer"
+          ],
+          "cost": "labour"
+        }
+      ],
+      "biological": [
+        {
+          "measure": "castor seed bait",
+          "targets": [
+            "rhizome_fly"
+          ],
+          "cost": "negligible"
+        },
+        {
+          "measure": "Trichoderma 2 kg per acre in FYM",
+          "targets": [
+            "nematodes",
+            "soft_rot"
+          ],
+          "cost": "low"
+        },
+        {
+          "measure": "neem cake 300 to 800 kg per acre",
+          "targets": [
+            "nematodes"
+          ],
+          "cost": "medium",
+          "note": "already applied as a nutrient input"
+        },
+        {
+          "measure": "Metarhizium anisopliae 2 kg per acre in FYM",
+          "targets": [
+            "white_grub"
+          ],
+          "cost": "low"
+        },
+        {
+          "measure": "marigold trap crop",
+          "targets": [
+            "nematodes"
+          ],
+          "cost": "negative - generates income"
+        }
+      ],
+      "free_measures_count": 6,
+      "key_observation": "Each of the three most important pests here has at least one free or near-free effective control. So even with chemical doses legally constrained for a minor crop, the advisory engine remains fully useful."
+    },
+    "chemical_reference": {
+      "note": "Doses below are as published by the Maharashtra institutional source and are recorded for reference only. CIB&RC label claim for ginger must be verified before use.",
+      "per_litre_water": [
+        {
+          "pest": "rhizome_fly",
+          "molecule": "quinalphos 25 EC",
+          "dose_ml": 2,
+          "interval_days": 15
+        },
+        {
+          "pest": "rhizome_fly",
+          "molecule": "dimethoate 30 EC",
+          "dose_ml": 1,
+          "interval_days": 15
+        },
+        {
+          "pest": "shoot_borer",
+          "molecule": "quinalphos 25 EC",
+          "dose_ml": 2,
+          "interval_days": 15
+        },
+        {
+          "pest": "leaf_roller",
+          "molecule": "quinalphos 25 EC",
+          "dose_ml": 2
+        },
+        {
+          "pest": "leaf_caterpillar",
+          "molecule": "dimethoate 30 EC",
+          "dose_ml": 1
+        },
+        {
+          "pest": "leaf_caterpillar",
+          "molecule": "quinalphos 25 EC",
+          "dose_ml": 2
+        },
+        {
+          "pest": "white_grub",
+          "molecule": "chlorpyriphos",
+          "dose_ml": 4,
+          "method": "drench"
+        }
+      ],
+      "seed_treatment_per_10_litres": {
+        "quinalphos_25_ec_ml": 20,
+        "or_dimethoate_30_ec_ml": 10,
+        "plus_fungicide": true,
+        "dip_minutes": [
+          15,
+          20
+        ]
+      },
+      "application_rules": [
+        "add a sticker at 1 ml per litre",
+        "soil must be at vafsa condition when drenching",
+        "give a slight water stress after drenching",
+        "do not use the same molecule repeatedly; alternate",
+        "avoid spraying if rain is forecast",
+        "spray early morning or evening in this belt because of high daytime temperature"
+      ],
+      "source_tier": "A"
+    },
+    "scouting_protocol": {
+      "etl_availability": "No published economic threshold levels for ginger pests were located. Sources say to spray as needed without defining need. Provisional levels below are estimates.",
+      "schedule": [
+        {
+          "pest": "rhizome_fly",
+          "look_for": "yellow leaves with soft stem; dig a sample rhizome",
+          "sample": "5 spots x 5 plants",
+          "frequency": "weekly in July and August"
+        },
+        {
+          "pest": "shoot_borer",
+          "look_for": "hole in pseudostem with webbing; central leaf yellow",
+          "sample": "5 spots x 10 plants",
+          "frequency": "weekly July to October"
+        },
+        {
+          "pest": "leaf_roller",
+          "look_for": "count rolled leaves",
+          "sample": "5 spots x 10 plants",
+          "frequency": "fortnightly"
+        },
+        {
+          "pest": "leaf_caterpillar",
+          "look_for": "straight line holes in unfurled whorl leaf",
+          "sample": "5 spots x 10 plants",
+          "frequency": "fortnightly"
+        },
+        {
+          "pest": "nematodes",
+          "look_for": "tiller count against variety expectation; root galls",
+          "sample": "5 spots x 5 plants",
+          "frequency": "at 60 and 90 DAP"
+        },
+        {
+          "pest": "white_grub",
+          "look_for": "pull a plant - does it come up easily",
+          "sample": "wherever plants look yellow",
+          "frequency": "on observation"
+        }
+      ],
+      "provisional_thresholds": [
+        {
+          "pest": "shoot_borer",
+          "level": "above 5 percent shoots holed",
+          "action": "mechanical plus check light trap"
+        },
+        {
+          "pest": "shoot_borer",
+          "level": "above 10 percent",
+          "action": "consider chemical"
+        },
+        {
+          "pest": "leaf_roller",
+          "level": "above 10 percent leaves rolled",
+          "action": "mechanical collection"
+        },
+        {
+          "pest": "leaf_roller",
+          "level": "above 20 percent",
+          "action": "consider chemical"
+        },
+        {
+          "pest": "nematodes",
+          "level": "tillers below 70 percent of variety expectation",
+          "action": "investigate and raise neem cake"
+        },
+        {
+          "pest": "rhizome_fly",
+          "level": "any soft rhizome found",
+          "action": "immediate; no threshold applies"
+        }
+      ],
+      "threshold_source_class": "EST"
+    }
+  },
+  "rules": [
+    {
+      "rule_id": "D05-PC-001",
+      "category": "PC",
+      "priority": 5,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Pest management planning initiated",
+        "marathi": "कीड व्यवस्थापन नियोजन सुरू"
+      },
+      "action": {
+        "english": "Frame pest control as wound prevention rather than insect killing. Measure success by rot incidence at harvest, not by pest counts.",
+        "marathi": "अद्रकात कीड नियंत्रण म्हणजे गड्ड्याला जखम होऊ न देणे. यश किडीच्या संख्येने नव्हे, काढणीच्या वेळी कंदकुजीच्या प्रमाणाने मोजावे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Rhizome fly larvae entering the rhizome are followed by pathogenic fungi and nematodes. Nematode wounds are a documented entry route for rot fungi. Shoot borer and white grub both create wounds. The same wounds are created without any pest by careless weeding.",
+        "yield_impact": "Links the pest u-values to the soft rot u-value of 0.50 to 0.90 rather than treating them as independent.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan, rhizome fly and nematode descriptions"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "field_history_rot",
+        "nematode_suspected"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-D",
+      "kannad_note": "Domain 11 should not add pest and rot u-values as if they were independent. They share a causal chain and adding them separately would double count.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-PC-002",
+      "category": "PC",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Planting date being decided",
+        "marathi": "लागवडीची तारीख ठरवली जात आहे",
+        "expr": "planting_date IS NOT NULL AND dap < 0",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Late planting exposes emergence to the rhizome fly peak. Duplication group late_planting.",
+        "golden_tests": [
+          {
+            "context": {
+              "planting_date": "2026-06-20",
+              "dap": -5
+            },
+            "expect": "TRUE",
+            "label": "लागवड ठरली, अजून झाली नाही"
+          },
+          {
+            "context": {
+              "dap": 30
+            },
+            "expect": "FALSE",
+            "label": "झाली"
+          }
+        ]
+      },
+      "action": {
+        "english": "Reinforce the 7 June deadline as a pest control measure. Rhizome fly peaks in July and August; timely planting means the crop is 60 to 90 days old and robust by then.",
+        "marathi": "७ जूनची मुदत ही कीड नियंत्रणाचीही पहिली आणि सर्वात स्वस्त उपाययोजना आहे. कंदमाशीचा हंगाम जुलै-ऑगस्ट आहे; वेळेवर लागवड केल्यास तेव्हा पीक ६० ते ९० दिवसांचे व मजबूत असते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source states directly that planting after the first week of June causes large scale rhizome fly and soft rot incidence. Late planting leaves the crop tender at exactly the moment the pest peaks.",
+        "yield_impact": "Shares the 0.20 u-value with the Domain 1 planting deadline rule.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "planting_date",
+        "dap"
+      ],
+      "u_value": 0.2,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Zero cost and it protects against both the primary pest and the primary disease at the same time. Nothing else in this domain does that.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D05-RF-001",
+      "category": "RF",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G2",
+      "trigger": {
+        "english": "Date is around 20 June, or dap is about 30, AND castor_bait_prepared_date is empty",
+        "marathi": "सुमारे २० जून किंवा ३० DAP, एरंडी आमिष अजून तयार केलेले नाही",
+        "expr": "dap BETWEEN 28 AND 33 AND castor_bait_prepared_date IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "The bait needs 8 to 10 days to develop and the pest peaks in July. Starting when the pest is seen is already late.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 30
+            },
+            "expect": "TRUE",
+            "label": "एरंडी आमिष भिजत घाला"
+          },
+          {
+            "context": {
+              "dap": 30,
+              "castor_bait_prepared_date": "done"
+            },
+            "expect": "FALSE",
+            "label": "घातले"
+          },
+          {
+            "context": {
+              "dap": 50
+            },
+            "expect": "FALSE",
+            "label": "उशीर"
+          }
+        ]
+      },
+      "action": {
+        "english": "Start the castor seed bait TODAY. Crush 200 g castor seed into 1.5 litres of water in plastic containers. Explain that it takes 8 to 10 days to develop the smell and the pest arrives in July.",
+        "marathi": "एरंडी आमिष आजच भिजत घाला. प्लॅस्टिकच्या भांड्यात भरडलेले एरंडीचे बी २०० ग्रॅम आणि १.५ लिटर पाणी. ८ ते १० दिवसांनी विशिष्ट वास येऊन कंदमाशा आकर्षित होऊन मरतात — आणि कंदमाशी जुलैत येते, म्हणून आत्ताच सुरुवात करावी लागते."
+      },
+      "reasoning": {
+        "agronomic_basis": "The bait requires 8 to 10 days to develop the attractant odour. Rhizome fly peaks in July and August. Starting when the pest is seen is already too late.",
+        "yield_impact": "Primary control for the pest carrying u = 0.175, with no regulatory constraint and negligible cost.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan; described as extremely simple, effective and low cost"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "castor_bait_prepared_date",
+        "castor_bait_units_per_acre",
+        "dap"
+      ],
+      "u_value": 0.175,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "This is exactly what an advisory engine is for. The farmer may already know the method; what is hard is remembering it ten days before the pest arrives, with the reason attached.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-RF-002",
+      "category": "RF",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G2",
+      "trigger": {
+        "english": "Month is July, August or September AND exposed_rhizomes_observed is true",
+        "marathi": "जुलै ते सप्टेंबर आणि शेतात उघडे गड्डे दिसत आहेत"
+      },
+      "action": {
+        "english": "Cover exposed rhizomes with soil immediately. Rhizome fly larvae enter through exposed rhizomes.",
+        "marathi": "शेतात उघडे पडलेले गड्डे मातीत तात्काळ झाकून घ्या. कंदमाशीच्या अळ्या उघड्या गड्ड्यांमध्ये शिरून त्यावर उपजीविका करतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source states the entry route is exposed rhizomes and gives the explicit instruction to cover them during July to September.",
+        "yield_impact": "Direct prevention of the entry event that starts the rot chain.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_8_operations"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "exposed_rhizomes_observed",
+        "earthing_up_date",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "This is why earthing up is a pest measure as well as an agronomic one. Part of the recorded 10 to 15 percent loss for skipping it is a rhizome fly loss.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-RF-003",
+      "category": "RF",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "soft_rhizome_found is true",
+        "marathi": "मऊ गड्डा आढळला"
+      },
+      "action": {
+        "english": "Act immediately. No threshold applies to this pest because symptoms appear only after the rhizome is already damaged. Escalate to the Domain 6 rot protocol simultaneously.",
+        "marathi": "तात्काळ कृती करा. या किडीला सहनशीलता पातळी लागू होत नाही — लक्षण दिसेपर्यंत गड्डा आधीच खराब झालेला असतो. सोबतच कंदकूज प्रतिबंधक कृतीही सुरू करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Once larvae have tunnelled, fungi and nematodes follow, the rhizome softens and exudes water, leaves yellow and the plant dries. In severe infestation the rhizome is consumed entirely.",
+        "yield_impact": "Entry point into the largest loss factor in the crop.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan symptom sequence"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "soft_rhizome_found",
+        "rhizome_fly_incidence_pct",
+        "current_stage"
+      ],
+      "u_value": 0.175,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "Zero tolerance here is deliberate and differs from the other pests. The concept of an economic threshold assumes damage is proportional and detectable; for this pest neither holds.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-SH-001",
+      "category": "SH",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G2",
+      "trigger": {
+        "english": "dap between 45 and 60 AND light_trap_installed is false",
+        "marathi": "४५ ते ६० दिवस, प्रकाश सापळा लावलेला नाही",
+        "expr": "dap BETWEEN 45 AND 60 AND light_trap_installed IS FALSE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 50,
+              "light_trap_installed": false
+            },
+            "expect": "TRUE",
+            "label": "प्रकाश सापळा"
+          },
+          {
+            "context": {
+              "dap": 50,
+              "light_trap_installed": true
+            },
+            "expect": "FALSE",
+            "label": "लावला"
+          }
+        ]
+      },
+      "action": {
+        "english": "Install one light trap per acre, at field centre slightly above crop height. Switch on at dusk and off before dawn. Begin recording the nightly catch by hand.",
+        "marathi": "एकरी एक प्रकाश सापळा लावा — शेताच्या मध्यभागी, पिकाच्या उंचीच्या थोडे वर. संध्याकाळी चालू, पहाटे बंद. रात्रभर चालू ठेवू नये, कारण मित्रकीटकही पडतात. रोजची संख्या हाताने नोंदवायला सुरुवात करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Light trap at one per acre is the recommended mechanical control for shoot borer, which is active July to October.",
+        "yield_impact": "u = 0.075 for shoot borer.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "light_trap_installed",
+        "light_trap_count_nightly",
+        "dap"
+      ],
+      "u_value": 0.075,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "The trap is already a recommended practice, so the farmer will accept it. The nightly count it produces is currently thrown away. Manual recording should start in season one because this data cannot be gathered retrospectively, and a counter on the sub-node would later turn every trap into a cluster-level sensor.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-SH-002",
+      "category": "SH",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "stem_hole_with_webbing is true",
+        "marathi": "खोडावर छिद्र आणि त्यावर जाळीदार भाग दिसत आहे"
+      },
+      "action": {
+        "english": "Confirm shoot borer with a live larva inside. Remove and destroy the affected shoot. If incidence exceeds about 5 percent, check the light trap; above about 10 percent consider chemical control.",
+        "marathi": "खोडावरील छिद्र म्हणजे आत अळी जिवंत आहे. प्रादुर्भावित खोड काढून नष्ट करा. प्रादुर्भाव ५ टक्क्यांहून जास्त असल्यास प्रकाश सापळा तपासा; १० टक्क्यांहून जास्त असल्यास रासायनिक उपायाचा विचार करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source states that a hole in the stem means the larva is alive inside, and that webbing is visible over the hole. This makes the pest verifiable by the farmer, so it can be handled on scouting rather than on calendar.",
+        "yield_impact": "u = 0.05 to 0.10.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan diagnostic signs"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "stem_hole_with_webbing",
+        "shoot_borer_incidence_pct",
+        "light_trap_count_nightly"
+      ],
+      "u_value": 0.075,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "Because this pest is verifiable, prophylactic spraying can be avoided. Treating it the same way as rhizome fly would mean either unnecessary sprays or a missed window; the two require opposite handling.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-LR-001",
+      "category": "LR",
+      "priority": 3,
+      "severity": "yellow",
+      "stage": "G3",
+      "trigger": {
+        "english": "rolled_leaves observed AND month between late August and November",
+        "marathi": "गुंडाळलेली पाने दिसत आहेत, ऑगस्ट अखेर ते नोव्हेंबर",
+        "expr": "STAGE IN [G3] AND MONTH IN [SEP, OCT, NOV]",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "current_stage": "G3",
+              "current_month": 10
+            },
+            "expect": "TRUE",
+            "label": "पाने गुंडाळणारी अळी"
+          },
+          {
+            "context": {
+              "current_stage": "G2",
+              "current_month": 10
+            },
+            "expect": "FALSE",
+            "label": ""
+          }
+        ]
+      },
+      "action": {
+        "english": "Pluck the rolled leaves with the larva inside and destroy them. This removes larva and pupa together because both are in the same roll.",
+        "marathi": "गुंडाळलेली पाने अळीसह खुडून नष्ट करा. अळी आणि कोष दोन्ही त्याच गुंडाळीत असतात, त्यामुळे एकाच कृतीत दोन्ही अवस्था नष्ट होतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source notes that the pest pupates inside the leaf roll. So mechanical removal is unusually efficient for this species.",
+        "yield_impact": "u = 0.03. Damage is to foliage only, not to the rhizome.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "leaf_roller_incidence_pct",
+        "current_stage"
+      ],
+      "u_value": 0.03,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "Damage severity is moderate and confined to foliage, so chemical control is usually avoidable here. Above about 20 percent rolled leaves the labour cost may exceed a spray, which is where the threshold should sit.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D05-LC-001",
+      "category": "LC",
+      "priority": 3,
+      "severity": "yellow",
+      "stage": "G2",
+      "trigger": {
+        "english": "straight_line_holes_in_whorl is true",
+        "marathi": "सुरळीतील पान उघडल्यावर सरळ रेषेत छिद्रे दिसली"
+      },
+      "action": {
+        "english": "Identify as leaf eating caterpillar. Collect and destroy larvae and pupae. Chemical control only if damage is widespread.",
+        "marathi": "ही पाने खाणाऱ्या अळीची खूण आहे. अळ्या व कोष वेचून नष्ट करा. प्रादुर्भाव मोठा असेल तरच रासायनिक उपाय."
+      },
+      "reasoning": {
+        "agronomic_basis": "The caterpillar bores through the rolled whorl at one point, so when the leaf unfurls the single hole appears as a row of holes in a straight line. This is highly specific and unambiguous.",
+        "yield_impact": "u = 0.05, foliage damage only.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "straight_line_holes_in_whorl",
+        "leaf_caterpillar_observed"
+      ],
+      "u_value": 0.05,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "The most visually distinctive sign in the entire pest set and therefore a strong early candidate for image recognition. It is also low value in yield terms, which makes it a safe first target for a model that may be wrong.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-NE-001",
+      "category": "NE",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G2",
+      "trigger": {
+        "english": "dap at 60 or 90 AND tillers_per_plant below 70 percent of variety expectation AND nitrogen split applied",
+        "marathi": "६० किंवा ९० दिवसांना फुटव्यांची संख्या जातीच्या अपेक्षेच्या ७० टक्क्यांपेक्षा कमी, आणि नत्राचा हप्ता दिलेला आहे",
+        "expr": "dap IN [60, 90] AND tillers_per_plant < 9",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Tiller shortfall is the earliest nematode sign and is routinely read as nitrogen deficiency.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 60,
+              "tillers_per_plant": 7
+            },
+            "expect": "TRUE",
+            "label": "फुटवे कमी — सूत्रकृमी तपासा"
+          },
+          {
+            "context": {
+              "dap": 60,
+              "tillers_per_plant": 12
+            },
+            "expect": "FALSE",
+            "label": "सामान्य"
+          },
+          {
+            "context": {
+              "dap": 60
+            },
+            "expect": "UNKNOWN",
+            "label": "मोजले नाहीत"
+          }
+        ]
+      },
+      "action": {
+        "english": "Suspect nematodes rather than nitrogen deficiency. Dig roots and look for galls. If confirmed, raise neem cake at earthing up toward 8 quintal per acre.",
+        "marathi": "हे नत्राच्या कमतरतेचे नव्हे तर सूत्रकृमींचे लक्षण असू शकते. मुळे उकरून गाठी आहेत का पहा. पुष्टी झाल्यास उटाळणीच्या वेळी निंबोळी पेंडीची मात्रा एकरी ८ क्विंटलपर्यंत वाढवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Nematodes suck root sap, so growth is stunted and tiller number falls. Mahima is expected to produce 12 to 13 tillers per plant, so a shortfall against the variety norm is measurable. The symptom set overlaps with nitrogen deficiency, which is why the nitrogen record is part of the trigger.",
+        "yield_impact": "u = 0.15, and it also opens the wound route for rot.",
+        "confidence_score": 0.78,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan",
+          "Agrowon variety tiller counts"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient",
+          "domain_6_disease",
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle",
+          "domain_4_nutrient"
+        ]
+      },
+      "farm_brain_schema": [
+        "tillers_per_plant",
+        "variety",
+        "dap",
+        "n_split_1_date",
+        "nematode_suspected"
+      ],
+      "u_value": 0.15,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "Tiller count is the earliest visible nematode symptom and it is routinely misread as a nitrogen problem. Comparing against the variety's rated tiller count is only possible because the variety register carries that figure.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-NE-002",
+      "category": "NE",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "FYM application scheduled",
+        "marathi": "शेणखत टाकण्याची वेळ"
+      },
+      "action": {
+        "english": "Mix Trichoderma 2 kg per acre into about 250 kg of FYM at planting. This serves nematodes and soft rot together.",
+        "marathi": "लागवडीच्या वेळी सुमारे २५० किलो शेणखतात ट्रायकोडर्मा २ किलो प्रति एकर मिसळा. हे सूत्रकृमी आणि कंदकूज दोन्हीवर काम करते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Trichoderma is recommended for nematode suppression and independently for soft rot control. It needs an organic carrier to colonise, so mixing into FYM is not incidental.",
+        "yield_impact": "u = 0.08 for omission, acting across both pest and disease pathways.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan",
+          "Krishi app blog rates",
+          "CJAST 2020 soft rot review"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil",
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "trichoderma_kg_per_acre",
+        "fym_t_per_acre",
+        "fym_fully_decomposed"
+      ],
+      "u_value": 0.08,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Rate conflict between sources is 2 kg/acre in 250 kg FYM against 2.5 to 3 kg/acre in 200 to 250 kg. The difference is small and either is defensible.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-NE-003",
+      "category": "NE",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G3",
+      "trigger": {
+        "english": "Earthing up scheduled AND nematode_suspected is true",
+        "marathi": "उटाळणीची वेळ आणि सूत्रकृमींचा संशय आहे"
+      },
+      "action": {
+        "english": "Raise neem cake at earthing up toward 8 quintal per acre instead of the routine 300 to 400 kg. The dose is condition dependent and must not be held fixed.",
+        "marathi": "सूत्रकृमींचा प्रादुर्भाव असल्यास उटाळणीच्या वेळी निंबोळी पेंडीची मात्रा एकरी ८ क्विंटलपर्यंत वाढवा. एरवी ३०० ते ४०० किलो पुरेसे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Neem cake at 8 quintal per acre at earthing up is the recommended nematode measure, while 300 to 400 kg per acre is the general nutrition rate. Same input, different dose, different purpose.",
+        "yield_impact": "Reduces the 0.15 nematode value.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Krishi app blog",
+          "Domain 4 neem cake programme"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "nematode_suspected",
+        "neem_cake_earthing_kg_per_acre",
+        "earthing_up_date"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "A good example of a dose the engine must vary rather than hold constant. Fixing it at either value would be wrong in one of the two situations.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-NE-004",
+      "category": "NE",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Variety being selected",
+        "marathi": "जात निवडली जात आहे"
+      },
+      "action": {
+        "english": "Prefer Mahima on nematode resistance grounds alone, independent of its yield advantage.",
+        "marathi": "महिमा जात सूत्रकृमी प्रतिकारक आहे — आणि हा फायदा फुकट आहे, फक्त योग्य बेणे निवडून."
+      },
+      "reasoning": {
+        "agronomic_basis": "Nematode wounds are a documented entry route for rot fungi and for bacterial wilt. Resistance therefore delivers indirect disease control at no cost.",
+        "yield_impact": "Reduces exposure to the 0.15 nematode value and indirectly to the 0.50 to 0.90 rot value.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon variety register",
+          "Agrowon - Mali & Mahajan wound pathway"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "variety",
+        "nematode_suspected"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Where soft rot and wilt have no reliable cure, a free preventive that works through a different mechanism is worth more than its yield ranking alone suggests.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-WG-001",
+      "category": "WG",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G0",
+      "trigger": {
+        "english": "FYM application scheduled AND fym_fully_decomposed is false or unknown",
+        "marathi": "शेणखत टाकायचे आहे पण ते पूर्ण कुजलेले आहे का माहीत नाही"
+      },
+      "action": {
+        "english": "Verify decomposition before applying. Half decomposed FYM is white grub larval food. If decomposition is incomplete, either wait or mix Metarhizium anisopliae 2 kg per acre into it.",
+        "marathi": "शेणखत पूर्ण कुजले आहे का तपासा. अर्धवट कुजलेले शेणखत हे हुमणीच्या अळ्यांचे खाद्य आहे. पूर्ण कुजलेले नसल्यास आणखी कुजू द्या, किंवा मेटॅरायझियम २ किलो प्रति एकर मिसळा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source states that white grub larvae initially feed on organic matter, specifically farmyard manure, and later gnaw roots. It gives the explicit instruction not to use half decomposed FYM.",
+        "yield_impact": "u = 0.10.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil",
+          "domain_4_nutrient"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "fym_fully_decomposed",
+        "fym_t_per_acre",
+        "metarhizium_kg_per_acre",
+        "white_grub_suspected"
+      ],
+      "u_value": 0.1,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "FYM here runs at 14 to 16 tonnes per acre, which is roughly double what some belts use. The white grub exposure from undecomposed material is proportionally larger.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-WG-002",
+      "category": "WG",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "plant_pulls_easily is true",
+        "marathi": "पिवळे पडलेले रोप सहज उपटून येते",
+        "expr": "plant_pulls_easily IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "plant_pulls_easily": true
+            },
+            "expect": "TRUE",
+            "label": "हुमणी"
+          },
+          {
+            "context": {
+              "plant_pulls_easily": false
+            },
+            "expect": "FALSE",
+            "label": ""
+          }
+        ]
+      },
+      "action": {
+        "english": "Diagnose white grub. Roots have been gnawed. Begin evening beetle collection and consider Metarhizium.",
+        "marathi": "ही हुमणीची खूण आहे — मुळेच कुरतडलेली असल्याने रोप सहज उपटते. संध्याकाळी भुंगेरे गोळा करून रॉकेलमिश्रित पाण्यात नष्ट करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source names easy uplift of affected plants as the diagnostic sign. It takes two seconds and needs no equipment.",
+        "yield_impact": "u = 0.10.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "plant_pulls_easily",
+        "white_grub_suspected"
+      ],
+      "u_value": 0.1,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "Useful because it discriminates cleanly from the other causes of yellowing, all of which leave the root system intact.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-WG-003",
+      "category": "WG",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "white_grub_suspected is true on any plot in the cluster",
+        "marathi": "cluster मधील कोणत्याही शेतात हुमणीचा प्रादुर्भाव आढळला"
+      },
+      "action": {
+        "english": "Issue a cluster-wide alert. Ask all farms in the cluster to collect beetles on the same three evenings. Individual action does not work because the beetles fly.",
+        "marathi": "cluster मधील सर्व शेतकऱ्यांना एकाच वेळी इशारा द्या — पुढील तीन संध्याकाळी सर्वांनी भुंगेरे गोळा करावेत. भुंगेरे उडतात, त्यामुळे एकट्याने केलेले नियंत्रण टिकत नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source states that integrated pest management carried out collectively is beneficial for this pest. Beetles are mobile, so a single treated field is recolonised from neighbouring untreated ones.",
+        "yield_impact": "Raises the effectiveness of the 0.10 white grub control from partial to substantial.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "white_grub_suspected",
+        "cluster_pest_alert_active"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "The cluster architecture of one weather station and master unit per five to ten farms already exists, so this coordination is available at no extra cost. A single farmer with a phone cannot do it, and neither can an app without a cluster.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-TC-001",
+      "category": "TC",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Planting layout being planned",
+        "marathi": "लागवडीची मांडणी ठरवली जात आहे"
+      },
+      "action": {
+        "english": "Plant marigold as a trap crop, starting at bed ends and field bunds where competition with ginger is least.",
+        "marathi": "झेंडू सापळा पीक म्हणून लावा — वाफ्यांच्या टोकाला व बांधावर, जिथे अद्रकाशी स्पर्धा कमी होईल."
+      },
+      "reasoning": {
+        "agronomic_basis": "Marigold is recommended as a nematode trap crop and is separately listed as a compatible intercrop. Nematodes are attracted to it but cannot reproduce on it.",
+        "yield_impact": "Reduces the 0.15 nematode value and provides early cash flow at 2 to 3 months against ginger's 8 month cycle.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Krishi app blog",
+          "Agrowon intercrop list"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_8_operations",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "marigold_planted",
+        "nematode_suspected"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "Triple benefit: nematode suppression, beneficial insects, and cash at 2 to 3 months into an 8 month crop where the entire investment is front loaded. Exact layout and plant numbers are not in the source and should be recorded in season one.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-TC-002",
+      "category": "TC",
+      "priority": 4,
+      "severity": "red",
+      "stage": "G0",
+      "trigger": {
+        "english": "Intercrop selection includes chilli, brinjal, tomato or potato",
+        "marathi": "आंतरपीक म्हणून मिरची, वांगी, टोमॅटो किंवा बटाटा निवडले जात आहे",
+        "expr": "intercrop_selected IN [chilli, brinjal, tomato, potato]",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "intercrop_selected": "chilli"
+            },
+            "expect": "TRUE",
+            "label": "मिरची — नाकारा"
+          },
+          {
+            "context": {
+              "intercrop_selected": "marigold"
+            },
+            "expect": "FALSE",
+            "label": "झेंडू — चालेल"
+          }
+        ]
+      },
+      "action": {
+        "english": "REFUSE these as intercrops. They are hosts for bacterial wilt, which is the disease with no reliable cure in this crop.",
+        "marathi": "मिरची, वांगी, टोमॅटो, बटाटा हे आंतरपीक म्हणूनही घेऊ नयेत. ती मर रोगाची यजमान पिके आहेत, आणि मर रोगावर खात्रीशीर उपाय नाही. फेरपालटीत टाळायचे पीक आंतरपीक म्हणूनही टाळावे — कारण ते तर तात्काळ शेजारीच असते."
+      },
+      "reasoning": {
+        "agronomic_basis": "One source lists chilli among recommended intercrops, but chilli is a solanaceous host for Ralstonia. A crop excluded from the rotation for disease reasons cannot be acceptable as an intercrop, where it sits immediately adjacent all season.",
+        "yield_impact": "Prevents exposure to the 0.30 to 0.70 bacterial wilt pathway.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Domain 6 bacterial wilt host range",
+          "Domain 1 rotation conflict list"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_8_operations"
+        ],
+        "depends_on": [
+          "domain_6_disease"
+        ]
+      },
+      "farm_brain_schema": [
+        "previous_crops_3yr",
+        "marigold_planted",
+        "field_history_wilt"
+      ],
+      "u_value": 0.5,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "This correction was found by cross checking the intercrop list against the disease host list. It is the kind of contradiction that only appears when domains are validated against each other rather than written in isolation.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "मिरची, वांगी, टोमॅटो, बटाटा आंतरपीक टाळणे योग्य. मर रोगाचा धोका वाढतो."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-IP-001",
+      "category": "IP",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Any pest control recommendation about to be issued",
+        "marathi": "कोणतीही कीड नियंत्रण शिफारस देण्यापूर्वी"
+      },
+      "action": {
+        "english": "Present options in order: cultural, mechanical, biological, chemical. Do not surface a chemical option without recording why the preceding tiers are insufficient.",
+        "marathi": "उपाय याच क्रमाने द्या — सांस्कृतिक, यांत्रिक, जैविक, मग रासायनिक. आधीचे टप्पे का अपुरे आहेत हे नोंदवल्याशिवाय रासायनिक पर्याय दाखवू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "This ordering is what makes the output defensible as integrated pest management rather than a spray calendar. It also preserves natural enemies, whose loss makes later outbreaks worse.",
+        "yield_impact": "Indirect. Reduces input cost and resistance development.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Core C5.2",
+          "Agrowon - Mali & Mahajan control ordering"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "last_insecticide_date",
+        "last_insecticide_group"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Fifteen measures sit in the first three tiers and six of them are free. For the three most important pests here, each has at least one free or near-free effective control.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-IP-002",
+      "category": "IP",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Pre-season planning",
+        "marathi": "हंगामापूर्व नियोजन"
+      },
+      "action": {
+        "english": "Issue the free-measure checklist: plant by 7 June, choose Mahima, use fully decomposed FYM, maintain three year rotation, do summer deep ploughing and solarization, and avoid rhizome injury during operations.",
+        "marathi": "मोफत उपायांची यादी — ७ जूनपर्यंत लागवड, महिमा जात, पूर्ण कुजलेले शेणखत, तीन वर्षांची फेरपालट, उन्हाळी खोल नांगरट व सौरीकरण, आणि मशागतीत गड्ड्याला इजा टाळणे."
+      },
+      "reasoning": {
+        "agronomic_basis": "All six are decisions rather than purchases, and all are taken before or at planting.",
+        "yield_impact": "Collectively these address the majority of pest exposure in the crop at effectively zero input cost.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Domain 5 IPM ladder",
+          "Agrowon - Dr. Kadam",
+          "Agrowon - Mali & Mahajan"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil",
+          "domain_6_disease",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "planting_date",
+        "variety",
+        "fym_fully_decomposed",
+        "previous_crops_3yr",
+        "solarization_done"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "The strategic point for this belt is that even if CIB&RC restrictions prevent the engine from giving chemical doses for a minor crop, it remains fully useful. The free tier is where most of the value sits.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-CH-001",
+      "category": "CH",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": null,
+      "trigger": {
+        "english": "A recommendation would emit BHC or monocrotophos",
+        "marathi": "BHC किंवा मोनोक्रोटोफॉस सुचवले जात आहे",
+        "expr": "last_insecticide_group IN [BHC, lindane, monocrotophos]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Hard blocklist.",
+        "golden_tests": [
+          {
+            "context": {
+              "last_insecticide_group": "BHC"
+            },
+            "expect": "TRUE",
+            "label": "प्रतिबंधित"
+          },
+          {
+            "context": {
+              "last_insecticide_group": "monocrotophos"
+            },
+            "expect": "TRUE",
+            "label": "प्रतिबंधित"
+          },
+          {
+            "context": {
+              "last_insecticide_group": "quinalphos"
+            },
+            "expect": "FALSE",
+            "label": "परवानगी"
+          }
+        ]
+      },
+      "action": {
+        "english": "BLOCK. These molecules must never be emitted. BHC is banned in India and monocrotophos is highly restricted. Both appear in older online pages for this crop.",
+        "marathi": "ही रसायने कधीही सुचवू नयेत. BHC भारतात प्रतिबंधित आहे आणि मोनोक्रोटोफॉस अत्यंत निर्बंधित. जुन्या ऑनलाइन पानांवर ती अजूनही दिसतात — ऑनलाइन उपलब्ध असणे म्हणजे वैध असणे नव्हे."
+      },
+      "reasoning": {
+        "agronomic_basis": "An older state agriculture department page recommends BHC for white grub and a commercial page recommends monocrotophos for shoot borer. Both remain publicly accessible.",
+        "yield_impact": "Regulatory and safety, not yield. Emitting a banned molecule is a legal exposure for the platform.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "older Maharashtra Department of Agriculture page",
+          "AgroWorld"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "last_insecticide_group"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The wider lesson is that any molecule scraped from an extension page must be checked against the live CIB&RC list, because outdated recommendations stay online indefinitely.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "BHC व Monocrotophos कधीही सुचवू नयेत."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": true,
+      "immutable_reason": "BHC and monocrotophos are banned or restricted. No agronomic judgement changes that."
+    },
+    {
+      "rule_id": "D05-CH-002",
+      "category": "CH",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "A chemical option is about to be presented",
+        "marathi": "रासायनिक पर्याय दाखवला जात आहे"
+      },
+      "action": {
+        "english": "Emit the molecule name, group and source-reported dose, and append that CIB&RC label claim for ginger must be verified and label dose and pre-harvest interval followed. Always show biological and cultural options above it.",
+        "marathi": "रसायनाचे नाव, गट आणि स्रोतातील मात्रा दाखवा, आणि सोबत अनिवार्य शेरा — लेबलवर अद्रकासाठी नोंदणी असल्याची खात्री करा, मात्रा व प्रतीक्षा कालावधी लेबलनुसार. जैविक व सांस्कृतिक पर्याय नेहमी वर दाखवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Ginger is a minor crop, so many insecticides lack a specific ginger label claim. Being recommended in extension literature and being registered on the label are different things.",
+        "yield_impact": "Regulatory compliance rather than yield.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan doses",
+          "CIB&RC minor crop position"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_10_institutional"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "last_insecticide_date",
+        "last_insecticide_group",
+        "phi_days_remaining"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This keeps the engine useful without making it liable. The doses are published by a state research centre and are recorded for reference; the responsibility for label compliance stays where the law puts it.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-CH-003",
+      "category": "CH",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": "G5",
+      "trigger": {
+        "english": "Chemical spray proposed AND phi_days_remaining unknown AND expected harvest within 30 days",
+        "marathi": "रासायनिक फवारणीचा प्रस्ताव, प्रतीक्षा कालावधी माहीत नाही, आणि काढणी ३० दिवसांच्या आत",
+        "expr": "phi_days_remaining IS NULL AND WITHIN(harvest_date, 30 DAYS)",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Duplication group: pre_harvest_interval_block.",
+        "golden_tests": [
+          {
+            "context": {
+              "days_to_harvest": 20
+            },
+            "expect": "TRUE",
+            "label": "PHI माहीत नाही, २० दिवस — अडवा"
+          },
+          {
+            "context": {
+              "days_to_harvest": 20,
+              "phi_days_remaining": 0
+            },
+            "expect": "FALSE",
+            "label": "PHI संपला"
+          },
+          {
+            "context": {
+              "days_to_harvest": 60
+            },
+            "expect": "FALSE",
+            "label": "६० दिवस — वेळ आहे"
+          }
+        ]
+      },
+      "action": {
+        "english": "BLOCK the spray. Where the pre-harvest interval is unknown, apply a conservative 30 day default before harvest.",
+        "marathi": "प्रतीक्षा कालावधी माहीत नसल्यास काढणीपूर्वी ३० दिवस कोणतीही रासायनिक फवारणी करू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "Residue on a harvested rhizome is a food safety and market access issue. Where the interval is unverified, the safe default protects both the consumer and the grower's market.",
+        "yield_impact": "None. Protects marketability.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "Core C5.3",
+          "CIB&RC label requirement"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "phi_days_remaining",
+        "last_insecticide_date",
+        "dap",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Also relevant to the dry ginger route, where export buyers apply residue limits that are stricter than domestic ones.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "PHI माहीत नसेल तर फवारणी टाळावी."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": true,
+      "immutable_reason": "Residue on a harvested rhizome is a food safety matter, not an agronomic preference."
+    },
+    {
+      "rule_id": "D05-CH-004",
+      "category": "CH",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Chemical spray scheduled AND the same group was used in the previous application",
+        "marathi": "मागील फवारणीत वापरलेल्याच गटाचे रसायन पुन्हा सुचवले जात आहे"
+      },
+      "action": {
+        "english": "Alternate the mode of action group, not merely the product name. Track the group of the last two applications and select a different one.",
+        "marathi": "एकच रसायन सतत वापरू नये. फक्त नाव नव्हे, क्रियापद्धतीचा गट बदला. मागील दोन फवारण्यांचे गट तपासून वेगळा गट निवडा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source instructs alternating chemicals. Two products with different trade names but the same mode of action do not break resistance selection, so the group is what must change.",
+        "yield_impact": "Preserves the useful life of the available molecules.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan",
+          "Domain 6 fungicide rotation rule"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "last_insecticide_group",
+        "last_insecticide_date"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Hard for a farmer to track across a season, trivial for the engine. Group codes must be stored with every recommendation for this to work.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-CH-005",
+      "category": "CH",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Soil drench scheduled",
+        "marathi": "आळवणी करायची आहे",
+        "expr": "last_insecticide_group IS NOT NULL AND insecticide_group_repeated IS TRUE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Rotate the mode of action group or resistance builds.",
+        "golden_tests": [
+          {
+            "context": {
+              "last_insecticide_group": "organophosphate",
+              "insecticide_group_repeated": true
+            },
+            "expect": "TRUE",
+            "label": "तोच गट पुन्हा"
+          },
+          {
+            "context": {
+              "last_insecticide_group": "neonicotinoid",
+              "insecticide_group_repeated": false
+            },
+            "expect": "FALSE",
+            "label": "गट बदलला"
+          }
+        ]
+      },
+      "action": {
+        "english": "Drench only when the soil is at vafsa condition, and give a slight water stress afterwards rather than irrigating immediately.",
+        "marathi": "आळवणी करताना जमिनीस वाफसा असावा. आळवणीनंतर पिकास थोडासा पाण्याचा ताण द्यावा — लगेच पाणी दिल्यास औषध वाहून जाते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source gives both instructions explicitly. Drenching saturated soil dilutes and displaces the chemical; irrigating immediately after leaches it below the shallow root zone.",
+        "yield_impact": "Protects the effectiveness of the application rather than adding yield.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan application rules"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water"
+        ],
+        "depends_on": [
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "vafsa_state",
+        "soil_moisture_vwc",
+        "drip_runtime_min",
+        "last_insecticide_date"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "The engine must reduce drip for three to five days after a drench. This is a cross-domain dependency that a human operator would easily miss.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D05-CH-006",
+      "category": "CH",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Foliar spray scheduled",
+        "marathi": "फवारणी ठरली आहे",
+        "expr": "air_temp_max_c > 35 OR forecast_rain_48h_mm > 5",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Spray suppressor. Suppressed by D07-HS-004 which states the same condition.",
+        "golden_tests": [
+          {
+            "context": {
+              "air_temp_max_c": 38,
+              "forecast_rain_48h_mm": 0
+            },
+            "expect": "TRUE",
+            "label": "फवारणी पुढे ढकला"
+          },
+          {
+            "context": {
+              "air_temp_max_c": 29,
+              "forecast_rain_48h_mm": 1
+            },
+            "expect": "FALSE",
+            "label": "योग्य वेळ"
+          }
+        ]
+      },
+      "action": {
+        "english": "Add a sticker at 1 ml per litre. Spray early morning or evening, not in the midday heat, and postpone if rain is forecast within a few hours.",
+        "marathi": "फवारणीत चिकट पदार्थ १ मिलि प्रति लिटर मिसळा. सकाळी लवकर किंवा संध्याकाळी फवारा — दुपारच्या उन्हात पाने करपतात. काही तासांत पावसाचा अंदाज असल्यास फवारणी पुढे ढकला."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source specifies the sticker. Ginger leaves are smooth so retention is poor without one. Leaves scorch above 35 C and this district reaches 45.9 C.",
+        "yield_impact": "Protects application efficacy and avoids leaf damage.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan",
+          "Domain 1 heat threshold",
+          "Core C3.3"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "air_temp_max_c",
+        "rainfall_mm",
+        "last_insecticide_date"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "The spray window here is genuinely narrow because of daytime temperature. Scheduling without checking the forecast wastes both product and labour.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D05-CH-007",
+      "category": "CH",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Seed treatment being planned",
+        "marathi": "बेणे प्रक्रिया ठरवली जात आहे",
+        "expr": "days_to_planting BETWEEN 1 AND 8 AND hot_water_treatment_done IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Chemical then dry then biological. Easy to collapse into one step on a busy day.",
+        "golden_tests": [
+          {
+            "context": {
+              "days_to_planting": 5,
+              "hot_water_treatment_done": false
+            },
+            "expect": "TRUE",
+            "label": "बेणे प्रक्रिया"
+          },
+          {
+            "context": {
+              "days_to_planting": 5,
+              "hot_water_treatment_done": true
+            },
+            "expect": "FALSE",
+            "label": "झाली"
+          }
+        ]
+      },
+      "action": {
+        "english": "Include an insecticide with the fungicide in the seed dip: quinalphos 25 EC 20 ml or dimethoate 30 EC 10 ml per 10 litres, dip 15 to 20 minutes. Then shade dry before any biological treatment.",
+        "marathi": "बेणे प्रक्रियेत बुरशीनाशकासोबत कीडनाशकही घ्या — प्रति १० लिटर पाण्यात क्विनॉलफॉस २५% प्रवाही २० मिलि किंवा डायमेथोएट ३०% प्रवाही १० मिलि, १५ ते २० मिनिटे बुडवा. नंतर सावलीत सुकवूनच जैविक प्रक्रिया करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Seed rhizome is the entry vector for both pests and pathogens. Treating once at planting covers both, and it is the only point at which carried infestation can be addressed.",
+        "yield_impact": "Contributes to the 0.135 seed treatment value recorded in Domain 1.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam seed treatment"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_4_nutrient",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "last_insecticide_date",
+        "azospirillum_psb_done",
+        "planting_date"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "The sequence constraint matters and is easy to get wrong on a busy planting day, because both treatments involve dipping seed in a tank.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-SC-001",
+      "category": "SC",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Weekly or fortnightly scouting due",
+        "marathi": "निरीक्षणाची वेळ",
+        "expr": "dap BETWEEN 40 AND 200 AND pest_scouting_date IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "No published ETLs exist for ginger. Recorded percentages are what eventually create them.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 100
+            },
+            "expect": "TRUE",
+            "label": "निरीक्षण करा"
+          },
+          {
+            "context": {
+              "dap": 100,
+              "pest_scouting_date": "done"
+            },
+            "expect": "FALSE",
+            "label": "केले"
+          }
+        ]
+      },
+      "action": {
+        "english": "Issue the scouting checklist for the current stage and month, with sample sizes. Record percentages, not impressions.",
+        "marathi": "सध्याच्या अवस्थेनुसार निरीक्षण यादी द्या — पाच ठिकाणी, प्रत्येकी पाच किंवा दहा रोपे. टक्केवारी नोंदवा, अंदाज नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Sources say to act as needed but do not define need. Recorded percentages are what will eventually turn those qualitative instructions into local thresholds.",
+        "yield_impact": "Indirect this season; foundational for future seasons.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Domain 5 scouting protocol"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield",
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "pest_scouting_date",
+        "shoot_borer_incidence_pct",
+        "leaf_roller_incidence_pct",
+        "rhizome_fly_incidence_pct",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "This is the data collection that turns the estimated thresholds into measured ones. Without a season of recorded percentages the ETL gap cannot close.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-SC-002",
+      "category": "SC",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Provisional threshold exceeded",
+        "marathi": "तात्पुरती सहनशीलता पातळी ओलांडली"
+      },
+      "action": {
+        "english": "Present the threshold as provisional and estimated, not as an established economic threshold level. State that no published ETL exists for ginger pests.",
+        "marathi": "ही सहनशीलता पातळी तात्पुरती व अंदाजित आहे. अद्रकाच्या किडींसाठी प्रकाशित आर्थिक नुकसान पातळी उपलब्ध नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "No published economic threshold levels for ginger pests were located across the sources consulted. Presenting an estimate as an established threshold would be a false precision claim.",
+        "yield_impact": "None. Protects credibility and sets correct expectations.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "absence of source across consulted material"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "shoot_borer_incidence_pct",
+        "leaf_roller_incidence_pct"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "The honest position is more useful than a confident one here. A farmer who is told the threshold is provisional and is asked to record actual outcomes becomes a source of the data that fixes it.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-SW-001",
+      "category": "SW",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "rh_pct above 80 for three consecutive days AND cloudy AND month between July and October",
+        "marathi": "सलग तीन दिवस आर्द्रता ८० टक्क्यांवर, ढगाळ हवामान, जुलै ते ऑक्टोबर",
+        "expr": "DURATION(rh_pct > 80) > 72 HOURS AND MONTH IN [JUL, AUG, SEP, OCT]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Pest pressure alert, not a spray instruction. Doubles scouting frequency.",
+        "golden_tests": [
+          {
+            "context": {
+              "rh_pct__duration": 80,
+              "current_month": 8
+            },
+            "expect": "TRUE",
+            "label": "कीड-दाब वाढला"
+          },
+          {
+            "context": {
+              "rh_pct__duration": 80,
+              "current_month": 1
+            },
+            "expect": "FALSE",
+            "label": "हंगामाबाहेर"
+          },
+          {
+            "context": {
+              "rh_pct__duration": 20,
+              "current_month": 8
+            },
+            "expect": "FALSE",
+            "label": "कमी कालावधी"
+          }
+        ]
+      },
+      "action": {
+        "english": "Issue a pest pressure alert and double the scouting frequency. Check biological preventives are in place. Do not spray on this signal alone.",
+        "marathi": "कीड-दाबाचा इशारा द्या आणि निरीक्षणाची वारंवारता दुप्पट करा. जैविक प्रतिबंधक उपाय जागेवर आहेत का तपासा. फक्त या संकेतावर फवारणी करू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source names high humidity, cloudy weather and lower temperature as the conditions under which pests and diseases appear during the monsoon. All three are measurable at the cluster station.",
+        "yield_impact": "Enables action before symptoms, when control is cheaper and more effective.",
+        "confidence_score": 0.75,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan weather statement"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "rh_pct",
+        "air_temp_max_c",
+        "current_stage",
+        "pest_scouting_date"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-D",
+      "kannad_note": "This is the most valuable thing the weather station does for pest management. The alternative is waiting for visible damage, by which point the cheapest interventions have already expired.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-SW-002",
+      "category": "SW",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Sensor-based pest detection expected",
+        "marathi": "sensor वरून कीड ओळखण्याची अपेक्षा"
+      },
+      "action": {
+        "english": "State plainly that sensors cannot detect the two most important pests, because rhizome fly larvae and nematodes are below ground. Value here comes from timely reminders, weather-based forecasting and correct diagnostic sequencing.",
+        "marathi": "मुख्य दोन किडी — कंदमाशी आणि सूत्रकृमी — जमिनीखाली आहेत आणि कोणताही sensor त्यांना पाहू शकत नाही. इथे advisory चे मूल्य वेळेवर आठवण, हवामान-आधारित पूर्वानुमान, आणि निदानाचा योग्य क्रम यातून येते."
+      },
+      "reasoning": {
+        "agronomic_basis": "The primary damage occurs below ground and is invisible until the crop is already compromised. Overstating sensor capability here would fail at the first field test.",
+        "yield_impact": "None. Sets correct expectations and directs effort to what actually works.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "Domain 5 sensor limitation section"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "nematode_suspected",
+        "soft_rhizome_found"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Worth contrasting with Domain 6, where the opposite holds. Disease triggers are moisture and weather driven and therefore highly sensor-visible. Pest management is where hardware helps least and reminders help most.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-PC-003",
+      "category": "PC",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G2",
+      "trigger": {
+        "english": "dap approximately 60",
+        "marathi": "सुमारे ६० दिवस",
+        "expr": "dap BETWEEN 58 AND 64 AND labour_arranged_date IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "August competes with cotton and soybean intercultivation for the same workers.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 60
+            },
+            "expect": "TRUE",
+            "label": "मजूर ठरवा"
+          },
+          {
+            "context": {
+              "dap": 60,
+              "labour_arranged_date": "set"
+            },
+            "expect": "FALSE",
+            "label": "ठरले"
+          }
+        ]
+      },
+      "action": {
+        "english": "Remind the farmer to arrange labour for earthing up now. August is also cotton and soybean intercultivation season and labour becomes scarce.",
+        "marathi": "उटाळणीसाठी मजूर आत्ताच ठरवा. ऑगस्टमध्ये कापूस-सोयाबीनच्या आंतरमशागतीमुळे सर्वत्र मजुरांना मागणी असते, आणि उटाळणीला कठोर मुदत आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Earthing up must be completed before flowering and it is simultaneously a rhizome fly control measure. Labour scarcity is the most likely reason it is delayed.",
+        "yield_impact": "Protects the 0.125 earthing up value and part of the 0.175 rhizome fly value.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Core C7.3 labour feasibility",
+          "Domain 8 operations calendar"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_8_operations"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "dap",
+        "earthing_up_date"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "A logistics reminder rather than an agronomic one, but it protects two u-values at once. Per-acre labour-day figures are not yet recorded and are an open item.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D05-PC-004",
+      "category": "PC",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Weeding or earthing up in progress",
+        "marathi": "खुरपणी किंवा उटाळणी चालू आहे",
+        "expr": "previous_crops_3yr IS NOT NULL AND days_to_planting > 30",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "previous_crops_3yr": "cotton,soybean,ginger",
+              "days_to_planting": 60
+            },
+            "expect": "TRUE",
+            "label": "फेरपालट तपासा"
+          },
+          {
+            "context": {
+              "days_to_planting": 60
+            },
+            "expect": "FALSE",
+            "label": "नोंद नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Instruct that the rhizome must not be injured. Mechanical injury opens the same wound route as any pest and requires no insect at all.",
+        "marathi": "खुरपणी व उटाळणी करताना गड्ड्याला इजा होणार नाही याची काळजी घ्या. यांत्रिक इजा हीसुद्धा किडीसारखीच जखम आहे, आणि तिच्यातूनही बुरशी आत शिरते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source states that injury to the rhizome during earthing up or weeding allows Pythium and Fusarium to enter. This is a pest-free route into the same disease.",
+        "yield_impact": "Prevents entry into the 0.50 to 0.90 rot pathway.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan",
+          "Domain 2 weeding chain"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_8_operations"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "earthing_up_date",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Zero cost. It is an instruction to the labour team rather than an input, and it belongs in the day's task list alongside the operation itself.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    }
+  ],
+  "open_items": [
+    {
+      "id": "D05-OI-01",
+      "item": "Economic threshold levels for all ginger pests",
+      "owner": "field records, one to three seasons",
+      "source_class": "FIELD",
+      "blocking": false,
+      "note": "No published ETLs exist. Provisional levels in this file are estimates."
+    },
+    {
+      "id": "D05-OI-02",
+      "item": "CIB&RC label claims for ginger — insecticides and pre-harvest intervals",
+      "owner": "CIB&RC current list",
+      "source_class": "VERIFY",
+      "blocking": false,
+      "note": "Not blocking because biological and cultural options cover the main pests."
+    },
+    {
+      "id": "D05-OI-03",
+      "item": "Castor bait containers per acre",
+      "owner": "first season record",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D05-OI-04",
+      "item": "Marigold layout and plant numbers, and competition effect on ginger",
+      "owner": "first season trial",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D05-OI-05",
+      "item": "Light trap counter on sub-node",
+      "owner": "hardware roadmap",
+      "source_class": "FIELD",
+      "blocking": false,
+      "note": "Manual counting must begin in season one regardless; the data cannot be collected retrospectively."
+    },
+    {
+      "id": "D05-OI-06",
+      "item": "Local availability of castor seed in the Kannad belt",
+      "owner": "local survey",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D05-OI-07",
+      "item": "Scientific name and life cycle of the rhizome fly for image recognition training",
+      "owner": "further literature search",
+      "source_class": "VERIFY",
+      "blocking": false
+    },
+    {
+      "id": "D05-OI-08",
+      "item": "Per acre labour days for earthing up and manual pest collection",
+      "owner": "first season record",
+      "source_class": "FIELD",
+      "blocking": false
+    }
+  ],
+  "summary": {
+    "total_rules": 33,
+    "by_category": {
+      "PC": 4,
+      "RF": 3,
+      "SH": 2,
+      "LR": 1,
+      "LC": 1,
+      "NE": 4,
+      "WG": 3,
+      "TC": 2,
+      "IP": 2,
+      "CH": 7,
+      "SC": 2,
+      "SW": 2
+    },
+    "by_priority": {
+      "5": 12,
+      "4": 15,
+      "3": 6
+    },
+    "by_severity": {
+      "info": 12,
+      "yellow": 16,
+      "red": 3,
+      "blocking": 2
+    },
+    "by_source_tier": {
+      "A": 26,
+      "B": 7,
+      "C": 0
+    },
+    "by_source_class": {
+      "SRC-D": 7,
+      "SRC-Q": 15,
+      "DERIVED": 8,
+      "EST": 3
+    },
+    "confidence_range": {
+      "min": 0.7,
+      "max": 0.9,
+      "mean": 0.832
+    },
+    "rules_with_u_value": 12,
+    "irrecoverable_rules": 11,
+    "zero_cost_rules": [
+      "D05-PC-002",
+      "D05-PC-004",
+      "D05-WG-001",
+      "D05-NE-004",
+      "D05-CH-001",
+      "D05-TC-002"
+    ],
+    "highest_value_rule": "D05-RF-001",
+    "blocking_open_items": 0,
+    "by_decision_type": {
+      "PLANNING_GUIDANCE": 11,
+      "SCHEDULED_REMINDER": 6,
+      "DIAGNOSTIC": 10,
+      "BLOCK": 3,
+      "SENSOR_ALERT": 3
+    },
+    "reviewed_t1": 3,
+    "rules_with_trigger_expr": 16,
+    "rules_with_delivery_class": 16,
+    "immutable_rules": 2
+  },
+  "next_steps": [
+    "1. Diarise the castor bait preparation for around 20 June — it is the highest value time-critical rule in this domain (D05-RF-001)",
+    "2. Begin manual light trap counting in season one; the data cannot be gathered retrospectively (D05-OI-05)",
+    "3. Check the CIB&RC current list for ginger label claims and pre-harvest intervals (D05-OI-02)",
+    "4. Build Domain 6 JSON inheriting the Domain 1 _schema block unchanged",
+    "5. Cross-validate D05-PC-001 against Domain 11 so pest and rot u-values are not double counted"
+  ],
+  "author_note": "This file contains 32 rules because that is what the source document supports. The organising insight is that pest control in ginger is wound prevention, so the pest and disease u-values share a causal chain and must not be summed independently in Domain 11. Economic threshold levels are absent from the literature and the provisional figures here are marked EST rather than dressed up as sourced. Two banned or restricted molecules found in still-live online pages are placed on a hard blocklist. Status is PHASE_1_RAW_UNVALIDATED.",
+  "legal": {
+    "disclaimer_mr": "हा नियम-संच निर्णय-सहाय्य साधन आहे. अंतिम जबाबदारी शेतकऱ्याची.",
+    "disclaimer_en": "This rule set is a decision-support tool. Final responsibility rests with the cultivator.",
+    "pesticide_note": "Every insecticide must carry a CIB&RC label claim for ginger. Label dose and pre-harvest interval must be followed. BHC and monocrotophos are blocklisted and must never be emitted.",
+    "safety_note": "Kerosene-mixed water for beetle destruction is a fire hazard and must be handled away from flame.",
+    "data_note": "Farmer-attributable data handled under DPDP Act 2023; see Domain 12."
+  }
+}

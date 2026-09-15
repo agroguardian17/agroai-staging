@@ -1,0 +1,2675 @@
+{
+  "_schema": {
+    "schema_version": "2.0",
+    "inherits_from": "Domain1_Rules_Ginger_v2.json",
+    "inheritance_note": "The full _schema block is defined in Domain 1 and is NOT repeated here. Units (per acre), stage codes G0-G5, source tiers A/B/C, source classes, priority scale, recoverability, severity and confidence bounds are inherited unchanged. Domain 2, 3, 4 and 5 additions are also assumed present. Only Domain 6 additions are declared below.",
+    "additions": {
+      "rule_categories_domain_6": {
+        "DX": "differential diagnosis",
+        "SR": "soft rot",
+        "BW": "bacterial wilt",
+        "FY": "fusarium yellows",
+        "LS": "leaf spot and blotch",
+        "PV": "prevention stack",
+        "ST": "seed treatment",
+        "MU": "mulch as disease control",
+        "CH": "chemical control and rotation",
+        "SW": "sensor and weather binding",
+        "FH": "field history"
+      },
+      "new_farm_brain_fields": {
+        "central_shoot_dead": "boolean",
+        "stem_cut_colour": "enum:[brown_black, greyish_yellow, brown_vascular, normal]",
+        "stem_ooze_type": "enum:[none, watery_foul, milky_yellowish]",
+        "ooze_test_result": "enum:[not_done, milky_thread, no_thread]",
+        "wilt_while_green": "boolean",
+        "rhizome_smell": "enum:[normal, sour_foul, faint]",
+        "rhizome_texture": "enum:[firm, mushy_wet, dry_rot]",
+        "shoot_pulls_out_easily": "boolean",
+        "rot_incidence_pct": "number",
+        "wilt_incidence_pct": "number",
+        "leaf_spot_rings_visible": "boolean",
+        "leaf_spot_incidence_pct": "number",
+        "fog_days_consecutive": "integer",
+        "leaf_wetness_hours": "number",
+        "last_fungicide_group": "string",
+        "last_fungicide_date": "date",
+        "affected_plants_removed": "boolean",
+        "biofumigation_done": "boolean",
+        "hot_water_treatment_done": "boolean",
+        "fungicide_group_repeated": "boolean — the last two applications shared a mode-of-action group"
+      },
+      "fungicide_emission_policy": {
+        "bacterial_wilt": "NO fungicide may be emitted. Encoded as the deliberate absence of any bacterial_wilt entry in the fungicide table, so the constraint holds even if rule logic is bypassed.",
+        "soft_rot_first_choice": "metalaxyl-M plus mancozeb, because Pythium is an oomycete. The source lists carbendazim first, but that ordering is mild to severe, not less to more effective.",
+        "rotation": "Change the mode of action GROUP, not the trade name. Two products with different names and the same mode of action do not break resistance selection.",
+        "phi_default": "Where the pre-harvest interval is unknown, block all spray advisory within 30 days of expected harvest.",
+        "label_note": "Ginger is a minor crop. CIB&RC label claim must be verified before any chemical is used."
+      },
+      "decision_types": {
+        "AUTO_DECISION": {
+          "mr": "AI कधी व किती हे स्वतः ठरवतो",
+          "en": "engine computes the quantity or timing itself"
+        },
+        "SENSOR_ALERT": {
+          "mr": "sensor वर आधारित इशारा, कृती माणसाची",
+          "en": "sensor-triggered; the action is human work"
+        },
+        "SCHEDULED_REMINDER": {
+          "mr": "वेळापत्रकानुसार आठवण",
+          "en": "calendar or stage driven reminder"
+        },
+        "DIAGNOSTIC": {
+          "mr": "AI विचारतो, शेतकरी सांगतो",
+          "en": "engine asks, farmer answers, engine branches"
+        },
+        "DATA_CAPTURE": {
+          "mr": "नोंद किंवा मोजमाप मागतो",
+          "en": "engine requests a record or measurement"
+        },
+        "HUMAN_DECISION": {
+          "mr": "AI गणित दाखवतो, निर्णय माणसाचा",
+          "en": "engine presents arithmetic; person decides"
+        },
+        "BLOCK": {
+          "mr": "AI नाकारतो किंवा अडवतो",
+          "en": "engine refuses or blocks"
+        },
+        "PLANNING_GUIDANCE": {
+          "mr": "हंगामापूर्व निवड — शेतकरी ठरवतो",
+          "en": "pre-season choice the farmer makes"
+        },
+        "POLICY": {
+          "mr": "प्रॉडक्ट धोरण, शेतकऱ्यापर्यंत जात नाही",
+          "en": "product policy; never reaches a farmer"
+        }
+      },
+      "automation_levels": {
+        "full": "engine decides and acts without asking",
+        "assisted": "engine decides when, the person does the work or supplies the observation",
+        "advisory": "engine shows the arithmetic, the person chooses",
+        "refusal": "engine prevents an action",
+        "none": "internal policy, not farmer facing"
+      },
+      "trigger_dsl": {
+        "version": "dsl-1.0",
+        "logic": "three-valued: TRUE / FALSE / UNKNOWN",
+        "unknown_rule": "A rule whose trigger evaluates UNKNOWN must NOT fire and must NOT be treated as FALSE. Report reduced confidence and name the missing field (Domain 12 D12-COLD-001).",
+        "operators": [
+          "> >= < <= == !=",
+          "AND OR NOT",
+          "IN [..]",
+          "BETWEEN a AND b",
+          "IS NULL / IS NOT NULL / IS TRUE / IS FALSE",
+          "DURATION(field > x) > n HOURS",
+          "WITHIN(date_field, n DAYS)",
+          "MONTH IN [..]",
+          "STAGE IN [..]"
+        ],
+        "note": "Fields resolve against kb_farm_brain_fields. An undeclared name is a parse error, never a silent false."
+      },
+      "notification_policy": {
+        "version": "notify-1.0",
+        "why": "The season simulation issued 998 messages across 301 days before this existed. A trigger expresses a condition and a condition stays true; the advice is an event and must be delivered once.",
+        "classes": {
+          "ONCE_UNTIL_RESOLVED": "Standing precondition. Once, then a 7/21/45/90 day ladder with rising severity.",
+          "EVENT": "Transient physical event. Rising edge only; re-armed after it clears.",
+          "WINDOW": "Dated operation. Advance warning, the day, then 3 overdue reminders.",
+          "SILENT_GUARD": "Prevention rule. No message unless the prohibited action is attempted."
+        },
+        "result": "998 messages became 43 in the normal season, with no critical stage left silent for more than 15 days."
+      },
+      "override_policy": {
+        "version": "override-1.0",
+        "why": "The Tier-1 review worked but was offline. An agronomist looking at a live plot in August cannot edit JSON and wait for a deploy; by then the window has closed.",
+        "kinds": [
+          "THRESHOLD",
+          "DELIVERY",
+          "SEVERITY",
+          "DISABLE",
+          "PARAMETER"
+        ],
+        "scopes": [
+          "plot",
+          "cluster",
+          "global"
+        ],
+        "scope_precedence": "narrowest wins — plot over cluster over global",
+        "default_expiry_days": 240,
+        "max_expiry_days": 400,
+        "expiry_rationale": "A permanent change belongs in the knowledge base, not in the override table.",
+        "immutable_count": 16,
+        "immutable_rationale": "Some rules exist because getting them wrong causes harm no agronomic judgement outweighs. The API refuses them by code path, and a database trigger refuses them again if the application layer is bypassed.",
+        "audit": "Refused attempts are recorded, not discarded. An attempt to override an immutable rule is a governance signal."
+      }
+    }
+  },
+  "metadata": {
+    "domain": 6,
+    "domain_name": "Disease Management",
+    "domain_name_mr": "रोग व्यवस्थापन",
+    "crop": "ginger",
+    "crop_mr": "आले",
+    "region": "Kannad, Chhatrapati Sambhajinagar, Marathwada",
+    "source_document": "AgroGuardian_Ginger_Domain6_Disease_Management_RAW.docx",
+    "version": "1.0",
+    "status": "PHASE_1_RAW_UNVALIDATED",
+    "agronomist_validated": false,
+    "validation_note": "Disease descriptions and control measures come from the same institutional centre as Domains 2, 4 and 5. The soft rot risk model thresholds are qualitative and must be replaced by measured values after one season. Bacterial wilt presence in the Kannad belt is unconfirmed.",
+    "total_rules": 28,
+    "rule_count_note": "28 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count.",
+    "review_by": null,
+    "review_note": "Disease biology is stable. CIB&RC status must be rechecked annually.",
+    "purpose": "Disease diagnosis and management for ginger on Marathwada vertisol. This is the domain in which the crop is won or lost in this belt, and the one in which the sensor investment returns most directly, because the triggers are moisture and weather driven.",
+    "key_innovations": [
+      "Three below-ground diseases produce almost identical above-ground symptoms and require completely different responses. One of the three responds to no fungicide at all. A single stem-cut test plus a glass of water separates them.",
+      "Pythium is a water mold, not a true fungus. Its cell wall lacks chitin, so benzimidazole and triazole chemistry gives limited control. Metalaxyl-M is oomycete-specific and should be the first choice, not the escalation option — which reverses the order the source presents.",
+      "Bacterial wilt is called green wilt because the plant wilts while the foliage is still green. That single observation distinguishes it from soft rot, where leaves yellow first.",
+      "The absence of any fungicide entry against bacterial wilt is deliberate and structural. Telling the farmer NOT to spray is the most valuable advice in this domain.",
+      "Sun-held ring test separates leaf spot from heat scorch. In a belt recording 45.9 C, foliage scorch is routine and would otherwise be treated repeatedly as disease.",
+      "Sixteen preventive measures are documented and six are free. All are pre-plant decisions, which is the numerical case for advisory starting sixty days before planting."
+    ],
+    "central_finding": {
+      "statement": "Three diseases, near-identical symptoms, completely different treatments — and no fungicide works on one of them.",
+      "loss_potential": {
+        "soft_rot_pct": [
+          50,
+          90
+        ],
+        "bacterial_wilt": "most destructive pathogen reported from all ginger growing countries"
+      },
+      "diagnostic_resolution": "stem cut lengthwise plus ooze test in clear water",
+      "cost_of_misdiagnosis": "full input cost wasted plus continued spread, because the wrong chemistry has no activity on the actual pathogen",
+      "implication": "Diagnosis must precede treatment without exception. The engine must refuse to emit a fungicide before the differential is resolved."
+    },
+    "primary_sources": [
+      "Agrowon - Halad, Ale pikatil kid-rog niyantran; Dr. Manoj Mali (officer in charge) and Dr. Sachin Mahajan (plant pathologist), Halad Sanshodhan Yojana, Krishi Sanshodhan Kendra, Kasbe Digraj, Sangli (TIER A) - soft rot, leaf spot and leaf blotch symptoms, control, drench and rotation rules",
+      "ScienceDirect Heliyon 2023 - A comprehensive review on soft rot disease management in ginger (TIER A) - 50 to 90 percent loss, three-disease confusion",
+      "Springer Journal of Plant Pathology 2020 - Bacterial wilt of ginger review (TIER A) - Ralstonia pseudosolanacearum, ginger blast, Mahali, green wilt, soil persistence",
+      "Microbiology Spectrum / NCBI PMC9603371 (TIER A) - continuous cropping risk, Bacillus velezensis, Etridiazole caution",
+      "IntechOpen - Diseases of Ginger 2019 (TIER A) - Samuel and Mathew 1986 nematode to wilt link",
+      "Pesticidi i Fitomedicina 37(1) 2022 (TIER B) - biofumigation trial, Tepi Ethiopia",
+      "CJAST 39(35) 2020 - Pythium soft rot management review (TIER A) - prevention list, solarization, twice-treated seed",
+      "Springer - soft rot management study (TIER A) - hot water plus Trichoderma, germination figures",
+      "dalvoy.com (TIER B) - Pythium as water mold, stem-cut diagnosis",
+      "Organic Mandya (TIER B) - Kodagu and Shivamogga mulch field records",
+      "Agrowon - Ale Lagvad Tantradnyan, Dr. Jitendra Kadam (TIER A) - seed treatment sequence, disease timing"
+    ],
+    "review_log": {
+      "tier_1_review_date": "2026-07-31",
+      "rules_reviewed": 6,
+      "rules_total": 28,
+      "note": "Rule-level status is authoritative. Domain status stays PHASE_1_RAW_UNVALIDATED until T3 and T4 are also reviewed and one season of field data exists."
+    }
+  },
+  "reference_data": {
+    "diseases": [
+      {
+        "code": "soft_rot",
+        "name_mr": "कंदकूज",
+        "name_en": "soft rot / rhizome rot",
+        "causal_organism": "Pythium myriotylum, P. aphanidermatum, with Fusarium spp.",
+        "organism_type": "water_mold_oomycete",
+        "location": "below_ground",
+        "curable": false,
+        "fungicide_effective": true,
+        "yield_loss_pct": {
+          "min": 50,
+          "max": 90
+        },
+        "peak_period": "August to September",
+        "susceptible_stages": [
+          "G2",
+          "G3",
+          "G4"
+        ],
+        "soil_persistence": "inoculum persists across seasons",
+        "symptom_sequence_mr": [
+          "रोगामध्ये सर्वप्रथम झाडाची सुरळी मरते",
+          "सुरळीतील पानांचे शेंडे वरून व कडेने पिवळे पडून १-१.५ सेंमी खालीपर्यंत वाळतात",
+          "संपूर्ण पान वाळते",
+          "खोडाचा गड्ड्यालगतच्या बुंध्याचा रंग तपकिरी काळपट होतो",
+          "गड्डा वरून काळा व निस्तेज",
+          "प्रादुर्भावग्रस्त फुटवा ओढल्यास सहज हातामध्ये येतो",
+          "कंद पचपचीत व मऊ; त्यातून दुर्गंधीयुक्त पाणी बाहेर पडते"
+        ],
+        "earliest_sign": "central shoot death",
+        "rhizome_early_signs": "small slightly raised reddish-brown spots that enlarge, coalesce and become sunken lesions with a characteristic sour smell",
+        "partial_infection_note": "Where infestation is not extensive the plant survives but stays stunted and unproductive — so a green-looking field can still be carrying a large loss",
+        "favourable_conditions": [
+          "warm",
+          "humid",
+          "poor drainage"
+        ],
+        "source_tier": "A",
+        "technical_note": "Pythium is a water mold, not a true fungus. Its cell wall lacks chitin, so benzimidazole and triazole fungicides give limited control. Metalaxyl-M is phenylamide and oomycete-specific."
+      },
+      {
+        "code": "bacterial_wilt",
+        "name_mr": "मर रोग",
+        "name_en": "bacterial wilt",
+        "causal_organism": "Ralstonia pseudosolanacearum (formerly R. solanacearum)",
+        "organism_type": "bacterium",
+        "location": "below_ground",
+        "curable": false,
+        "fungicide_effective": false,
+        "yield_loss_pct": {
+          "min": 30,
+          "max": 70
+        },
+        "peak_period": "any time during the growth period",
+        "susceptible_stages": [
+          "G1",
+          "G2",
+          "G3",
+          "G4",
+          "G5"
+        ],
+        "soil_persistence": "notorious for persisting in soil for many years",
+        "other_names": [
+          "ginger blast",
+          "Mahali",
+          "green wilt"
+        ],
+        "host_range": "wide, including potato, tomato, brinjal and chilli",
+        "diagnostic_signs": [
+          "sudden wilting starting with the lower leaves",
+          "plant wilts while foliage is still green",
+          "stem cut lengthwise shows greyish-yellow discolouration",
+          "characteristic milky or yellowish exudate oozes from the cut stem"
+        ],
+        "progression": "slower than soft rot but can occur at any stage",
+        "management_status": "Management strategies have met with limited success and it remains an enigma",
+        "nematode_link": "Root-knot nematode Meloidogyne incognita has a documented role in inducing bacterial wilt (Samuel & Mathew, 1986)",
+        "source_tier": "A"
+      },
+      {
+        "code": "fusarium_yellows",
+        "name_mr": "फ्युजेरियम पिवळेपणा",
+        "name_en": "fusarium yellows",
+        "causal_organism": "Fusarium oxysporum f. sp. zingiberi",
+        "organism_type": "true_fungus",
+        "location": "below_ground",
+        "curable": true,
+        "fungicide_effective": true,
+        "yield_loss_pct": null,
+        "susceptible_stages": [
+          "G2",
+          "G3",
+          "G4"
+        ],
+        "distinguishing_features": [
+          "dry rot rather than wet mushy rot",
+          "slow progression",
+          "no ooze"
+        ],
+        "source_tier": "A",
+        "honest_note": "Limited Indian and Maharashtra-specific detail was located. Kept in the diagnostic table because excluding it would push its cases into the other two categories, but it does not need a separate preventive programme — the soft rot stack covers it."
+      },
+      {
+        "code": "leaf_spot",
+        "name_mr": "पानांवरील ठिपके / करपा",
+        "name_en": "leaf spot",
+        "causal_organism": "fungal",
+        "organism_type": "true_fungus",
+        "location": "foliar",
+        "curable": true,
+        "fungicide_effective": true,
+        "peak_period": "periods of prolonged fog",
+        "susceptible_stages": [
+          "G3",
+          "G4",
+          "G5"
+        ],
+        "diagnostic_signs": [
+          "oval to elliptical brown spots",
+          "held up to the sun, concentric rings are visible inside the spots",
+          "in severe cases spots coalesce and the leaf scorches to a reddish-grey brown and falls"
+        ],
+        "decisive_test": "sun-held ring test",
+        "source_tier": "A"
+      },
+      {
+        "code": "leaf_blotch",
+        "name_mr": "पानांवरील ठिपके (ब्लॉच)",
+        "name_en": "leaf blotch",
+        "causal_organism": "fungal",
+        "organism_type": "true_fungus",
+        "location": "foliar",
+        "curable": true,
+        "fungicide_effective": true,
+        "peak_period": "periods of prolonged fog",
+        "susceptible_stages": [
+          "G3",
+          "G4",
+          "G5"
+        ],
+        "diagnostic_signs": [
+          "begins on the leaves closest to the ground and spreads upward",
+          "numerous small round grain-like spots on the upper surface",
+          "black fruiting bodies in the centre",
+          "no yellow halo initially, one develops later",
+          "2 to 4 mm, white central area",
+          "reddish-grey spots 1 to 2 cm along the midrib on the underside"
+        ],
+        "inoculum_route": "soil or splash-borne, which is why mulch also helps",
+        "source_tier": "A"
+      }
+    ],
+    "differential_diagnosis": [
+      {
+        "criterion_en": "how leaves wilt",
+        "criterion_mr": "पाने कशी कोमेजतात",
+        "soft_rot": "yellow first, then dry",
+        "bacterial_wilt": "wilts while still green",
+        "fusarium_yellows": "gradual yellowing from below",
+        "decisive": true
+      },
+      {
+        "criterion_en": "onset",
+        "criterion_mr": "सुरुवात कुठून",
+        "soft_rot": "central shoot dies first",
+        "bacterial_wilt": "lower leaves first",
+        "fusarium_yellows": "lower leaves",
+        "decisive": true
+      },
+      {
+        "criterion_en": "speed",
+        "criterion_mr": "वेग",
+        "soft_rot": "fast",
+        "bacterial_wilt": "slow but any stage",
+        "fusarium_yellows": "slow",
+        "decisive": false
+      },
+      {
+        "criterion_en": "stem colour when cut lengthwise",
+        "criterion_mr": "खोड लांबीच्या दिशेने कापल्यावर रंग",
+        "soft_rot": "brown to blackish",
+        "bacterial_wilt": "greyish-yellow",
+        "fusarium_yellows": "brown vascular strands",
+        "decisive": true
+      },
+      {
+        "criterion_en": "ooze from cut stem",
+        "criterion_mr": "कापलेल्या खोडातून स्राव",
+        "soft_rot": "watery, foul smelling",
+        "bacterial_wilt": "milky or yellowish",
+        "fusarium_yellows": "none",
+        "decisive": true
+      },
+      {
+        "criterion_en": "rhizome smell",
+        "criterion_mr": "गड्ड्याचा वास",
+        "soft_rot": "sour and foul",
+        "bacterial_wilt": "comparatively less",
+        "fusarium_yellows": "faint",
+        "decisive": true
+      },
+      {
+        "criterion_en": "rhizome texture",
+        "criterion_mr": "गड्ड्याचा पोत",
+        "soft_rot": "mushy, disintegrates on handling",
+        "bacterial_wilt": "moist, rotten",
+        "fusarium_yellows": "dry rot",
+        "decisive": true
+      },
+      {
+        "criterion_en": "shoot pulled by hand",
+        "criterion_mr": "फुटवा ओढल्यास",
+        "soft_rot": "comes away easily, no mechanical support left",
+        "bacterial_wilt": "comes away",
+        "fusarium_yellows": "partially",
+        "decisive": false
+      },
+      {
+        "criterion_en": "ooze test in clear water",
+        "criterion_mr": "पाण्यातील स्राव चाचणी",
+        "soft_rot": "no milky thread",
+        "bacterial_wilt": "descending milky white thread",
+        "fusarium_yellows": "no thread",
+        "decisive": true
+      }
+    ],
+    "ooze_test": {
+      "method_mr": "कापलेल्या खोडाचा तुकडा स्वच्छ पाण्याच्या ग्लासात लटकवा; कापलेल्या टोकातून दुधाळ पांढऱ्या धाग्यासारखा स्राव खाली उतरताना दिसला तर तो जिवाणूजन्य मर रोग",
+      "method_en": "Suspend a cut stem piece in a glass of clear water. A descending milky white thread from the cut end confirms bacterial wilt. Nothing visible indicates a fungal or oomycete cause.",
+      "equipment": "a glass and water",
+      "timing_minutes": {
+        "value": null,
+        "source_class": "FIELD",
+        "note": "practical experience suggests three to ten minutes; the source does not state it"
+      },
+      "status": "standard field test used worldwide"
+    },
+    "prevention_stack": [
+      {
+        "measure_en": "Excellent drainage",
+        "measure_mr": "उत्तम निचरा",
+        "targets": [
+          "soft_rot"
+        ],
+        "evidence": "named the single most important measure",
+        "cost_class": "structural",
+        "u_value": 0.22,
+        "kannad_priority": 1,
+        "source_tier": "A"
+      },
+      {
+        "measure_en": "Three-stage mulching",
+        "measure_mr": "तीन-टप्पी आच्छादन",
+        "targets": [
+          "soft_rot",
+          "leaf_blotch"
+        ],
+        "evidence": "soft rot below 5 percent against a district average of 20 to 30 percent",
+        "cost_class": "medium",
+        "u_value": 0.2,
+        "kannad_priority": 2,
+        "source_tier": "A"
+      },
+      {
+        "measure_en": "Healthy seed rhizome selection",
+        "measure_mr": "निरोगी बेणे निवड",
+        "targets": [
+          "soft_rot",
+          "bacterial_wilt",
+          "fusarium_yellows"
+        ],
+        "evidence": "named as the first step",
+        "cost_class": "free",
+        "u_value": null,
+        "kannad_priority": 3,
+        "source_tier": "A"
+      },
+      {
+        "measure_en": "Seed treatment",
+        "measure_mr": "बेणे प्रक्रिया",
+        "targets": [
+          "soft_rot",
+          "bacterial_wilt"
+        ],
+        "evidence": "germination 80 to 83 percent untreated against 93 to 98 percent treated",
+        "cost_class": "low",
+        "u_value": 0.135,
+        "kannad_priority": 3,
+        "source_tier": "A"
+      },
+      {
+        "measure_en": "Nematode resistant variety Mahima",
+        "measure_mr": "सूत्रकृमी प्रतिकारक जात",
+        "targets": [
+          "soft_rot",
+          "bacterial_wilt"
+        ],
+        "evidence": "nematode wounds are a documented entry route",
+        "cost_class": "free",
+        "u_value": null,
+        "kannad_priority": 3,
+        "source_tier": "A"
+      },
+      {
+        "measure_en": "Timely planting by 7 June",
+        "measure_mr": "वेळेवर लागवड",
+        "targets": [
+          "soft_rot"
+        ],
+        "evidence": "late planting causes large scale rhizome fly and soft rot",
+        "cost_class": "free",
+        "u_value": 0.2,
+        "kannad_priority": 4,
+        "source_tier": "A"
+      },
+      {
+        "measure_en": "Rotation of three years or more",
+        "measure_mr": "फेरपालट",
+        "targets": [
+          "soft_rot",
+          "bacterial_wilt"
+        ],
+        "evidence": "continuous cropping raises infection risk",
+        "cost_class": "free",
+        "u_value": 0.15,
+        "kannad_priority": 4,
+        "source_tier": "A"
+      },
+      {
+        "measure_en": "Avoid rhizome injury during operations",
+        "measure_mr": "गड्ड्याला इजा टाळणे",
+        "targets": [
+          "soft_rot",
+          "fusarium_yellows"
+        ],
+        "evidence": "injury during weeding or earthing admits Pythium and Fusarium",
+        "cost_class": "free",
+        "u_value": null,
+        "kannad_priority": 4,
+        "source_tier": "A"
+      },
+      {
+        "measure_en": "Fully decomposed FYM only",
+        "measure_mr": "पूर्ण कुजलेले शेणखत",
+        "targets": [
+          "soft_rot"
+        ],
+        "evidence": "also removes white grub food source",
+        "cost_class": "free",
+        "u_value": 0.1,
+        "kannad_priority": 4,
+        "source_tier": "A"
+      },
+      {
+        "measure_en": "Avoid solanaceous host crops",
+        "measure_mr": "यजमान पिके टाळणे",
+        "targets": [
+          "bacterial_wilt"
+        ],
+        "evidence": "wide host range",
+        "cost_class": "free",
+        "u_value": null,
+        "kannad_priority": 4,
+        "source_tier": "A"
+      },
+      {
+        "measure_en": "Soil solarization",
+        "measure_mr": "जमीन सौरीकरण",
+        "targets": [
+          "soft_rot",
+          "bacterial_wilt"
+        ],
+        "evidence": "recognised cultural measure",
+        "cost_class": "low",
+        "u_value": 0.05,
+        "kannad_priority": 5,
+        "source_tier": "A"
+      },
+      {
+        "measure_en": "Remove and burn affected plants",
+        "measure_mr": "बाधित रोपे काढून जाळणे",
+        "targets": [
+          "bacterial_wilt",
+          "soft_rot"
+        ],
+        "evidence": "only available response once wilt appears",
+        "cost_class": "labour",
+        "u_value": null,
+        "kannad_priority": 2,
+        "source_tier": "A"
+      },
+      {
+        "measure_en": "Trichoderma 2 kg per acre in FYM",
+        "measure_mr": "ट्रायकोडर्मा",
+        "targets": [
+          "soft_rot",
+          "bacterial_wilt"
+        ],
+        "evidence": "antibiotic metabolites against R. solanacearum",
+        "cost_class": "low",
+        "u_value": 0.08,
+        "kannad_priority": 6,
+        "source_tier": "A"
+      },
+      {
+        "measure_en": "Neem cake 800 kg per acre",
+        "measure_mr": "निंबोळी पेंड",
+        "targets": [
+          "soft_rot"
+        ],
+        "evidence": "yield up and rhizome rot incidence down, Kerala trials",
+        "cost_class": "medium",
+        "u_value": null,
+        "kannad_priority": 6,
+        "source_tier": "A"
+      },
+      {
+        "measure_en": "Biofumigation with aromatic crop residue",
+        "measure_mr": "जैव-धुरीकरण",
+        "targets": [
+          "bacterial_wilt"
+        ],
+        "evidence": "citronella, palmarosa, mint, lemongrass, Chinese chive tested in Ethiopia",
+        "cost_class": "low",
+        "u_value": null,
+        "kannad_priority": 7,
+        "source_tier": "B"
+      },
+      {
+        "measure_en": "Bacillus velezensis",
+        "measure_mr": "जैविक जिवाणू",
+        "targets": [
+          "bacterial_wilt"
+        ],
+        "evidence": "reported beneficial for ginger propagation",
+        "cost_class": "low",
+        "u_value": null,
+        "kannad_priority": 7,
+        "source_tier": "B"
+      }
+    ],
+    "prevention_summary": {
+      "total_measures": 16,
+      "free_measures": 6,
+      "all_pre_plant": true,
+      "note": "Six of sixteen are entirely free and all sixteen are decisions taken before or at planting. After planting, soft rot and bacterial wilt offer no cure, only damage limitation. This is the numerical case for advisory beginning sixty days before planting."
+    },
+    "fungicides": [
+      {
+        "molecule": "metalaxyl-M 4% + mancozeb 64%",
+        "formulation": "WP",
+        "moa_group": "phenylamide + multi-site",
+        "dose_per_litre": "2 g",
+        "method": "drench",
+        "target": "soft_rot",
+        "effective": true,
+        "severity_tier": "severe_in_source",
+        "engine_rank": 1,
+        "cibrc_verified": false,
+        "source_tier": "A",
+        "note": "Oomycete-specific plus contact partner. Should be the FIRST choice where Pythium is indicated, not the escalation option. Independently recorded as giving the lowest disease incidence and highest germination in a seed treatment trial."
+      },
+      {
+        "molecule": "mancozeb",
+        "formulation": "75 WP",
+        "moa_group": "dithiocarbamate multi-site",
+        "dose_per_litre": "2 g",
+        "method": "drench",
+        "target": "soft_rot",
+        "effective": true,
+        "severity_tier": "routine",
+        "engine_rank": 2,
+        "cibrc_verified": false,
+        "source_tier": "A",
+        "note": "Contact, partially effective"
+      },
+      {
+        "molecule": "copper oxychloride",
+        "formulation": "50 WP",
+        "moa_group": "copper multi-site",
+        "dose_per_litre": "5 g",
+        "method": "drench",
+        "target": "soft_rot",
+        "effective": true,
+        "severity_tier": "routine",
+        "engine_rank": 3,
+        "cibrc_verified": false,
+        "source_tier": "A"
+      },
+      {
+        "molecule": "carbendazim",
+        "formulation": "50 WP",
+        "moa_group": "benzimidazole",
+        "dose_per_litre": "1 g",
+        "method": "drench",
+        "target": "soft_rot",
+        "effective": false,
+        "severity_tier": "routine",
+        "engine_rank": 4,
+        "cibrc_verified": false,
+        "source_tier": "A",
+        "note": "Listed first in the source but Pythium is an oomycete, so control is limited. Appropriate where Fusarium is the suspected cause."
+      },
+      {
+        "molecule": "hexaconazole",
+        "formulation": "5 EC",
+        "moa_group": "triazole",
+        "dose_per_litre": "0.5 to 1 ml",
+        "method": "drench",
+        "target": "soft_rot",
+        "effective": false,
+        "severity_tier": "severe",
+        "engine_rank": 5,
+        "cibrc_verified": false,
+        "source_tier": "A",
+        "note": "Triazole; limited activity on oomycetes"
+      },
+      {
+        "molecule": "mancozeb",
+        "formulation": "75 WP",
+        "moa_group": "dithiocarbamate multi-site",
+        "dose_per_litre": "2 to 2.5 g",
+        "method": "spray",
+        "target": "leaf_spot",
+        "effective": true,
+        "severity_tier": "routine",
+        "cibrc_verified": false,
+        "source_tier": "A"
+      },
+      {
+        "molecule": "carbendazim",
+        "formulation": "50 WP",
+        "moa_group": "benzimidazole",
+        "dose_per_litre": "1 to 2 g",
+        "method": "spray",
+        "target": "leaf_spot",
+        "effective": true,
+        "severity_tier": "routine",
+        "cibrc_verified": false,
+        "source_tier": "A"
+      },
+      {
+        "molecule": "copper oxychloride",
+        "formulation": "50 WP",
+        "moa_group": "copper multi-site",
+        "dose_per_litre": "2.5 to 3 g",
+        "method": "spray",
+        "target": "leaf_spot",
+        "effective": true,
+        "severity_tier": "routine",
+        "cibrc_verified": false,
+        "source_tier": "A"
+      },
+      {
+        "molecule": "Bordeaux mixture",
+        "formulation": "1 percent",
+        "moa_group": "copper multi-site",
+        "dose_per_litre": "as prepared",
+        "method": "spray",
+        "target": "leaf_spot",
+        "effective": true,
+        "severity_tier": "severe",
+        "cibrc_verified": false,
+        "source_tier": "A"
+      },
+      {
+        "molecule": "propiconazole",
+        "formulation": "25 EC",
+        "moa_group": "triazole",
+        "dose_per_litre": "0.5 to 1 ml",
+        "method": "spray",
+        "target": "leaf_spot",
+        "effective": true,
+        "severity_tier": "severe",
+        "cibrc_verified": false,
+        "source_tier": "A"
+      },
+      {
+        "molecule": "chlorothalonil",
+        "formulation": "75 WP",
+        "moa_group": "chloronitrile multi-site",
+        "dose_per_litre": "2 to 2.5 g",
+        "method": "spray",
+        "target": "leaf_spot",
+        "effective": true,
+        "severity_tier": "severe",
+        "cibrc_verified": false,
+        "source_tier": "A"
+      }
+    ],
+    "fungicides_absent_for": {
+      "bacterial_wilt": "DELIBERATE. No fungicide has activity against a bacterial pathogen. The absence of any entry is a data-level guarantee that is stronger than rule logic, which can be bypassed."
+    },
+    "application_rules": [
+      {
+        "rule_mr": "आळवणी करताना जमिनीस वाफसा असावा",
+        "rule_en": "soil must be at vafsa condition when drenching",
+        "source_tier": "A"
+      },
+      {
+        "rule_mr": "आळवणी केल्यानंतर पिकास थोडासा पाण्याचा ताण द्यावा",
+        "rule_en": "give a slight water stress after drenching",
+        "source_tier": "A",
+        "cross_domain": "engine must reduce drip for 3 to 5 days"
+      },
+      {
+        "rule_mr": "फवारणीत चिकट पदार्थ १ मिलि प्रति लिटर",
+        "rule_en": "add a sticker at 1 ml per litre",
+        "source_tier": "A"
+      },
+      {
+        "rule_mr": "एकच बुरशीनाशक सतत वापरू नये — आलटून-पालटून",
+        "rule_en": "do not use the same fungicide repeatedly; alternate the mode of action group",
+        "source_tier": "A"
+      },
+      {
+        "rule_mr": "जास्त दिवस धुके राहिल्यास १५ दिवसांच्या अंतराने पीक सात महिन्यांचे होईपर्यंत फवारणी",
+        "rule_en": "if fog persists, spray at 15 day intervals until the crop is seven months old",
+        "source_tier": "A"
+      },
+      {
+        "rule_mr": "बाधित गड्डे जाळून नष्ट करावेत",
+        "rule_en": "burn affected rhizomes; do not leave them in the field",
+        "source_tier": "A"
+      }
+    ],
+    "observable_markers": [
+      {
+        "marker_id": "MK-006",
+        "name_mr": "सुरळी मरणे",
+        "name_en": "central_shoot_death",
+        "indicates": "soft_rot_earliest_sign",
+        "stages": [
+          "G2",
+          "G3",
+          "G4"
+        ],
+        "clarity": "high",
+        "u_value": 0.7,
+        "image_recognition_priority": 1,
+        "note": "Appears before rhizome softening or smell. The earliest available sign of the largest loss factor in the crop."
+      },
+      {
+        "marker_id": "MK-007",
+        "name_mr": "दुधाळ स्राव",
+        "name_en": "milky_ooze_from_cut_stem",
+        "indicates": "bacterial_wilt_confirmation",
+        "stages": [
+          "G1",
+          "G2",
+          "G3",
+          "G4",
+          "G5"
+        ],
+        "clarity": "very_high",
+        "u_value": 0.5,
+        "image_recognition_priority": null
+      },
+      {
+        "marker_id": "MK-008",
+        "name_mr": "हिरवीच असताना कोमेजणे",
+        "name_en": "green_wilt",
+        "indicates": "bacterial_wilt",
+        "stages": [
+          "G1",
+          "G2",
+          "G3",
+          "G4",
+          "G5"
+        ],
+        "clarity": "high",
+        "u_value": 0.5,
+        "image_recognition_priority": 2
+      },
+      {
+        "marker_id": "MK-009",
+        "name_mr": "सूर्याकडे धरल्यास ठिपक्यांत वर्तुळे",
+        "name_en": "concentric_rings_in_leaf_spot",
+        "indicates": "leaf_spot_versus_heat_scorch",
+        "stages": [
+          "G3",
+          "G4",
+          "G5"
+        ],
+        "clarity": "medium",
+        "u_value": 0.08,
+        "image_recognition_priority": 5
+      }
+    ],
+    "vocabulary": [
+      {
+        "mr": "सुरळी",
+        "en": "central unopened shoot",
+        "note": "Its death is the earliest soft rot sign, before rhizome softening or smell"
+      },
+      {
+        "mr": "कंदकूज",
+        "en": "soft rot / rhizome rot"
+      },
+      {
+        "mr": "मर रोग",
+        "en": "bacterial wilt",
+        "note": "Also called green wilt because the plant wilts while still green"
+      },
+      {
+        "mr": "आळवणी",
+        "en": "drenching",
+        "note": "Soil must be at vafsa condition; give a light water stress afterwards"
+      },
+      {
+        "mr": "करपा",
+        "en": "leaf spot / blight"
+      }
+    ]
+  },
+  "rules": [
+    {
+      "rule_id": "D06-DX-001",
+      "category": "DX",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "A wilting or yellowing plant is reported at any stage",
+        "marathi": "कोणत्याही अवस्थेत कोमेजलेले किंवा पिवळे रोप नोंदवले",
+        "expr": "leaf_yellowing_pattern IS NOT NULL OR wilt_while_green IS TRUE OR central_shoot_dead IS TRUE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Diagnosis before any treatment.",
+        "golden_tests": [
+          {
+            "context": {
+              "central_shoot_dead": true
+            },
+            "expect": "TRUE",
+            "label": "सुरळी मेली"
+          },
+          {
+            "context": {
+              "leaf_yellowing_pattern": "uniform_old"
+            },
+            "expect": "TRUE",
+            "label": "पिवळेपणा"
+          },
+          {
+            "context": {
+              "central_shoot_dead": false,
+              "wilt_while_green": false
+            },
+            "expect": "FALSE",
+            "label": "लक्षण नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Do NOT recommend any fungicide yet. Ask two questions first: did the leaves stay green while the plant wilted, and is the central shoot dead? Then require the stem-cut test and the ooze test. Diagnosis precedes treatment without exception.",
+        "marathi": "अजून कोणतेही बुरशीनाशक सुचवू नका. आधी दोन प्रश्न — पाने हिरवीच असताना कोमेजली का, आणि सुरळी मेली आहे का. मग खोड कापण्याची चाचणी आणि स्राव चाचणी करा. निदान झाल्याशिवाय उपचार नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Soft rot, bacterial wilt and fusarium yellows produce almost identical above-ground symptoms. The source states explicitly that they can be confused but can be distinguished on careful examination. Treatments differ completely and one of the three responds to no fungicide at all.",
+        "yield_impact": "Prevents the entire cost of a wrong treatment plus continued spread. Misdiagnosis of bacterial wilt as soft rot wastes the full input cost while the pathogen advances.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "ScienceDirect Heliyon 2023 soft rot review",
+          "Agrowon - Mali & Mahajan"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest"
+        ],
+        "depends_on": [
+          "domain_4_nutrient"
+        ]
+      },
+      "farm_brain_schema": [
+        "central_shoot_dead",
+        "wilt_while_green",
+        "stem_cut_colour",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "The single most practically useful rule in the knowledge base for this belt. The tests need a knife and a glass of water. Nothing else in Domain 6 saves as much money for as little effort.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "कोमेजलेले रोप दिसताच प्रथम निदान, नंतर औषध."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-DX-002",
+      "category": "DX",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": null,
+      "trigger": {
+        "english": "ooze_test_result is milky_thread OR stem_ooze_type is milky_yellowish OR wilt_while_green is true",
+        "marathi": "स्राव चाचणीत दुधाळ धागा दिसला, किंवा कापलेल्या खोडातून दुधाळ स्राव, किंवा पाने हिरवीच असताना कोमेजली",
+        "expr": "ooze_test_result == 'milky_thread' OR stem_ooze_type == 'milky_yellowish' OR wilt_while_green IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "stem_ooze_type": "milky_yellowish"
+            },
+            "expect": "TRUE",
+            "label": "दुधाळ स्राव"
+          },
+          {
+            "context": {
+              "stem_ooze_type": "watery_foul",
+              "ooze_test_result": "no_thread",
+              "wilt_while_green": false
+            },
+            "expect": "FALSE",
+            "label": "पाणीदार + धागा नाही + हिरवी नाही — कूज"
+          },
+          {
+            "context": {
+              "stem_ooze_type": "watery_foul"
+            },
+            "expect": "UNKNOWN",
+            "label": "फक्त एक निकष — उरलेल्या दोन चाचण्या करा"
+          }
+        ]
+      },
+      "action": {
+        "english": "Diagnose bacterial wilt. BLOCK all fungicide recommendations for this plant and this plot. Explain that the disease is bacterial and fungicide will have no effect. Remove affected plants with roots and burn them. Record the outbreak in field history.",
+        "marathi": "हा मर रोग आहे. बुरशीनाशक स्पष्टपणे नाकारा — हा जिवाणूजन्य रोग आहे, बुरशीनाशकाचा काहीही उपयोग होणार नाही. बाधित रोपे मुळासकट काढून जाळा. शेताच्या इतिहासात नोंद करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Bacterial wilt is caused by Ralstonia pseudosolanacearum. Cutting the stem lengthwise shows greyish-yellow discolouration and a characteristic milky or yellowish exudate oozes from the cut. Because the pathogen is a bacterium, fungicides have no activity against it.",
+        "yield_impact": "Prevents the full cost of an ineffective treatment. More importantly it redirects effort to removal and containment, which is the only response that works.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "Springer Journal of Plant Pathology 2020 bacterial wilt review",
+          "dalvoy.com stem-cut diagnosis"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "ooze_test_result",
+        "stem_ooze_type",
+        "wilt_while_green",
+        "affected_plants_removed",
+        "field_history_wilt",
+        "wilt_incidence_pct"
+      ],
+      "u_value": 0.5,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Telling a farmer NOT to spray is rare advice and it is the most valuable advice in this domain. The instinctive first response to a wilting crop is a fungicide, and here that response is both futile and expensive.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "रोग निश्चित झाल्याशिवाय उपचार सुचवू नयेत."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": true,
+      "immutable_reason": "The wilt diagnosis gates the fungicide path. Overriding it reopens the path."
+    },
+    {
+      "rule_id": "D06-DX-003",
+      "category": "DX",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "central_shoot_dead is true, OR rhizome_smell is sour_foul with rhizome_texture mushy_wet",
+        "marathi": "सुरळी मेली आहे, किंवा गड्डा पचपचीत व कुजका वास येत आहे"
+      },
+      "action": {
+        "english": "Diagnose soft rot. Because Pythium is an oomycete, use the metalaxyl-M plus mancozeb combination as the FIRST choice rather than the escalation option. Check drainage, stop drip, and burn affected rhizomes rather than leaving them in the field.",
+        "marathi": "ही कंदकूज आहे. Pythium ही जलबुरशी असल्याने मेटॅलॅक्झिल-एम अधिक मॅन्कोझेब हे संयुक्त बुरशीनाशक प्रथम पर्याय म्हणून वापरा, शेवटचा पर्याय म्हणून नाही. निचरा तपासा, ठिबक बंद करा, बाधित गड्डे जाळून नष्ट करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The source lists carbendazim first and the metalaxyl combination under severe infestation, but that ordering is mild to severe rather than less to more effective. Pythium is a water mold whose cell wall lacks chitin, so benzimidazoles give limited control. Metalaxyl-M is phenylamide and oomycete-specific.",
+        "yield_impact": "Soft rot carries 50 to 90 percent yield loss and is the largest single factor in the crop. Correct molecule selection is the difference between control and an apparent product failure.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "dalvoy.com Pythium is a water mold",
+          "Springer soft rot management study",
+          "Agrowon - Mali & Mahajan control list"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "central_shoot_dead",
+        "rhizome_smell",
+        "rhizome_texture",
+        "shoot_pulls_out_easily",
+        "rot_incidence_pct",
+        "last_fungicide_group"
+      ],
+      "u_value": 0.7,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "A farmer who uses the first listed option, sees no effect, and concludes the medicine does not work has in fact used the wrong medicine. Independent evidence supports this — the metalaxyl combination separately gave the lowest disease incidence and highest germination in a seed treatment trial.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "Pythium कंदकुजीमध्ये Metalaxyl-M + Mancozeb प्रथम पर्याय देणे वैज्ञानिकदृष्ट्या योग्य आहे."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-DX-004",
+      "category": "DX",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "rhizome_texture is dry_rot AND progression is slow AND no milky ooze",
+        "marathi": "गड्ड्याचा कूज कोरडा आहे, प्रगती मंद, दुधाळ स्राव नाही"
+      },
+      "action": {
+        "english": "Diagnose fusarium yellows. Ordinary fungicides are effective here, unlike the other two. Treat as the third-ranked risk and rely on the shared preventive stack rather than a separate programme.",
+        "marathi": "हा फ्युजेरियम पिवळेपणा असू शकतो. यावर सामान्य बुरशीनाशके चालतात — इतर दोन रोगांप्रमाणे नाही. हा तिसऱ्या क्रमांकाचा धोका मानावा; कंदकुजीचे प्रतिबंधक उपाय यावरही काम करतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "Fusarium oxysporum f. sp. zingiberi is a true fungus, so benzimidazole and triazole chemistry works. It produces a dry rot and progresses slowly, in contrast to the wet mushy rot and rapid progression of Pythium.",
+        "yield_impact": "Third-ranked risk. Correct identification mainly prevents the unnecessary use of oomycete-specific chemistry.",
+        "confidence_score": 0.75,
+        "source_tier": "A",
+        "references": [
+          "ScienceDirect Heliyon 2023"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "rhizome_texture",
+        "stem_cut_colour"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "Limited Indian and Maharashtra-specific detail was located for this disease. It stays in the diagnostic table because excluding it would push its cases into the other two categories, but it does not need its own preventive programme.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "लक्षणाधारित निदानात पुष्टीची पायरी आवश्यक."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-DX-005",
+      "category": "DX",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G4",
+      "trigger": {
+        "english": "Leaf spots reported AND air_temp_max_c above 35 in the preceding three days",
+        "marathi": "पानांवर ठिपके दिसले आणि गेल्या तीन दिवसांत तापमान ३५ अंशांवर होते",
+        "expr": "leaf_spot_rings_visible IS NOT NULL AND air_temp_max_c > 35",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Sun-held ring test separates leaf spot from heat scorch. In a belt reaching 45.9 C this fires often.",
+        "golden_tests": [
+          {
+            "context": {
+              "leaf_spot_rings_visible": true,
+              "air_temp_max_c": 38
+            },
+            "expect": "TRUE",
+            "label": "वर्तुळे तपासा"
+          },
+          {
+            "context": {
+              "leaf_spot_rings_visible": true,
+              "air_temp_max_c": 30
+            },
+            "expect": "FALSE",
+            "label": "उष्णता नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Before treating as disease, hold a leaf up to the sun and look for concentric rings inside the spots. Rings mean leaf spot. No rings, with scorched tips and margins on exposed leaves, means heat damage — treat with mulch, shade and irrigation timing, not fungicide.",
+        "marathi": "उपचारापूर्वी पान सूर्याकडे धरून पहा. ठिपक्यांमध्ये अनेक वर्तुळे दिसली तर तो करपा रोग. वर्तुळे नाहीत आणि उघड्या पानांच्या टोकांना व कडांना करपा असेल तर ती उष्णतेची इजा — त्यावर आच्छादन, सावली आणि पाण्याची वेळ, बुरशीनाशक नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "The source gives the sun-held ring test as the diagnostic sign for leaf spot. In this district recorded maxima reach 45.9 C and leaves scorch above 35 C, so heat damage to foliage is routine rather than exceptional and will otherwise be misread as disease.",
+        "yield_impact": "Prevents unnecessary fungicide use. Leaf spot itself carries roughly 0.08.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan sun-held ring test",
+          "District Profile Chhatrapati Sambhajinagar"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "leaf_spot_rings_visible",
+        "air_temp_max_c",
+        "leaf_spot_incidence_pct"
+      ],
+      "u_value": 0.08,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "Without this test the engine would recommend fungicide repeatedly through May and June for what is simply sun damage. The test costs nothing and needs no equipment.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-SR-001",
+      "category": "SR",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G3",
+      "trigger": {
+        "english": "Saturation exceeded 12 hours OR humidity above 85 percent for three consecutive days, in August or September, at stage G2 or G3",
+        "marathi": "पाणी १२ तासांहून जास्त साचले, किंवा सलग तीन दिवस आर्द्रता ८५ टक्क्यांवर, ऑगस्ट-सप्टेंबरमध्ये, पीक G2 किंवा G3 अवस्थेत",
+        "expr": "(DURATION(soil_moisture_vwc > vwc_saturation) > 12 HOURS OR DURATION(rh_pct > 85) > 72 HOURS) AND MONTH IN [AUG, SEP] AND STAGE IN [G2, G3]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Preventive — fires on the environmental signature, before symptoms.",
+        "golden_tests": [
+          {
+            "context": {
+              "soil_moisture_vwc__duration": 14,
+              "current_month": 8,
+              "current_stage": "G3"
+            },
+            "expect": "TRUE",
+            "label": "संपृक्तता + ऑगस्ट + G3"
+          },
+          {
+            "context": {
+              "rh_pct__duration": 80,
+              "current_month": 8,
+              "current_stage": "G3"
+            },
+            "expect": "TRUE",
+            "label": "आर्द्रता ८० तास"
+          },
+          {
+            "context": {
+              "soil_moisture_vwc__duration": 14,
+              "current_month": 11,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "नोव्हेंबर — वेगळा नियम"
+          },
+          {
+            "context": {
+              "soil_moisture_vwc__duration": 6,
+              "rh_pct__duration": 20,
+              "current_month": 8,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "दोन्ही मर्यादेखाली"
+          }
+        ]
+      },
+      "action": {
+        "english": "Start the preventive protocol WITHOUT waiting for symptoms. Check all three drainage levels, stop drip, apply Trichoderma drench, and where risk is high apply a preventive metalaxyl plus mancozeb drench.",
+        "marathi": "लक्षणांची वाट न पाहता कंदकूज प्रतिबंधक कृती सुरू करा. निचऱ्याच्या तिन्ही पातळ्या तपासा, ठिबक बंद करा, ट्रायकोडर्मा आळवणी करा, आणि जोखीम जास्त असल्यास प्रतिबंधात्मक बुरशीनाशक आळवणी करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "For a disease flagged not curable, symptom appearance means the yield is already lost. When leaves yellow and the shoot collapses, the rhizome is already rotten. The environmental signature that precedes infection is therefore the correct trigger, and a high false positive rate is the price of prevention.",
+        "yield_impact": "Soft rot carries 50 to 90 percent loss. Ten false alarms cost ten drainage inspections; one missed true alarm costs most of the crop.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "CJAST 39(35) 2020 Pythium soft rot review",
+          "Core C4.1 trigger-based escalation"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_2_soil",
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "saturation_hours",
+        "rh_pct",
+        "soil_temp_c",
+        "current_stage",
+        "drainage_levels_present"
+      ],
+      "u_value": 0.7,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "The timing here is unforgiving. July delivers about 195 mm, the wettest month, soft rot peaks in August and September, and G3 is when rhizome fingers differentiate irreversibly. All three coincide.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-SR-002",
+      "category": "SR",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Soft rot confirmed on any plant",
+        "marathi": "कोणत्याही रोपावर कंदकूज निश्चित झाली"
+      },
+      "action": {
+        "english": "Remove affected plants with roots and burn them. Do not leave them in the field or on the bund. Drench the affected and adjacent beds. Drench only when the soil is at vafsa condition and give a light water stress afterwards.",
+        "marathi": "बाधित रोपे मुळासकट काढून जाळून नष्ट करा — शेतात किंवा बांधावर टाकू नका. बाधित व शेजारच्या वाफ्यांत आळवणी करा. आळवणी करताना जमिनीस वाफसा असावा, आणि नंतर पिकास थोडासा पाण्याचा ताण द्यावा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Affected rhizomes left in the field become inoculum for the rest of the season and for subsequent seasons. Drenching saturated soil dilutes and displaces the chemical, and irrigating immediately afterwards leaches it below the shallow root zone.",
+        "yield_impact": "Limits spread within the season and reduces carry-over inoculum.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan drench and disposal instructions"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "affected_plants_removed",
+        "vafsa_state",
+        "last_fungicide_date",
+        "drip_runtime_min"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "The water stress instruction creates a cross-domain dependency. The engine must reduce drip for three to five days after a drench, which a human operator would easily overlook.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-SR-003",
+      "category": "SR",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G2",
+      "trigger": {
+        "english": "Any field operation involving soil disturbance near the rhizome is scheduled",
+        "marathi": "गड्ड्याजवळ माती हलवण्याचे कोणतेही काम ठरले आहे",
+        "expr": "earthing_up_date IS NULL AND dap BETWEEN 70 AND 95",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Injury during weeding or earthing is a pest-free route into the same rot.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 80
+            },
+            "expect": "TRUE",
+            "label": "गड्ड्याला इजा टाळा"
+          },
+          {
+            "context": {
+              "dap": 80,
+              "earthing_up_date": "done"
+            },
+            "expect": "FALSE",
+            "label": "झाली"
+          }
+        ]
+      },
+      "action": {
+        "english": "Instruct that the rhizome must not be injured during weeding, earthing up or harvest. Mechanical injury opens the same entry route as any pest, with no pest involved.",
+        "marathi": "खुरपणी, उटाळणी किंवा काढणी करताना गड्ड्याला इजा होणार नाही याची काळजी घ्या. यांत्रिक इजा हीसुद्धा किडीसारखीच जखम आहे, आणि तिच्यातूनही पिथियम व फ्युजेरियम आत शिरतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "The source states that injury to the rhizome during earthing up or weeding allows Pythium and Fusarium to enter. This is a pathogen entry route that requires no insect at all, and it originates in the operations the farmer performs deliberately.",
+        "yield_impact": "Prevents entry into the 0.50 to 0.90 pathway at zero input cost.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan injury as entry route",
+          "Domain 2 weeding chain"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest"
+        ],
+        "depends_on": [
+          "domain_8_operations"
+        ]
+      },
+      "farm_brain_schema": [
+        "earthing_up_date",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Zero cost. It is an instruction to the labour team rather than a purchase, and it belongs in the day task list beside the operation itself rather than in a separate advisory.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-BW-001",
+      "category": "BW",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G0",
+      "trigger": {
+        "english": "field_history_wilt is true for this plot and the persistence window has not elapsed",
+        "marathi": "या प्लॉटवर मर रोगाची नोंद आहे आणि पुरेशी वर्षे उलटलेली नाहीत"
+      },
+      "action": {
+        "english": "Warn clearly before replanting ginger or turmeric here. The bacterium persists in soil for many years. Recommend a different plot if one is available, and treat the standard three-year rotation as insufficient where wilt has actually been recorded.",
+        "marathi": "या प्लॉटवर मर रोग नोंदवलेला आहे. हा जिवाणू जमिनीत अनेक वर्षे टिकतो. दुसरा प्लॉट उपलब्ध असल्यास तो निवडा. जिथे प्रत्यक्ष मर रोग आढळला आहे तिथे तीन वर्षांची फेरपालट पुरेशी मानू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "Ralstonia is described as notorious for persisting in soil for many years and has a wide host range. Management strategies have met with limited success and it remains an enigma, so there is no reliable curative response once the crop is planted into infested soil.",
+        "yield_impact": "Prevents exposure to a 0.30 to 0.70 loss with no available treatment.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "Springer Journal of Plant Pathology 2020 soil persistence"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_10_institutional"
+        ]
+      },
+      "farm_brain_schema": [
+        "field_history_wilt",
+        "previous_crops_3yr"
+      ],
+      "u_value": 0.5,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "This rule depends entirely on a field history record surviving across years, which paper does not do and farmer memory does incompletely. Holding that record is the clearest durable advantage the product has, and it grows more valuable the longer it runs.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-BW-002",
+      "category": "BW",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G2",
+      "trigger": {
+        "english": "nematode_suspected is true",
+        "marathi": "सूत्रकृमींचा संशय आहे"
+      },
+      "action": {
+        "english": "Raise the bacterial wilt risk score as well as the soft rot risk score. Root-knot nematode has a documented role in inducing bacterial wilt, so nematode control is indirect wilt prevention.",
+        "marathi": "सूत्रकृमींचा प्रादुर्भाव असल्यास मर रोगाचीही जोखीम वाढवा. मूळगाठ सूत्रकृमींची जिवाणूजन्य मर निर्माण होण्यात भूमिका नोंदवलेली आहे — म्हणजे सूत्रकृमी नियंत्रण हे अप्रत्यक्षपणे मर रोग प्रतिबंध आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Samuel and Mathew documented the role of Meloidogyne incognita in inducing bacterial wilt in ginger. The nematode wounds provide entry, so the two problems are causally linked rather than merely co-occurring.",
+        "yield_impact": "Strengthens the case for the nematode-resistant variety, which is a free preventive against a disease that has no cure.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "IntechOpen Diseases of Ginger 2019, Samuel & Mathew 1986"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle"
+        ],
+        "depends_on": [
+          "domain_5_pest"
+        ]
+      },
+      "farm_brain_schema": [
+        "nematode_suspected",
+        "variety"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "This is why the Mahima recommendation carries more weight than its yield ranking alone suggests. Where a disease has no reliable treatment, a free preventive acting through a different mechanism is worth more than a marginal yield gain.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-BW-003",
+      "category": "BW",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Pre-season planning AND aromatic crop residue is locally available",
+        "marathi": "हंगामापूर्व नियोजन आणि सुगंधी पिकांचा अवशेष स्थानिक उपलब्ध आहे"
+      },
+      "action": {
+        "english": "Offer biofumigation as a trial option: incorporate residue of lemongrass, palmarosa, mint or similar into the soil before planting. Present it as a trial strip, not as an established recommendation.",
+        "marathi": "जैव-धुरीकरण चाचणी पट्ट्यात करून पहा — गवती चहा, पामारोसा, पुदिना यांचा अवशेष लागवडीपूर्वी जमिनीत मिसळणे. ही प्रस्थापित शिफारस नाही, प्रयोग आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Different biofumigation soil amendments were tested against bacterial wilt in Ethiopia using citronella, palmarosa, mint, lemongrass and Chinese chive incorporated before planting. Three of these are grown commercially in parts of Maharashtra, and the distillation residue is otherwise waste.",
+        "yield_impact": "Unquantified. Offered because bacterial wilt has no reliable control, so a cheap trial with a plausible mechanism is worth running.",
+        "confidence_score": 0.6,
+        "source_tier": "B",
+        "references": [
+          "Pesticidi i Fitomedicina 37(1) 2022, Tepi Ethiopia"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "biofumigation_done",
+        "solarization_done"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "The trial was in Ethiopia and Indian results were not located. It is grouped with soil solarization as a cheap pre-plant measure worth testing in a strip, since both target soil-borne pathogens before the crop is in the ground.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-LS-001",
+      "category": "LS",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G4",
+      "trigger": {
+        "english": "fog_days_consecutive is high OR estimated leaf_wetness_hours above 8 for two consecutive days, AND crop age below seven months",
+        "marathi": "सलग अनेक दिवस धुके, किंवा पानांवरील ओलावा आठ तासांहून जास्त सलग दोन दिवस, आणि पीक सात महिन्यांच्या आत",
+        "expr": "DURATION(leaf_wetness_hours > 8) > 48 HOURS AND dap < 210",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Seven months from a June planting reaches the winter fog period exactly.",
+        "golden_tests": [
+          {
+            "context": {
+              "leaf_wetness_hours__duration": 60,
+              "dap": 180
+            },
+            "expect": "TRUE",
+            "label": "पानांवरील रोग वेळापत्रक"
+          },
+          {
+            "context": {
+              "leaf_wetness_hours__duration": 60,
+              "dap": 230
+            },
+            "expect": "FALSE",
+            "label": "सात महिन्यांनंतर"
+          }
+        ]
+      },
+      "action": {
+        "english": "Start a 15-day interval spray schedule, rotating fungicide GROUPS, and continue until the crop is seven months old.",
+        "marathi": "पंधरा दिवसांच्या अंतराने बुरशीनाशकांची आलटून-पालटून फवारणी सुरू करा आणि पीक सात महिन्यांचे होईपर्यंत चालू ठेवा. एकच बुरशीनाशक सतत वापरू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "The source states that if fog persists for many days, alternating fungicides should be sprayed at 15-day intervals until the crop is seven months old, and that the same fungicide must not be used repeatedly.",
+        "yield_impact": "Leaf spot carries roughly 0.08. Foliar disease reduces photosynthetic area during bulking.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan fog rule"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "fog_days_consecutive",
+        "leaf_wetness_hours",
+        "dap",
+        "last_fungicide_group"
+      ],
+      "u_value": 0.08,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "Seven months from a late May or early June planting reaches December or January, which is exactly the winter fog period here. The rule and the local calendar align, so this is a real rather than theoretical trigger in this belt.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-LS-002",
+      "category": "LS",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "A fungicide spray is scheduled AND last_fungicide_group equals the proposed group",
+        "marathi": "फवारणी ठरली आहे पण मागील फवारणीतील गटाचेच बुरशीनाशक सुचवले जात आहे"
+      },
+      "action": {
+        "english": "Change the mode of action GROUP, not merely the product name. Check the last two applications and select a different group. When groups are exhausted, return to a multi-site such as copper or Bordeaux.",
+        "marathi": "क्रियापद्धतीचा गट बदला, फक्त नाव नव्हे. मागील दोन फवारण्यांचे गट तपासून वेगळा गट निवडा. गट संपल्यास तांबे किंवा बोर्डो मिश्रणाकडे परत या."
+      },
+      "reasoning": {
+        "agronomic_basis": "Two products with different trade names but the same mode of action do not break resistance selection. The source instructs alternation; the group is what must actually change for that instruction to have effect.",
+        "yield_impact": "Preserves the useful life of the few molecules available for a minor crop.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan do not use the same fungicide repeatedly"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "last_fungicide_group",
+        "last_fungicide_date"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Hard for a farmer to track across a season and trivial for the engine, provided the group code is stored with every recommendation rather than only the product name.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-LS-003",
+      "category": "LS",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Leaf blotch identified, beginning on the lowest leaves",
+        "marathi": "लीफ ब्लॉच ओळखला, जमिनीलगतच्या पानांपासून सुरुवात"
+      },
+      "action": {
+        "english": "Note that mulch reduces this disease as well, by stopping rain splash from carrying soil onto the leaves.",
+        "marathi": "आच्छादन याही रोगावर मदत करते — पावसाच्या थेंबांनी माती उडून पानांवर पडणे थांबते."
+      },
+      "reasoning": {
+        "agronomic_basis": "The source records that leaf blotch begins on the leaves closest to the ground and spreads upward, which indicates soil or splash-borne inoculum rather than airborne infection.",
+        "yield_impact": "Adds a further benefit to an operation already justified on soft rot and water grounds.",
+        "confidence_score": 0.75,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan leaf blotch begins on lowest leaves"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_8_operations"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "leaf_spot_incidence_pct",
+        "mulch_stage_1_done"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "Mulch now appears in five domains — water, disease, weeds, temperature and organic carbon. No other single operation in this knowledge base does that, and it is absent from the standard cost sheet.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-ST-001",
+      "category": "ST",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Seed treatment is being planned",
+        "marathi": "बेणे प्रक्रिया ठरवली जात आहे"
+      },
+      "action": {
+        "english": "Treat seed rhizome twice — once before storage and again before planting. Hot water at 51 C for 10 minutes followed by Trichoderma harzianum at 15 g per kg gave the best result among biological treatments. Then shade dry before any further biological step.",
+        "marathi": "बेणे प्रक्रिया दोन वेळा करा — साठवणीपूर्वी आणि लागवडीपूर्वी. ५१ अंश सेल्सिअस पाण्यात दहा मिनिटे, नंतर ट्रायकोडर्मा हार्जियानम प्रति किलो पंधरा ग्रॅम. मग सावलीत सुकवूनच पुढील जैविक प्रक्रिया करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Seed rhizome is the primary entry route for both soft rot and bacterial wilt, and once the pathogen is in the soil it cannot be removed. Recorded germination was 80 to 83 percent untreated against 93 to 98 percent treated. Treating only before planting does not address infection already established inside the rhizome during storage.",
+        "yield_impact": "u = 0.135 on establishment alone. On roughly 800 kg of seed a 15 percent germination difference is worth about 120 to 150 kg of seed. The disease prevention value is separate and larger.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Springer hot water plus Trichoderma harzianum trial",
+          "CJAST 39(35) 2020 treat before storage and before planting"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "hot_water_treatment_done",
+        "trichoderma_kg_per_acre",
+        "establishment_pct"
+      ],
+      "u_value": 0.135,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "The twice-treated instruction is easy to lose. Seed goes into storage in December and comes out in May, and the December step is the one that gets skipped because the crop is not on anyone's mind then.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-ST-002",
+      "category": "ST",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G0",
+      "trigger": {
+        "english": "Biological seed treatment proposed on the same day as chemical treatment, or without drying in between",
+        "marathi": "रासायनिक आणि जैविक प्रक्रिया एकाच वेळी, किंवा मधे सुकवल्याशिवाय"
+      },
+      "action": {
+        "english": "Enforce the sequence: chemical treatment, shade dry three to six hours, then biological treatment, then plant. Never simultaneously.",
+        "marathi": "क्रम पाळा — आधी रासायनिक प्रक्रिया, मग सावलीत तीन ते सहा तास सुकवणे, मग जैविक प्रक्रिया, मग लागवड. एकाच वेळी करू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "Fungicide kills Trichoderma and the other biological cultures. Applying them together makes the biological step useless and wastes the input, while appearing to have been done.",
+        "yield_impact": "Protects the value of both the seed treatment and the Trichoderma application.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Jitendra Kadam seed treatment sequence"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient"
+        ],
+        "depends_on": [
+          "domain_4_nutrient"
+        ]
+      },
+      "farm_brain_schema": [
+        "azospirillum_psb_done",
+        "last_fungicide_date"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Easy to get wrong on a busy planting day because both steps involve dipping seed in a tank. The constraint has to appear in the day instruction list, not only in a reference document.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-MU-001",
+      "category": "MU",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G1",
+      "trigger": {
+        "english": "Mulch stage is due and not yet done, at planting or at 40 to 60 or 90 to 120 DAP",
+        "marathi": "आच्छादनाचा टप्पा बाकी आहे — लागवडीच्या वेळी, ४०-६० किंवा ९०-१२० दिवसांना"
+      },
+      "action": {
+        "english": "Apply the due mulch stage. Treat the three-stage programme as disease control, not as moisture conservation. Bundle stage two with earthing up.",
+        "marathi": "आच्छादनाचा टप्पा घाला. तीन-टप्पी आच्छादन हे ओलावा टिकवण्याचे साधन नाही — ते रोग-प्रतिबंधाचे मुख्य साधन आहे. दुसरा टप्पा उटाळणीसोबत करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Records from Kodagu and Shivamogga show soft rot below 5 percent among farmers following a three-stage mulching programme against a district average of 20 to 30 percent. Mulch lowers soil temperature, stops rain impact compaction, prevents splash carrying soil onto leaves, and keeps moisture steady so the plant is less stressed.",
+        "yield_impact": "u = 0.20, derived from 25 percent average incidence reduced to 5 percent. This is the best quantified preventive measure in the knowledge base.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Organic Mandya Kodagu and Shivamogga field records",
+          "Spices Board / TNAU mulch programme"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_8_operations",
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "mulch_stage_1_done",
+        "mulch_stage_2_done",
+        "mulch_stage_3_done",
+        "earthing_up_date"
+      ],
+      "u_value": 0.2,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "This is the strongest numerical evidence for any single preventive here, and it belongs to Domain 6 rather than to cultivation operations. It is also missing from the standard per-acre cost sheet, which is why the Kannad budget had to add roughly Rs 15,000 for it.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-PV-001",
+      "category": "PV",
+      "priority": 5,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Pre-season planning is initiated",
+        "marathi": "हंगामापूर्व नियोजन सुरू"
+      },
+      "action": {
+        "english": "Issue the full prevention checklist in Kannad priority order: drainage first, then three-stage mulching, then Mahima with healthy seed, then planting by 7 June, then solarization, then Trichoderma with neem cake.",
+        "marathi": "प्रतिबंधक यादी प्राधान्यक्रमाने द्या — प्रथम निचरा, मग तीन-टप्पी आच्छादन, मग महिमा जात व निरोगी बेणे, मग ७ जूनपर्यंत लागवड, मग सौरीकरण, मग ट्रायकोडर्मा व निंबोळी पेंड."
+      },
+      "reasoning": {
+        "agronomic_basis": "Sixteen preventive measures are documented and six of them are entirely free. All are decisions taken before or at planting, which means the largest part of disease management is complete before the crop is in the ground. After that point soft rot and bacterial wilt offer no cure, only damage limitation.",
+        "yield_impact": "The stack collectively addresses the largest loss factor in the crop. Individual u-values range from 0.05 to 0.22.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Domain 6 prevention stack",
+          "CJAST 39(35) 2020",
+          "Agrowon - Mali & Mahajan"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "drainage_levels_present",
+        "variety",
+        "planting_date",
+        "solarization_done",
+        "trichoderma_kg_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Six of sixteen measures are free and all sixteen are pre-plant. This is the numerical case for the advisory engine starting sixty days before planting rather than at sowing, which was the reason Core C13.7 introduced a pre-season stage at all.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-PV-002",
+      "category": "PV",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "previous_crops_3yr contains ginger, turmeric, potato, tomato, brinjal or chilli",
+        "marathi": "मागील तीन वर्षांत आले, हळद, बटाटा, टोमॅटो, वांगी किंवा मिरची घेतलेली आहे"
+      },
+      "action": {
+        "english": "Warn that rotation is not satisfied. Ginger and turmeric share soil-borne pathogens; the solanaceous crops are bacterial wilt hosts. Recommend a different plot where available.",
+        "marathi": "फेरपालट पाळलेली नाही. हळद व आले एकाच कुळातील असल्याने त्यांचे soil-borne रोग सामाईक आहेत; बटाटा, टोमॅटो, वांगी, मिरची हे मर रोगाचे यजमान आहेत."
+      },
+      "reasoning": {
+        "agronomic_basis": "Continuous cropping raises the risk of infection by both Pythium myriotylum and Ralstonia solanacearum. The minimum recommended gap is three years, and the wilt bacterium can persist longer than that.",
+        "yield_impact": "u = 0.15 for rotation failure alone, substantially higher if a wilt outbreak follows.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Microbiology Spectrum NCBI PMC9603371 continuous cropping risk",
+          "Agrowon - Dr. Kadam"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest",
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle"
+        ]
+      },
+      "farm_brain_schema": [
+        "previous_crops_3yr",
+        "field_history_wilt",
+        "field_history_rot"
+      ],
+      "u_value": 0.15,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "This also excludes those crops as intercrops, not only as predecessors. An intercrop sits immediately adjacent for the whole season, which is a shorter distance than a previous season.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-CH-001",
+      "category": "CH",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": null,
+      "trigger": {
+        "english": "A fungicide is about to be emitted for a plant diagnosed with bacterial wilt",
+        "marathi": "मर रोगाचे निदान झालेल्या रोपासाठी बुरशीनाशक सुचवले जात आहे",
+        "expr": "ooze_test_result == 'milky_thread' OR stem_ooze_type == 'milky_yellowish' OR wilt_while_green IS TRUE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Bacterial wilt confirmed — no fungicide, ever.",
+        "golden_tests": [
+          {
+            "context": {
+              "ooze_test_result": "milky_thread"
+            },
+            "expect": "TRUE",
+            "label": "दुधाळ धागा — मर रोग"
+          },
+          {
+            "context": {
+              "wilt_while_green": true
+            },
+            "expect": "TRUE",
+            "label": "हिरवीच असताना कोमेजली"
+          },
+          {
+            "context": {
+              "ooze_test_result": "no_thread",
+              "stem_ooze_type": "watery_foul",
+              "wilt_while_green": false
+            },
+            "expect": "FALSE",
+            "label": "कूज — बुरशीनाशक चालेल"
+          }
+        ]
+      },
+      "action": {
+        "english": "BLOCK. No fungicide has activity against a bacterial pathogen. Emit removal, containment and rotation guidance instead, and state the reason plainly.",
+        "marathi": "नाकारा. जिवाणूजन्य रोगावर कोणतेही बुरशीनाशक चालत नाही. त्याऐवजी रोपे काढून जाळणे, प्रसार रोखणे आणि फेरपालट यांचा सल्ला द्या, आणि कारण स्पष्ट सांगा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Bacterial wilt is caused by a bacterium. Fungicides act on fungal or oomycete targets that a bacterium does not possess. The deliberate absence of any bacterial_wilt entry in the fungicide table encodes this at the data level rather than relying on rule logic alone.",
+        "yield_impact": "Prevents wasted expenditure and, more importantly, prevents the delay during which the pathogen continues to spread.",
+        "confidence_score": 0.92,
+        "source_tier": "A",
+        "references": [
+          "Springer bacterial wilt review"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "wilt_incidence_pct",
+        "ooze_test_result"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Encoded twice on purpose — once as this rule and once as the absence of an entry in the fungicide table. A data-level guarantee is stronger than a rule that someone can later bypass.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "जीवाणूजन्य मर रोगावर बुरशीनाशक देऊ नये."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": true,
+      "immutable_reason": "No fungicide has activity against a bacterium. Offering one wastes money while the pathogen spreads."
+    },
+    {
+      "rule_id": "D06-CH-002",
+      "category": "CH",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "A fungicide option is about to be presented to the farmer",
+        "marathi": "बुरशीनाशकाचा पर्याय शेतकऱ्याला दाखवला जात आहे"
+      },
+      "action": {
+        "english": "Emit molecule, group and source-reported dose, and append that CIB&RC label claim for ginger must be verified and label dose and pre-harvest interval followed. Show biological and cultural options above it.",
+        "marathi": "रसायनाचे नाव, गट आणि स्रोतातील मात्रा दाखवा, आणि सोबत अनिवार्य शेरा — लेबलवर अद्रकासाठी नोंदणी असल्याची खात्री करा, मात्रा व प्रतीक्षा कालावधी लेबलनुसार. जैविक व सांस्कृतिक पर्याय नेहमी वर दाखवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Ginger is a minor crop, so many fungicides lack a specific ginger label claim. Appearing in state extension literature and being registered on the label are different things, and only the second is a legal basis for use.",
+        "yield_impact": "Regulatory compliance rather than yield.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "CIB&RC minor crop position",
+          "Agrowon - Mali & Mahajan doses"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_10_institutional"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "last_fungicide_group",
+        "last_fungicide_date"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This keeps the engine useful without making the platform liable. The doses were published by a state research centre and are recorded as reference; responsibility for label compliance stays where the law puts it.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-CH-003",
+      "category": "CH",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": "G5",
+      "trigger": {
+        "english": "A fungicide spray is proposed, the pre-harvest interval is unknown, and expected harvest is within 30 days",
+        "marathi": "बुरशीनाशक फवारणीचा प्रस्ताव, प्रतीक्षा कालावधी माहीत नाही, काढणी तीस दिवसांच्या आत",
+        "expr": "phi_days_remaining IS NULL AND WITHIN(harvest_date, 30 DAYS)",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Duplication group: pre_harvest_interval_block.",
+        "golden_tests": [
+          {
+            "context": {
+              "days_to_harvest": 15
+            },
+            "expect": "TRUE",
+            "label": "PHI अज्ञात"
+          },
+          {
+            "context": {
+              "days_to_harvest": 15,
+              "phi_days_remaining": 5
+            },
+            "expect": "FALSE",
+            "label": "PHI माहीत आहे"
+          }
+        ]
+      },
+      "action": {
+        "english": "BLOCK the spray. Apply a conservative 30-day default before harvest wherever the interval is unverified.",
+        "marathi": "फवारणी अडवा. प्रतीक्षा कालावधी माहीत नसल्यास काढणीपूर्वी तीस दिवस कोणतीही रासायनिक फवारणी करू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "Residue on a harvested rhizome is a food safety and market access issue. Where the interval is unverified the safe default protects both the consumer and the grower's market, and the dry ginger export route applies stricter residue limits than the domestic market.",
+        "yield_impact": "None on yield. Protects marketability, which matters more here given the grading price spread.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "Core C5.3 pre-harvest interval enforcement"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "phi_days_remaining",
+        "dap",
+        "last_fungicide_date",
+        "target_product"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Particularly relevant to the dry ginger route, where export buyers apply residue limits stricter than domestic ones and a rejected consignment loses the entire quality premium.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "काढणीपूर्वी अवशेष नियंत्रण योग्य."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": true,
+      "immutable_reason": "Same."
+    },
+    {
+      "rule_id": "D06-CH-004",
+      "category": "CH",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "A soil drench is scheduled",
+        "marathi": "आळवणी करायची आहे",
+        "expr": "last_fungicide_group IS NOT NULL AND fungicide_group_repeated IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "last_fungicide_group": "benzimidazole",
+              "fungicide_group_repeated": true
+            },
+            "expect": "TRUE",
+            "label": "तोच गट"
+          },
+          {
+            "context": {
+              "last_fungicide_group": "phenylamide",
+              "fungicide_group_repeated": false
+            },
+            "expect": "FALSE",
+            "label": "बदलला"
+          }
+        ]
+      },
+      "action": {
+        "english": "Drench only at vafsa condition and give a light water stress afterwards rather than irrigating immediately. Add a sticker at 1 ml per litre for foliar sprays.",
+        "marathi": "आळवणी करताना जमिनीस वाफसा असावा, आणि नंतर लगेच पाणी न देता थोडासा ताण द्यावा. फवारणीत चिकट पदार्थ एक मिलि प्रति लिटर मिसळा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The source gives both instructions explicitly. Drenching saturated soil dilutes and displaces the chemical, and irrigating immediately afterwards leaches it below the shallow root zone where ginger roots sit.",
+        "yield_impact": "Protects the effectiveness of the application.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan application rules"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water"
+        ],
+        "depends_on": [
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "vafsa_state",
+        "soil_moisture_vwc",
+        "drip_runtime_min"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "Creates a cross-domain dependency: drip must be reduced for three to five days after a drench. A human operator managing both would easily miss it, and the drench would appear to have failed.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D06-SW-001",
+      "category": "SW",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Disease risk scoring is being computed",
+        "marathi": "रोग जोखीम गुण मोजले जात आहेत",
+        "expr": "DURATION(rh_pct > 85) > 48 HOURS AND MONTH IN [JUL, AUG, SEP]",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "rh_pct__duration": 60,
+              "current_month": 8
+            },
+            "expect": "TRUE",
+            "label": "रोगाचे हवामान"
+          },
+          {
+            "context": {
+              "rh_pct__duration": 60,
+              "current_month": 1
+            },
+            "expect": "FALSE",
+            "label": "हिवाळा"
+          }
+        ]
+      },
+      "action": {
+        "english": "Compute the soft rot risk score from saturation duration, soil temperature, humidity, rainfall forecast, crop stage and field history. Saturation duration carries the greatest weight.",
+        "marathi": "कंदकूज जोखीम गुण संपृक्ततेचा कालावधी, मातीचे तापमान, आर्द्रता, पावसाचा अंदाज, पिकाची अवस्था आणि शेताचा इतिहास यांवरून काढा. संपृक्ततेच्या कालावधीला सर्वाधिक वजन."
+      },
+      "reasoning": {
+        "agronomic_basis": "Soft rot thrives in warm humid conditions and poor drainage, and Pythium is favoured by 25 to 30 C soil temperature. Every one of these inputs is measurable on the deployed hardware, which makes this the domain where the sensor investment returns most directly.",
+        "yield_impact": "Enables preventive action on the largest loss factor in the crop.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "ScienceDirect Heliyon 2023 warm humid conditions and poor drainage"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield",
+          "domain_12_ai"
+        ],
+        "depends_on": [
+          "domain_3_water",
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "saturation_hours",
+        "soil_temp_c",
+        "rh_pct",
+        "rainfall_mm",
+        "current_stage",
+        "field_history_rot"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "Worth contrasting with Domain 5. Pest management gets little help from sensors because the main pests are below ground and invisible. Disease triggers are moisture and weather driven, so here the hardware genuinely pays.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "full",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D06-SW-002",
+      "category": "SW",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Estimated leaf wetness exceeds 8 hours for two consecutive days and the crop is under seven months",
+        "marathi": "पानांवरील अंदाजित ओलावा आठ तासांहून जास्त, सलग दोन दिवस, आणि पीक सात महिन्यांच्या आत",
+        "expr": "soil_temp_c BETWEEN 25 AND 32 AND DURATION(soil_moisture_vwc > vwc_field_capacity) > 24 HOURS",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Pythium optimum. Soil temperature plus sustained wetness is the signature.",
+        "golden_tests": [
+          {
+            "context": {
+              "soil_temp_c": 28,
+              "soil_moisture_vwc__duration": 30
+            },
+            "expect": "TRUE",
+            "label": "कूजसाठी अनुकूल"
+          },
+          {
+            "context": {
+              "soil_temp_c": 18,
+              "soil_moisture_vwc__duration": 30
+            },
+            "expect": "FALSE",
+            "label": "थंड"
+          },
+          {
+            "context": {
+              "soil_moisture_vwc__duration": 30
+            },
+            "expect": "UNKNOWN",
+            "label": "मातीचे तापमान नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Trigger the foliar disease spray schedule. Estimate leaf wetness from humidity above 90 percent, the temperature to dew point gap, and rainfall, since no dedicated sensor is fitted.",
+        "marathi": "पानांवरील रोगाचे फवारणी वेळापत्रक सुरू करा. समर्पित sensor नसल्याने आर्द्रता, तापमान व दव-बिंदू यांवरून ओलाव्याचा कालावधी अंदाजावा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Leaf spot and blotch depend on the duration of surface wetness. The fog rule in the source is a qualitative version of the same relationship, and the underlying variable can be estimated from measurements already being taken.",
+        "yield_impact": "Leaf spot carries roughly 0.08.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Core C3.2 derived agro-meteorological variables"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "leaf_wetness_hours",
+        "rh_pct",
+        "dap"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "EST",
+      "kannad_note": "A dedicated leaf wetness sensor is the single most valuable hardware addition for this domain and is cheap. Logged in the capability gap register; the estimate serves in the meantime.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D06-SW-003",
+      "category": "SW",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G4",
+      "trigger": {
+        "english": "Month is October or November and forecast rainfall exceeds 40 mm",
+        "marathi": "ऑक्टोबर किंवा नोव्हेंबर, चाळीस मिलिमीटरहून जास्त पावसाचा अंदाज",
+        "expr": "MONTH IN [OCT, NOV] AND forecast_rain_48h_mm > 40",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Duplication group post_monsoon_cyclone_saturation. D07-CY-001 supersedes.",
+        "golden_tests": [
+          {
+            "context": {
+              "current_month": 10,
+              "forecast_rain_48h_mm": 60
+            },
+            "expect": "TRUE",
+            "label": "चक्रीवादळ"
+          },
+          {
+            "context": {
+              "current_month": 8,
+              "forecast_rain_48h_mm": 60
+            },
+            "expect": "FALSE",
+            "label": "मान्सून"
+          }
+        ]
+      },
+      "action": {
+        "english": "Raise a red drainage alert, more severe than the equivalent monsoon warning. Stop drip, clear channels urgently, and check saturation within 12 hours of the rain stopping.",
+        "marathi": "लाल इशारा — आणि हा जुलैच्या इशाऱ्यापेक्षा जास्त तीव्र. ठिबक बंद करा, निचरा चर तातडीने मोकळे करा, पाऊस थांबल्यावर बारा तासांत संपृक्तता तपासा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Tropical cyclones reach this district with a secondary peak in October and November. By then the rhizome is fully formed, the soil is dry and cracked after weeks without rain, and drainage channels have usually been neglected because the monsoon is considered finished.",
+        "yield_impact": "A saturation event at this stage is more expensive than an equivalent July event because the full season investment is already committed.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "climatestotravel Aurangabad cyclone seasonality",
+          "Domain 7"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "rainfall_mm",
+        "current_stage",
+        "drainage_levels_present",
+        "saturation_hours"
+      ],
+      "u_value": 0.3,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "This rule did not exist when Domain 6 was first drafted. Both this domain and Domain 3 assumed the rainy season ends in September. Domain 7 research surfaced the post-monsoon cyclone peak and the rule was added afterwards.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D06-FH-001",
+      "category": "FH",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Harvest is complete",
+        "marathi": "काढणी पूर्ण झाली"
+      },
+      "action": {
+        "english": "Record actual rot and wilt incidence as percentages against this plot, permanently. This is a first-class input to next season planning and to Domain 11 gap attribution.",
+        "marathi": "काढणीनंतर कंदकूज व मर रोगाचे प्रत्यक्ष प्रमाण टक्केवारीत या प्लॉटविरुद्ध कायमस्वरूपी नोंदवा. ही नोंद पुढील हंगामाच्या नियोजनाचा आणि उत्पादन-दरी विश्लेषणाचा प्राथमिक आधार आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Field history is a first-class input because inoculum persists across seasons and the wilt bacterium persists for many years. Without a recorded incidence figure, next season starts blind and the u-values cannot be corrected against reality.",
+        "yield_impact": "Foundational for the u-value validation loop rather than for this season's yield.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Core C4.3 inoculum carry-over",
+          "Core C11.2 field history as persistent state"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield",
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "rot_incidence_pct",
+        "wilt_incidence_pct",
+        "field_history_rot",
+        "field_history_wilt"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-D",
+      "kannad_note": "The estimated u-values in Domain 11 can only become measured values through this record. It is also the input that D06-BW-001 depends on, so skipping it disarms the strongest wilt rule in the domain.",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D06-FH-002",
+      "category": "FH",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Soft rot confirmed on any plot within the cluster",
+        "marathi": "cluster मधील कोणत्याही शेतात कंदकूज निश्चित झाली"
+      },
+      "action": {
+        "english": "Issue an anonymised cluster-level advisory raising the disease pressure score for neighbouring plots. Do not name the affected farm.",
+        "marathi": "cluster मधील शेजारच्या शेतांना अनामीकृत इशारा द्या — या भागात कंदकुजीचा दाब वाढला आहे. बाधित शेताचे नाव सांगू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "Because symptom appearance means the yield is already lost for the affected plant, a neighbouring plot warned before symptoms appear has a genuine preventive window that it would not otherwise have.",
+        "yield_impact": "Extends the preventive window to plots that have not yet been infected.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Core C11.2 field history",
+          "Domain 12 DPDP constraints"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "rot_incidence_pct",
+        "cluster_pest_alert_active"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "The cluster architecture of one weather station per five to ten farms makes this possible at no extra cost. Naming the affected farm would breach the DPDP consent basis, so the advisory must be aggregate — this area, not this neighbour.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    }
+  ],
+  "open_items": [
+    {
+      "id": "D06-OI-01",
+      "item": "CIB&RC label claims for ginger — fungicides and pre-harvest intervals",
+      "owner": "CIB&RC current list",
+      "source_class": "VERIFY",
+      "blocking": false,
+      "note": "Not blocking because the biological and cultural stack covers the main diseases and no fungicide works on bacterial wilt anyway."
+    },
+    {
+      "id": "D06-OI-02",
+      "item": "Soft rot risk model thresholds — saturation hours, humidity, soil temperature",
+      "owner": "field records, one season",
+      "source_class": "FIELD",
+      "blocking": false,
+      "note": "Qualitative triggers work in the meantime."
+    },
+    {
+      "id": "D06-OI-03",
+      "item": "Dedicated leaf wetness sensor",
+      "owner": "hardware roadmap",
+      "source_class": "FIELD",
+      "blocking": false,
+      "note": "Cheapest high-value hardware addition for this domain. Estimation from humidity and dew point serves in the meantime."
+    },
+    {
+      "id": "D06-OI-04",
+      "item": "Whether bacterial wilt is actually present in the Kannad belt",
+      "owner": "first season observation and local enquiry",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D06-OI-05",
+      "item": "Indian results for biofumigation against bacterial wilt",
+      "owner": "further literature search and trial strip",
+      "source_class": "VERIFY",
+      "blocking": false
+    },
+    {
+      "id": "D06-OI-06",
+      "item": "Availability of Bacillus velezensis products in India",
+      "owner": "market enquiry",
+      "source_class": "VERIFY",
+      "blocking": false
+    },
+    {
+      "id": "D06-OI-07",
+      "item": "Fusarium yellows — Indian and Maharashtra-specific detail",
+      "owner": "further literature search",
+      "source_class": "VERIFY",
+      "blocking": false
+    },
+    {
+      "id": "D06-OI-08",
+      "item": "Ooze test timing — how many minutes before the thread is visible",
+      "owner": "first field use",
+      "source_class": "FIELD",
+      "blocking": false,
+      "note": "Practical experience suggests three to ten minutes; the source does not state it."
+    }
+  ],
+  "summary": {
+    "total_rules": 28,
+    "by_category": {
+      "DX": 5,
+      "SR": 3,
+      "BW": 3,
+      "LS": 3,
+      "ST": 2,
+      "MU": 1,
+      "PV": 2,
+      "CH": 4,
+      "SW": 3,
+      "FH": 2
+    },
+    "by_priority": {
+      "5": 16,
+      "4": 10,
+      "3": 2
+    },
+    "by_severity": {
+      "red": 5,
+      "blocking": 3,
+      "yellow": 15,
+      "info": 5
+    },
+    "by_source_tier": {
+      "A": 23,
+      "B": 5,
+      "C": 0
+    },
+    "by_source_class": {
+      "DERIVED": 9,
+      "SRC-Q": 9,
+      "SRC-D": 9,
+      "EST": 1
+    },
+    "confidence_range": {
+      "min": 0.6,
+      "max": 0.92,
+      "mean": 0.827
+    },
+    "rules_with_u_value": 10,
+    "irrecoverable_rules": 12,
+    "zero_cost_rules": [
+      "D06-DX-001",
+      "D06-DX-002",
+      "D06-DX-005",
+      "D06-SR-003",
+      "D06-CH-001",
+      "D06-PV-002"
+    ],
+    "highest_value_rule": "D06-DX-001",
+    "blocking_open_items": 0,
+    "by_decision_type": {
+      "BLOCK": 4,
+      "DIAGNOSTIC": 4,
+      "SENSOR_ALERT": 6,
+      "PLANNING_GUIDANCE": 11,
+      "SCHEDULED_REMINDER": 1,
+      "AUTO_DECISION": 1,
+      "DATA_CAPTURE": 1
+    },
+    "reviewed_t1": 6,
+    "rules_with_trigger_expr": 12,
+    "rules_with_delivery_class": 12,
+    "immutable_rules": 3
+  },
+  "next_steps": [
+    "1. Teach the stem-cut and ooze tests before anything else — they cost a knife and a glass of water and resolve the most expensive misdiagnosis in the crop (D06-DX-001, D06-DX-002)",
+    "2. Check the CIB&RC current list for ginger fungicide label claims and pre-harvest intervals (D06-OI-01)",
+    "3. Add a leaf wetness sensor to the hardware roadmap; it is cheap and it is the biggest accuracy gain available in this domain (D06-OI-03)",
+    "4. Build Domain 7 JSON inheriting the Domain 1 _schema block unchanged",
+    "5. Cross-validate D06-SR-001 saturation trigger against Domain 3 D03-WL-001 so the two do not fire as separate alerts for the same event"
+  ],
+  "author_note": "This file contains 28 rules because that is what the source document supports. The organising insight is that three below-ground diseases produce near-identical symptoms and require completely different responses, and that one of them responds to no fungicide at all — so diagnosis must precede treatment without exception. Two corrections to the source ordering are recorded: metalaxyl-M should be the first choice for soft rot rather than the escalation option because Pythium is an oomycete, and the sun-held ring test must run before any leaf spot treatment because heat scorch is routine in this belt. The absence of any fungicide entry against bacterial wilt is deliberate and structural. Status is PHASE_1_RAW_UNVALIDATED.",
+  "legal": {
+    "disclaimer_mr": "हा नियम-संच निर्णय-सहाय्य साधन आहे. अंतिम जबाबदारी शेतकऱ्याची. रोगाचे निश्चित निदान स्थानिक कृषी अधिकारी किंवा वनस्पती रोगशास्त्रज्ञाकडून करून घ्यावे.",
+    "disclaimer_en": "This rule set is a decision-support tool. Final responsibility rests with the cultivator. Definitive disease diagnosis should be confirmed with a local agriculture officer or plant pathologist.",
+    "fungicide_note": "Every fungicide must carry a CIB&RC label claim for ginger. Label dose and pre-harvest interval must be followed. No fungicide may be recommended for bacterial wilt under any circumstances.",
+    "data_note": "Farmer-attributable data handled under DPDP Act 2023. Cluster-level disease advisories must be anonymised — area level, never neighbour level. See Domain 12."
+  }
+}

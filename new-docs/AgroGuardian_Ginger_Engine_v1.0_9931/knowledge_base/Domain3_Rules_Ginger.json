@@ -1,0 +1,2699 @@
+{
+  "_schema": {
+    "schema_version": "2.0",
+    "inherits_from": "Domain1_Rules_Ginger_v2.json",
+    "inheritance_note": "The full _schema block is defined in Domain 1 and is NOT repeated here. Units (per acre), stage codes G0-G5, source tiers A/B/C, source classes, priority scale, recoverability, severity and confidence bounds are inherited unchanged. Domain 2 additions are also assumed present. Only Domain 3 additions are declared below.",
+    "additions": {
+      "rule_categories_domain_3": {
+        "WR": "water requirement and budgeting",
+        "WS": "water source planning",
+        "DS": "drip system design",
+        "SC": "irrigation scheduling",
+        "WL": "waterlogging and saturation",
+        "MN": "monsoon and rainfall management",
+        "WW": "water withdrawal before harvest",
+        "MU": "mulch as water management",
+        "SB": "sensor binding and calibration"
+      },
+      "new_farm_brain_fields": {
+        "water_source_type": "enum:[well, borewell, farm_pond, canal, mixed]",
+        "water_available_oct_feb_litres": "number",
+        "seasonal_water_requirement_litres": "number",
+        "drip_lateral_spacing_ft": "number",
+        "dripper_spacing_cm": "number",
+        "dripper_lph": "number",
+        "drippers_per_acre": "integer",
+        "drip_flow_lph_per_acre": "number",
+        "drip_runtime_min": "number",
+        "drip_shifts_per_day": "integer",
+        "irrigation_applied_litres_today": "number",
+        "effective_rainfall_mm": "number",
+        "saturation_hours": "number",
+        "calibration_done": "boolean",
+        "calibration_date": "date",
+        "vwc_field_capacity": "number",
+        "vwc_saturation": "number",
+        "vwc_stress_threshold": "number",
+        "rain_gap_days": "integer",
+        "water_withdrawal_started": "boolean",
+        "mulch_stage_1_done": "boolean",
+        "mulch_stage_2_done": "boolean",
+        "mulch_stage_3_done": "boolean",
+        "pan_evaporation_mm_day": "number",
+        "crop_coefficient_kc": "number",
+        "pan_coefficient_kp": "number",
+        "drip_efficiency_measured": "number",
+        "drip_discharge_lph": "number — per-dripper discharge, needed to convert litres per acre into runtime minutes",
+        "drip_system_flow_lph": "number — total system flow at the plot, drippers times discharge"
+      },
+      "constants": {
+        "mm_to_litre_per_acre": 4000,
+        "pan_coefficient_kp_default": 0.8,
+        "drip_efficiency": 0.9,
+        "effective_rainfall_fraction": 0.65
+      },
+      "decision_types": {
+        "AUTO_DECISION": {
+          "mr": "AI कधी व किती हे स्वतः ठरवतो",
+          "en": "engine computes the quantity or timing itself"
+        },
+        "SENSOR_ALERT": {
+          "mr": "sensor वर आधारित इशारा, कृती माणसाची",
+          "en": "sensor-triggered; the action is human work"
+        },
+        "SCHEDULED_REMINDER": {
+          "mr": "वेळापत्रकानुसार आठवण",
+          "en": "calendar or stage driven reminder"
+        },
+        "DIAGNOSTIC": {
+          "mr": "AI विचारतो, शेतकरी सांगतो",
+          "en": "engine asks, farmer answers, engine branches"
+        },
+        "DATA_CAPTURE": {
+          "mr": "नोंद किंवा मोजमाप मागतो",
+          "en": "engine requests a record or measurement"
+        },
+        "HUMAN_DECISION": {
+          "mr": "AI गणित दाखवतो, निर्णय माणसाचा",
+          "en": "engine presents arithmetic; person decides"
+        },
+        "BLOCK": {
+          "mr": "AI नाकारतो किंवा अडवतो",
+          "en": "engine refuses or blocks"
+        },
+        "PLANNING_GUIDANCE": {
+          "mr": "हंगामापूर्व निवड — शेतकरी ठरवतो",
+          "en": "pre-season choice the farmer makes"
+        },
+        "POLICY": {
+          "mr": "प्रॉडक्ट धोरण, शेतकऱ्यापर्यंत जात नाही",
+          "en": "product policy; never reaches a farmer"
+        }
+      },
+      "automation_levels": {
+        "full": "engine decides and acts without asking",
+        "assisted": "engine decides when, the person does the work or supplies the observation",
+        "advisory": "engine shows the arithmetic, the person chooses",
+        "refusal": "engine prevents an action",
+        "none": "internal policy, not farmer facing"
+      },
+      "trigger_dsl": {
+        "version": "dsl-1.0",
+        "logic": "three-valued: TRUE / FALSE / UNKNOWN",
+        "unknown_rule": "A rule whose trigger evaluates UNKNOWN must NOT fire and must NOT be treated as FALSE. Report reduced confidence and name the missing field (Domain 12 D12-COLD-001).",
+        "operators": [
+          "> >= < <= == !=",
+          "AND OR NOT",
+          "IN [..]",
+          "BETWEEN a AND b",
+          "IS NULL / IS NOT NULL / IS TRUE / IS FALSE",
+          "DURATION(field > x) > n HOURS",
+          "WITHIN(date_field, n DAYS)",
+          "MONTH IN [..]",
+          "STAGE IN [..]"
+        ],
+        "note": "Fields resolve against kb_farm_brain_fields. An undeclared name is a parse error, never a silent false."
+      },
+      "notification_policy": {
+        "version": "notify-1.0",
+        "why": "The season simulation issued 998 messages across 301 days before this existed. A trigger expresses a condition and a condition stays true; the advice is an event and must be delivered once.",
+        "classes": {
+          "ONCE_UNTIL_RESOLVED": "Standing precondition. Once, then a 7/21/45/90 day ladder with rising severity.",
+          "EVENT": "Transient physical event. Rising edge only; re-armed after it clears.",
+          "WINDOW": "Dated operation. Advance warning, the day, then 3 overdue reminders.",
+          "SILENT_GUARD": "Prevention rule. No message unless the prohibited action is attempted."
+        },
+        "result": "998 messages became 43 in the normal season, with no critical stage left silent for more than 15 days."
+      },
+      "override_policy": {
+        "version": "override-1.0",
+        "why": "The Tier-1 review worked but was offline. An agronomist looking at a live plot in August cannot edit JSON and wait for a deploy; by then the window has closed.",
+        "kinds": [
+          "THRESHOLD",
+          "DELIVERY",
+          "SEVERITY",
+          "DISABLE",
+          "PARAMETER"
+        ],
+        "scopes": [
+          "plot",
+          "cluster",
+          "global"
+        ],
+        "scope_precedence": "narrowest wins — plot over cluster over global",
+        "default_expiry_days": 240,
+        "max_expiry_days": 400,
+        "expiry_rationale": "A permanent change belongs in the knowledge base, not in the override table.",
+        "immutable_count": 16,
+        "immutable_rationale": "Some rules exist because getting them wrong causes harm no agronomic judgement outweighs. The API refuses them by code path, and a database trigger refuses them again if the application layer is bypassed.",
+        "audit": "Refused attempts are recorded, not discarded. An attempt to override an immutable rule is a governance signal."
+      }
+    }
+  },
+  "metadata": {
+    "domain": 3,
+    "domain_name": "Water & Irrigation",
+    "domain_name_mr": "पाणी आणि सिंचन व्यवस्थापन",
+    "crop": "ginger",
+    "crop_mr": "आले",
+    "region": "Kannad, Chhatrapati Sambhajinagar, Marathwada",
+    "source_document": "AgroGuardian_Ginger_Domain3_Water_Irrigation_RAW.docx",
+    "version": "1.0",
+    "status": "PHASE_1_RAW_UNVALIDATED",
+    "agronomist_validated": false,
+    "validation_note": "Month-wise water table is from a Maharashtra commercial irrigation source (Netafim) published via Agrowon. Runtime figures are computed from that table and independently match a second institutional source. Volumetric thresholds require plot calibration before sensor-driven irrigation is enabled.",
+    "total_rules": 31,
+    "rule_count_note": "29 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count.",
+    "review_by": null,
+    "review_note": "Water physics is stable. The month-wise table is regional average and should be progressively replaced by station-derived evaporation once one season of data exists.",
+    "purpose": "Irrigation scheduling, drip system design and saturation management for ginger on Marathwada vertisol. Water is not one factor among several in this crop — deficit at critical stages is irrecoverable and excess causes the single largest loss factor in the entire knowledge base.",
+    "key_innovations": [
+      "The formula matters more than the table. Requirement equals pan evaporation times crop coefficient times pan coefficient times 4000. The cluster weather station can supply the local evaporation term, replacing a regional average with a daily plot-specific figure that no competitor can produce without hardware in the same village.",
+      "Two independent Maharashtra sources cross-validate: a published runtime recommendation of 30-45 minutes rising to 60-90 minutes matches the computed runtime from the month-wise volume table almost exactly.",
+      "The hardest period is not the monsoon. Rain ends in September but demand peaks October to December, so roughly 27 lakh litres per acre must come entirely from the well during the months when the water table is falling.",
+      "Sensor thresholds are declared as FIELD gaps rather than invented. Until calibration exists the engine runs on the table plus rain deduction and says so.",
+      "Saturation duration, not moisture level, is the trigger for the red alert — because the damage pathway is root anoxia followed by pathogen entry, and that is a time-dependent process."
+    ],
+    "central_finding": {
+      "statement": "Ginger needs abundant water but tolerates no standing water, and in heavy black soil these two requirements pull in opposite directions.",
+      "requirement_mm": {
+        "published_min": 1320,
+        "published_max": 1520,
+        "derived_under_drip": 1220
+      },
+      "kannad_rainfall_mm": {
+        "min": 725,
+        "max": 775
+      },
+      "deficit_covered_by_irrigation": true,
+      "waterlogging_consequence": "soft rot, 50 to 90 percent yield loss",
+      "resolution": "abundant water delivered in small frequent doses on raised beds with open drainage — that is, drip plus broad ridge. Neither alone is sufficient."
+    },
+    "primary_sources": [
+      "Agrowon - Ale pikasathi thibak sinchanane pani, khat vyavasthapan; Anil Bitle, Arun Deshmukh, Netafim Irrigation India Pvt Ltd, Pune (TIER A) - month-wise water table, formula, drip design by soil type, stage-wise temperature",
+      "Agrowon - Ale Lagvad Tantradnyan, Dr. Jitendra Kadam, Halad Sanshodhan Yojana, Kasbe Digraj (TIER A) - runtime, ambavani, monsoon gap rule, winter interval",
+      "ICL Growing Solutions - Ginger Crop Nutrition (TIER B) - total water requirement, critical irrigation stages",
+      "Pythium Soft Rot Management Review, CJAST 39(35) 2020 (TIER A)",
+      "ScienceDirect Heliyon 2023 - soft rot review (TIER A)",
+      "Organic Mandya, Spices Board / TNAU (TIER B) - mulch programme",
+      "District Profile Chhatrapati Sambhajinagar, climate-data.org (TIER A/B) - rainfall distribution"
+    ],
+    "review_log": {
+      "tier_1_review_date": "2026-07-31",
+      "rules_reviewed": 3,
+      "rules_total": 31,
+      "note": "Rule-level status is authoritative. Domain status stays PHASE_1_RAW_UNVALIDATED until T3 and T4 are also reviewed and one season of field data exists."
+    }
+  },
+  "reference_data": {
+    "water_budget": {
+      "seasonal_requirement_mm": 1220,
+      "seasonal_requirement_litres_per_acre": 4880000,
+      "derivation": "sum of month-wise mm/day over 278 days from mid-May to end February",
+      "published_range_mm": {
+        "min": 1320,
+        "max": 1520
+      },
+      "reconciliation_note": "The derived figure sits below the published range, which is expected because drip is documented to save about 50 percent of water. The two are consistent rather than contradictory.",
+      "kannad_rainfall_mm": {
+        "annual_min": 725,
+        "annual_max": 775,
+        "monsoon_season": 558
+      },
+      "effective_rainfall_fraction": 0.65,
+      "effective_rainfall_mm": 480,
+      "net_irrigation_requirement_mm": 740,
+      "gross_at_90pct_efficiency_mm": 820,
+      "gross_litres_per_acre": 3280000,
+      "oct_to_feb_requirement_mm": 675,
+      "oct_to_feb_litres_per_acre": 2700000,
+      "source_class": "DERIVED"
+    },
+    "monthly_water_table": [
+      {
+        "month": "May",
+        "month_mr": "मे",
+        "stage": "G0_G1",
+        "mm_per_day": 2.1,
+        "litres_per_acre_per_day": 8400,
+        "runtime_min": 34
+      },
+      {
+        "month": "June",
+        "month_mr": "जून",
+        "stage": "G1",
+        "mm_per_day": 3.0,
+        "litres_per_acre_per_day": 12000,
+        "runtime_min": 49
+      },
+      {
+        "month": "July",
+        "month_mr": "जुलै",
+        "stage": "G2",
+        "mm_per_day": 3.85,
+        "litres_per_acre_per_day": 15400,
+        "runtime_min": 63
+      },
+      {
+        "month": "August",
+        "month_mr": "ऑगस्ट",
+        "stage": "G2_G3",
+        "mm_per_day": 4.56,
+        "litres_per_acre_per_day": 18240,
+        "runtime_min": 74
+      },
+      {
+        "month": "September",
+        "month_mr": "सप्टेंबर",
+        "stage": "G3",
+        "mm_per_day": 5.5,
+        "litres_per_acre_per_day": 22000,
+        "runtime_min": 89
+      },
+      {
+        "month": "October",
+        "month_mr": "ऑक्टोबर",
+        "stage": "G3_G4",
+        "mm_per_day": 5.5,
+        "litres_per_acre_per_day": 22000,
+        "runtime_min": 89
+      },
+      {
+        "month": "November",
+        "month_mr": "नोव्हेंबर",
+        "stage": "G4",
+        "mm_per_day": 5.0,
+        "litres_per_acre_per_day": 20000,
+        "runtime_min": 81
+      },
+      {
+        "month": "December",
+        "month_mr": "डिसेंबर",
+        "stage": "G4",
+        "mm_per_day": 4.32,
+        "litres_per_acre_per_day": 17280,
+        "runtime_min": 70
+      },
+      {
+        "month": "January",
+        "month_mr": "जानेवारी",
+        "stage": "G4_G5",
+        "mm_per_day": 3.84,
+        "litres_per_acre_per_day": 15360,
+        "runtime_min": 62
+      },
+      {
+        "month": "February",
+        "month_mr": "फेब्रुवारी",
+        "stage": "G5",
+        "mm_per_day": 3.64,
+        "litres_per_acre_per_day": 14560,
+        "runtime_min": 59
+      }
+    ],
+    "monthly_table_notes": {
+      "source_tier": "A",
+      "december_note": "The December figure was printed ambiguously in the source. The relation litres equals mm times 4000 holds exactly for every other month, so 4.32 mm/day giving 17,280 litres is the internally consistent value.",
+      "runtime_basis": "computed at 14,760 litres per hour per acre; see drip_design",
+      "caveat": "Source states explicitly that requirement varies with local temperature and evaporation. This table is a regional average and should be superseded by station-derived values."
+    },
+    "water_requirement_formula": {
+      "expression": "requirement_mm_per_day = pan_evaporation_mm_per_day * crop_coefficient_kc * pan_coefficient_kp",
+      "litres_per_acre": "requirement_mm_per_day * 4000",
+      "worked_example_from_source": {
+        "evaporation": 5,
+        "kc": 0.5,
+        "kp": 0.8,
+        "result_mm": 2.0,
+        "result_litres": 8000
+      },
+      "kc_series_available": false,
+      "kc_note": "No published stage-wise Kc series for ginger in Indian conditions was located. Back-calculated indicative values from the monthly table at Kp 0.8 and evaporation 6 mm: May 0.44, July 0.80, September 1.15, February 0.76. These are DERIVED and must not be presented as sourced.",
+      "source_tier": "A"
+    },
+    "drip_design_by_soil": {
+      "light_shallow": {
+        "lateral_spacing_ft": [
+          4,
+          4.5
+        ],
+        "dripper_spacing_cm": 30,
+        "dripper_lph": 1
+      },
+      "medium_heavy": {
+        "lateral_spacing_ft": [
+          4.5,
+          5
+        ],
+        "dripper_spacing_cm": 40,
+        "dripper_lph": 2
+      },
+      "kannad_selection": "medium_heavy",
+      "rationale": "In heavy soil water spreads laterally rather than percolating, so wider dripper spacing still gives a continuous wetted strip. The reverse error is dangerous: close drippers at high flow on clay produce surface ponding and become a cause of soft rot rather than a cure for drought.",
+      "type": "inline",
+      "source_tier": "A"
+    },
+    "drip_hydraulics_derived": {
+      "lateral_spacing_m": 1.37,
+      "dripper_spacing_m": 0.4,
+      "drippers_per_acre": 7380,
+      "dripper_lph": 2,
+      "flow_lph_per_acre": 14760,
+      "source_class": "DERIVED",
+      "cross_validation": "Computed runtimes of about 34 minutes early and about 89 minutes at peak match the independently published recommendation of 30-45 minutes rising to 60-90 minutes. Two separate Maharashtra sources therefore agree."
+    },
+    "critical_irrigation_stages": {
+      "stages": [
+        "G1",
+        "G3",
+        "G4"
+      ],
+      "source_names": [
+        "germination",
+        "rhizome initiation",
+        "rhizome development"
+      ],
+      "note": "This published irrigation classification matches the criticality ranking derived independently from crop physiology in Domain 1. Two independent lines of reasoning converge.",
+      "engine_behaviour": [
+        "tighten moisture tolerance band",
+        "increase sensor sampling frequency to hourly",
+        "escalate advisory severity by one level",
+        "act on a 7 day rain gap rather than the general 10-12 day rule"
+      ],
+      "source_tier": "B"
+    },
+    "sensor_binding": {
+      "required_probe_depth_cm": {
+        "min": 0,
+        "max": 20
+      },
+      "measurement_points_ideal": [
+        {
+          "depth_cm": 10,
+          "purpose": "rhizome zone, primary decision"
+        },
+        {
+          "depth_cm": 20,
+          "purpose": "root base, stress check"
+        },
+        {
+          "depth_cm": 30,
+          "purpose": "drainage, early detection of rising saturation"
+        }
+      ],
+      "measurement_points_current_hardware": 1,
+      "capability_gap": "Three-depth measurement requires a hardware change. One point at 10 cm is adequate for season one. Logged in the Core C10.5 capability gap register.",
+      "sampling_frequency": {
+        "G0": "1 per day",
+        "G1": "1 per hour",
+        "G2": "1 per 4 hours",
+        "G3": "1 per hour",
+        "G4": "1 per hour",
+        "G5": "1 per 4 hours",
+        "during_rain_alert": "1 per hour at all stages"
+      },
+      "calibration": {
+        "method": "two-point, oven-dry and saturated, using soil from this plot",
+        "reason": "Capacitive sensors respond to bulk dielectric permittivity, which varies strongly with clay content. Factory calibration is invalid on vertisol.",
+        "cost": "one handful of soil, one container, one day"
+      },
+      "thresholds": {
+        "vwc_saturation": null,
+        "vwc_field_capacity": null,
+        "vwc_stress_g3_g4": null,
+        "vwc_stress_other": null,
+        "source_class": "FIELD",
+        "note": "These cannot be filled from any publication because they depend on this plot's soil. This is the largest open item in Domain 3."
+      }
+    },
+    "drip_benefits_reported": {
+      "water_saving_pct": 50,
+      "fertiliser_saving_pct": 30,
+      "yield_increase_pct": {
+        "min": 35,
+        "max": 40
+      },
+      "soil_state": "permanent vafsa condition can be maintained",
+      "disease_effect": "markedly lower incidence of fungal, weed and pest problems",
+      "source_tier": "A",
+      "caveat": "Yield increase figures come from an irrigation equipment supplier. Treated as directional rather than as a planning number. The broad ridge figure of 15-20 percent from an independent institutional source is used for yield planning instead."
+    },
+    "mulch_programme": {
+      "stages": [
+        {
+          "stage": 1,
+          "timing": "immediately at planting",
+          "quantity_t_per_acre": {
+            "min": 4,
+            "max": 12
+          }
+        },
+        {
+          "stage": 2,
+          "timing": "40 to 60 DAP, with earthing up",
+          "quantity_t_per_acre": {
+            "min": 2,
+            "max": 4
+          }
+        },
+        {
+          "stage": 3,
+          "timing": "90 to 120 DAP",
+          "quantity_t_per_acre": {
+            "min": 2,
+            "max": 3
+          }
+        }
+      ],
+      "quantity_conflict_note": "Two sources give different quantities. The principle is identical in both: three applications, not one.",
+      "water_functions": [
+        "reduces evaporation and therefore irrigation demand",
+        "lowers soil temperature",
+        "prevents rain impact compaction on vertisol",
+        "suppresses weeds competing for water"
+      ],
+      "source_tier": "B"
+    }
+  },
+  "rules": [
+    {
+      "rule_id": "D03-WS-001",
+      "category": "WS",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": "G0",
+      "trigger": {
+        "english": "Pre-season planning AND water_available_oct_feb_litres is unknown or less than requirement",
+        "marathi": "हंगामापूर्व नियोजन, ऑक्टोबर-फेब्रुवारीची पाणी उपलब्धता माहीत नाही किंवा अपुरी आहे",
+        "expr": "water_available_oct_feb_litres IS NULL OR water_available_oct_feb_litres < seasonal_water_requirement_litres",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Expert amendment: no universal 27 lakh litre figure. seasonal_water_requirement_litres is computed per plot from soil texture, local evaporation and measured drip efficiency before this trigger runs.",
+        "golden_tests": [
+          {
+            "context": {
+              "water_available_oct_feb_litres": 2000000,
+              "seasonal_water_requirement_litres": 2700000
+            },
+            "expect": "TRUE",
+            "label": "पुरवठा कमी — फिरतो"
+          },
+          {
+            "context": {
+              "water_available_oct_feb_litres": 3200000,
+              "seasonal_water_requirement_litres": 2700000
+            },
+            "expect": "FALSE",
+            "label": "पुरवठा पुरेसा"
+          },
+          {
+            "context": {
+              "seasonal_water_requirement_litres": 2700000
+            },
+            "expect": "TRUE",
+            "label": "उपलब्धता माहीत नाही — मूल्यांकन करा"
+          },
+          {
+            "context": {
+              "water_available_oct_feb_litres": 2000000
+            },
+            "expect": "UNKNOWN",
+            "label": "गरज अजून काढलेली नाही — UNKNOWN"
+          },
+          {
+            "context": {
+              "water_available_oct_feb_litres": 900000,
+              "seasonal_water_requirement_litres": 1400000
+            },
+            "expect": "TRUE",
+            "label": "हलकी जमीन, कमी गरज — तरीही कमी"
+          }
+        ]
+      },
+      "action": {
+        "english": "Assess water source capacity before anything else. Compute the October to February requirement for THIS plot from its own soil texture, the local evaporation record and the measured drip efficiency — do not use a single universal figure. About 27 lakh litres per acre is an illustrative mid-case for heavy soil under efficient drip; lighter soil, hotter conditions or lower system efficiency raise it. If supply is inadequate, reduce area rather than reduce water per acre.",
+        "marathi": "लागवडीपूर्वी पाण्याच्या स्रोताची क्षमता तपासा. ऑक्टोबर ते फेब्रुवारीची गरज या शेतासाठी स्वतंत्रपणे काढा — त्याच्या मातीचा प्रकार, स्थानिक बाष्पीभवनाची नोंद आणि ठिबकाची प्रत्यक्ष कार्यक्षमता यावरून. एकच सार्वत्रिक आकडा वापरू नका. एकरी सुमारे २७ लाख लिटर हा भारी जमिनीत कार्यक्षम ठिबकासाठीचा उदाहरणादाखल मध्यम अंदाज आहे; हलकी जमीन, जास्त उष्णता किंवा कमी कार्यक्षमता असल्यास तो वाढतो. पाणी अपुरे असल्यास क्षेत्र कमी करा — प्रति एकर पाणी कमी करू नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "Rain ends in early October but crop demand peaks in October and November at 22,000 and 20,000 litres per acre per day. The entire late-season load falls on stored or pumped water at exactly the time the water table is falling. EXPERT AMENDMENT: the 27 lakh litre figure is illustrative, not universal. It must be computed per plot from soil texture, local evaporation and measured drip efficiency.",
+        "yield_impact": "Water exhaustion during G4 carries u = 0.20 to 0.40, and because seed cost is already sunk the financial loss is close to total rather than proportional.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Bitle & Deshmukh month-wise table",
+          "Domain 7 rainfall distribution",
+          "Tier-1 expert review, 2026-07-31"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_10_institutional",
+          "domain_11_yield",
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "water_source_type",
+        "water_available_oct_feb_litres",
+        "seasonal_water_requirement_litres",
+        "area_acre",
+        "drip_efficiency_measured"
+      ],
+      "u_value": 0.3,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "55 percent of years here fall below the long-term average rainfall, so this assessment must be run on a poor-year assumption rather than an average one. A farm pond carries 50 percent subsidy and solves this alongside the monsoon drainage problem — see Domain 10.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "amended",
+        "comment_mr": "२७ लाख लिटर हा सार्वत्रिक आकडा नसावा. माती, हवामान, ठिबक कार्यक्षमता यानुसार बदलतो.",
+        "superseded": {
+          "trigger_en": "Pre-season planning AND water_available_oct_feb_litres is unknown or less than requirement",
+          "action_en": "Assess water source capacity before anything else. Seasonal requirement is about 33 lakh litres per acre, of which about 27 lakh must come from the well between October and February. If supply is inadequate, reduce area rather than reduce water per acre.",
+          "severity": "blocking",
+          "confidence_score": 0.85,
+          "source_class": "DERIVED",
+          "figure": "27 lakh litres per acre October to February stated as a fixed requirement",
+          "author_reasoning": "Derived from the monthly water table; presented as a single number."
+        }
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-WS-002",
+      "category": "WS",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Water supply assessed as marginal",
+        "marathi": "पाण्याची उपलब्धता जेमतेम आहे"
+      },
+      "action": {
+        "english": "Recommend a lined farm pond to capture monsoon runoff for the October to February period. This stores the water that the drainage channels are already carrying away.",
+        "marathi": "शेततळे विचारात घ्या. मान्सूनमध्ये जे पाणी निचरा चरातून वाहून जाते तेच साठवून ऑक्टोबरनंतर वापरता येईल — म्हणजे एकाच रचनेतून दोन्ही समस्या सुटतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "Monsoon water must be removed from the root zone to prevent soft rot, and the same water is short four months later. Storage converts a disposal problem into a supply solution.",
+        "yield_impact": "Reduces exposure to both the waterlogging pathway and the late-season exhaustion pathway.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Domain 3 water budget",
+          "Domain 10 farm pond subsidy"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_10_institutional",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "water_source_type",
+        "water_available_oct_feb_litres"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Plastic lining carries 50 percent subsidy up to a ceiling under the state scheme. Sizing against the 27 lakh litre October to February shortfall has not yet been done and is an open item.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-DS-001",
+      "category": "DS",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G0",
+      "trigger": {
+        "english": "soil_texture_class is heavy AND drip design not set to the heavy-soil configuration",
+        "marathi": "जमीन भारी आहे पण ठिबकाची मांडणी भारी जमिनीसाठी नाही",
+        "expr": "has_drip IS TRUE AND drip_lateral_spacing_ft IS NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "has_drip": true
+            },
+            "expect": "TRUE",
+            "label": "ठिबकाची मांडणी ठरवा"
+          },
+          {
+            "context": {
+              "has_drip": true,
+              "drip_lateral_spacing_ft": 4
+            },
+            "expect": "FALSE",
+            "label": "ठरली"
+          }
+        ]
+      },
+      "action": {
+        "english": "Set inline drip to the heavy soil configuration: lateral spacing 4.5 to 5 feet, dripper spacing 40 cm, dripper flow 2 lph. Do NOT use close dripper spacing at high flow on clay.",
+        "marathi": "मध्यम ते भारी जमिनीसाठी — ठिबक नळीतील अंतर ४.५ ते ५ फूट, ड्रीपरमधील अंतर ४० सेंमी, ड्रीपरचा ताशी प्रवाह २ लिटर. काळ्या जमिनीत जवळचे ड्रीपर व जास्त प्रवाह वापरू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "In heavy soil water spreads laterally, so wider dripper spacing still produces a continuous wetted strip. Close spacing at high flow exceeds the infiltration rate, water ponds on the surface and the system itself becomes a cause of soft rot.",
+        "yield_impact": "Not quantified directly. Prevents a self-inflicted route into the largest loss factor in the crop.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Bitle & Deshmukh, drip design by soil type"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "soil_texture_class",
+        "drip_lateral_spacing_ft",
+        "dripper_spacing_cm",
+        "dripper_lph"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "A wrongly specified drip set is a permanent cost that then causes disease every season. This is a one-time decision that a supplier quotation will not necessarily get right without being told the soil class.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D03-DS-002",
+      "category": "DS",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Drip configuration set",
+        "marathi": "ठिबकाची मांडणी ठरली",
+        "expr": "has_drip IS TRUE AND drip_system_flow_lph IS NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "has_drip": true
+            },
+            "expect": "TRUE",
+            "label": "प्रवाह मोजा"
+          },
+          {
+            "context": {
+              "has_drip": true,
+              "drip_system_flow_lph": 7380
+            },
+            "expect": "FALSE",
+            "label": "मोजला"
+          }
+        ]
+      },
+      "action": {
+        "english": "Compute and store system hydraulics: about 7,380 drippers per acre giving about 14,760 litres per hour. All runtime advisory derives from this figure.",
+        "marathi": "प्रति एकर सुमारे ७,३८० ड्रीपर, ताशी सुमारे १४,७६० लिटर. ठिबक किती वेळ चालवायचे हे सर्व गणित याच आकड्यावरून येते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Runtime cannot be advised without knowing system flow. Deriving it once at installation removes a recurring source of error.",
+        "yield_impact": "Indirect. Determines whether the intended volume actually reaches the crop.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "computed from Agrowon drip design",
+          "cross-validated against Agrowon runtime recommendation"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "drippers_per_acre",
+        "drip_flow_lph_per_acre",
+        "dripper_lph",
+        "dripper_spacing_cm",
+        "drip_lateral_spacing_ft"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Actual dripper count should be verified on installation rather than assumed. A 10 percent error here shifts every runtime figure by 10 percent.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D03-DS-003",
+      "category": "DS",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": "G0",
+      "trigger": {
+        "english": "Planting date within 15 days AND drip not laid and tested",
+        "marathi": "लागवडीला १५ दिवस उरले आणि ठिबक अंथरून चाचणी झालेली नाही",
+        "expr": "has_drip IS FALSE AND WITHIN(planting_date, 15 DAYS)",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "has_drip": false,
+              "days_to_planting": 10
+            },
+            "expect": "TRUE",
+            "label": "१० दिवस, ठिबक नाही"
+          },
+          {
+            "context": {
+              "has_drip": false,
+              "days_to_planting": 40
+            },
+            "expect": "FALSE",
+            "label": "४० दिवस — अजून वेळ"
+          }
+        ]
+      },
+      "action": {
+        "english": "Block planting readiness. Drip must be operational before planting because monsoon onset is unreliable and germination water may have to come from the system.",
+        "marathi": "ठिबक लागवडीपूर्वी अंथरून, चाचणी करून, कार्यरत असले पाहिजे. लागवड करून पाऊस लांबल्यास उगवणीचे पाणी ठिबकातूनच द्यावे लागेल, आणि उगवण चुकली तर ती भरून निघत नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Establishment count is a hard ceiling for the season and cannot be recovered by gap filling. Pre-monsoon rainfall in this region has declined by about 31 percent, so the traditional practice of planting with pre-monsoon showers is less reliable than when the recommendation was written.",
+        "yield_impact": "Protects the establishment ceiling set at G1.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Domain 7 pre-monsoon rainfall trend",
+          "Domain 1 establishment ceiling"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_8_operations"
+        ],
+        "depends_on": [
+          "domain_10_institutional"
+        ]
+      },
+      "farm_brain_schema": [
+        "has_drip",
+        "planting_date"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Subsidy approval involves a lottery and takes months, so the drip decision belongs six or more months before planting, not fifteen days before.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "उगवणीपूर्वी ठिबक कार्यरत असणे अत्यावश्यक."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-WR-001",
+      "category": "WR",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Daily irrigation planning AND station evaporation data unavailable",
+        "marathi": "रोजचे सिंचन नियोजन, station चा बाष्पीभवन डेटा उपलब्ध नाही",
+        "expr": "has_drip IS TRUE AND pan_evaporation_mm_day IS NULL AND dap BETWEEN 0 AND 225",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Table fallback. This alone can run the whole season irrigation.",
+        "golden_tests": [
+          {
+            "context": {
+              "has_drip": true,
+              "dap": 100
+            },
+            "expect": "TRUE",
+            "label": "तक्त्यानुसार पाणी"
+          },
+          {
+            "context": {
+              "has_drip": true,
+              "dap": 100,
+              "pan_evaporation_mm_day": 5.2
+            },
+            "expect": "FALSE",
+            "label": "सूत्र वापरा"
+          }
+        ]
+      },
+      "action": {
+        "english": "Use the month-wise table as the base requirement. Range is 8,400 litres per acre per day in May to 22,000 in September and October. Flag confidence as medium and state that the figure is a regional average.",
+        "marathi": "महिनानिहाय तक्त्यानुसार पाणी द्या — मे मध्ये ८,४०० लिटर प्रति एकर प्रति दिवस, सप्टेंबर-ऑक्टोबरमध्ये शिखर २२,००० लिटर. हा विभागीय सरासरीचा आकडा आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "The table is published for Maharashtra ginger under drip and internally consistent — litres equal mm times 4000 for every month.",
+        "yield_impact": "Provides a complete working irrigation schedule with no sensor dependency, so the system functions from day one.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Bitle & Deshmukh month-wise table"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "irrigation_applied_litres_today",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "This table alone can run the entire season's irrigation. Sensors and the weather station improve on it; they do not replace it. That is what makes graceful degradation real rather than a slogan here.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-WR-002",
+      "category": "WR",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Daily irrigation planning AND pan_evaporation_mm_day is available from the cluster station",
+        "marathi": "station कडून प्रत्यक्ष बाष्पीभवन उपलब्ध आहे",
+        "expr": "pan_evaporation_mm_day IS NOT NULL AND dap BETWEEN 0 AND 225",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Evaporation is the only locally variable term. A competitor without hardware in the village cannot produce this.",
+        "golden_tests": [
+          {
+            "context": {
+              "pan_evaporation_mm_day": 5.2,
+              "dap": 100
+            },
+            "expect": "TRUE",
+            "label": "सूत्राने गरज काढा"
+          },
+          {
+            "context": {
+              "dap": 100
+            },
+            "expect": "FALSE",
+            "label": "station डेटा नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Compute requirement as evaporation times crop coefficient times pan coefficient times 4000, and use it in preference to the table. Raise confidence to high.",
+        "marathi": "पाण्याची गरज = बाष्पीभवन × पीक गुणांक × बाष्प पात्र गुणांक × ४०००. तक्त्याऐवजी हा रोजचा आकडा वापरा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The only locally variable term in the equation is evaporation. Kannad is hotter and drier than the belt the table averages over, so the regional figure is systematically wrong here in one direction.",
+        "yield_impact": "Improves dosing accuracy across the whole season and eliminates both chronic over- and under-watering.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Bitle & Deshmukh formula and worked example"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient",
+          "domain_12_ai"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "pan_evaporation_mm_day",
+        "crop_coefficient_kc",
+        "pan_coefficient_kp",
+        "irrigation_applied_litres_today"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "This is the single most defensible technical differentiator in the product. A competitor without hardware in the same village cannot produce this number, and the accumulated evaporation series becomes a FIELD-class asset that exists in no publication.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "full",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-WR-003",
+      "category": "WR",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Engine requires a stage-wise crop coefficient",
+        "marathi": "अवस्थानिहाय पीक गुणांक हवा आहे",
+        "expr": "STAGE IN [G3, G4] AND soil_moisture_vwc < vwc_stress_threshold",
+        "expr_version": "dsl-1.0",
+        "expr_note": "The critical window. Stress here is irrecoverable.",
+        "golden_tests": [
+          {
+            "context": {
+              "current_stage": "G3",
+              "soil_moisture_vwc": 20,
+              "vwc_stress_threshold": 22
+            },
+            "expect": "TRUE",
+            "label": "ताण"
+          },
+          {
+            "context": {
+              "current_stage": "G3",
+              "soil_moisture_vwc": 30,
+              "vwc_stress_threshold": 22
+            },
+            "expect": "FALSE",
+            "label": "ठीक"
+          },
+          {
+            "context": {
+              "current_stage": "G3",
+              "soil_moisture_vwc": 20
+            },
+            "expect": "UNKNOWN",
+            "label": "calibration नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Use the back-calculated indicative values and mark them DERIVED. Do not present them as published. Record actual Kc from station data as a first-season deliverable.",
+        "marathi": "अद्रकासाठी प्रकाशित Kc मालिका उपलब्ध नाही. तक्त्यावरून उलट गणित करून काढलेली अंदाजित मूल्ये वापरा, पण ती प्रकाशित म्हणून दाखवू नका. पहिल्या हंगामात station च्या डेटावरून खरी मालिका काढता येईल."
+      },
+      "reasoning": {
+        "agronomic_basis": "The source worked example uses Kc of 0.5 without stating the stage. No complete stage-wise series for ginger in Indian conditions was located across ICAR-IISR, KAU or TNAU.",
+        "yield_impact": "None directly. Prevents false precision and identifies a valuable data gap.",
+        "confidence_score": 0.6,
+        "source_tier": "B",
+        "references": [
+          "absence of source; Domain 3 back-calculation"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "crop_coefficient_kc",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "A locally derived Kc series would be genuinely novel. It is the kind of thing that cannot be bought and only accrues to whoever puts instruments in the field.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D03-SC-001",
+      "category": "SC",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Daily irrigation scheduled",
+        "marathi": "रोजचे सिंचन",
+        "expr": "has_drip IS TRUE AND drip_system_flow_lph IS NOT NULL AND dap BETWEEN 0 AND 225",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Litres per acre divided by system flow gives runtime in minutes. The engine computes this.",
+        "golden_tests": [
+          {
+            "context": {
+              "has_drip": true,
+              "drip_system_flow_lph": 7380,
+              "dap": 100
+            },
+            "expect": "TRUE",
+            "label": "चालू वेळ काढा"
+          },
+          {
+            "context": {
+              "has_drip": true,
+              "dap": 100
+            },
+            "expect": "FALSE",
+            "label": "प्रवाह माहीत नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Convert the day's volume to runtime using system flow. Range is about 34 minutes in May to about 89 minutes at the September and October peak.",
+        "marathi": "आजची पाण्याची गरज ÷ संचाचा ताशी प्रवाह = ठिबक किती वेळ चालवायचा. मे मध्ये सुमारे ३४ मिनिटे, सप्टेंबर-ऑक्टोबरमध्ये सुमारे ८९ मिनिटे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Computed runtimes match the independently published recommendation of 30-45 minutes early rising to 60-90 minutes later. Two Maharashtra sources agree, which raises confidence in both.",
+        "yield_impact": "Indirect but continuous. Wrong runtime means either chronic deficit or chronic saturation.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam runtime",
+          "computed from Agrowon - Bitle & Deshmukh volumes"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "drip_runtime_min",
+        "drip_flow_lph_per_acre",
+        "irrigation_applied_litres_today"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This cross-validation is worth noting because it is rare. Most figures in this knowledge base rest on a single source; here two independent Maharashtra sources produce the same answer by different routes.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D03-SC-002",
+      "category": "SC",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "soil_texture_class is heavy AND drip_runtime_min greater than 60",
+        "marathi": "भारी जमीन आणि ठिबक ६० मिनिटांहून जास्त चालवायचे आहे",
+        "expr": "drip_runtime_min > 60 AND soil_texture_class == 'heavy'",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Application rate must not exceed infiltration. A long run on vertisol ponds and runs off.",
+        "golden_tests": [
+          {
+            "context": {
+              "drip_runtime_min": 85,
+              "soil_texture_class": "heavy"
+            },
+            "expect": "TRUE",
+            "label": "दोन पाळ्यांत विभागा"
+          },
+          {
+            "context": {
+              "drip_runtime_min": 40,
+              "soil_texture_class": "heavy"
+            },
+            "expect": "FALSE",
+            "label": "ठीक"
+          }
+        ]
+      },
+      "action": {
+        "english": "Split the run into two shifts rather than one long run. Applies particularly from September to November.",
+        "marathi": "एका वेळी ९० मिनिटे न देता ४५ अधिक ४५ अशा दोन पाळ्यांत द्या. काळ्या जमिनीत झिरपण्याचा वेग कमी असल्याने एकाच वेळी जास्त पाणी दिल्यास ते पृष्ठभागावर साचते आणि वाहून जाते — म्हणजे मोजून दिलेले पाणी मुळांपर्यंत पोहोचतच नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Application rate must not exceed soil infiltration rate. On vertisol a long single run produces surface ponding and runoff, so the measured volume does not reach the root zone.",
+        "yield_impact": "Prevents a silent deficit in which the schedule appears correct but delivery is not.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Domain 3 infiltration reasoning",
+          "Domain 2 percolation test"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "drip_runtime_min",
+        "drip_shifts_per_day",
+        "soil_texture_class",
+        "percolation_class"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "The percolation test from Domain 2 gives the actual infiltration rate and should set this threshold rather than the generic 60 minute rule.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-SC-003",
+      "category": "SC",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G1",
+      "trigger": {
+        "english": "current_stage is G1",
+        "marathi": "पीक उगवणीच्या अवस्थेत",
+        "expr": "STAGE IN [G1] AND air_temp_max_c > 33",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Two shifts of 30 to 45 minutes. Seed rhizome has no roots and rots in saturated soil.",
+        "golden_tests": [
+          {
+            "context": {
+              "current_stage": "G1",
+              "air_temp_max_c": 38
+            },
+            "expect": "TRUE",
+            "label": "दोन पाळ्यांत पाणी"
+          },
+          {
+            "context": {
+              "current_stage": "G1",
+              "air_temp_max_c": 29
+            },
+            "expect": "FALSE",
+            "label": "सौम्य"
+          },
+          {
+            "context": {
+              "current_stage": "G2",
+              "air_temp_max_c": 38
+            },
+            "expect": "FALSE",
+            "label": "G2 — वेगळा नियम"
+          }
+        ]
+      },
+      "action": {
+        "english": "Run two shifts, morning and evening, of 30 to 45 minutes each. Keep the soil moist, not soaked.",
+        "marathi": "सकाळ आणि संध्याकाळ अशा दोन पाळ्यांत, प्रत्येकी ३० ते ४५ मिनिटे. जमीन ओलसर ठेवा — भिजवू नका. या अवस्थेत जास्त पाणी हा ताणापेक्षा मोठा धोका आहे, कारण बेणे हा मुळे नसलेला मांसल तुकडा आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Freshly planted seed rhizome has no root system and rots readily in saturated soil. Small frequent doses also moderate the surface temperature of bare black soil, which in May runs well above the 25-26 C optimum for sprouting.",
+        "yield_impact": "Protects establishment, which is a hard ceiling for the season.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam runtime",
+          "Domain 1 sprouting optimum"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "current_stage",
+        "drip_shifts_per_day",
+        "drip_runtime_min",
+        "soil_temp_c"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Mulch and split irrigation work as a pair at this stage. Either one alone gives roughly half the benefit, because mulch retains what drip delivers and drip supplies what mulch conserves.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-SC-004",
+      "category": "SC",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Irrigation timing being set",
+        "marathi": "ठिबक चालवण्याची वेळ ठरवायची आहे",
+        "expr": "STAGE IN [G5] AND days_to_harvest BETWEEN 0 AND 20",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "current_stage": "G5",
+              "days_to_harvest": 10
+            },
+            "expect": "TRUE",
+            "label": "काढणीपूर्व"
+          },
+          {
+            "context": {
+              "current_stage": "G4",
+              "days_to_harvest": 70
+            },
+            "expect": "FALSE",
+            "label": ""
+          }
+        ]
+      },
+      "action": {
+        "english": "Prefer early morning. Avoid midday because evaporation is high. Avoid night because prolonged surface wetness favours fungal infection.",
+        "marathi": "पहाटे किंवा सकाळी लवकर सर्वोत्तम. दुपारी बाष्पीभवन जास्त, पाणी वाया. रात्री जमीन व पाने रात्रभर ओली राहिल्यास बुरशीला अनुकूल."
+      },
+      "reasoning": {
+        "agronomic_basis": "Morning irrigation minimises evaporative loss and allows surfaces to dry during the day, shortening the wetness duration that fungal pathogens require.",
+        "yield_impact": "Small but continuous water saving plus reduced disease pressure.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "general irrigation practice",
+          "Domain 6 leaf wetness reasoning"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "drip_runtime_min",
+        "drip_shifts_per_day"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "Overhead sprinkler is explicitly discouraged for this crop. Water on the foliage is an invitation to leaf spot and blotch.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D03-SC-005",
+      "category": "SC",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G1",
+      "trigger": {
+        "english": "Planting completed",
+        "marathi": "लागवड झाली",
+        "expr": "dap BETWEEN 2 AND 5",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Ambavani — the first light irrigation after planting into vafsa.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 3
+            },
+            "expect": "TRUE",
+            "label": "आंबवणी"
+          },
+          {
+            "context": {
+              "dap": 10
+            },
+            "expect": "FALSE",
+            "label": ""
+          }
+        ]
+      },
+      "action": {
+        "english": "Plant into vafsa condition after a pre-irrigation, then give the first light irrigation on the third or fourth day.",
+        "marathi": "पूर्वपाणी देऊन वाफसा स्थितीत लागवड करा, नंतर तिसऱ्या-चौथ्या दिवशी आंबवणीचे हलके पाणी द्या."
+      },
+      "reasoning": {
+        "agronomic_basis": "Sources differ — one recommends water immediately after planting, another on the third or fourth day. The latter comes with the precondition of planting into vafsa, so soil moisture is already present. Heavy irrigation immediately after planting compacts vertisol and impedes shoot emergence.",
+        "yield_impact": "Affects emergence uniformity.",
+        "confidence_score": 0.75,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam ambavani",
+          "Vikaspedia"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_8_operations"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "planting_date",
+        "vafsa_state",
+        "dap"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "The vafsa precondition is the safer route on black soil. It also means the pre-irrigation has to be planned into the land preparation calendar rather than treated as a planting-day decision.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-WL-001",
+      "category": "WL",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "soil_moisture_vwc at saturation AND saturation_hours greater than 12",
+        "marathi": "मातीचा ओलावा संपृक्त पातळीवर आणि तो १२ तासांहून जास्त टिकला",
+        "expr": "DURATION(soil_moisture_vwc > vwc_saturation) > 12 HOURS",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Duration, not instantaneous level. Damage is time dependent.",
+        "golden_tests": [
+          {
+            "context": {
+              "soil_moisture_vwc__duration": 14
+            },
+            "expect": "TRUE",
+            "label": "१४ तास संपृक्त"
+          },
+          {
+            "context": {
+              "soil_moisture_vwc__duration": 6
+            },
+            "expect": "FALSE",
+            "label": "६ तास — अजून धोका नाही"
+          },
+          {
+            "context": {
+              "soil_moisture_vwc": 48
+            },
+            "expect": "UNKNOWN",
+            "label": "कालावधी मोजलेला नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "RED alert. Stop drip immediately. Inspect all three drainage levels. Trigger the soft rot preventive protocol in Domain 6.",
+        "marathi": "लाल इशारा. ठिबक तात्काळ बंद करा. निचऱ्याच्या तिन्ही पातळ्या तपासा — वरंब्याची उंची, पाट, आणि मुख्य चर. कंदकूज प्रतिबंधक कृती सुरू करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Saturated pore space excludes oxygen, root respiration fails, roots die, and the damaged tissue is colonised by Pythium and Fusarium. The damage is time-dependent, so duration rather than instantaneous moisture level is the correct trigger.",
+        "yield_impact": "u = 0.20 to 0.50 at G2, and this is the entry route to the largest single loss factor in the crop at 0.50 to 0.90.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "CJAST 39(35) 2020 soft rot review",
+          "Heliyon 2023",
+          "Core C2.3"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "soil_moisture_vwc",
+        "saturation_hours",
+        "vwc_saturation",
+        "drainage_levels_present",
+        "current_stage"
+      ],
+      "u_value": 0.35,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "Detecting saturation requires only a qualitative reading of very wet, which works even before calibration. This alert is therefore available from day one, unlike the deficit thresholds.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-WL-002",
+      "category": "WL",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "Saturation detected AND current_stage is G2 or G3",
+        "marathi": "पाणी साचले आहे आणि पीक G2 किंवा G3 अवस्थेत",
+        "expr": "DURATION(soil_moisture_vwc > vwc_saturation) > 12 HOURS AND STAGE IN [G2, G3]",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "soil_moisture_vwc__duration": 14,
+              "current_stage": "G3"
+            },
+            "expect": "TRUE",
+            "label": "G3 मध्ये — तीव्रता वाढवा"
+          },
+          {
+            "context": {
+              "soil_moisture_vwc__duration": 14,
+              "current_stage": "G5"
+            },
+            "expect": "FALSE",
+            "label": "G5 — सामान्य इशारा"
+          }
+        ]
+      },
+      "action": {
+        "english": "Escalate above the standard saturation alert. This is the peak soft rot window, August to September, coinciding with the most sensitive crop stage.",
+        "marathi": "ही कंदकुजीची शिखर वेळ आहे — ऑगस्ट-सप्टेंबर, आणि पीक सर्वात संवेदनशील अवस्थेत. सामान्य इशाऱ्यापेक्षा तीव्रता वाढवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Three factors align: heaviest rainfall month is July at about 195 mm, soft rot peaks in August and September, and G3 is when rhizome fingers differentiate irreversibly.",
+        "yield_impact": "Compounds a 0.35 saturation loss with an irrecoverable G3 stage loss.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan disease timing",
+          "Domain 7 rainfall distribution"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "saturation_hours",
+        "current_stage",
+        "rainfall_mm"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "The timing coincidence is the core hazard of growing ginger on vertisol in this belt, and it is the reason bed height and channel design are treated as preconditions rather than recommendations.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "G2–G3 मध्ये पाणी साचल्यास उच्च धोका."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-WL-003",
+      "category": "WL",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G4",
+      "trigger": {
+        "english": "Month is October or November AND forecast exceeds 40 mm",
+        "marathi": "ऑक्टोबर किंवा नोव्हेंबर, ४० मिमीहून जास्त पावसाचा अंदाज",
+        "expr": "MONTH IN [OCT, NOV] AND forecast_rain_48h_mm > 40",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Post-monsoon cyclone. Duplication group: post_monsoon_cyclone_saturation.",
+        "golden_tests": [
+          {
+            "context": {
+              "current_month": 10,
+              "forecast_rain_48h_mm": 55
+            },
+            "expect": "TRUE",
+            "label": "ऑक्टोबर, ५५ मिमी"
+          },
+          {
+            "context": {
+              "current_month": 7,
+              "forecast_rain_48h_mm": 55
+            },
+            "expect": "FALSE",
+            "label": "जुलै — वेगळा नियम"
+          },
+          {
+            "context": {
+              "current_month": 10,
+              "forecast_rain_48h_mm": 20
+            },
+            "expect": "FALSE",
+            "label": "२० मिमी — मर्यादेखाली"
+          }
+        ]
+      },
+      "action": {
+        "english": "RED alert, more severe than the equivalent monsoon warning. Stop drip, clear channels urgently, and check saturation within 12 hours of the rain stopping.",
+        "marathi": "लाल इशारा — आणि हा जुलैच्या इशाऱ्यापेक्षा जास्त तीव्र आहे. ठिबक बंद करा, निचरा चर तातडीने मोकळे करा, पाऊस थांबल्यावर १२ तासांत संपृक्तता तपासा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Tropical cyclones reach this district with a secondary peak in October and November. By then the rhizome is fully formed, the soil is dry and cracked after weeks without rain, and drainage channels have usually been neglected because the monsoon is considered over.",
+        "yield_impact": "u = 0.20 to 0.40, and the loss is more expensive than an equivalent July event because the full season's investment is already committed.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "climatestotravel Aurangabad cyclone seasonality",
+          "Domain 7"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "rainfall_mm",
+        "current_stage",
+        "drainage_levels_present",
+        "saturation_hours"
+      ],
+      "u_value": 0.3,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "This rule did not exist in the original Domain 3 or Domain 6 drafts. Both assumed the rainy season is July to September. Domain 7 research surfaced the post-monsoon cyclone peak and the rule was added afterwards.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-WL-004",
+      "category": "WL",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Forecast exceeds 50 mm within 48 hours AND stage is G2 or G3",
+        "marathi": "४८ तासांत ५० मिमीहून जास्त पावसाचा अंदाज, पीक G2 किंवा G3 अवस्थेत",
+        "expr": "DURATION(soil_moisture_vwc > vwc_saturation) > 6 HOURS AND STAGE IN [G1]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Seed rhizome has no roots yet. Six hours is enough at G1.",
+        "golden_tests": [
+          {
+            "context": {
+              "soil_moisture_vwc__duration": 8,
+              "current_stage": "G1"
+            },
+            "expect": "TRUE",
+            "label": "उगवणीत साचले"
+          },
+          {
+            "context": {
+              "soil_moisture_vwc__duration": 8,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "नंतरची अवस्था"
+          }
+        ]
+      },
+      "action": {
+        "english": "Pre-warn. Stop drip now rather than after the rain. Verify channels are clear before the event.",
+        "marathi": "पूर्वसूचना — पाऊस पडल्यावर नव्हे, आत्ताच ठिबक बंद करा आणि चर मोकळे आहेत का तपासा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Acting on the forecast rather than the sensor converts a reactive response into a preventive one, and channel clearing takes time that is not available once the rain has started.",
+        "yield_impact": "Reduces the probability of the saturation event rather than responding to it.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Core C3.3 forecast-conditioned suppression"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "rainfall_mm",
+        "current_stage",
+        "drainage_levels_present"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "Forecast quality at district level is limited. The station's bias correction is what makes this rule trustworthy over time rather than merely plausible.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D03-MN-001",
+      "category": "MN",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Rainfall recorded",
+        "marathi": "पाऊस पडला",
+        "expr": "rainfall_mm > 2 AND dap BETWEEN 0 AND 225",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Ten millimetres is 40,000 litres per acre — about two days in September, not a week.",
+        "golden_tests": [
+          {
+            "context": {
+              "rainfall_mm": 12,
+              "dap": 100
+            },
+            "expect": "TRUE",
+            "label": "पाऊस वजा करा"
+          },
+          {
+            "context": {
+              "rainfall_mm": 0.5,
+              "dap": 100
+            },
+            "expect": "FALSE",
+            "label": "नगण्य"
+          }
+        ]
+      },
+      "action": {
+        "english": "Deduct effective rainfall from the day's requirement. Net requirement equals table or formula value minus effective rainfall in mm times 4000. If the result is zero or less, skip irrigation.",
+        "marathi": "आजची निव्वळ गरज = तक्त्यातील गरज − (प्रभावी पाऊस मिमी × ४०००). शून्य किंवा कमी आले तर आज ठिबक नको."
+      },
+      "reasoning": {
+        "agronomic_basis": "Rain and irrigation are substitutes, but only partially. Ten millimetres of rain supplies 40,000 litres per acre, which against a September demand of 22,000 litres per day is about two days of water, not a week.",
+        "yield_impact": "Prevents both wasteful irrigation after rain and, more commonly, an unrecognised deficit when a small rain event is treated as sufficient.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam monsoon gap rule",
+          "Domain 3 water budget"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "rainfall_mm",
+        "effective_rainfall_mm",
+        "irrigation_applied_litres_today"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This arithmetic is where the product earns its place. Rain fell so stop irrigating is a crude rule that is often wrong. Doing the conversion by hand every day is impractical; doing it automatically is trivial.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "full",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-MN-002",
+      "category": "MN",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "Soil moisture is at saturation",
+        "marathi": "मातीचा ओलावा संपृक्त आहे",
+        "expr": "soil_moisture_vwc >= vwc_saturation",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Hard interlock. Overrides the water balance computation.",
+        "golden_tests": [
+          {
+            "context": {
+              "soil_moisture_vwc": 48,
+              "vwc_saturation": 45
+            },
+            "expect": "TRUE",
+            "label": "संपृक्त — पाणी बंद"
+          },
+          {
+            "context": {
+              "soil_moisture_vwc": 30,
+              "vwc_saturation": 45
+            },
+            "expect": "FALSE",
+            "label": "संपृक्त नाही"
+          },
+          {
+            "context": {
+              "soil_moisture_vwc": 48
+            },
+            "expect": "UNKNOWN",
+            "label": "calibration नाही — स्वयंचलित सिंचन बंद ठेवा"
+          }
+        ]
+      },
+      "action": {
+        "english": "Do not irrigate regardless of what the rainfall arithmetic says. The sensor reading overrides the computation.",
+        "marathi": "गणित काहीही सांगो, sensor ने संपृक्तता दाखवली तर पाणी देऊ नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "The water balance calculation estimates; the sensor measures. Where they conflict on the excess side, the measurement wins because the downside is asymmetric — a missed irrigation costs a little, an added irrigation on saturated soil costs the crop.",
+        "yield_impact": "Prevents the engine from causing the very condition it is meant to avoid.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "Core C2.3",
+          "Domain 3 dual risk"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "soil_moisture_vwc",
+        "vwc_saturation",
+        "irrigation_applied_litres_today"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This override must be hard-coded rather than advisory. An automated irrigation system that cannot be stopped by its own moisture sensor is a liability on vertisol.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-MN-003",
+      "category": "MN",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "rain_gap_days greater than or equal to 10 AND stage is not G3 or G4",
+        "marathi": "पावसाचा खंड १० दिवसांहून जास्त, पीक G3 किंवा G4 मध्ये नाही",
+        "expr": "rain_gap_days >= 10 AND STAGE IN [G1, G2]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Superseded by D03-MN-004 at G3 and G4, where the point is 7 days.",
+        "golden_tests": [
+          {
+            "context": {
+              "rain_gap_days": 11,
+              "current_stage": "G2"
+            },
+            "expect": "TRUE",
+            "label": "दहा दिवस खंड"
+          },
+          {
+            "context": {
+              "rain_gap_days": 11,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "G3 — सात दिवसांचा नियम"
+          }
+        ]
+      },
+      "action": {
+        "english": "Resume full irrigation per the table.",
+        "marathi": "पावसात १० ते १२ दिवसांचा खंड पडल्यास पिकास पाणी द्यावे — तक्त्यानुसार पूर्ण क्षमतेने."
+      },
+      "reasoning": {
+        "agronomic_basis": "Published guidance for Maharashtra ginger sets the intervention point at a 10 to 12 day break in rainfall.",
+        "yield_impact": "Prevents drought stress during less sensitive stages.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "rain_gap_days",
+        "current_stage",
+        "irrigation_applied_litres_today"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "Dry spells of 20 to 45 days have occurred in Maharashtra, with Marathwada worse than average. The 10 to 12 day rule is a floor, not a description of typical conditions.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D03-MN-004",
+      "category": "MN",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G3",
+      "trigger": {
+        "english": "rain_gap_days greater than or equal to 7 AND stage is G3 or G4",
+        "marathi": "पावसाचा खंड ७ दिवस आणि पीक गड्डा तयार होण्याच्या किंवा भरण्याच्या अवस्थेत",
+        "expr": "rain_gap_days >= 7 AND STAGE IN [G3, G4]",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "rain_gap_days": 8,
+              "current_stage": "G3"
+            },
+            "expect": "TRUE",
+            "label": "G3 मध्ये ८ दिवस खंड"
+          },
+          {
+            "context": {
+              "rain_gap_days": 8,
+              "current_stage": "G2"
+            },
+            "expect": "FALSE",
+            "label": "G2 — सामान्य नियम लागू"
+          },
+          {
+            "context": {
+              "rain_gap_days": 5,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "५ दिवस — अजून नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Resume full irrigation at 7 days, not 10. Do not wait for the general rule.",
+        "marathi": "या अवस्थांत १० दिवसांची वाट पाहू नका — ७ दिवसांवरच पूर्ण क्षमतेने ठिबक सुरू करा. G3 मध्ये १० दिवस खूप जास्त आहेत."
+      },
+      "reasoning": {
+        "agronomic_basis": "G3 and G4 are named critical irrigation stages. Moisture deficit during finger differentiation prevents fingers from forming at all, and they do not form later.",
+        "yield_impact": "u = 0.15 to 0.25 for stress in the critical window, and it is irrecoverable.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "ICL Growing Solutions critical stages",
+          "Core C2.2"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "rain_gap_days",
+        "current_stage",
+        "soil_moisture_vwc"
+      ],
+      "u_value": 0.2,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "This is Core C2.2 applied concretely — tightening a general threshold inside a critical window. The general rule is safe on average and unsafe exactly when it matters most.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-SC-006",
+      "category": "SC",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G4",
+      "trigger": {
+        "english": "Month is October to January AND has_drip is true",
+        "marathi": "ऑक्टोबर ते जानेवारी, ठिबक उपलब्ध",
+        "expr": "dap BETWEEN 150 AND 210 AND has_drip IS TRUE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Bulking needs consistency, not level. This is where drip pays for itself.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 180,
+              "has_drip": true
+            },
+            "expect": "TRUE",
+            "label": "गड्डा भरतोय — सातत्य ठेवा"
+          },
+          {
+            "context": {
+              "dap": 100,
+              "has_drip": true
+            },
+            "expect": "FALSE",
+            "label": "अजून G3"
+          }
+        ]
+      },
+      "action": {
+        "english": "Continue daily small doses. Do NOT switch to the 12 to 15 day flood interval. Consistency matters more than level during bulking.",
+        "marathi": "रोज थोडे पाणी देत रहा. १२ ते १५ दिवसांचे अंतर हे पाटपाण्याचे नियम आहेत, ठिबकाचे नाहीत. गड्डा भरताना ओलाव्यातील सातत्य हे पातळीपेक्षा जास्त महत्वाचे — चढउतार झाल्यास गड्डा वेडावाकडा होतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "Fluctuating moisture during bulking produces misshapen rhizomes even when the mean level is correct, and shape affects grade and therefore price. Drip's advantage is precisely the ability to hold a steady state.",
+        "yield_impact": "Affects quality and grade more than weight, and the grading price spread is larger than most yield factors.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Bitle & Deshmukh permanent vafsa",
+          "Domain 9 grading spread"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest",
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "current_stage",
+        "has_drip",
+        "irrigation_applied_litres_today"
+      ],
+      "u_value": 0.15,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "This is the window in which drip pays for itself. It is also the window in which the well is under most pressure, so the two constraints meet here.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-WW-001",
+      "category": "WW",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Estimated 60 days to harvest",
+        "marathi": "काढणीला सुमारे ६० दिवस उरले",
+        "expr": "days_to_harvest BETWEEN 55 AND 62 AND water_withdrawal_start_date IS NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "days_to_harvest": 60
+            },
+            "expect": "TRUE",
+            "label": "पाणी उतरण"
+          },
+          {
+            "context": {
+              "days_to_harvest": 60,
+              "water_withdrawal_start_date": "done"
+            },
+            "expect": "FALSE",
+            "label": "सुरू"
+          }
+        ]
+      },
+      "action": {
+        "english": "Begin gradual water withdrawal. Reduce to about 80 percent at 45 days, 60 percent at 30 days, 30 percent at 15 days, and stop completely 7 days before harvest.",
+        "marathi": "काढणीच्या एक ते दोन महिने आधी पाणी हळूहळू कमी करायला सुरुवात करा, आणि काढणीच्या एक ते दोन आठवडे आधी पूर्ण बंद करा. हे प्रत सुधारण्यासाठी आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Continued irrigation prevents skin corking. An uncured rhizome weighs more but stores badly and gives lower dry recovery. Abrupt cessation cracks vertisol and makes harvest injurious, so the taper must be gradual.",
+        "yield_impact": "Does not change weight materially but strongly affects grade, and the observed market spread between grades is about 2.7 times.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "CropLibrary",
+          "Agrowon - Bitle & Deshmukh descending table",
+          "Domain 9 grading"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "water_withdrawal_started",
+        "dap",
+        "current_stage",
+        "target_product"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "The percentage taper is an estimate fitted inside the sourced one-to-two months gradual and one-to-two weeks stopped framework. It should be checked in season one against the skin scrape test.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "WINDOW"
+    },
+    {
+      "rule_id": "D03-WW-002",
+      "category": "WW",
+      "priority": 3,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "soil_texture_class is heavy AND water withdrawal in progress",
+        "marathi": "भारी जमीन आणि पाणी उतरण सुरू आहे",
+        "expr": "water_withdrawal_start_date IS NOT NULL AND soil_texture_class == 'heavy'",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "water_withdrawal_start_date": "done",
+              "soil_texture_class": "heavy"
+            },
+            "expect": "TRUE",
+            "label": "हळू उतरण"
+          },
+          {
+            "context": {
+              "water_withdrawal_start_date": "done",
+              "soil_texture_class": "light"
+            },
+            "expect": "FALSE",
+            "label": ""
+          }
+        ]
+      },
+      "action": {
+        "english": "Make the taper slower than the standard schedule. Abrupt drying cracks black soil, which makes lifting difficult and injures rhizomes.",
+        "marathi": "काळ्या जमिनीत उतरण अधिक हळू ठेवा. एकदम पाणी बंद केल्यास जमीन फुटते, काढणी कठीण होते आणि गड्ड्याला इजा होते — आणि तीच इजा साठवणीत कूज बनते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Vertisol shrinks and cracks on drying. Harvest injury is the entry route for storage rot, and by harvest the entire season's cost is already committed.",
+        "yield_impact": "Acts on post-harvest loss rather than field yield.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Domain 2 vertisol behaviour",
+          "Domain 9 harvest injury"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest",
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "soil_texture_class",
+        "water_withdrawal_started",
+        "dap"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "EST",
+      "kannad_note": "The word gradual appears in both sources and is not incidental. On this soil it is the operative instruction.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "WINDOW"
+    },
+    {
+      "rule_id": "D03-MU-001",
+      "category": "MU",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G1",
+      "trigger": {
+        "english": "Planting completed AND mulch_stage_1_done is false",
+        "marathi": "लागवड झाली पण आच्छादन घातलेले नाही",
+        "expr": "dap BETWEEN 0 AND 4 AND mulch_stage_1_done IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Duplication group three_stage_mulch_programme. D06-MU-001 supersedes.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 2,
+              "mulch_stage_1_done": false
+            },
+            "expect": "TRUE",
+            "label": "आच्छादन"
+          },
+          {
+            "context": {
+              "dap": 2,
+              "mulch_stage_1_done": true
+            },
+            "expect": "FALSE",
+            "label": "घातले"
+          }
+        ]
+      },
+      "action": {
+        "english": "Apply mulch immediately. This is not an optional improvement in this belt; it is a precondition for emergence.",
+        "marathi": "लागवडीनंतर लगेच आच्छादन घाला. इथे ते ऐच्छिक सुधारणा नाही — उगवणीची अट आहे. उघड्या काळ्या जमिनीचे तापमान हवेपेक्षा बरेच जास्त असते आणि बेणे भाजू शकते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Optimal soil temperature for sprouting is 25 to 26 C. Recorded maxima in this district reach 45.9 C and bare black soil runs hotter than air. Mulch is the only practical way to bring the surface temperature down.",
+        "yield_impact": "u = 0.12 estimated for absent stage-one mulch under heat stress, and it also carries the largest single documented disease benefit at stage level.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 1 sprouting optimum",
+          "Organic Mandya mulch programme",
+          "District Profile temperature"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_6_disease",
+          "domain_8_operations"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "mulch_stage_1_done",
+        "dap",
+        "soil_temp_c",
+        "air_temp_max_c"
+      ],
+      "u_value": 0.12,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "Mulch appears in five domains — water, disease, weeds, temperature and organic carbon. No other single operation in this knowledge base does that, and it is absent from the standard cost sheet.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D03-MU-002",
+      "category": "MU",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "dap in the 40-60 or 90-120 band AND the corresponding mulch stage not done",
+        "marathi": "आच्छादनाचा दुसरा किंवा तिसरा टप्पा बाकी आहे"
+      },
+      "action": {
+        "english": "Apply the next mulch stage. Bundle stage two with earthing up so both are done in one field visit.",
+        "marathi": "आच्छादनाचा पुढील टप्पा घाला. दुसरा टप्पा उटाळणीसोबत करा — एकाच फेरीत दोन्ही कामे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Sources differ on quantity but agree the programme is three applications rather than one. Cumulative cover is what maintains the effect through the season.",
+        "yield_impact": "Contributes to the documented reduction in soft rot incidence from 20-30 percent to below 5 percent.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Organic Mandya",
+          "Spices Board / TNAU"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_8_operations"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "mulch_stage_2_done",
+        "mulch_stage_3_done",
+        "dap",
+        "earthing_up_date"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "Bundling with earthing up matters because the farmer visits the field once. Three separate notifications on three days produce three ignored notifications.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-SB-001",
+      "category": "SB",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": "G0",
+      "trigger": {
+        "english": "moisture_probe_depth_cm greater than 20",
+        "marathi": "probe २० सेंमीपेक्षा खोल आहे",
+        "expr": "moisture_probe_depth_cm > 20",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "moisture_probe_depth_cm": 30
+            },
+            "expect": "TRUE",
+            "label": "खोल probe"
+          },
+          {
+            "context": {
+              "moisture_probe_depth_cm": 10
+            },
+            "expect": "FALSE",
+            "label": "योग्य खोली"
+          }
+        ]
+      },
+      "action": {
+        "english": "Block all moisture-derived advisory in this domain. Reposition the probe into the 0 to 20 cm band before planting.",
+        "marathi": "probe ०-२० सेंमीमध्ये आणल्याशिवाय या Domain मधील ओलावा-आधारित कोणताही सल्ला वापरू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "Ginger roots occupy 0 to 30 cm with the majority in the top 20. Every threshold in this domain assumes readings from that band.",
+        "yield_impact": "Not a yield factor itself. It invalidates the largest advisory stream in the system.",
+        "confidence_score": 0.95,
+        "source_tier": "A",
+        "references": [
+          "Domain 1 root morphology",
+          "D01-HW-001"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle"
+        ]
+      },
+      "farm_brain_schema": [
+        "moisture_probe_depth_cm",
+        "soil_moisture_vwc"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "Restated here deliberately. Every number in Domain 3 rests on the probe reading, so the constraint belongs in both domains rather than only in Domain 1.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-SB-002",
+      "category": "SB",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "calibration_done is false or calibration_date is older than the validity period",
+        "marathi": "sensor calibration झालेले नाही किंवा जुने आहे",
+        "expr": "calibration_done IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Capacitive sensors on vertisol need two-point calibration. Until then, table plus rain deduction.",
+        "golden_tests": [
+          {
+            "context": {
+              "calibration_done": false
+            },
+            "expect": "TRUE",
+            "label": "calibration करा"
+          },
+          {
+            "context": {
+              "calibration_done": true
+            },
+            "expect": "FALSE",
+            "label": "झाले"
+          },
+          {
+            "context": {},
+            "expect": "UNKNOWN",
+            "label": "स्थिती माहीत नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Mark all moisture-derived advisory LOW CONFIDENCE and disable automated irrigation triggers. Fall back to the month-wise table plus rain deduction. Tell the user this is happening and why.",
+        "marathi": "calibration झालेले नसल्यास ओलावा-आधारित सल्ला कमी विश्वासार्ह म्हणून दाखवा आणि स्वयंचलित ठिबक बंद ठेवा. तक्ता आणि पाऊस वजावट यावर चालवा — आणि हे वापरकर्त्याला सांगा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Capacitive sensors respond to bulk dielectric permittivity, which varies strongly with clay content, so factory calibration is invalid on vertisol. Two-point calibration using plot soil is required.",
+        "yield_impact": "None if the fallback is used. Significant if uncalibrated readings drive irrigation.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "Core C10.3",
+          "sensor physics"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "calibration_done",
+        "calibration_date",
+        "vwc_field_capacity",
+        "vwc_saturation"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-D",
+      "kannad_note": "Calibration needs one handful of plot soil, a container and a day. Saturation detection works even without it, because recognising very wet is qualitative, so the red alert survives while the deficit thresholds do not.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-SB-003",
+      "category": "SB",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Stage changes",
+        "marathi": "अवस्था बदलली"
+      },
+      "action": {
+        "english": "Adjust sampling frequency: hourly in G1, G3 and G4, four-hourly in G2 and G5, daily in G0, and hourly at all stages during a rain alert.",
+        "marathi": "अवस्थेनुसार sensor वाचनाची वारंवारता बदला — G1, G3, G4 मध्ये तासाला एकदा; G2 आणि G5 मध्ये चार तासांनी; पावसाच्या इशाऱ्यादरम्यान सर्व अवस्थांत तासाला."
+      },
+      "reasoning": {
+        "agronomic_basis": "Sampling frequency should scale with stage criticality and with the rate at which the risk can develop. Saturation damage accrues over hours, so hourly sampling is needed when the crop is sensitive.",
+        "yield_impact": "Indirect. Affects how early a saturation event is detected.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Core C6.2",
+          "Domain 3 sensor binding"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "current_stage",
+        "soil_moisture_vwc"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "Battery and LoRa airtime are finite on the sub-node, so frequency scaling is also a power management decision, not only an agronomic one.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-SB-004",
+      "category": "SB",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Hardware upgrade under consideration",
+        "marathi": "hardware सुधारणेचा विचार"
+      },
+      "action": {
+        "english": "Record the three-depth measurement requirement in the capability gap register: 10 cm for the rhizome zone, 20 cm for root base stress, 30 cm for drainage. One point at 10 cm is adequate for season one.",
+        "marathi": "तीन खोलींवर मोजमाप हवे — १० सेंमी गड्डा क्षेत्र, २० सेंमी मुळांचा तळ, ३० सेंमी निचरा. पहिल्या हंगामासाठी १० सेंमीचा एक बिंदू पुरेसा."
+      },
+      "reasoning": {
+        "agronomic_basis": "A reading at 30 cm showing saturation while 10 cm does not indicates water rising from below, meaning drainage is blocked. That is detectable before anything is visible at the surface.",
+        "yield_impact": "Would improve early detection of the largest loss pathway.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Core C10.5 capability gap register"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "moisture_probe_depth_cm",
+        "soil_moisture_vwc"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "Recorded rather than acted on. The single most valuable hardware addition remains a leaf wetness sensor for Domain 6, followed by this.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D03-WR-004",
+      "category": "WR",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Stage is G1, G3 or G4",
+        "marathi": "पीक G1, G3 किंवा G4 अवस्थेत",
+        "expr": "STAGE IN [G3, G4] AND dry_spell_days >= 5",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "current_stage": "G4",
+              "dry_spell_days": 6
+            },
+            "expect": "TRUE",
+            "label": "निर्णायक अवस्थेत खंड"
+          },
+          {
+            "context": {
+              "current_stage": "G2",
+              "dry_spell_days": 6
+            },
+            "expect": "FALSE",
+            "label": "सामान्य नियम"
+          }
+        ]
+      },
+      "action": {
+        "english": "Flag critical irrigation window. Tighten the moisture tolerance band, raise sampling to hourly, escalate advisory severity by one level, and apply the 7 day rain gap rule instead of 10.",
+        "marathi": "ही निर्णायक सिंचन अवस्था आहे. ओलाव्याची सहन-मर्यादा घट्ट करा, sensor वाचन तासाला करा, इशाऱ्याची तीव्रता एक पातळी वर न्या."
+      },
+      "reasoning": {
+        "agronomic_basis": "Published irrigation guidance names germination, rhizome initiation and rhizome development as critical, which matches the criticality ranking derived independently from crop physiology in Domain 1.",
+        "yield_impact": "u = 0.15 to 0.25 for stress inside these windows, and it is irrecoverable.",
+        "confidence_score": 0.88,
+        "source_tier": "B",
+        "references": [
+          "ICL Growing Solutions",
+          "Domain 1 stage criticality"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_6_disease",
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "current_stage",
+        "soil_moisture_vwc",
+        "vwc_stress_threshold",
+        "rain_gap_days"
+      ],
+      "u_value": 0.2,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "G3 and G4 fall in September to December here, exactly when the monsoon has ended and the entire load shifts to the well. The hardest period to serve is also the most costly to fail.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    }
+  ],
+  "open_items": [
+    {
+      "id": "D03-OI-01",
+      "item": "Two-point sensor calibration on plot soil; derive vwc_saturation, vwc_field_capacity and stress thresholds",
+      "owner": "own measurement, one day",
+      "source_class": "FIELD",
+      "blocking": true,
+      "note": "Largest gap in Domain 3. Until this exists the engine runs on the table plus rain deduction and automated irrigation triggers stay disabled."
+    },
+    {
+      "id": "D03-OI-02",
+      "item": "Actual dripper count and system flow verified at installation",
+      "owner": "installation check",
+      "source_class": "FIELD",
+      "blocking": false,
+      "note": "A 10 percent error shifts every runtime figure by 10 percent."
+    },
+    {
+      "id": "D03-OI-03",
+      "item": "Stage-wise crop coefficient series for ginger under Kannad conditions",
+      "owner": "cluster weather station, one season",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D03-OI-04",
+      "item": "Month-wise pan evaporation for Kannad",
+      "owner": "cluster weather station",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D03-OI-05",
+      "item": "Measured effective rainfall fraction; 0.65 is an assumption",
+      "owner": "field measurement",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D03-OI-06",
+      "item": "Farm pond sizing against the 27 lakh litre October to February shortfall",
+      "owner": "own calculation plus Domain 10 subsidy limits",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D03-OI-07",
+      "item": "Infiltration rate from the Domain 2 percolation test, to set the split-shift threshold properly",
+      "owner": "own measurement",
+      "source_class": "FIELD",
+      "blocking": false
+    }
+  ],
+  "summary": {
+    "total_rules": 31,
+    "by_category": {
+      "WS": 2,
+      "DS": 3,
+      "WR": 4,
+      "SC": 6,
+      "WL": 4,
+      "MN": 4,
+      "WW": 2,
+      "MU": 2,
+      "SB": 4
+    },
+    "by_priority": {
+      "5": 13,
+      "4": 14,
+      "3": 4
+    },
+    "by_severity": {
+      "blocking": 3,
+      "yellow": 10,
+      "red": 6,
+      "info": 12
+    },
+    "by_source_tier": {
+      "A": 16,
+      "B": 15,
+      "C": 0
+    },
+    "by_source_class": {
+      "DERIVED": 10,
+      "SRC-Q": 6,
+      "EST": 5,
+      "SRC-D": 10
+    },
+    "confidence_range": {
+      "min": 0.6,
+      "max": 0.95,
+      "mean": 0.811
+    },
+    "rules_with_u_value": 7,
+    "irrecoverable_rules": 13,
+    "zero_cost_rules": [
+      "D03-MN-001",
+      "D03-MN-002",
+      "D03-SC-004",
+      "D03-SB-002"
+    ],
+    "highest_value_rule": "D03-WS-001",
+    "blocking_open_items": 1,
+    "by_decision_type": {
+      "BLOCK": 4,
+      "PLANNING_GUIDANCE": 6,
+      "SCHEDULED_REMINDER": 7,
+      "AUTO_DECISION": 2,
+      "SENSOR_ALERT": 12
+    },
+    "reviewed_t1": 3,
+    "rules_with_trigger_expr": 27,
+    "rules_with_delivery_class": 27,
+    "immutable_rules": 0
+  },
+  "next_steps": [
+    "1. Run the two-point sensor calibration — one day, one handful of soil (D03-OI-01)",
+    "2. Verify dripper count and flow at installation (D03-OI-02)",
+    "3. Begin logging daily pan evaporation from the cluster station to build the local Kc series",
+    "4. Build Domain 4 JSON inheriting the Domain 1 _schema block unchanged",
+    "5. Cross-validate D03-SC-002 split-shift threshold against the Domain 2 percolation result"
+  ],
+  "author_note": "This file contains 29 rules because that is what the source document supports. The month-wise water table and the requirement formula are the two most valuable objects in the domain, and the formula is more valuable than the table because it can be localised. Volumetric thresholds are deliberately left null rather than invented, since they depend on this plot's soil and no publication can supply them. Status is PHASE_1_RAW_UNVALIDATED and must remain so until calibration exists.",
+  "legal": {
+    "disclaimer_mr": "हा नियम-संच निर्णय-सहाय्य साधन आहे. अंतिम जबाबदारी शेतकऱ्याची. पाण्याचे आकडे स्थानिक हवामान, जमीन आणि संचाच्या कार्यक्षमतेनुसार बदलतात.",
+    "disclaimer_en": "This rule set is a decision-support tool. Final responsibility rests with the cultivator. Water figures vary with local weather, soil and system efficiency.",
+    "automation_note": "Automated irrigation must not be enabled until sensor calibration is complete. The saturation override in D03-MN-002 must be implemented as a hard interlock, not as advisory text.",
+    "data_note": "Farmer-attributable data handled under DPDP Act 2023; see Domain 12."
+  }
+}
