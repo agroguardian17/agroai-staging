@@ -67,6 +67,10 @@ jobs:
       DATABASE_URL: postgresql+asyncpg://agro:ci-password@localhost:5432/agro
       DATABASE_URL_SYNC: postgresql://agro:ci-password@localhost:5432/agro
       APP_GIT_SHA: ${{ github.sha }}
+      # NOTE: AGRO_RUN_DESTRUCTIVE (the full up->down base->up migration
+      # round-trip) is intentionally NOT set yet — migration 0008's downgrade
+      # is currently broken (finding F-029: DROP ROLE authenticated_role fails
+      # on dependent grants). Enable this once F-029 is fixed.
 
     steps:
       - uses: actions/checkout@v4
@@ -96,8 +100,8 @@ jobs:
           echo "Postgres did not become ready" >&2
           exit 1
 
-      - name: Run migrations (Phase 0 stub - no-op until Phase 1)
-        run: alembic upgrade head || true
+      - name: Run migrations
+        run: alembic upgrade head
 
       - name: Pytest with coverage gate
         run: pytest -q --cov=app --cov-report=xml --cov-fail-under=80
