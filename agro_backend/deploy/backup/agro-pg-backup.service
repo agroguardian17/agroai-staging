@@ -1,0 +1,18 @@
+[Unit]
+Description=AgroGuardian nightly Postgres backup (pg_dump -> R2/B2)
+Documentation=file:///home/ubuntu/agri-AI-live/agro_backend/deploy/backup/README.md
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+# Credentials + bucket config live outside the repo. Create this file with
+# `chmod 600` and root ownership; see deploy/backup/README.md.
+EnvironmentFile=/etc/agro/backup.env
+# Adjust the path if you deploy from a different directory.
+ExecStart=/home/ubuntu/agri-AI-live/agro_backend/deploy/backup/pg_backup.sh
+Nice=10
+IOSchedulingClass=idle
+# Never leak the env file / dumps to world; keep the unit's own footprint tight.
+ProtectSystem=full
+PrivateTmp=true

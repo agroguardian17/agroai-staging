@@ -259,7 +259,10 @@ The firmware skeleton (PlatformIO C++) ships in the follow-up bootstrap.
 ## What's NOT included in this direct staging path
 
 - Coolify (a UI over docker-compose — nice, not necessary).
-- Nightly `pg_dump` backups to B2/R2. Add and test restore before real farmer data flows.
+- Nightly `pg_dump` backups to B2/R2 — **scaffolding now in `deploy/backup/`**
+  (script + systemd service/timer + restore drill, finding F-013). Dormant until
+  you create a bucket and drop credentials in `/etc/agro/backup.env`; enable and
+  test the restore drill before real farmer data flows.
 - Tailscale for private `/metrics`. Add before the pilot is publicly announced.
 - A real domain (right now sslip.io serves the IP verbatim).
 - Sentry DSN + BetterStack Uptime pinger.
