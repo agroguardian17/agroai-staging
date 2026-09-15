@@ -58,8 +58,10 @@ services:
       - mosquitto
     healthcheck:
       # Process liveness. caddy:2.x-alpine ships busybox pgrep; the reverse proxy
-      # is up iff the caddy process is running.
-      test: ["CMD-SHELL", "pgrep -x caddy >/dev/null || exit 1"]
+      # is up iff the caddy process is running. NB: busybox `pgrep -x` matches the
+      # full argv, not comm, so it is unreliable for a process launched by an
+      # absolute path — use a plain substring match.
+      test: ["CMD-SHELL", "pgrep caddy >/dev/null || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -107,7 +109,10 @@ services:
     healthcheck:
       # Process liveness. eclipse-mosquitto ships busybox pgrep; a port/auth probe
       # would need broker credentials, so we check the broker process instead.
-      test: ["CMD-SHELL", "pgrep -x mosquitto >/dev/null || exit 1"]
+      # NB: the broker runs as `/usr/sbin/mosquitto ...`, and busybox `pgrep -x`
+      # matches the full argv (not comm), so `-x mosquitto` never matches — use a
+      # plain substring match. (Verified against the running container.)
+      test: ["CMD-SHELL", "pgrep mosquitto >/dev/null || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
