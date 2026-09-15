@@ -43,10 +43,26 @@ $$;
 """
 
 
+# The non-alpine ``postgis/postgis`` image (used by CI and prod) auto-provisions
+# ``postgis_topology`` and ``postgis_tiger_geocoder`` at initdb, and both depend
+# on ``postgis``. A bare ``DROP EXTENSION postgis`` therefore fails with
+# ``dependent_objects_still_exist`` on those images (the -alpine dev image does
+# not create them, which is why this only bit the full round-trip in CI). We do
+# not own the image-provided extensions, so on downgrade we simply retain
+# ``postgis`` when something still depends on it — mirroring the tolerant
+# DROP-ROLE pattern in 0008 (finding F-029). Our schema uses no PostGIS geometry
+# (boundaries are JSONB, SCHEMA_DECISIONS §), so retaining it changes nothing.
 DOWNGRADE_SQL = r"""
 DROP EXTENSION IF EXISTS vector;
 DROP EXTENSION IF EXISTS pgcrypto;
-DROP EXTENSION IF EXISTS postgis;
+DO $$
+BEGIN
+    DROP EXTENSION IF EXISTS postgis;
+EXCEPTION
+    WHEN dependent_objects_still_exist THEN
+        RAISE NOTICE 'postgis retained: image-provided extensions (e.g. postgis_topology / postgis_tiger_geocoder) still depend on it.';
+END
+$$;
 DROP EXTENSION IF EXISTS "uuid-ossp";
 """
 
