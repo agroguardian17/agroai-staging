@@ -67,10 +67,10 @@ jobs:
       DATABASE_URL: postgresql+asyncpg://agro:ci-password@localhost:5432/agro
       DATABASE_URL_SYNC: postgresql://agro:ci-password@localhost:5432/agro
       APP_GIT_SHA: ${{ github.sha }}
-      # NOTE: AGRO_RUN_DESTRUCTIVE (the full up->down base->up migration
-      # round-trip) is intentionally NOT set yet — migration 0008's downgrade
-      # is currently broken (finding F-029: DROP ROLE authenticated_role fails
-      # on dependent grants). Enable this once F-029 is fixed.
+      # Exercise the full up -> down base -> up migration round-trip
+      # (test_migration_roundtrip). Re-enabled now that F-029 is fixed (0008's
+      # downgrade tolerates the cluster-shared role). Guards migration reversibility.
+      AGRO_RUN_DESTRUCTIVE: "1"
 
     steps:
       - uses: actions/checkout@v4

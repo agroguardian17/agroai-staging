@@ -31,25 +31,47 @@ depends_on: str | Sequence[str] | None = None
 
 # Tenant-scoped tables grouped by farmer-ownership semantics.
 GROUP_FARMER: tuple[str, ...] = (
-    "farmers", "farms", "node_sensor_readings", "irrigation_events",
-    "ai_suggestions", "farmer_actions", "ai_learning_log",
-    "technician_installations", "alerts_notifications", "subscriptions_billing",
-    "product_performance_bi", "chat_messages", "wa_inbound_log",
+    "farmers",
+    "farms",
+    "node_sensor_readings",
+    "irrigation_events",
+    "ai_suggestions",
+    "farmer_actions",
+    "ai_learning_log",
+    "technician_installations",
+    "alerts_notifications",
+    "subscriptions_billing",
+    "product_performance_bi",
+    "chat_messages",
+    "wa_inbound_log",
 )
 GROUP_FARM: tuple[str, ...] = (
-    "plots", "crop_seasons", "device_registry", "weather_station_readings",
-    "satellite_data", "weather_forecasts", "electricity_schedule_log",
-    "water_source_status", "service_maintenance",
+    "plots",
+    "crop_seasons",
+    "device_registry",
+    "weather_station_readings",
+    "satellite_data",
+    "weather_forecasts",
+    "electricity_schedule_log",
+    "water_source_status",
+    "service_maintenance",
 )
 GROUP_STAFF: tuple[str, ...] = (
-    "component_inventory", "feature_flags", "notification_dispatch_log",
-    "notification_dlq", "ingest_unmatched", "event_outbox",
+    "component_inventory",
+    "feature_flags",
+    "notification_dispatch_log",
+    "notification_dlq",
+    "ingest_unmatched",
+    "event_outbox",
     "calibration_history",
 )
 ALL_RLS_TABLES: tuple[str, ...] = GROUP_FARMER + GROUP_FARM + GROUP_STAFF
 
 MATERIALIZED_VIEWS: tuple[str, ...] = (
-    "node_readings_hourly", "node_readings_daily", "weather_hourly", "weather_daily",
+    "node_readings_hourly",
+    "node_readings_daily",
+    "weather_hourly",
+    "weather_daily",
 )
 
 _STAFF = "('admin','agronomist','service','technician')"
@@ -143,9 +165,7 @@ def upgrade() -> None:
 
     # Scoped grants: tenant tables to authenticated_role; everything to service_role.
     for table in ALL_RLS_TABLES:
-        op.execute(
-            f"GRANT SELECT, INSERT, UPDATE, DELETE ON {table} TO authenticated_role;"
-        )
+        op.execute(f"GRANT SELECT, INSERT, UPDATE, DELETE ON {table} TO authenticated_role;")
     op.execute("GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;")
     op.execute("GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO service_role;")
     for view in (*MATERIALIZED_VIEWS, "v_plot_latest_state"):
@@ -175,18 +195,34 @@ def downgrade() -> None:
             op.execute(f"DROP POLICY IF EXISTS {table}_{suffix} ON {table};")
         op.execute(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY;")
 
-    # Drop roles (DROP OWNED BY clears dependent grants first).
+    # Drop roles. ``authenticated_role`` / ``service_role`` are CLUSTER-global
+    # (shared across all databases), but this migration is per-database. We
+    # ``DROP OWNED BY`` to clear THIS database's grants/objects (so a later
+    # re-upgrade re-grants cleanly), then attempt ``DROP ROLE`` — tolerating the
+    # case where the role is still referenced by another database in the same
+    # cluster (e.g. a dev box with several migrated DBs). Without this guard,
+    # ``alembic downgrade base`` fails with DependentObjectsStillExist whenever
+    # the cluster hosts more than one migrated database. In a clean single-DB
+    # cluster (CI's fresh Postgres service) the role drops fully.
     op.execute(
         r"""
         DO $$
         BEGIN
             IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated_role') THEN
                 EXECUTE 'DROP OWNED BY authenticated_role';
-                DROP ROLE authenticated_role;
+                BEGIN
+                    DROP ROLE authenticated_role;
+                EXCEPTION WHEN dependent_objects_still_exist THEN
+                    RAISE NOTICE 'authenticated_role retained: still referenced in another database in this cluster';
+                END;
             END IF;
             IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
                 EXECUTE 'DROP OWNED BY service_role';
-                DROP ROLE service_role;
+                BEGIN
+                    DROP ROLE service_role;
+                EXCEPTION WHEN dependent_objects_still_exist THEN
+                    RAISE NOTICE 'service_role retained: still referenced in another database in this cluster';
+                END;
             END IF;
         END
         $$;
