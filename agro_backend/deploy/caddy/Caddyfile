@@ -53,6 +53,16 @@ api-IP-WITH-DASHES.sslip.io {
         }
     }
 
+    # Inbound webhooks (Meta WhatsApp: GET verify + POST events). Must reach the
+    # app — without this they fall through to the catch-all 200 and Meta's
+    # verification/handshake fails.
+    handle /webhooks/* {
+        reverse_proxy app:8000 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
     handle /metrics {
         # Production metric scraping is Tailscale-only.
         @tailscale remote_ip 100.64.0.0/10
