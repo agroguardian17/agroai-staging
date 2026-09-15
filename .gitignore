@@ -1,0 +1,25 @@
+# Root-level ignore (complements agro_backend/.gitignore, which only governs that subtree).
+
+# macOS
+.DS_Store
+._*
+Icon?
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+
+# Environments / secrets
+.env
+.env.*
+!.env.example
+
+# Scratch / unrelated working files that have landed in the repo dir
+Claude outputs/
