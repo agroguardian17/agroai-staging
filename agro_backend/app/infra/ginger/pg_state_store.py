@@ -35,7 +35,7 @@ a future migration between SQLite and Postgres is a plain ``COPY`` of the
 from __future__ import annotations
 
 import json
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING, Any, cast
 
 import psycopg2  # type: ignore[import-untyped]
@@ -152,7 +152,7 @@ class PgStateStore:
                     plot_id,
                     STATE_VERSION,
                     _iso(last_run),
-                    datetime.utcnow().isoformat(timespec="seconds"),
+                    datetime.now(UTC).isoformat(timespec="seconds"),
                     payload,
                 ),
             )
