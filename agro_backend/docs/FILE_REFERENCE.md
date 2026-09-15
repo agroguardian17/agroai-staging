@@ -6,6 +6,16 @@ Python package boundaries even when they contain no runtime code. Generated
 virtual environments and caches are intentionally not part of the repository
 and are not documented as source files.
 
+> **⚠️ Freshness (2026-09-15).** This index was last swept around migration
+> `0009` / Round G. Not individually listed below but present in the tree
+> (see `SKILL_agroguardian.md` / `DATA_INVENTORY.md`): migrations `0010`–`0014`;
+> the Round 16 `device_calibration` trio (domain/port/`pg_*_repo`); the Round 17
+> `weather_station_reading` trio; the Round 17.5 `main_node_reading` trio +
+> `http/main_nodes.py` + `models/main_node.py`; and the Round 13 advisory
+> subscriber (`application/dispatch_advisory.py`, `infra/events/pg_notify_listener.py`,
+> `jobs/advisory_subscriber.py`). The `firmware/sub_node/eeprom_provisioner/`
+> entry no longer exists (v2.1 uses a compile-time `NODE_ID`).
+
 ## Root and backend control files
 
 | File | Purpose |
@@ -154,6 +164,11 @@ and are not documented as source files.
 | `alembic/versions/0007_audit_log.py` | Audit trigger function and master-table triggers. |
 | `alembic/versions/0008_rls_policies.py` | Roles, grants, tenant RLS, ownership policies, and AI review guard. |
 | `alembic/versions/0009_auth_otp_tables.py` | Active `otp_challenges` and `auth_sessions` tables. |
+| `alembic/versions/0010_ginger_kb.py` | Ginger KB — 19 `kb_*` + 4 runtime tables + views + trigger + 431 rules. |
+| `alembic/versions/0011_add_water_pressure_bar.py` | `water_pressure_bar` column on `node_sensor_readings`. |
+| `alembic/versions/0012_device_calibration.py` | Round 16 `device_calibration` table + AGR-SN-0001 seed. |
+| `alembic/versions/0013_main_node_readings.py` | Round 17.5 `main_node_readings` heartbeat table. |
+| `alembic/versions/0014_advisory_status.py` | Round 13 advisory state-machine columns on `alerts_notifications`. |
 
 Migrations are authoritative for the deployed schema; the ORM registry is not
 used for autogeneration.

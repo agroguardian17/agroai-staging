@@ -91,7 +91,7 @@ alembic downgrade -1
 alembic revision -m "describe the schema change"
 ```
 
-`DATABASE_URL` is the async application DSN. `DATABASE_URL_SYNC` is used by Alembic. The migration history currently ends at `0009_auth_otp_tables`.
+`DATABASE_URL` is the async application DSN. `DATABASE_URL_SYNC` is used by Alembic. The migration history currently ends at `0014_advisory_status` (Round 13). Note: the machine default `python3` may be newer than 3.12 — use `python3.12` or the project `.venv` (the project pins `requires-python >=3.12,<3.13`).
 
 Do not edit an already-applied migration. When adding a field or changing an enum, update the domain/wire model, SQLAlchemy model, a new Alembic migration, relevant tests, and any wire/schema documentation in the same change.
 

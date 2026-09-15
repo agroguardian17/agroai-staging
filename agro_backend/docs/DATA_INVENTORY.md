@@ -35,7 +35,7 @@ Every field in the schema comes from exactly one of these sources. The abbreviat
 | **LLM** | Claude LLM | Sonnet or Haiku, invoked by `compose_advisory` or the Ginger Engine | Per-alert or daily 06:30 IST |
 | **CAL** | Device calibration row | Field team's `UPDATE device_calibration SET …` after physical measurement | Once during commissioning; updated rarely |
 | **FW** | Firmware constant | Compiled into the firmware image and reported over MQTT | On device flash |
-| **AUTH** | Auth flow output | Argon2id hash, JWT claim, OTP generation | On login/verify |
+| **AUTH** | Auth flow output | Salted **SHA-256** OTP hash + HS256 JWT claims + SHA-256 refresh-token hash (staff `users.password_hash` = Argon2id is aspirational — no staff-login flow yet) | On login/verify |
 | **AUDIT** | Audit trigger | Postgres trigger writing to `audit_log` on any INSERT/UPDATE/DELETE of watched tables | Every mutation |
 | **AGRO** | Agronomy team, curated | Ginger Engine KB content — 431 rules + stage catalogue + Farm Brain schema hand-authored by the agronomy team, imported via a single 1.16 MB SQL blob per KB release | Once per KB release; versioned via `kb_domains.version` |
 

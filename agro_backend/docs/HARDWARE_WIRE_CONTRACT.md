@@ -174,6 +174,15 @@ tests, and a documentation update.
 
 ## 4.3 LoRa packet — Sub Node → Main Node (CSV over the air)
 
+> **⚠️ This subsection documents the LEGACY pre-Round-16 calibrated CSV.** The
+> FINAL v2.1 firmware (`viraai-sn-1.0.0-raw`) emits a **raw-values** CSV instead:
+> `NODE,SEQ,WIN,UP,SOIL,BAT,PRESS,FLOW,FTOT,DST,NOK,NT,NM,EC,PH,N,P,K[,FLT],FW`
+> (raw ADC counts + pulse counts + Modbus registers; `FLT` only on a fault
+> cycle). The Main Node maps this into the `v2-raw` JSON in §11, and the server
+> applies per-device calibration (`device_calibration`, §11.3). The calibrated
+> CSV below is retained for historical reference only — see `SKILL_agroguardian.md`
+> §5 and `DATA_INVENTORY.md` for the current field list.
+
 
 The Sub Node firmware does NOT send JSON over LoRa. It sends a compact
 plain-text CSV frame because:

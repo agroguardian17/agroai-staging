@@ -37,8 +37,10 @@ Strict rules:
     Meta WA, FCM, NASA, Copernicus) are stubbed via respx or mocks.
 20. ARM64 + amd64 Docker images required. CI checks with
     docker buildx build --platform linux/amd64,linux/arm64.
-21. LLM model selection is via ModelRole (PRIMARY=Sonnet, TRIAGE=Haiku),
-    not by model name. Never hardcode 'claude-sonnet-4-6' in use cases.
+21. LLM model ids are resolved from settings (ANTHROPIC_MODEL_SONNET /
+    ANTHROPIC_MODEL_HAIKU) and injected into use cases by the composition layer
+    (jobs/DI) — never hardcoded inside a use case. A ModelRole enum
+    (PRIMARY=Sonnet, TRIAGE=Haiku) over these settings is planned, not yet built.
 22. Razorpay SDK is NOT a pilot dependency. subscriptions_billing exists
     but is empty. Pilot tenant uses tier='pilot_internal'.
 23. SMS adapter exists as a Protocol only. Pilot uses WhatsApp for both
