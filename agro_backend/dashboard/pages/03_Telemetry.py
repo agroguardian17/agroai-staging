@@ -37,7 +37,9 @@ with tab_sensor:
         ).sort_values("recorded_at")
         present = [c for c in _NUMERIC if c in data.columns]
         pick = st.multiselect(
-            "Series", present, default=[c for c in ("soil_moisture_avg_pct", "battery_voltage_v") if c in present]
+            "Series",
+            present,
+            default=[c for c in ("soil_moisture_avg_pct", "battery_voltage_v") if c in present],
         )
         if pick and not data.empty:
             st.line_chart(data.set_index("recorded_at")[pick])

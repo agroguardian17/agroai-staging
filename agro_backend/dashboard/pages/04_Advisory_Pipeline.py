@@ -18,7 +18,9 @@ f = st.columns(6)
 f[0].metric("Alerts", int(db.scalar("SELECT count(*) FROM alerts_notifications") or 0))
 f[1].metric(
     "Composed",
-    int(db.scalar("SELECT count(*) FROM alerts_notifications WHERE advisory_status='composed'") or 0),
+    int(
+        db.scalar("SELECT count(*) FROM alerts_notifications WHERE advisory_status='composed'") or 0
+    ),
 )
 f[2].metric("Advisories", int(db.scalar("SELECT count(*) FROM ai_suggestions") or 0))
 f[3].metric(

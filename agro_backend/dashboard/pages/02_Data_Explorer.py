@@ -37,7 +37,12 @@ c2.metric("Columns", len(cols))
 
 # Order by a sensible recency column when present, else primary- key-ish.
 order_candidates = [
-    "generated_at", "received_at", "recorded_at", "triggered_at", "created_at", "timestamp"
+    "generated_at",
+    "received_at",
+    "recorded_at",
+    "triggered_at",
+    "created_at",
+    "timestamp",
 ]
 order_col = next((c for c in order_candidates if c in cols), cols[0] if cols else None)
 limit = st.slider("Rows to show", 10, 500, 100, step=10)
@@ -45,7 +50,9 @@ limit = st.slider("Rows to show", 10, 500, 100, step=10)
 if order_col:
     order_dir = st.radio("Order", ["newest first", "oldest first"], horizontal=True)
     direction = "DESC" if order_dir == "newest first" else "ASC"
-    rows = db.df(f'SELECT * FROM "{table}" ORDER BY "{order_col}" {direction} LIMIT :lim', {"lim": limit})
+    rows = db.df(
+        f'SELECT * FROM "{table}" ORDER BY "{order_col}" {direction} LIMIT :lim', {"lim": limit}
+    )
 else:
     rows = db.df(f'SELECT * FROM "{table}" LIMIT :lim', {"lim": limit})
 
