@@ -361,7 +361,7 @@ class MasterReadings(BaseModel):
     # "ntp" = fresh modem NTP, "rtc" = DS3231 fallback, "none" = sentinel
     # 1970-01-01 (the broker-side clock-skew net will rewrite this).
     # Optional with default None so pre-2026-08-27-v1 firmware validates.
-    time_source: str | None = Field(default=None, max_length=16)
+    time_source: Literal["ntp", "rtc", "none"] | None = None
 
     # 2026-08-27 v2 firmware — Main Node's view of Sub Node liveness at
     # the moment this payload was assembled. Always True on the v2-raw
@@ -573,7 +573,7 @@ class MasterReadingsHeartbeat(BaseModel):
     wind_dir_adc: int = Field(default=0, ge=0, le=4095)
     # 2026-09-05 v2.1 firmware — see MasterReadings.wind_gust_pulses_max.
     wind_gust_pulses_max: int = Field(default=0, ge=0)
-    time_source: str | None = Field(default=None, max_length=16)
+    time_source: Literal["ntp", "rtc", "none"] | None = None
     sub_node_online: bool
     # Milliseconds since the Main Node last received a LoRa frame from
     # the Sub Node. 0 when we've never heard from it since Main Node boot

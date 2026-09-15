@@ -1,6 +1,6 @@
 """Model-layer tests that need no database (run on Windows + CI).
 
-These assert the ORM mapping matches the migrations: all 37 tables present,
+These assert the ORM mapping matches the migrations: all 39 tables present,
 tenant_id on tenant-scoped tables, partition metadata + idempotency constraints
 on the time-series tables, and the key v3 columns.
 """
@@ -52,6 +52,9 @@ EXPECTED_TABLES = {
     "wa_inbound_log",
     "device_calibration",
     "main_node_readings",
+    # 0009 active auth tables (legacy otp_codes/refresh_tokens above superseded)
+    "otp_challenges",
+    "auth_sessions",
 }
 
 # Every tenant-scoped table must carry tenant_id.
@@ -63,10 +66,10 @@ TENANT_SCOPED = EXPECTED_TABLES - {
 }
 
 
-def test_all_37_tables_registered() -> None:
+def test_all_39_tables_registered() -> None:
     actual = set(Base.metadata.tables.keys())
     assert actual == EXPECTED_TABLES
-    assert len(actual) == 37
+    assert len(actual) == 39
 
 
 @pytest.mark.parametrize("table", sorted(TENANT_SCOPED))

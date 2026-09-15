@@ -360,6 +360,14 @@ def test_master_readings_accepts_sub_node_online_flag() -> None:
     assert model.master_readings.sub_node_online is False
 
 
+def test_master_readings_rejects_unknown_time_source() -> None:
+    """F-001: time_source is a Literal ntp/rtc/none; anything else is rejected."""
+    payload = copy.deepcopy(_raw_payload())
+    payload["master_readings"]["time_source"] = "gps"
+    with pytest.raises(ValidationError):
+        TelemetryInRaw.model_validate(payload)
+
+
 # ---------- 2026-08-27 v2 firmware: v2-master heartbeat ----------
 
 
