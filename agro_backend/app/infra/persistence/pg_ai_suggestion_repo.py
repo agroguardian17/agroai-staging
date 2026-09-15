@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any, cast
 
 from sqlalchemy import text
@@ -101,6 +102,109 @@ class PgAiSuggestionRepo:
             res = await session.execute(stmt, {"plot_id": plot_id, "limit": limit})
             rows = res.all()
         return [_row_to_suggestion(r) for r in rows]
+
+    # --- Round 14 delivery state machine (migration 0016) -----------------
+
+    async def claim_for_delivery(
+        self, suggestion_id: uuid.UUID, now: datetime, *, require_review: bool
+    ) -> int | None:
+        stmt = text(
+            """
+            UPDATE ai_suggestions
+            SET delivery_status = 'in_flight',
+                delivery_claimed_at = :now
+            WHERE suggestion_id = :sid
+              AND delivery_status = 'pending'
+              AND (delivery_next_retry_at IS NULL OR delivery_next_retry_at <= :now)
+              AND (NOT CAST(:require_review AS boolean) OR review_status = 'approved')
+            RETURNING delivery_attempts
+            """
+        )
+        async with self._sm() as session:
+            res = await session.execute(
+                stmt, {"sid": suggestion_id, "now": now, "require_review": require_review}
+            )
+            row = res.first()
+            await session.commit()
+        if row is None:
+            return None
+        return int(cast(Any, row).delivery_attempts)
+
+    async def set_delivery_outcome(
+        self,
+        suggestion_id: uuid.UUID,
+        *,
+        status: str,
+        attempts: int | None = None,
+        next_retry_at: datetime | None = None,
+        last_error: str | None = None,
+        provider_message_id: str | None = None,
+        sent_at: datetime | None = None,
+    ) -> None:
+        sets = [
+            "delivery_status = :status",
+            "delivery_next_retry_at = :nra",
+            "delivery_last_error = :err",
+        ]
+        params: dict[str, Any] = {
+            "sid": suggestion_id,
+            "status": status,
+            "nra": next_retry_at,
+            "err": last_error,
+        }
+        if attempts is not None:
+            sets.append("delivery_attempts = :attempts")
+            params["attempts"] = attempts
+        if provider_message_id is not None:
+            sets.append("delivery_provider_message_id = :pmid")
+            params["pmid"] = provider_message_id
+        if status == "sent":
+            # Also set the base 0001 markers so existing readers see it as sent.
+            sets.append("whatsapp_sent = TRUE")
+            sets.append("whatsapp_sent_at = :sent_at")
+            params["sent_at"] = sent_at
+        stmt = text(f"UPDATE ai_suggestions SET {', '.join(sets)} WHERE suggestion_id = :sid")
+        async with self._sm() as session:
+            await session.execute(stmt, params)
+            await session.commit()
+
+    async def list_due_deliveries(
+        self, now: datetime, *, require_review: bool, limit: int = 100
+    ) -> list[uuid.UUID]:
+        stmt = text(
+            """
+            SELECT suggestion_id
+            FROM ai_suggestions
+            WHERE delivery_status = 'pending'
+              AND (delivery_next_retry_at IS NULL OR delivery_next_retry_at <= :now)
+              AND (NOT CAST(:require_review AS boolean) OR review_status = 'approved')
+            ORDER BY generated_at ASC
+            LIMIT :limit
+            """
+        )
+        async with self._sm() as session:
+            res = await session.execute(
+                stmt, {"now": now, "require_review": require_review, "limit": limit}
+            )
+            rows = res.all()
+        return [cast(uuid.UUID, cast(Any, r).suggestion_id) for r in rows]
+
+    async def revert_stale_deliveries(self, cutoff: datetime, now: datetime) -> int:
+        stmt = text(
+            """
+            UPDATE ai_suggestions
+            SET delivery_status = 'pending',
+                delivery_next_retry_at = :now,
+                delivery_last_error = 'stale_revert'
+            WHERE delivery_status = 'in_flight'
+              AND delivery_claimed_at IS NOT NULL
+              AND delivery_claimed_at < :cutoff
+            """
+        )
+        async with self._sm() as session:
+            res = await session.execute(stmt, {"cutoff": cutoff, "now": now})
+            await session.commit()
+        return int(cast(Any, res).rowcount or 0)
 
 
 __all__ = ["PgAiSuggestionRepo"]

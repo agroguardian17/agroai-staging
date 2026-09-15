@@ -177,10 +177,20 @@ advisory_composed_total = Counter(
     registry=REGISTRY,
 )
 
+# ----- Advisory delivery (Round 14) --------------------------------------
+advisory_delivered_total = Counter(
+    "agro_advisory_delivered_total",
+    "Advisory WhatsApp-delivery outcomes, labeled by outcome (sent/skipped/"
+    "failed_transient/failed_permanent/transient_retry/already_handled/error).",
+    ["outcome"],
+    registry=REGISTRY,
+)
+
 
 __all__ = [
     "REGISTRY",
     "advisory_composed_total",
+    "advisory_delivered_total",
     "alerts_cooldown_suppressed_total",
     "alerts_created_total",
     "auth_otp_total",

@@ -54,5 +54,25 @@ class WhatsappSender(Protocol):
         """
         ...
 
+    async def send_template(
+        self,
+        *,
+        phone: str,
+        template_name: str,
+        language_code: str,
+        body_params: list[str],
+    ) -> WhatsappSendResult:
+        """Send a business-initiated template with text body parameters.
+
+        Round 14 advisory delivery uses this: a proactive (outside the 24h
+        service window) message must be a pre-approved template, so the Marathi
+        advisory text is passed as the template's body parameter(s).
+
+        Same contract as :meth:`send_otp_template` — implementations MUST NOT
+        raise on provider errors; set ``accepted=False`` + ``error_code`` and
+        let the caller decide (transient retry vs permanent failure).
+        """
+        ...
+
 
 __all__ = ["WhatsappSendResult", "WhatsappSender"]

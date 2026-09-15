@@ -95,6 +95,21 @@ class AiSuggestion(Base):
     )
     reviewed_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True))
     review_notes: Mapped[str | None] = mapped_column(Text)
+    # Round 14 (0016) — WhatsApp delivery state machine. Distinct from the
+    # simple whatsapp_sent / whatsapp_sent_at markers above (0001), which the
+    # delivery use case sets on success.
+    delivery_status: Mapped[str] = mapped_column(
+        Text, nullable=False, server_default=text("'pending'")
+    )
+    delivery_attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
+    delivery_next_retry_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+    delivery_claimed_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True))
+    delivery_last_error: Mapped[str | None] = mapped_column(Text)
+    delivery_provider_message_id: Mapped[str | None] = mapped_column(Text)
 
 
 class AiLearningLog(Base):

@@ -122,6 +122,16 @@ class Settings(BaseSettings):
     # How often the reconciliation sweep runs (recovers lost NOTIFYs + reaps).
     ADVISORY_RECONCILE_SECONDS: int = 60
 
+    # ---- Advisory delivery (Round 14) ---------------------------------------
+    # Master switch for the delivery subscriber (LISTEN suggestion.generated ->
+    # deliver_advisory -> WhatsApp). Off in tests/CI. Shares the reconcile/stale
+    # cadence above.
+    ADVISORY_DELIVERY_ENABLED: bool = True
+    # When true, only advisories with review_status='approved' are delivered
+    # (agronomist human-in-the-loop, pilot Phase 5). Off by default so composed
+    # advisories deliver straight through until the review UI exists.
+    ADVISORY_REQUIRE_REVIEW: bool = False
+
     # ---- ChromaDB -----------------------------------------------------------
     CHROMA_HOST: str = "localhost"
     CHROMA_PORT: int = 8001
