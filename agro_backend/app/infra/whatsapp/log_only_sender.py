@@ -40,5 +40,25 @@ class LogOnlyWhatsappSender:
             provider_message_id=f"log-{uuid4().hex[:12]}",
         )
 
+    async def send_template(
+        self,
+        *,
+        phone: str,
+        template_name: str,
+        language_code: str,
+        body_params: list[str],
+    ) -> WhatsappSendResult:
+        log.info(
+            "whatsapp.log_only_sender.fake_template_send",
+            phone=mask_phone(phone),
+            template=template_name,
+            language=language_code,
+            body_chars=sum(len(p) for p in body_params),
+        )
+        return WhatsappSendResult(
+            accepted=True,
+            provider_message_id=f"log-{uuid4().hex[:12]}",
+        )
+
 
 __all__ = ["LogOnlyWhatsappSender"]

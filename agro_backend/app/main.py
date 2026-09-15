@@ -33,10 +33,15 @@ from app.infra.http import auth as auth_routes
 from app.infra.http import health
 from app.infra.http import main_nodes as main_node_routes
 from app.infra.http import plots as plot_routes
+from app.infra.http import webhooks as webhook_routes
 from app.infra.http.deps import shutdown_engine
 from app.jobs.advisory_subscriber import (
     build_and_start_advisory_subscriber,
     stop_advisory_subscriber,
+)
+from app.jobs.delivery_subscriber import (
+    build_and_start_delivery_subscriber,
+    stop_delivery_subscriber,
 )
 from app.jobs.ginger_scheduler import build_and_start_scheduler, stop_scheduler
 from app.jobs.ingest_startup import build_and_start_ingest, stop_ingest
@@ -50,6 +55,7 @@ if TYPE_CHECKING:
 
     from app.infra.mqtt.broker import IngestBroker
     from app.jobs.advisory_subscriber import AdvisorySubscriberHandle
+    from app.jobs.delivery_subscriber import DeliverySubscriberHandle
 
 log = structlog.get_logger(__name__)
 
@@ -76,12 +82,16 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     broker: IngestBroker | None = None
     scheduler: AsyncIOScheduler | None = None
     advisory: AdvisorySubscriberHandle | None = None
+    delivery: DeliverySubscriberHandle | None = None
     try:
         broker = await build_and_start_ingest(settings)
         scheduler = await build_and_start_scheduler(settings)
         advisory = await build_and_start_advisory_subscriber(settings)
+        delivery = await build_and_start_delivery_subscriber(settings)
         yield
     finally:
+        if delivery is not None:
+            await stop_delivery_subscriber(delivery)
         if advisory is not None:
             await stop_advisory_subscriber(advisory)
         if scheduler is not None:
@@ -148,6 +158,7 @@ def create_app() -> FastAPI:
     app.include_router(plot_routes.router)
     app.include_router(alert_routes.router)
     app.include_router(main_node_routes.router)
+    app.include_router(webhook_routes.router)
 
     # Prometheus exposition. In production, Caddy gates this to Tailscale only.
     @app.get("/metrics", include_in_schema=False)

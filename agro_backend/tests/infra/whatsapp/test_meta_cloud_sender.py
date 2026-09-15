@@ -92,11 +92,51 @@ async def test_network_error_returns_network_error_code() -> None:
 
 
 @pytest.mark.asyncio
+@respx.mock
+async def test_send_template_posts_body_only_advisory_payload() -> None:
+    route = respx.post(URL).mock(
+        return_value=httpx.Response(200, json={"messages": [{"id": "wamid.ADV1"}]})
+    )
+    async with httpx.AsyncClient() as client:
+        sender = MetaCloudWhatsappSender(_settings(), client=client)
+        out = await sender.send_template(
+            phone="+918123456789",
+            template_name="agroguardian_advisory_v1",
+            language_code="mr",
+            body_params=["आज पाणी द्या."],
+        )
+    assert route.called
+    assert out.accepted is True
+    assert out.provider_message_id == "wamid.ADV1"
+
+    body = route.calls.last.request.read().decode()
+    assert "agroguardian_advisory_v1" in body
+    assert '"code": "mr"' in body or '"code":"mr"' in body
+    # Body-only template: exactly one component, no button.
+    assert '"type": "button"' not in body and '"type":"button"' not in body
+
+
+@pytest.mark.asyncio
 async def test_log_only_sender_always_accepts() -> None:
     from app.infra.whatsapp.log_only_sender import LogOnlyWhatsappSender
 
     out = await LogOnlyWhatsappSender().send_otp_template(
         phone="+918123456789", code="123456", template_name="t"
+    )
+    assert out.accepted is True
+    assert out.provider_message_id is not None
+    assert out.provider_message_id.startswith("log-")
+
+
+@pytest.mark.asyncio
+async def test_log_only_sender_send_template_accepts() -> None:
+    from app.infra.whatsapp.log_only_sender import LogOnlyWhatsappSender
+
+    out = await LogOnlyWhatsappSender().send_template(
+        phone="+918123456789",
+        template_name="agroguardian_advisory_v1",
+        language_code="mr",
+        body_params=["आज पाणी द्या."],
     )
     assert out.accepted is True
     assert out.provider_message_id is not None

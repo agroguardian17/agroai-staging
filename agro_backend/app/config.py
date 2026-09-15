@@ -122,6 +122,16 @@ class Settings(BaseSettings):
     # How often the reconciliation sweep runs (recovers lost NOTIFYs + reaps).
     ADVISORY_RECONCILE_SECONDS: int = 60
 
+    # ---- Advisory delivery (Round 14) ---------------------------------------
+    # Master switch for the delivery subscriber (LISTEN suggestion.generated ->
+    # deliver_advisory -> WhatsApp). Off in tests/CI. Shares the reconcile/stale
+    # cadence above.
+    ADVISORY_DELIVERY_ENABLED: bool = True
+    # When true, only advisories with review_status='approved' are delivered
+    # (agronomist human-in-the-loop, pilot Phase 5). Off by default so composed
+    # advisories deliver straight through until the review UI exists.
+    ADVISORY_REQUIRE_REVIEW: bool = False
+
     # ---- ChromaDB -----------------------------------------------------------
     CHROMA_HOST: str = "localhost"
     CHROMA_PORT: int = 8001
@@ -140,6 +150,10 @@ class Settings(BaseSettings):
     META_WHATSAPP_BUSINESS_ACCOUNT_ID: str = ""
     META_WHATSAPP_TOKEN: SecretStr = SecretStr("")
     META_WHATSAPP_VERIFY_TOKEN: SecretStr = SecretStr("")
+    # App secret for verifying the X-Hub-Signature-256 on inbound webhooks
+    # (Round 14 PR B). When empty (dev/staging without a WABA) signature
+    # verification is skipped; when set it is enforced.
+    META_WHATSAPP_APP_SECRET: SecretStr = SecretStr("")
     META_WHATSAPP_OTP_TEMPLATE_NAME: str = "agroguardian_otp_v1"
     META_WHATSAPP_ADVISORY_TEMPLATE_NAME: str = "agroguardian_advisory_v1"
     META_WHATSAPP_GRAPH_VERSION: str = "v20.0"

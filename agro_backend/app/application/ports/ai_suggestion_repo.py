@@ -55,5 +55,47 @@ class AiSuggestionRepo(Protocol):
         """
         ...
 
+    # --- Round 14 delivery state machine (migration 0016) -----------------
+
+    async def claim_for_delivery(
+        self, suggestion_id: uuid.UUID, now: datetime, *, require_review: bool
+    ) -> int | None:
+        """Atomically move a due ``pending`` row to ``in_flight``.
+
+        Returns the prior ``delivery_attempts`` on success, or ``None`` if the
+        row was not claimable (already handled, not yet due, or — when
+        ``require_review`` is set — not yet ``review_status='approved'``). The
+        atomic UPDATE...RETURNING makes concurrent listener+reconciler safe.
+        """
+        ...
+
+    async def set_delivery_outcome(
+        self,
+        suggestion_id: uuid.UUID,
+        *,
+        status: str,
+        attempts: int | None = None,
+        next_retry_at: datetime | None = None,
+        last_error: str | None = None,
+        provider_message_id: str | None = None,
+        sent_at: datetime | None = None,
+    ) -> None:
+        """Record the terminal (or retry) delivery outcome.
+
+        On ``status='sent'`` implementations also set the base ``whatsapp_sent``
+        / ``whatsapp_sent_at`` markers (0001) from ``sent_at``.
+        """
+        ...
+
+    async def list_due_deliveries(
+        self, now: datetime, *, require_review: bool, limit: int = 100
+    ) -> list[uuid.UUID]:
+        """Pending, due (and — if required — approved) suggestion ids."""
+        ...
+
+    async def revert_stale_deliveries(self, cutoff: datetime, now: datetime) -> int:
+        """Reap ``in_flight`` rows claimed before ``cutoff`` (crashed workers)."""
+        ...
+
 
 __all__ = ["AiSuggestion", "AiSuggestionRepo"]

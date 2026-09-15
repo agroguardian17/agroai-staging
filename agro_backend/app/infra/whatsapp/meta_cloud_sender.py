@@ -104,12 +104,28 @@ class MetaCloudWhatsappSender:
             },
         }
 
-    async def send_otp_template(
-        self, *, phone: str, code: str, template_name: str, language_code: str = "en"
-    ) -> WhatsappSendResult:
-        payload = self._payload(
-            phone=phone, code=code, template_name=template_name, language_code=language_code
-        )
+    def _template_payload(
+        self, *, phone: str, template_name: str, language_code: str, body_params: list[str]
+    ) -> dict[str, Any]:
+        # A plain body-only template (e.g. the advisory template renders
+        # "{{1}}" with the full Marathi message). No button component.
+        return {
+            "messaging_product": "whatsapp",
+            "to": phone,
+            "type": "template",
+            "template": {
+                "name": template_name,
+                "language": {"code": language_code},
+                "components": [
+                    {
+                        "type": "body",
+                        "parameters": [{"type": "text", "text": p} for p in body_params],
+                    }
+                ],
+            },
+        }
+
+    async def _post(self, payload: dict[str, Any], phone: str) -> WhatsappSendResult:
         owns_client = self._client is None
         client = self._client or httpx.AsyncClient(timeout=self._s.timeout_seconds)
         try:
@@ -129,6 +145,30 @@ class MetaCloudWhatsappSender:
         if resp.status_code >= 400:
             return self._failure_from(resp, phone)
         return self._success_from(resp, phone)
+
+    async def send_otp_template(
+        self, *, phone: str, code: str, template_name: str, language_code: str = "en"
+    ) -> WhatsappSendResult:
+        payload = self._payload(
+            phone=phone, code=code, template_name=template_name, language_code=language_code
+        )
+        return await self._post(payload, phone)
+
+    async def send_template(
+        self,
+        *,
+        phone: str,
+        template_name: str,
+        language_code: str,
+        body_params: list[str],
+    ) -> WhatsappSendResult:
+        payload = self._template_payload(
+            phone=phone,
+            template_name=template_name,
+            language_code=language_code,
+            body_params=body_params,
+        )
+        return await self._post(payload, phone)
 
     def _success_from(self, resp: httpx.Response, phone: str) -> WhatsappSendResult:
         try:
