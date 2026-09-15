@@ -127,6 +127,10 @@ jobs:
   build-multiarch:
     name: Multi-arch Docker build
     runs-on: ubuntu-latest
+    # The arm64 QEMU cross-build takes ~45-60 min, which would make every PR
+    # wait an hour. Skip it on pull_request (lint + tests are the PR gate) and
+    # only validate the cross-platform build on pushes to main / develop.
+    if: github.event_name != 'pull_request'
     defaults:
       run:
         working-directory: agro_backend
