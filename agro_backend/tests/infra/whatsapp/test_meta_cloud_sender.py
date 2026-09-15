@@ -117,6 +117,30 @@ async def test_send_template_posts_body_only_advisory_payload() -> None:
 
 
 @pytest.mark.asyncio
+@respx.mock
+async def test_send_template_sanitizes_newlines_in_body_param() -> None:
+    route = respx.post(URL).mock(
+        return_value=httpx.Response(200, json={"messages": [{"id": "wamid.ADV2"}]})
+    )
+    async with httpx.AsyncClient() as client:
+        sender = MetaCloudWhatsappSender(_settings(), client=client)
+        await sender.send_template(
+            phone="+918123456789",
+            template_name="agroguardian_advisory_v1",
+            language_code="mr",
+            body_params=["ओळ १\nओळ २\t\t  खूप   जागा"],
+        )
+    body = route.calls.last.request.read().decode()
+    import json as _json
+
+    param_text = _json.loads(body)["template"]["components"][0]["parameters"][0]["text"]
+    # Meta rejects newlines/tabs and runs of >4 spaces — all collapsed to single.
+    assert "\n" not in param_text and "\t" not in param_text
+    assert "  " not in param_text
+    assert param_text == "ओळ १ ओळ २ खूप जागा"
+
+
+@pytest.mark.asyncio
 async def test_log_only_sender_always_accepts() -> None:
     from app.infra.whatsapp.log_only_sender import LogOnlyWhatsappSender
 

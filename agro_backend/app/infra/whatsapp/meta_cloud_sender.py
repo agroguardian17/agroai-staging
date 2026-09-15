@@ -31,6 +31,7 @@ HTTP status (4xx vs 5xx) plus the provider's ``code`` if present.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -41,6 +42,19 @@ from app.application.ports.whatsapp_sender import WhatsappSendResult
 from app.domain.auth import mask_phone
 
 log = structlog.get_logger(__name__)
+
+_WHITESPACE_RUN = re.compile(r"\s+")
+
+
+def _sanitize_param(text: str) -> str:
+    """Make a string safe as a WhatsApp template body parameter.
+
+    Meta rejects template parameters that contain newlines or tabs, or runs of
+    more than four spaces. A composed Marathi advisory may be multi-line, so we
+    collapse every run of whitespace to a single space (the message's structure
+    comes from the template's fixed text, not the parameter).
+    """
+    return _WHITESPACE_RUN.sub(" ", text).strip()
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,7 +133,9 @@ class MetaCloudWhatsappSender:
                 "components": [
                     {
                         "type": "body",
-                        "parameters": [{"type": "text", "text": p} for p in body_params],
+                        "parameters": [
+                            {"type": "text", "text": _sanitize_param(p)} for p in body_params
+                        ],
                     }
                 ],
             },
