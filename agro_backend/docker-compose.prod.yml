@@ -4,8 +4,30 @@
 #   - Caddy reverse-proxies all public traffic
 #   - Prometheus + Grafana run Tailscale-only (Caddyfile gates by source IP)
 #   - Restart policies are aggressive
+#   - Every service declares a healthcheck and a memory/CPU cap (F-015)
 #
 # Run: docker compose -f docker-compose.prod.yml up -d --build
+#
+# ── Deterministic deploys / rollback (F-016) ─────────────────────────────────
+# CI (.github/workflows/ci.yml) builds and pushes the app image to
+#   ghcr.io/agroguardian17/agro-backend
+# on every push to main/develop, tagged with an immutable `sha-<40-char-gitsha>`
+# (plus a moving `:latest` on main). To deploy a known-good build without a local
+# rebuild — and to roll back deterministically — set APP_IMAGE_TAG in .env to the
+# immutable tag and pull instead of build:
+#   APP_IMAGE_TAG=sha-<gitsha>  docker compose -f docker-compose.prod.yml pull app
+#   docker compose -f docker-compose.prod.yml up -d app
+# With APP_IMAGE_TAG unset the app service falls back to `:latest` (unchanged
+# behaviour), and `--build` still rebuilds locally from source.
+#
+# ── Host memory (F-015) ──────────────────────────────────────────────────────
+# The per-service `deploy.resources.limits.memory` values below are runaway
+# guardrails, not extra RAM. On a small (~2 GiB) box with no swap the kernel
+# OOM-killer still fires once *total* usage nears physical RAM. Add swap on the
+# host (one-time, root; not done by this repo — needs an explicit VPS approval):
+#   sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile
+#   sudo mkswap /swapfile && sudo swapon /swapfile
+#   echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
 name: agro-prod
 
@@ -34,6 +56,19 @@ services:
     depends_on:
       - app
       - mosquitto
+    healthcheck:
+      # Process liveness. caddy:2.x-alpine ships busybox pgrep; the reverse proxy
+      # is up iff the caddy process is running.
+      test: ["CMD-SHELL", "pgrep -x caddy >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 128M
     networks: [edge, internal]
 
   postgres:
@@ -52,6 +87,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 512M
     networks: [internal]
 
   mosquitto:
@@ -64,6 +104,19 @@ services:
       - ./deploy/mosquitto/acl:/mosquitto/config/acl:ro
       - mosquitto_data:/mosquitto/data
       - mosquitto_log:/mosquitto/log
+    healthcheck:
+      # Process liveness. eclipse-mosquitto ships busybox pgrep; a port/auth probe
+      # would need broker credentials, so we check the broker process instead.
+      test: ["CMD-SHELL", "pgrep -x mosquitto >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 64M
     networks: [internal]
 
   chroma:
@@ -76,13 +129,21 @@ services:
       IS_PERSISTENT: "TRUE"
       PERSIST_DIRECTORY: "/data"
       ANONYMIZED_TELEMETRY: "FALSE"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 512M
     networks: [internal]
 
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ghcr.io/agroguardian/agro-backend:latest
+    # GHCR namespace matches the repo owner (agroguardian17) so CI's GITHUB_TOKEN
+    # can push here. Pin APP_IMAGE_TAG to an immutable sha-<gitsha> for
+    # deterministic deploys/rollback (see header); defaults to :latest.
+    image: ghcr.io/agroguardian17/agro-backend:${APP_IMAGE_TAG:-latest}
     container_name: agro_app
     restart: always
     env_file:
@@ -110,6 +171,11 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 640M
     networks: [internal]
 
   prometheus:
@@ -120,6 +186,11 @@ services:
       - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./deploy/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
     networks: [internal]
 
   grafana:
@@ -131,6 +202,11 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
     volumes:
       - grafana_data:/var/lib/grafana
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
     networks: [internal]
 
 volumes:
