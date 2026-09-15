@@ -81,6 +81,16 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
 
+      # The test job installs the GDAL/GEOS/PROJ apt stack + a heavy Python dep
+      # tree (geospatial + testcontainers) on top of the Postgres service image,
+      # which overruns the default runner disk ([Errno 28] No space left). Free
+      # the ~20 GB of preinstalled toolchains we don't use first.
+      - name: Free up runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost /usr/local/share/powershell || true
+          df -h /
+
       - name: Install system deps for native wheels
         run: |
           sudo apt-get update
