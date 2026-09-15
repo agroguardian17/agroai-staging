@@ -114,6 +114,9 @@ class _FakePlotRepo:
     async def update_data_tier(self, plot_id: str, tier: DataTier) -> None:
         return None
 
+    async def assign_sub_node(self, plot_id: str, node_id: str) -> None:
+        return None
+
 
 class _FakeAlertRepo:
     async def create(self, candidate: AlertCandidate) -> int:

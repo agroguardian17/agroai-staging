@@ -57,6 +57,7 @@ from app.application.build_farm_brain import (
 )
 from app.application.ports.ai_suggestion_repo import AiSuggestion, AiSuggestionRepo
 from app.application.ports.crop_season_repo import CropSeasonRepo, CropSeasonView
+from app.application.ports.farmer_repo import FarmerRepo
 from app.application.ports.plot_repo import PlotRepo
 from app.application.ports.reading_repo import ReadingRepo
 from app.lib import metrics
@@ -84,6 +85,7 @@ class GingerDailyDeps:
     plot_repo: PlotRepo
     crop_season_repo: CropSeasonRepo
     ai_suggestion_repo: AiSuggestionRepo
+    farmer_repo: FarmerRepo
     # SYNC DSN — the engine's PostgresSource wants a libpq-style URL for
     # psycopg (v3). We pass this in so the job builder can hand it to
     # ``build_runner(PostgresSource(dsn), ...)``.
@@ -162,9 +164,15 @@ async def _run_one_plot(
     elapsed = time.perf_counter() - started
     metrics.ginger_engine_run_seconds.observe(elapsed)
 
+    # Resolve the farm's owner once per plot (was a hardcoded pilot UUID).
+    farmer_id = await deps.farmer_repo.owner_of_farm(season.farm_id)
+    if farmer_id is None:
+        log.warning("ginger_daily.no_owner", plot_id=season.plot_id, farm_id=str(season.farm_id))
+        return 0
+
     rows = 0
     for msg in engine_result.get("messages", []):
-        await _persist_message(deps.ai_suggestion_repo, season, msg, today)
+        await _persist_message(deps.ai_suggestion_repo, season, farmer_id, msg, today)
         rows += 1
         delivery_class = (
             engine_result.get("delivery", {}).get(msg.rule_id, "unknown")
@@ -222,14 +230,18 @@ def _invoke_engine(
 
 
 async def _persist_message(
-    repo: AiSuggestionRepo, season: CropSeasonView, msg: Any, today: date
+    repo: AiSuggestionRepo,
+    season: CropSeasonView,
+    farmer_id: uuid.UUID,
+    msg: Any,
+    today: date,
 ) -> None:
     """Write one engine message as an ``ai_suggestions`` row."""
     body = msg.render() if hasattr(msg, "render") else str(msg)
     suggestion = AiSuggestion(
         suggestion_id=uuid.uuid4(),
         tenant_id=season.tenant_id,
-        farmer_id=_farmer_id_for(season),  # see helper below
+        farmer_id=farmer_id,
         farm_id=season.farm_id,
         plot_id=season.plot_id,
         season_id=season.season_id,
@@ -243,20 +255,6 @@ async def _persist_message(
         crop_stage=season.current_growth_stage,
     )
     await repo.create(suggestion)
-
-
-def _farmer_id_for(season: CropSeasonView) -> uuid.UUID:
-    """Farmer FK on ai_suggestions.
-
-    CropSeasonView does not carry farmer_id today; the crop_seasons row
-    identifies a farm, and the farm identifies the farmer. For the pilot
-    (single farmer per farm) we look this up via a subquery in a follow-up.
-    Placeholder: the seeded pilot farmer id is used until we thread
-    farmer_id through the view.
-    """
-    # NB: the pilot has one farmer. When multi-tenant lands, replace this
-    # with a repo call: ``await farmer_repo.owner_of_farm(season.farm_id)``.
-    return uuid.UUID("aaaaaaaa-1111-1111-1111-111111111111")
 
 
 def _today_in(tz: ZoneInfo) -> date:

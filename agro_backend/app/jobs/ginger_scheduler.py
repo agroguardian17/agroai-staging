@@ -21,6 +21,7 @@ from apscheduler.triggers.cron import CronTrigger
 from app.infra.http.deps import _ensure_engine
 from app.infra.persistence.pg_ai_suggestion_repo import PgAiSuggestionRepo
 from app.infra.persistence.pg_crop_season_repo import PgCropSeasonRepo
+from app.infra.persistence.pg_farmer_repo import PgFarmerRepo
 from app.infra.persistence.pg_plot_repo import PgPlotRepo
 from app.infra.persistence.pg_reading_repo import PgReadingRepo
 from app.jobs.ginger_daily import GingerDailyDeps, run_daily
@@ -46,6 +47,7 @@ async def build_and_start_scheduler(settings: Settings) -> AsyncIOScheduler | No
         plot_repo=PgPlotRepo(sessionmaker),
         crop_season_repo=PgCropSeasonRepo(sessionmaker),
         ai_suggestion_repo=PgAiSuggestionRepo(sessionmaker),
+        farmer_repo=PgFarmerRepo(sessionmaker),
         sync_dsn=settings.DATABASE_URL_SYNC,
     )
 

@@ -122,13 +122,22 @@ class PgPlotRepo:
         # accidentally clear data without context. Round 9 wires the
         # full SUB_NODE registration flow.
         if tier is DataTier.SUB_NODE:
-            raise NotImplementedError(
-                "update_data_tier -> SUB_NODE requires a node_id argument; "
-                "wire the technician-install flow in Round 9"
+            raise ValueError(
+                "update_data_tier only clears to satellite_only; use "
+                "assign_sub_node(plot_id, node_id) to register a Sub Node"
             )
         stmt = text("UPDATE plots SET node_id = NULL WHERE plot_id = :plot_id")
         async with self._sm() as session:
             await session.execute(stmt, {"plot_id": plot_id})
+            await session.commit()
+
+    async def assign_sub_node(self, plot_id: str, node_id: str) -> None:
+        # Setting node_id flips data_tier to 'sub_node' via the plots_set_data_tier
+        # trigger (0004). The node_id FK to device_registry enforces the device
+        # exists — a bad id raises IntegrityError for the caller to surface.
+        stmt = text("UPDATE plots SET node_id = :node_id WHERE plot_id = :plot_id")
+        async with self._sm() as session:
+            await session.execute(stmt, {"plot_id": plot_id, "node_id": node_id})
             await session.commit()
 
 

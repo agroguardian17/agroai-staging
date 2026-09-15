@@ -55,16 +55,22 @@ class PlotRepo(Protocol):
         ...
 
     async def update_data_tier(self, plot_id: str, tier: DataTier) -> None:
-        """Transition a plot's data tier.
+        """Clear a plot back to ``satellite_only`` (NULLs ``node_id``).
 
+        The implementation updates ``node_id`` (the trigger keeps ``data_tier``
+        in sync) rather than writing ``data_tier`` directly. The
+        ``sub_node`` direction needs a device id, so use
+        :meth:`assign_sub_node` for that; this method only supports the
+        ``satellite_only`` transition.
+        """
+        ...
 
-        The implementation MUST update ``node_id`` (the trigger keeps
-        ``data_tier`` in sync) rather than writing ``data_tier``
-        directly - the column has a server default and the trigger is
-        authoritative. Going ``satellite_only -> sub_node`` requires a
-        ``node_id`` argument; the application layer is responsible for
-        looking up the right device before calling this. (We do not
-        re-shape this port until that flow lands in Round 9.)
+    async def assign_sub_node(self, plot_id: str, node_id: str) -> None:
+        """Register a Sub Node on a plot (Round 9).
+
+        Sets ``plots.node_id`` to the device id; the BEFORE trigger
+        ``plots_set_data_tier`` then flips ``data_tier`` to ``sub_node``. The
+        ``node_id`` FK to ``device_registry`` enforces that the device exists.
         """
         ...
 

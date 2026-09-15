@@ -39,5 +39,9 @@ class FarmerRepo(Protocol):
         """Return the farmer with this id, or None."""
         ...
 
+    async def owner_of_farm(self, farm_id: uuid.UUID) -> uuid.UUID | None:
+        """Return the farmer_id that owns this farm, or None if unknown."""
+        ...
+
 
 __all__ = ["FarmerIdentity", "FarmerRepo"]
