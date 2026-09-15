@@ -1,0 +1,3113 @@
+{
+  "_schema": {
+    "schema_version": "2.0",
+    "inherits_from": "Domain1_Rules_Ginger_v2.json",
+    "inheritance_note": "The full _schema block is defined in Domain 1 and is NOT repeated here. Units (per acre), stage codes G0-G5, source tiers A/B/C, source classes, priority scale, recoverability, severity and confidence bounds are inherited unchanged. Domain 2 to 11 additions are also assumed present. Only Domain 12 additions are declared below. This is the final domain of the ginger knowledge base.",
+    "additions": {
+      "rule_categories_domain_12": {
+        "POS": "honest positioning",
+        "ARCH": "layer architecture",
+        "LOG": "data logging",
+        "LANG": "language layer",
+        "VOC": "controlled vocabulary",
+        "MOD": "model selection",
+        "CLS": "classification problems",
+        "IMG": "image recognition",
+        "VOI": "voice interface",
+        "COLD": "cold start and degradation",
+        "AL": "active learning",
+        "CLU": "cluster level learning",
+        "DPDP": "data protection compliance",
+        "EVAL": "evaluation metrics",
+        "MOAT": "durable data assets",
+        "ROAD": "season roadmap"
+      },
+      "new_farm_brain_fields": {
+        "consent_advisory": "boolean",
+        "consent_research": "boolean",
+        "consent_date": "date",
+        "data_retention_until": "date",
+        "deletion_requested": "boolean",
+        "advisory_language": "enum:[mr, en]",
+        "advisory_issued_count": "integer",
+        "advisory_completed_count": "integer",
+        "advisory_completed_on_time_count": "integer",
+        "action_compliance_rate": "number",
+        "non_compliance_reason": "enum:[labour, time, cost, seemed_unnecessary, other, not_asked]",
+        "photo_uploaded_count": "integer",
+        "photo_labelled_count": "integer",
+        "asr_used": "boolean",
+        "model_version": "string",
+        "cluster_id": "string",
+        "cluster_anonymised": "boolean",
+        "false_alarm_count": "integer",
+        "true_alarm_count": "integer"
+      },
+      "layer_model": {
+        "layer_1_rules": {
+          "available_from": "day 1",
+          "depends_on": "nothing",
+          "value": "timely reminders worth about Rs 2.85 lakh per acre"
+        },
+        "layer_2_language": {
+          "available_from": "season 1",
+          "depends_on": "layer 1",
+          "value": "the farmer understands the advice"
+        },
+        "layer_3_learning": {
+          "available_from": "season 4 or later",
+          "depends_on": "layers 1 and 2 plus accumulated records",
+          "value": "accuracy improves"
+        },
+        "critical_note": "Layers 1 and 2 deliver full value without layer 3. The product is sellable from day one."
+      },
+      "positioning_policy": {
+        "permitted_description": "A decision-support system running on agronomist-authored rules and sensor input, which becomes more accurate each season.",
+        "prohibited_claims": [
+          "the AI tells the farmer what to do",
+          "AI-driven yield prediction",
+          "machine learning optimises the crop",
+          "the NPK probe measures NPK",
+          "we forecast the weather"
+        ],
+        "rationale": "Every prohibited claim would fail at the first technical review or the first unforecast dry spell. Partners in a POC discussion can tell the difference between a rule engine and a learned model, and overstating loses credibility that the honest description would have kept."
+      },
+      "dpdp_policy": {
+        "act": "Digital Personal Data Protection Act 2023",
+        "status": "rules and enforcement evolving; legal advice required before collection and before any data partnership",
+        "consent_model": {
+          "consent_1": {
+            "purpose": "deliver advisory",
+            "mandatory": true
+          },
+          "consent_2": {
+            "purpose": "anonymised data for research or partnership",
+            "mandatory": false,
+            "service_continues_if_refused": true
+          }
+        },
+        "coordinates_are_identity": "GPS coordinates cannot be anonymised. Any field is identifiable from its location.",
+        "never_share": [
+          "7/12 number",
+          "Aadhaar",
+          "bank details",
+          "precise coordinates"
+        ],
+        "shareable_when_aggregated": [
+          "soil moisture series",
+          "yield",
+          "rot incidence percent",
+          "weather observations"
+        ]
+      },
+      "decision_types": {
+        "AUTO_DECISION": {
+          "mr": "AI कधी व किती हे स्वतः ठरवतो",
+          "en": "engine computes the quantity or timing itself"
+        },
+        "SENSOR_ALERT": {
+          "mr": "sensor वर आधारित इशारा, कृती माणसाची",
+          "en": "sensor-triggered; the action is human work"
+        },
+        "SCHEDULED_REMINDER": {
+          "mr": "वेळापत्रकानुसार आठवण",
+          "en": "calendar or stage driven reminder"
+        },
+        "DIAGNOSTIC": {
+          "mr": "AI विचारतो, शेतकरी सांगतो",
+          "en": "engine asks, farmer answers, engine branches"
+        },
+        "DATA_CAPTURE": {
+          "mr": "नोंद किंवा मोजमाप मागतो",
+          "en": "engine requests a record or measurement"
+        },
+        "HUMAN_DECISION": {
+          "mr": "AI गणित दाखवतो, निर्णय माणसाचा",
+          "en": "engine presents arithmetic; person decides"
+        },
+        "BLOCK": {
+          "mr": "AI नाकारतो किंवा अडवतो",
+          "en": "engine refuses or blocks"
+        },
+        "PLANNING_GUIDANCE": {
+          "mr": "हंगामापूर्व निवड — शेतकरी ठरवतो",
+          "en": "pre-season choice the farmer makes"
+        },
+        "POLICY": {
+          "mr": "प्रॉडक्ट धोरण, शेतकऱ्यापर्यंत जात नाही",
+          "en": "product policy; never reaches a farmer"
+        }
+      },
+      "automation_levels": {
+        "full": "engine decides and acts without asking",
+        "assisted": "engine decides when, the person does the work or supplies the observation",
+        "advisory": "engine shows the arithmetic, the person chooses",
+        "refusal": "engine prevents an action",
+        "none": "internal policy, not farmer facing"
+      },
+      "trigger_dsl": {
+        "version": "dsl-1.0",
+        "logic": "three-valued: TRUE / FALSE / UNKNOWN",
+        "unknown_rule": "A rule whose trigger evaluates UNKNOWN must NOT fire and must NOT be treated as FALSE. Report reduced confidence and name the missing field (Domain 12 D12-COLD-001).",
+        "operators": [
+          "> >= < <= == !=",
+          "AND OR NOT",
+          "IN [..]",
+          "BETWEEN a AND b",
+          "IS NULL / IS NOT NULL / IS TRUE / IS FALSE",
+          "DURATION(field > x) > n HOURS",
+          "WITHIN(date_field, n DAYS)",
+          "MONTH IN [..]",
+          "STAGE IN [..]"
+        ],
+        "note": "Fields resolve against kb_farm_brain_fields. An undeclared name is a parse error, never a silent false."
+      },
+      "notification_policy": {
+        "version": "notify-1.0",
+        "why": "The season simulation issued 998 messages across 301 days before this existed. A trigger expresses a condition and a condition stays true; the advice is an event and must be delivered once.",
+        "classes": {
+          "ONCE_UNTIL_RESOLVED": "Standing precondition. Once, then a 7/21/45/90 day ladder with rising severity.",
+          "EVENT": "Transient physical event. Rising edge only; re-armed after it clears.",
+          "WINDOW": "Dated operation. Advance warning, the day, then 3 overdue reminders.",
+          "SILENT_GUARD": "Prevention rule. No message unless the prohibited action is attempted."
+        },
+        "result": "998 messages became 43 in the normal season, with no critical stage left silent for more than 15 days."
+      },
+      "override_policy": {
+        "version": "override-1.0",
+        "why": "The Tier-1 review worked but was offline. An agronomist looking at a live plot in August cannot edit JSON and wait for a deploy; by then the window has closed.",
+        "kinds": [
+          "THRESHOLD",
+          "DELIVERY",
+          "SEVERITY",
+          "DISABLE",
+          "PARAMETER"
+        ],
+        "scopes": [
+          "plot",
+          "cluster",
+          "global"
+        ],
+        "scope_precedence": "narrowest wins — plot over cluster over global",
+        "default_expiry_days": 240,
+        "max_expiry_days": 400,
+        "expiry_rationale": "A permanent change belongs in the knowledge base, not in the override table.",
+        "immutable_count": 16,
+        "immutable_rationale": "Some rules exist because getting them wrong causes harm no agronomic judgement outweighs. The API refuses them by code path, and a database trigger refuses them again if the application layer is bypassed.",
+        "audit": "Refused attempts are recorded, not discarded. An attempt to override an immutable rule is a governance signal."
+      }
+    }
+  },
+  "metadata": {
+    "domain": 12,
+    "domain_name": "AI Training Data Requirements",
+    "domain_name_mr": "AI प्रशिक्षण डेटा आवश्यकता",
+    "crop": "ginger",
+    "crop_mr": "आले",
+    "region": "Kannad, Chhatrapati Sambhajinagar, Marathwada",
+    "source_document": "AgroGuardian_Ginger_Domain12_AI_Training_Requirements_RAW.docx",
+    "version": "1.0",
+    "status": "PHASE_1_RAW_UNVALIDATED",
+    "agronomist_validated": false,
+    "validation_note": "Language model capabilities are current as of mid-2026 and change quickly. DPDP rules and enforcement are evolving and require legal advice. The vocabulary gap and the absence of a Marathi agricultural instruction dataset were established by search and may change.",
+    "total_rules": 36,
+    "rule_count_note": "30 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count. This is the final domain of the ginger knowledge base.",
+    "review_by": "2027-06-30",
+    "review_note": "Language model availability and DPDP enforcement both move quickly. The agronomy domains do not expire; this one and Domains 9 and 10 do.",
+    "purpose": "Two jobs. Build the language and interaction layer that works from day one, and collect the right data from day one so that a genuinely learning system becomes possible in three or four seasons.",
+    "key_innovations": [
+      "For the first two or three seasons this is a rule engine, not a learning system, and saying so plainly is both more honest and commercially safer than the alternative. Partners in a technical review can tell the difference.",
+      "The value does not depend on machine learning. Four decisions worth about Rs 2.85 lakh per acre depend on timely reminders, and a rule engine delivers those on day one.",
+      "Data must be logged from day one because it cannot be reconstructed later. Ten minimum records cover the eight largest yield factors.",
+      "Ginger's Marathi vocabulary is absent from every available corpus. Utalni, hurde band, vafsa, bene, ambavani — a model that does not know these words cannot record the operations that carry the largest u-values.",
+      "No Marathi agricultural instruction dataset exists. Bengali has one, English has several, Marathi has none. That is both an obstacle and an unusually clear opportunity.",
+      "The yellowing classification problem is the real AI problem in this crop — six causes, different treatments, and two where the wrong treatment makes it worse. But a decision tree solves it without any model at all.",
+      "The most valuable data the product collects is not from sensors. It is the answer to why a recommended action was not taken, because implementation barriers are invisible to every instrument.",
+      "GPS coordinates cannot be anonymised. Any data partnership has to aggregate to village level or it is not anonymous at all."
+    ],
+    "central_finding": {
+      "statement": "The product is fully sellable before any machine learning exists.",
+      "reasoning": "Layer 1 rules deliver the timing value, Layer 2 language makes it usable, and Layer 3 learning only improves accuracy. Presenting the system as an already-learning AI would misstate what it is and would fail at the first review.",
+      "what_this_changes": "It removes the pressure to fake a capability, and it redirects effort to the thing that actually compounds — recording the right data from the first season.",
+      "the_real_moat": "Not the language model, which is open. Not the agronomy, which is published. Not the hardware, which is purchasable. The moat is the pairing of that knowledge with this plot's measurements and outcomes over several seasons."
+    },
+    "primary_sources": [
+      "AI4Bharat, IIT Madras (TIER A) - IndicBERT and v2, IndicBART, IndicTrans2, IndicWhisper, IndicWav2Vec, IndicVoices",
+      "IndicLLMSuite / Sangraha (TIER A) - 251 billion tokens across 22 languages",
+      "Bhashini / MeitY (TIER A) - 15,000 hours of transcribed speech from 400 plus districts",
+      "Krishi Sathi, arXiv 2508.03719 (TIER B) - multilingual agricultural chatbot, RAG plus instruction fine-tuning, ASR and TTS",
+      "KrishokChat, arXiv 2606.29243 (TIER B) - Bengali agricultural dataset and a review of related projects",
+      "AgriGPT with Agri-342K, AgroInstruct 70K (TIER B) - English agricultural instruction datasets",
+      "Farmer.Chat (TIER B) - over 5 million queries handled, dataset not released",
+      "Digital Personal Data Protection Act 2023 (TIER A) - consent and data handling framework",
+      "Domains 1 to 11 and Core Layer C3, C6, C9, C10, C12, C13 (internal)"
+    ],
+    "review_log": {
+      "tier_1_review_date": "2026-07-31",
+      "rules_reviewed": 5,
+      "rules_total": 36,
+      "note": "Rule-level status is authoritative. Domain status stays PHASE_1_RAW_UNVALIDATED until T3 and T4 are also reviewed and one season of field data exists."
+    }
+  },
+  "reference_data": {
+    "three_layers": [
+      {
+        "layer": 1,
+        "name": "rule engine",
+        "content": "Domains 1 to 13 compiled to executable rules",
+        "available": "day 1",
+        "depends_on": [],
+        "value_statement": "timely reminders worth about Rs 2.85 lakh per acre"
+      },
+      {
+        "layer": 2,
+        "name": "language",
+        "content": "Marathi advisory, controlled vocabulary, later voice and images",
+        "available": "season 1",
+        "depends_on": [
+          1
+        ],
+        "value_statement": "the farmer understands and acts on the advice"
+      },
+      {
+        "layer": 3,
+        "name": "learning",
+        "content": "records to patterns to corrected u-values and local coefficients",
+        "available": "season 4 or later",
+        "depends_on": [
+          1,
+          2
+        ],
+        "value_statement": "accuracy improves; nothing new becomes possible that was impossible before"
+      }
+    ],
+    "rule_engine_advantages": [
+      {
+        "advantage": "explainable",
+        "detail": "The farmer can be told why. Do earthing up now, because after flowering the window closes and yield falls 10 to 15 percent. A learned model cannot say that."
+      },
+      {
+        "advantage": "correctable",
+        "detail": "Change the rule and everyone gets the corrected advice tomorrow. A model has to be retrained."
+      },
+      {
+        "advantage": "works with no data",
+        "detail": "Which is decisive, because there is no data."
+      }
+    ],
+    "logging_classes": {
+      "A_machine": {
+        "automatic": true,
+        "records": [
+          {
+            "field": "soil_moisture_vwc",
+            "frequency": "hourly to four-hourly by stage",
+            "source": "sub-node"
+          },
+          {
+            "field": "soil_temp_c",
+            "frequency": "hourly",
+            "source": "DS18B20"
+          },
+          {
+            "field": "ec_current",
+            "frequency": "4 per day",
+            "source": "RS485 probe"
+          },
+          {
+            "field": "air_temp_max_c and air_temp_min_c",
+            "frequency": "hourly",
+            "source": "station"
+          },
+          {
+            "field": "rh_pct",
+            "frequency": "hourly",
+            "source": "station"
+          },
+          {
+            "field": "rainfall_mm",
+            "frequency": "per event",
+            "source": "station"
+          },
+          {
+            "field": "pan_evaporation_mm_day",
+            "frequency": "daily",
+            "source": "station plus computation"
+          },
+          {
+            "field": "wind_speed_ms",
+            "frequency": "hourly",
+            "source": "station"
+          }
+        ]
+      },
+      "B_action": {
+        "automatic": false,
+        "records": [
+          {
+            "field": "variety, seed source, quantity, rate",
+            "stage": "G0"
+          },
+          {
+            "field": "seed treatment performed",
+            "stage": "G0"
+          },
+          {
+            "field": "planting_layout and bed dimensions",
+            "stage": "G0"
+          },
+          {
+            "field": "planting_date",
+            "stage": "G0"
+          },
+          {
+            "field": "mulch stages 1, 2, 3",
+            "dap": [
+              0,
+              60,
+              120
+            ]
+          },
+          {
+            "field": "fertiliser splits with product and quantity",
+            "stage": "all"
+          },
+          {
+            "field": "micronutrient sprays",
+            "dap": [
+              45,
+              75
+            ]
+          },
+          {
+            "field": "earthing_up_date",
+            "dap": [
+              75,
+              90
+            ]
+          },
+          {
+            "field": "sprays with product, date and reason",
+            "stage": "as needed"
+          },
+          {
+            "field": "irrigation runtime",
+            "frequency": "daily"
+          }
+        ]
+      },
+      "C_observation": {
+        "automatic": false,
+        "photo_encouraged": true,
+        "records": [
+          {
+            "field": "establishment_pct",
+            "dap": 35
+          },
+          {
+            "field": "tillers_per_plant",
+            "dap": [
+              60,
+              90
+            ]
+          },
+          {
+            "field": "sample dig finger count",
+            "dap": 120
+          },
+          {
+            "field": "sample dig weight",
+            "dap": 180
+          },
+          {
+            "field": "flowering_observed",
+            "dap": "about 150"
+          },
+          {
+            "field": "pest incidence percent",
+            "frequency": "weekly"
+          },
+          {
+            "field": "disease incidence percent",
+            "frequency": "weekly"
+          },
+          {
+            "field": "leaf colour and symptoms",
+            "frequency": "as needed"
+          },
+          {
+            "field": "light_trap_count_nightly",
+            "frequency": "daily"
+          }
+        ]
+      },
+      "D_outcome": {
+        "automatic": false,
+        "records": [
+          {
+            "field": "yield_quintal_per_acre_actual"
+          },
+          {
+            "field": "grade split a, b, c"
+          },
+          {
+            "field": "rot_incidence_pct at harvest"
+          },
+          {
+            "field": "sale_price_per_quintal by grade"
+          },
+          {
+            "field": "seed retained weight at storage"
+          },
+          {
+            "field": "seed weight at planting"
+          },
+          {
+            "field": "actual cost by line item"
+          }
+        ]
+      }
+    },
+    "minimum_ten_records": [
+      {
+        "n": 1,
+        "record": "planting_date",
+        "covers_u": 0.2
+      },
+      {
+        "n": 2,
+        "record": "variety",
+        "covers_u": 0.138
+      },
+      {
+        "n": 3,
+        "record": "planting_layout with dimensions",
+        "covers_u": 0.167
+      },
+      {
+        "n": 4,
+        "record": "seed quantity, rate and treatment",
+        "covers_u": 0.135,
+        "also": "largest cost line"
+      },
+      {
+        "n": 5,
+        "record": "establishment_pct at 35 DAP",
+        "covers_u": null,
+        "also": "sets the season ceiling"
+      },
+      {
+        "n": 6,
+        "record": "mulch stage dates",
+        "covers_u": 0.2
+      },
+      {
+        "n": 7,
+        "record": "earthing_up_date",
+        "covers_u": 0.125
+      },
+      {
+        "n": 8,
+        "record": "saturation events in hours",
+        "covers_u": "0.30 to 0.70"
+      },
+      {
+        "n": 9,
+        "record": "rot_incidence_pct at harvest",
+        "covers_u": 0.7
+      },
+      {
+        "n": 10,
+        "record": "yield, grade split and price",
+        "covers_u": null,
+        "also": "the outcome against which everything is validated"
+      }
+    ],
+    "minimum_set_note": "These ten cover the eight largest u-values in the Domain 11 register. If nothing else is recorded in season one, these must be.",
+    "vocabulary_gap": {
+      "problem": "Ginger's Marathi technical vocabulary is absent from general corpora, which are built from news, Wikipedia and general text.",
+      "terms": [
+        {
+          "mr": "उटाळणी",
+          "en": "earthing up with root disturbance",
+          "domain": 8,
+          "u_value": 0.125,
+          "risk": "not in general dictionaries"
+        },
+        {
+          "mr": "हुरडे बांड",
+          "en": "ginger flowering spike",
+          "domain": 1,
+          "risk": "highly local"
+        },
+        {
+          "mr": "बेणे",
+          "en": "seed rhizome",
+          "domain": 1,
+          "risk": "confused with seed"
+        },
+        {
+          "mr": "वाफसा",
+          "en": "workable soil moisture state",
+          "domain": 2,
+          "risk": "Marathi-specific concept with no direct English equivalent"
+        },
+        {
+          "mr": "आंबवणी",
+          "en": "first irrigation after planting",
+          "domain": 3,
+          "risk": "local"
+        },
+        {
+          "mr": "कंदकूज",
+          "en": "soft rot",
+          "domain": 6,
+          "risk": "technical"
+        },
+        {
+          "mr": "कंदमाशी",
+          "en": "rhizome fly",
+          "domain": 5,
+          "risk": "technical"
+        },
+        {
+          "mr": "सुंठ",
+          "en": "dry ginger",
+          "domain": 9,
+          "risk": "context specific"
+        },
+        {
+          "mr": "मोक्या / अंगऱ्या",
+          "en": "Mahim sub-types",
+          "domain": 1,
+          "risk": "extremely local"
+        },
+        {
+          "mr": "गादीवाफा / रुंद वरंबा",
+          "en": "raised bed / broad ridge",
+          "domain": 8,
+          "risk": "technical"
+        },
+        {
+          "mr": "फणी",
+          "en": "rhizome finger",
+          "domain": 1,
+          "risk": "local"
+        },
+        {
+          "mr": "आळवणी",
+          "en": "drenching",
+          "domain": 6,
+          "risk": "technical"
+        },
+        {
+          "mr": "भरणी",
+          "en": "earthing up",
+          "domain": 8,
+          "risk": "possibly synonymous with utalni; needs confirmation"
+        }
+      ],
+      "worked_consequence": "If the model does not know utalni, then a farmer saying the earthing up is done produces no record, a question about when to do it gets no answer, and worst of all the model may infer a different meaning entirely. The factor carries a u-value of 0.125, about Rs 56,500 per acre.",
+      "controlled_vocabulary_structure": {
+        "fields": [
+          "mr_standard",
+          "mr_local_variants",
+          "en",
+          "definition",
+          "domain",
+          "u_value",
+          "deadline"
+        ],
+        "placement": "a separate section of the JSON or SQL, linked to rules across all domains",
+        "field_work_needed": "record local Kannad usage, which may differ from standard Marathi and is what the farmer actually says"
+      }
+    },
+    "available_models": [
+      {
+        "tool": "IndicBERT and v2",
+        "task": "text classification and understanding",
+        "marathi": true,
+        "source": "AI4Bharat"
+      },
+      {
+        "tool": "IndicBART",
+        "task": "text generation",
+        "marathi": true,
+        "source": "AI4Bharat"
+      },
+      {
+        "tool": "IndicTrans2",
+        "task": "translation across 22 languages",
+        "marathi": true,
+        "source": "AI4Bharat"
+      },
+      {
+        "tool": "IndicWhisper and IndicWav2Vec",
+        "task": "speech to text",
+        "marathi": true,
+        "source": "AI4Bharat"
+      },
+      {
+        "tool": "IndicVoices",
+        "task": "ASR training data",
+        "marathi": true,
+        "source": "AI4Bharat"
+      },
+      {
+        "tool": "Sangraha",
+        "task": "pretraining corpus, 251 billion tokens",
+        "marathi": true,
+        "source": "IndicLLMSuite"
+      },
+      {
+        "tool": "Bhashini",
+        "task": "15,000 hours transcribed from 400 plus districts",
+        "marathi": true,
+        "source": "MeitY"
+      }
+    ],
+    "agricultural_datasets": [
+      {
+        "project": "Krishi Sathi",
+        "language": "multilingual",
+        "dataset_public": "partial",
+        "basis": "ICAR and Vikaspedia, RAG plus instruction tuning"
+      },
+      {
+        "project": "AgriGPT / Agri-342K",
+        "language": "English",
+        "dataset_public": true
+      },
+      {
+        "project": "AgroInstruct",
+        "language": "English",
+        "dataset_public": true,
+        "size": "70K vision-language"
+      },
+      {
+        "project": "KrishokChat",
+        "language": "Bengali",
+        "dataset_public": true
+      },
+      {
+        "project": "Farmer.Chat",
+        "language": "multilingual",
+        "dataset_public": false,
+        "scale": "over 5 million queries"
+      }
+    ],
+    "marathi_dataset_status": {
+      "exists": false,
+      "implication_obstacle": "no ready model to adopt for Marathi agricultural instruction",
+      "implication_opportunity": "a Marathi agricultural instruction dataset would be a scarce asset, relevant to research collaboration and to data partnership discussions"
+    },
+    "language_technology_roadmap": [
+      {
+        "season": [
+          1,
+          2
+        ],
+        "approach": "templated Marathi messages, no model",
+        "reason": "safer, because a template cannot generate wrong advice"
+      },
+      {
+        "season": 3,
+        "approach": "ASR for voice input using IndicWhisper",
+        "reason": "farmers speak more easily than they type"
+      },
+      {
+        "season": "4 plus",
+        "approach": "model fine-tuned on the controlled vocabulary",
+        "reason": "free-form questions become possible once the rule base is stable"
+      }
+    ],
+    "message_structure": {
+      "parts": [
+        {
+          "part": 1,
+          "content": "what to do",
+          "form": "one sentence starting with a verb"
+        },
+        {
+          "part": 2,
+          "content": "when",
+          "form": "exact date or deadline"
+        },
+        {
+          "part": 3,
+          "content": "why",
+          "form": "one sentence"
+        },
+        {
+          "part": 4,
+          "content": "what happens if not",
+          "form": "with a number where one exists"
+        }
+      ],
+      "example_mr": "उद्या किंवा परवा उटाळणी करा. पिकाला ८० दिवस झाले आहेत. फुले येण्यापूर्वी उटाळणी झाली पाहिजे — नाहीतर उत्पादनात १०-१५% घट येते.",
+      "why_part_4_matters": "Without the number the urgency is not felt and the message is ignored."
+    },
+    "yellowing_classification": {
+      "why_it_is_the_real_ai_problem": "Most advisory is calendar-driven. Yellowing is event-driven with six possible causes, different treatments, and two cases where the reflexive response makes it worse.",
+      "causes": [
+        {
+          "cause": "nitrogen deficiency",
+          "sign": "old leaves, uniform pale",
+          "treatment": "nitrogen split",
+          "wrong_treatment_effect": "none"
+        },
+        {
+          "cause": "iron or zinc lock-up",
+          "sign": "new leaves, interveinal, veins green",
+          "treatment": "foliar micronutrient",
+          "wrong_treatment_effect": "urea achieves nothing"
+        },
+        {
+          "cause": "waterlogging",
+          "sign": "wet soil at root",
+          "treatment": "drainage",
+          "wrong_treatment_effect": "urea makes it worse"
+        },
+        {
+          "cause": "soft rot",
+          "sign": "central shoot dead, sour smell",
+          "treatment": "drainage plus metalaxyl group",
+          "wrong_treatment_effect": "wrong fungicide wasted while it spreads"
+        },
+        {
+          "cause": "bacterial wilt",
+          "sign": "wilts while green, milky ooze",
+          "treatment": "remove and burn",
+          "wrong_treatment_effect": "any fungicide completely wasted"
+        },
+        {
+          "cause": "heat stress",
+          "sign": "tip and margin scorch above 35 C",
+          "treatment": "mulch, shade, irrigation timing",
+          "wrong_treatment_effect": "fungicide wasted"
+        }
+      ],
+      "decision_tree": [
+        {
+          "q": 1,
+          "question": "Is the soil at the root wet?",
+          "yes": "waterlogging or soft rot — dig a sample",
+          "no": "continue"
+        },
+        {
+          "q": 2,
+          "question": "Did the plant wilt while still green?",
+          "yes": "bacterial wilt — cut stem and check for milky ooze",
+          "no": "continue"
+        },
+        {
+          "q": 3,
+          "question": "Is the central shoot dead?",
+          "yes": "soft rot",
+          "no": "continue"
+        },
+        {
+          "q": 4,
+          "question": "Which leaves are yellow, old or new?",
+          "old": "nitrogen",
+          "new": "iron or zinc"
+        },
+        {
+          "q": 5,
+          "question": "Was the maximum above 35 C in the last three days?",
+          "yes": "add heat stress as a contributing cause"
+        }
+      ],
+      "ml_role": "Later, image recognition could answer questions 3 and 4 automatically. The tree itself does not change.",
+      "why_tree_not_model": [
+        "every branch has a stated reason",
+        "errors are traceable to a branch",
+        "no training data required"
+      ]
+    },
+    "image_recognition_candidates": [
+      {
+        "rank": 1,
+        "marker": "central shoot death",
+        "mr": "सुरळी मरणे",
+        "domain": 6,
+        "u_value": 0.7,
+        "clarity": "high",
+        "note": "earliest sign of the largest factor"
+      },
+      {
+        "rank": 2,
+        "marker": "interveinal versus uniform yellowing",
+        "mr": "शिरांमधील विरुद्ध एकसारखे पिवळे",
+        "domain": 4,
+        "u_value": 0.11,
+        "clarity": "high",
+        "note": "occurs frequently"
+      },
+      {
+        "rank": 3,
+        "marker": "straight-line holes in whorl",
+        "mr": "सरळ रेषेत छिद्रे",
+        "domain": 5,
+        "u_value": 0.05,
+        "clarity": "very high",
+        "note": "most distinctive pattern; safe first target because low stakes"
+      },
+      {
+        "rank": 4,
+        "marker": "stem hole with webbing",
+        "mr": "खोडावर छिद्र व जाळे",
+        "domain": 5,
+        "u_value": 0.075,
+        "clarity": "high"
+      },
+      {
+        "rank": 5,
+        "marker": "concentric rings held to sun",
+        "mr": "सूर्याकडे धरल्यास वर्तुळे",
+        "domain": 6,
+        "u_value": 0.08,
+        "clarity": "medium",
+        "note": "light dependent"
+      },
+      {
+        "rank": 6,
+        "marker": "flowering spike",
+        "mr": "हुरडे बांड",
+        "domain": 1,
+        "u_value": null,
+        "clarity": "high",
+        "note": "not a disease sign — a stage marker for calendar re-anchoring, and it sets the earthing-up deadline"
+      },
+      {
+        "rank": 7,
+        "marker": "rolled leaves",
+        "mr": "गुंडाळलेली पाने",
+        "domain": 5,
+        "u_value": 0.03,
+        "clarity": "high"
+      },
+      {
+        "rank": 8,
+        "marker": "dug rhizome condition",
+        "mr": "खोदलेल्या गड्ड्याची स्थिती",
+        "domain": 1,
+        "u_value": null,
+        "clarity": "medium",
+        "note": "for yield estimation"
+      }
+    ],
+    "image_data_reality": {
+      "public_labelled_sets_available": false,
+      "strategy": [
+        {
+          "seasons": [
+            1,
+            2
+          ],
+          "action": "collect photographs and have an expert label them; do not attempt classification"
+        },
+        {
+          "season": 3,
+          "action": "enough labelled images for a first model on two or three classes"
+        }
+      ],
+      "critical_note": "Photographs cannot be collected retrospectively. Collection must begin in season one even though no model exists yet."
+    },
+    "voice": {
+      "tools": [
+        "IndicWhisper",
+        "IndicWav2Vec",
+        "AI4Bharat TTS",
+        "IndicVoices",
+        "Bhashini"
+      ],
+      "limitation": "General Marathi ASR will not reliably recognise ginger technical terms. Utalni may be transcribed as utani or utarni.",
+      "mitigation": "Supply the controlled vocabulary as ASR biasing hints, which most systems support.",
+      "priority": "not required in seasons 1 and 2; templated messages with simple button responses are sufficient and safer",
+      "when_needed": "once farmers begin asking free-form questions, by which time the rule base should be stable"
+    },
+    "cold_start": {
+      "season_1_state": [
+        "zero field data",
+        "22 of 35 u-values estimated",
+        "zero labelled images",
+        "sensor calibration incomplete"
+      ],
+      "degradation_table": [
+        {
+          "condition": "no calibration",
+          "behaviour": "table-based irrigation, low confidence, automated triggers disabled"
+        },
+        {
+          "condition": "no soil test",
+          "behaviour": "safe default doses, medium confidence"
+        },
+        {
+          "condition": "estimated u-value",
+          "behaviour": "present a range, not a point"
+        },
+        {
+          "condition": "no local weather record",
+          "behaviour": "regional forecast without bias correction"
+        }
+      ],
+      "principle": "The system never stops. It becomes less precise and says so.",
+      "confidence_display": {
+        "always_show": true,
+        "explain_when_low": true,
+        "never_hide": true
+      }
+    },
+    "active_learning_queue": {
+      "entries": [
+        {
+          "trigger": "low confidence decision",
+          "value": "medium"
+        },
+        {
+          "trigger": "farmer did something different",
+          "value": "highest"
+        },
+        {
+          "trigger": "unexpected outcome — predicted 90 quintal, got 50",
+          "value": "high"
+        },
+        {
+          "trigger": "symptom outside the decision tree",
+          "value": "high"
+        },
+        {
+          "trigger": "a VERIFY-class rule was used",
+          "value": "medium"
+        }
+      ],
+      "most_valuable_entry": {
+        "trigger": "recommended action not recorded within 3 days of deadline",
+        "question": "Was it done? If not, what got in the way?",
+        "options": [
+          "labour unavailable",
+          "no time",
+          "cost",
+          "did not seem necessary",
+          "other"
+        ],
+        "why": "Either the message failed or the recommendation was wrong for local conditions. Both are learnable and both are invisible to every sensor."
+      }
+    },
+    "cluster_learning": {
+      "architecture": "one weather station and master unit per 5 to 10 farms",
+      "learnable_at_cluster_level": [
+        {
+          "item": "weather bias correction",
+          "reason": "one station, many farms"
+        },
+        {
+          "item": "pest pressure map from light trap counts",
+          "reason": "aggregation across traps"
+        },
+        {
+          "item": "disease spread pattern",
+          "reason": "one farm's rot warns the neighbours"
+        },
+        {
+          "item": "white grub community action",
+          "reason": "beetles fly between farms"
+        },
+        {
+          "item": "local u-values",
+          "reason": "more samples, less uncertainty"
+        },
+        {
+          "item": "seed supplier performance",
+          "reason": "comparison across farms"
+        }
+      ],
+      "not_replicable_by_a_single_app": [
+        "simultaneous community alert for white grub",
+        "pre-symptom disease warning to neighbours"
+      ],
+      "privacy_constraint": "Cluster advisories must be aggregate. This area has raised disease pressure, never your neighbour's field has rot."
+    },
+    "dpdp_compliance": {
+      "principles": [
+        {
+          "principle": "consent",
+          "implementation": "explicit, in Marathi, in plain language at registration"
+        },
+        {
+          "principle": "purpose limitation",
+          "implementation": "data used only for the stated purpose"
+        },
+        {
+          "principle": "data minimisation",
+          "implementation": "collect only what is needed"
+        },
+        {
+          "principle": "storage limitation",
+          "implementation": "state the retention period in advance"
+        },
+        {
+          "principle": "right to erasure",
+          "implementation": "delete on request"
+        },
+        {
+          "principle": "security",
+          "implementation": "encryption and access control"
+        },
+        {
+          "principle": "third party sharing",
+          "implementation": "separate consent required"
+        }
+      ],
+      "two_consent_model": {
+        "consent_1": "mandatory, to deliver advisory",
+        "consent_2": "optional, for anonymised research or partnership; refusing must not stop the service"
+      },
+      "anonymisation_limit": {
+        "problem": "GPS coordinates cannot be anonymised — any field is identifiable from its location",
+        "rules": [
+          "coarsen coordinates to cluster or village level",
+          "never share 7/12 number, Aadhaar or bank details",
+          "agronomic records such as moisture, yield and rot percent may be shared"
+        ]
+      },
+      "consent_language": "must be in Marathi and free of legal jargon; drafted with legal advice"
+    },
+    "evaluation": {
+      "wrong_metrics": [
+        {
+          "metric": "messages sent",
+          "why_wrong": "volume is not value"
+        },
+        {
+          "metric": "app opens",
+          "why_wrong": "the farmer is in the field"
+        },
+        {
+          "metric": "AI accuracy percent",
+          "why_wrong": "accuracy of what?"
+        }
+      ],
+      "right_metrics": [
+        {
+          "rank": 1,
+          "metric": "action compliance rate",
+          "definition": "recommended actions completed on time divided by recommended actions issued",
+          "target_season_1": 60,
+          "target_season_3": 80
+        },
+        {
+          "rank": 2,
+          "metric": "deadline adherence",
+          "definition": "planting by 7 June, earthing up before flowering"
+        },
+        {
+          "rank": 3,
+          "metric": "rot incidence percent",
+          "definition": "compared against cluster average"
+        },
+        {
+          "rank": 4,
+          "metric": "yield against prediction",
+          "definition": "gap attribution residual"
+        },
+        {
+          "rank": 5,
+          "metric": "grade split",
+          "definition": "percentage in the upper band"
+        },
+        {
+          "rank": 6,
+          "metric": "false alarm rate",
+          "definition": "triggers fired without the event following"
+        }
+      ],
+      "why_compliance_is_first": "Four decisions worth about Rs 2.85 lakh per acre all depend on doing something at the right time. So system success equals whether the farmer acted on time, and measuring that needs a record rather than a model.",
+      "control_group": {
+        "ideal": "some farms without advisory for comparison",
+        "problem": "withholding advice is ethically uncomfortable and practically difficult",
+        "alternative": "compare a new cluster against its own previous season"
+      }
+    },
+    "moat": {
+      "durable_assets": [
+        {
+          "asset": "weather bias correction for this village",
+          "accrues_from": "season 1",
+          "why_scarce": "requires instruments in the same location"
+        },
+        {
+          "asset": "sensor reading paired with outcome",
+          "accrues_from": "season 1",
+          "why_scarce": "both must come from the same plot"
+        },
+        {
+          "asset": "Kannad-specific u-values",
+          "accrues_from": "season 3",
+          "why_scarce": "published nowhere"
+        },
+        {
+          "asset": "crop coefficient series for ginger in India",
+          "accrues_from": "season 1",
+          "why_scarce": "no published series located"
+        },
+        {
+          "asset": "Marathi ginger vocabulary and dialogue",
+          "accrues_from": "season 2",
+          "why_scarce": "does not exist"
+        },
+        {
+          "asset": "labelled symptom photographs",
+          "accrues_from": "season 3",
+          "why_scarce": "does not exist"
+        },
+        {
+          "asset": "field disease history",
+          "accrues_from": "continuous",
+          "why_scarce": "must be maintained across years"
+        },
+        {
+          "asset": "implementation barrier data",
+          "accrues_from": "continuous",
+          "why_scarce": "only obtainable by asking"
+        }
+      ],
+      "most_undervalued": {
+        "asset": "field disease history",
+        "reason": "Bacterial wilt persists in soil for many years and prior outbreak record is a first-class input. Paper does not survive; farmer memory is incomplete; the app persists. And it appreciates with age, which almost nothing else does."
+      },
+      "not_a_moat": [
+        {
+          "item": "language models",
+          "reason": "AI4Bharat models are open"
+        },
+        {
+          "item": "agronomic knowledge",
+          "reason": "Domains 1 to 13 sources are public"
+        },
+        {
+          "item": "hardware",
+          "reason": "components are purchasable"
+        }
+      ],
+      "statement": "The moat is not in the knowledge. It is in pairing that knowledge with this plot's measurements."
+    },
+    "season_roadmap": [
+      {
+        "season": 1,
+        "title": "foundation",
+        "items": [
+          "rule engine live",
+          "templated Marathi messages",
+          "ten minimum records",
+          "sensor calibration",
+          "collect photographs without labelling",
+          "measure action compliance rate",
+          "DPDP consent structure"
+        ],
+        "ml": false
+      },
+      {
+        "season": 2,
+        "title": "validation",
+        "items": [
+          "check u-values against season 1 records",
+          "verify prediction intervals",
+          "start weather bias correction",
+          "derive crop coefficient series",
+          "complete controlled vocabulary",
+          "begin photograph labelling"
+        ],
+        "ml": false
+      },
+      {
+        "season": 3,
+        "title": "first models",
+        "items": [
+          "image recognition for 2 to 3 classes",
+          "ASR voice input",
+          "cluster pest pressure map",
+          "u-values move to FIELD class"
+        ],
+        "ml": "partial"
+      },
+      {
+        "season": "4 plus",
+        "title": "learning system",
+        "items": [
+          "local u-values feed back into the rule engine",
+          "fine-tuned Marathi dialogue model",
+          "multi-cluster federated learning"
+        ],
+        "ml": true,
+        "note": "at this point the word AI can be used honestly"
+      }
+    ]
+  },
+  "rules": [
+    {
+      "rule_id": "D12-POS-001",
+      "category": "POS",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": null,
+      "trigger": {
+        "english": "The system is being described to a partner, investor or farmer as learning AI",
+        "marathi": "प्रणालीचे वर्णन शिकणारे AI असे केले जात आहे",
+        "expr": "capability_claim_proposed IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "capability_claim_proposed": "learning_ai"
+            },
+            "expect": "TRUE",
+            "label": "दावा अडवा"
+          },
+          {
+            "context": {},
+            "expect": "FALSE",
+            "label": ""
+          }
+        ]
+      },
+      "action": {
+        "english": "BLOCK the claim. Describe it accurately: a decision-support system running on agronomist-authored rules and sensor input, which becomes more accurate each season. Do not claim machine learning that does not exist yet.",
+        "marathi": "हा दावा टाळा. अचूक वर्णन द्या — कृषितज्ज्ञांच्या नियमांवर आणि sensor माहितीवर चालणारी निर्णय-सहाय्य प्रणाली, जी हंगामागणिक अधिक अचूक होते. अजून अस्तित्वात नसलेल्या machine learning चा दावा करू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "For the first two or three seasons there is no field data, 22 of 35 u-values are estimates, and there are no labelled images. A technical reviewer in a POC discussion can tell a rule engine from a learned model, and the overstatement costs credibility that the accurate description would have kept.",
+        "yield_impact": "None. Protects commercial and technical credibility.",
+        "confidence_score": 0.9,
+        "source_tier": "B",
+        "references": [
+          "Domain 12 positioning policy",
+          "Domain 11 estimated u-value count"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": [
+          "domain_11_yield"
+        ]
+      },
+      "farm_brain_schema": [
+        "model_version"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Being honest here is not a weakness in the pitch. A rule engine that explains itself is easier to defend than a black box, and the POC partners named in the project notes are technical organisations.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "प्रणालीला शिकणारी AI म्हणू नये; ती decision-support system आहे असे अचूक सांगणे योग्य."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": true,
+      "immutable_reason": "Describing the system accurately is a commercial and regulatory obligation."
+    },
+    {
+      "rule_id": "D12-POS-002",
+      "category": "POS",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "The value proposition is being explained",
+        "marathi": "प्रॉडक्टचे मूल्य समजावून सांगायचे आहे"
+      },
+      "action": {
+        "english": "Lead with the timing value, not the technology. Four decisions worth about Rs 2.85 lakh per acre depend on doing something at the right time, and a rule engine delivers those from day one without any machine learning.",
+        "marathi": "तंत्रज्ञानाने नव्हे, वेळेच्या मूल्याने सुरुवात करा. एकरी सुमारे २.८५ लाख रुपये ठरवणारे चार निर्णय वेळेवर कृती करण्यावर अवलंबून आहेत, आणि नियम-इंजिन ते दिवस एकपासून देते — कोणत्याही machine learning शिवाय."
+      },
+      "reasoning": {
+        "agronomic_basis": "Three of the four decisions cost nothing and the fourth costs about Rs 6,000 in labour. None requires new technology; all require being reminded at the right moment, which is what a machine does reliably and a person does not.",
+        "yield_impact": "None directly. It is the clearest and most defensible statement of what the product is worth.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Domain 11 economic conversion",
+          "Domain 12 layer model"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_11_yield"
+        ]
+      },
+      "farm_brain_schema": [
+        "action_compliance_rate"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The machine does not make fertiliser, bring rain or kill pathogens. It reminds at the right time, and Domain 11 puts a number on what that is worth.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-POS-003",
+      "category": "POS",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": null,
+      "trigger": {
+        "english": "Any prohibited capability claim is about to be made",
+        "marathi": "प्रतिबंधित क्षमता-दावा केला जात आहे",
+        "expr": "capability_claim_proposed IN [learning_ai, ai_yield_prediction, ml_optimises, npk_probe_measures, weather_forecast]",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "capability_claim_proposed": "npk_probe_measures"
+            },
+            "expect": "TRUE",
+            "label": "प्रतिबंधित दावा"
+          },
+          {
+            "context": {
+              "capability_claim_proposed": "decision_support"
+            },
+            "expect": "FALSE",
+            "label": "योग्य वर्णन"
+          }
+        ]
+      },
+      "action": {
+        "english": "BLOCK. The prohibited list is: the AI tells the farmer what to do, AI-driven yield prediction, machine learning optimises the crop, the NPK probe measures NPK, and we forecast the weather. Each would fail at the first review or the first unforecast event.",
+        "marathi": "टाळा. प्रतिबंधित दावे — AI शेतकऱ्याला सांगते, AI-आधारित उत्पादन अंदाज, machine learning पीक इष्टतम करते, NPK probe NPK मोजतो, आणि आपण हवामान वर्तवतो. यांपैकी प्रत्येक दावा पहिल्या तपासणीत किंवा पहिल्या न-वर्तवलेल्या घटनेत कोसळेल."
+      },
+      "reasoning": {
+        "agronomic_basis": "Each claim has a specific and documented reason for being false. The probe infers from electrical conductivity, weather forecasting is IMD's work with real limits, and no learned model exists. These are established in Domains 4, 7 and 12 respectively.",
+        "yield_impact": "None. Prevents a specific and predictable failure mode.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "Domain 4 NPK probe limitation",
+          "Domain 7 forecast positioning",
+          "Domain 12 positioning policy"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": [
+          "domain_4_nutrient",
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "model_version"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "All five prohibitions came from findings in other domains rather than from caution in the abstract. Each one is a claim that was tempting and turned out to be unsupportable.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "प्रतिबंधित capability claims टाळणे गरजेचे."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": true,
+      "immutable_reason": "Prohibited capability claims stay prohibited."
+    },
+    {
+      "rule_id": "D12-ARCH-001",
+      "category": "ARCH",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Development priorities are being set",
+        "marathi": "विकासाचा प्राधान्यक्रम ठरवला जात आहे"
+      },
+      "action": {
+        "english": "Build layer 1 rules and layer 2 language first. Layer 3 learning depends on both plus accumulated records and cannot be built earlier. Layers 1 and 2 deliver full value on their own.",
+        "marathi": "आधी थर १ — नियम, आणि थर २ — भाषा. थर ३ शिकण्यासाठी आधीचे दोन आणि जमा झालेल्या नोंदी लागतात, त्याआधी तो बांधता येत नाही. आणि थर १ व २ स्वतःच पूर्ण मूल्य देतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "The dependency runs one way. Rules need nothing, language needs rules, learning needs both plus data. Attempting layer 3 first produces a model trained on nothing.",
+        "yield_impact": "None. Determines whether the product ships at all in season one.",
+        "confidence_score": 0.88,
+        "source_tier": "B",
+        "references": [
+          "Domain 12 layer model"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "model_version",
+        "advisory_language"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The product is sellable before any machine learning exists. That removes the pressure to fake the capability and redirects effort to recording the right data, which is what actually compounds.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-LOG-001",
+      "category": "LOG",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G0",
+      "trigger": {
+        "english": "Season is beginning AND the logging structure is not in place",
+        "marathi": "हंगाम सुरू होत आहे आणि नोंदणीची रचना तयार नाही"
+      },
+      "action": {
+        "english": "Set up logging before the season starts. Data cannot be reconstructed later. If only ten records are possible, use the minimum set — they cover the eight largest u-values in the register.",
+        "marathi": "हंगाम सुरू होण्यापूर्वी नोंदणी रचना तयार करा. नंतर मागे जाऊन डेटा जमवता येत नाही. फक्त दहा नोंदी शक्य असल्यास किमान संच वापरा — तो नोंदवहीतील आठ सर्वात मोठ्या u मूल्यांना व्यापतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "Seventeen of thirty-five factors in the Domain 11 register are detectable only by record. A missed earthing-up date or an unrecorded saturation event is simply lost, and the gap attribution residual absorbs it for no informative reason.",
+        "yield_impact": "None this season. It determines whether the season produces learning as well as a harvest.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Domain 11 required records",
+          "Domain 12 minimum ten records"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "season_record_complete",
+        "planting_date",
+        "variety",
+        "establishment_pct",
+        "earthing_up_date"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Recoverability is marked none deliberately. Every other gap in this knowledge base can be filled later; a season logged badly is gone.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "हंगाम सुरू होण्यापूर्वी नोंदणी रचना आवश्यक; नंतर डेटा भरून काढता येत नाही."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-LOG-002",
+      "category": "LOG",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "A durable fact is learned during a conversation or a field visit",
+        "marathi": "संभाषणात किंवा शेत भेटीत टिकाऊ माहिती मिळाली"
+      },
+      "action": {
+        "english": "Record it against the plot at the time. Class B action records and class C observation records are manual and are the ones most often lost, and together they cover most of the register.",
+        "marathi": "ती त्याच वेळी प्लॉटविरुद्ध नोंदवा. कृती-नोंदी आणि निरीक्षण-नोंदी या हाताने कराव्या लागतात आणि त्याच सर्वात जास्त वेळा हरवतात — आणि त्या दोन मिळून नोंदवहीचा बहुतांश भाग व्यापतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "Machine records log themselves. Action and observation records depend on someone entering them, and they cover the operations that carry u-values of 0.125 to 0.20 each.",
+        "yield_impact": "None directly. It is the majority of the gap attribution input.",
+        "confidence_score": 0.82,
+        "source_tier": "A",
+        "references": [
+          "Domain 12 logging classes",
+          "Domain 11 record detectability"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "mulch_stage_1_done",
+        "earthing_up_date",
+        "micronutrient_spray_1_done",
+        "tillers_per_plant",
+        "season_record_complete"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "The interface design matters here more than the model. If recording an earthing-up date takes three taps it will happen; if it takes a form it will not.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-LOG-003",
+      "category": "LOG",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Sensor sampling frequency is being configured",
+        "marathi": "sensor वाचनाची वारंवारता ठरवली जात आहे"
+      },
+      "action": {
+        "english": "Scale frequency by stage criticality — hourly in G1, G3 and G4, four-hourly in G2 and G5, daily in G0, and hourly at all stages during a rain alert. This is a power management decision as well as an agronomic one.",
+        "marathi": "अवस्थेच्या निकडीनुसार वारंवारता ठरवा — G1, G3, G4 मध्ये तासाला, G2 आणि G5 मध्ये चार तासांनी, G0 मध्ये दिवसातून एकदा, आणि पावसाच्या इशाऱ्यादरम्यान सर्व अवस्थांत तासाला. हा agronomy इतकाच वीज-व्यवस्थापनाचा निर्णयही आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Saturation damage accrues over hours, so hourly sampling is needed when the crop is sensitive. Battery and LoRa airtime on the sub-node are finite, so uniform high-frequency sampling is not an option.",
+        "yield_impact": "Affects how early a saturation event is detected, which carries the largest u-value in the register.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Domain 3 sensor binding",
+          "Core C6.2"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water"
+        ],
+        "depends_on": [
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "current_stage",
+        "soil_moisture_vwc",
+        "saturation_hours"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "The ATmega328P sub-node has limited power budget, so this is a real constraint rather than a preference. Sampling everything hourly all season would not survive the season.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-LANG-001",
+      "category": "LANG",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "An advisory is being generated",
+        "marathi": "सल्ला तयार केला जात आहे"
+      },
+      "action": {
+        "english": "Generate both Marathi and English from one structured advisory object. Do not translate one into the other — translation loses agricultural terms.",
+        "marathi": "एकाच संरचित सल्ला-वस्तूतून मराठी आणि इंग्रजी दोन्ही तयार करा. एकाचे दुसऱ्यात भाषांतर करू नका — भाषांतरात कृषी संज्ञा चुकतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "Utalni has no single English equivalent; earthing up loses the root-disturbance element that is the whole mechanism. Vafsa has no English equivalent at all. Generating both from one source keeps them consistent and keeps the terms correct in each.",
+        "yield_impact": "None directly. Determines whether the advice is understood.",
+        "confidence_score": 0.82,
+        "source_tier": "B",
+        "references": [
+          "Core C12.2",
+          "Domain 12 vocabulary gap"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "advisory_language",
+        "advisory_issued_count"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The English version is for the operator and for analysis, not for the farmer. Keeping both in sync from one source is why every rule in these files carries both.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-LANG-002",
+      "category": "LANG",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "A farmer-facing message is being composed",
+        "marathi": "शेतकऱ्यासाठी संदेश तयार केला जात आहे"
+      },
+      "action": {
+        "english": "Use the four-part structure: what to do in one sentence starting with a verb, when with an exact date or deadline, why in one sentence, and what happens if not — with a number wherever one exists.",
+        "marathi": "चार भागांची रचना वापरा — काय करायचे (क्रियापदाने सुरू, एक वाक्य), कधी (नेमकी तारीख किंवा मुदत), का (एक वाक्य), आणि न केल्यास काय (आकडा उपलब्ध असेल तिथे आकड्यासह)."
+      },
+      "reasoning": {
+        "agronomic_basis": "The fourth part is what creates urgency. Do earthing up is ignorable; do earthing up or lose 10 to 15 percent of the crop is not. Twenty of the thirty-five register factors have a number available.",
+        "yield_impact": "Affects compliance, which is the metric that converts correct advice into yield.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 12 message structure"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": [
+          "domain_11_yield"
+        ]
+      },
+      "farm_brain_schema": [
+        "advisory_issued_count",
+        "action_compliance_rate",
+        "advisory_language"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This is why every rule in this knowledge base carries a u-value and a yield_impact statement. Those fields exist so the fourth part of the message can be generated automatically.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-VOC-001",
+      "category": "VOC",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "A language model or ASR system is being used with ginger terminology",
+        "marathi": "अद्रकाच्या संज्ञांसह भाषा मॉडेल किंवा ASR वापरले जात आहे"
+      },
+      "action": {
+        "english": "Supply the controlled vocabulary first. Ginger's Marathi technical terms are absent from general corpora, which are built from news and general text. A model that does not know utalni cannot record the operation.",
+        "marathi": "आधी नियंत्रित शब्दकोश द्या. अद्रकाच्या मराठी तांत्रिक संज्ञा सामान्य corpora मध्ये नाहीत — ते वृत्तपत्रे आणि सामान्य मजकुरातून बनलेले आहेत. ज्या मॉडेलला 'उटाळणी' माहीत नाही ते ती नोंदच करू शकत नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Sangraha holds 251 billion tokens across 22 languages including Marathi, but from general sources. Utalni, hurde band, vafsa, ambavani and mokya are either absent or present in a different sense. The utalni case is concrete: unrecognised means unrecorded, unanswerable, and possibly misinterpreted — on a factor worth about Rs 56,500 per acre.",
+        "yield_impact": "Protects the recording of operations carrying u-values of 0.125 and above.",
+        "confidence_score": 0.82,
+        "source_tier": "A",
+        "references": [
+          "AI4Bharat Sangraha",
+          "Domain 12 vocabulary gap"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_8_operations"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "advisory_language",
+        "asr_used",
+        "earthing_up_date"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-D",
+      "kannad_note": "The vocabulary is the first step of the training programme, not the last. Thirteen terms are already identified across the domains and local Kannad usage may add more.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-VOC-002",
+      "category": "VOC",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Local terminology differs from standard Marathi",
+        "marathi": "स्थानिक शब्दप्रयोग प्रमाण मराठीपेक्षा वेगळा आहे"
+      },
+      "action": {
+        "english": "Record the local variant alongside the standard term. The farmer uses the local word, so that is what must be recognised. Whether bharani and utalni are the same operation still needs confirming.",
+        "marathi": "प्रमाण संज्ञेसोबत स्थानिक शब्दही नोंदवा. शेतकरी स्थानिक शब्द वापरतो, म्हणून तोच ओळखता आला पाहिजे. 'भरणी' आणि 'उटाळणी' एकच काम आहे का, हे अजून निश्चित करायचे आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Standard Marathi and Kannad usage may differ, and the system has to match what is actually said rather than what is written in a bulletin. The bharani and utalni question is a live ambiguity in the sources.",
+        "yield_impact": "Affects recording accuracy on the largest manual-record factors.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Domain 12 controlled vocabulary structure"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_8_operations"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "advisory_language",
+        "asr_used"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "FIELD",
+      "kannad_note": "This is the kind of gap that only closes by listening to farmers in the field. It cannot be researched from published material because published material uses the standard term.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-MOD-001",
+      "category": "MOD",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Language technology is being selected for seasons 1 and 2",
+        "marathi": "पहिल्या दोन हंगामांसाठी भाषा तंत्रज्ञान निवडले जात आहे"
+      },
+      "action": {
+        "english": "Use templated Marathi messages with no model. A template cannot generate wrong advice, which matters more in the first seasons than fluency does.",
+        "marathi": "साचेबद्ध मराठी संदेश वापरा, मॉडेल नाही. साचा चुकीचा सल्ला तयार करू शकत नाही — आणि पहिल्या हंगामांत ते ओघवत्या भाषेपेक्षा जास्त महत्वाचे आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "A generative model can produce a plausible sentence recommending a wrong dose or a blocklisted molecule. A template cannot. With chemical rules, CIB&RC gaps and safety blocks in the rule base, that containment is worth more than natural phrasing.",
+        "yield_impact": "None. Prevents a failure mode with real safety and legal exposure.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "Domain 12 language roadmap"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "advisory_language",
+        "model_version"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The blocklist rules in Domains 5, 6 and 9 exist precisely because unsafe recommendations are available in the source material. A generative layer over that base would be the wrong order to build in.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-MOD-002",
+      "category": "MOD",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "A Marathi agricultural dataset is being sought",
+        "marathi": "मराठी कृषी dataset शोधला जात आहे"
+      },
+      "action": {
+        "english": "Note that none exists. Bengali has KrishokChat and English has AgriGPT and AgroInstruct, but no Marathi agricultural instruction dataset was located. Farmer.Chat handled over 5 million queries and released nothing.",
+        "marathi": "असा dataset उपलब्ध नाही. बंगालीसाठी KrishokChat आहे, इंग्रजीसाठी अनेक आहेत, पण मराठी कृषी instruction dataset सापडला नाही. Farmer.Chat ने ५० लाखांहून जास्त प्रश्न हाताळले आणि काहीही प्रकाशित केले नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "The absence means no ready model can be adopted for Marathi agricultural dialogue, which is an obstacle. It also means a Marathi dataset built here would be scarce, which is relevant to research collaboration and to data partnership discussions.",
+        "yield_impact": "None. Shapes the technology roadmap and one commercial argument.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "KrishokChat arXiv review",
+          "AgriGPT",
+          "AgroInstruct",
+          "Farmer.Chat"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "advisory_language",
+        "model_version"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-D",
+      "kannad_note": "Worth stating in a partnership conversation. The dataset does not exist, and the organisation that builds it holds something the open models do not have.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-CLS-001",
+      "category": "CLS",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "Leaf yellowing is reported",
+        "marathi": "पाने पिवळी पडल्याची नोंद"
+      },
+      "action": {
+        "english": "Run the five-question decision tree before recommending anything. Is the soil wet, did it wilt while green, is the central shoot dead, which leaves are yellow, and was it above 35 C. Six causes, different treatments, and two where the reflexive response makes it worse.",
+        "marathi": "काहीही सुचवण्यापूर्वी पाच प्रश्नांचा निर्णय-वृक्ष चालवा — मुळाजवळची माती ओली आहे का, पाने हिरवीच असताना कोमेजली का, सुरळी मेली आहे का, कोणती पाने पिवळी, आणि तापमान ३५ अंशांवर गेले का. सहा कारणे, वेगळे उपाय, आणि दोन ठिकाणी नेहमीची प्रतिक्रिया परिस्थिती बिघडवते."
+      },
+      "reasoning": {
+        "agronomic_basis": "This is the one genuinely event-driven classification problem in the crop. Most advisory is calendar-driven. Urea on waterlogged soil makes it worse, and any fungicide on bacterial wilt is wasted while the pathogen spreads.",
+        "yield_impact": "Prevents wasted input and, more importantly, prevents a missed rot or wilt diagnosis worth up to 0.70.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Domain 4 yellowing diagnosis",
+          "Domain 6 differential diagnosis"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient",
+          "domain_6_disease",
+          "domain_9_harvest"
+        ],
+        "depends_on": [
+          "domain_4_nutrient",
+          "domain_6_disease"
+        ]
+      },
+      "farm_brain_schema": [
+        "leaf_yellowing_pattern",
+        "soil_moisture_vwc",
+        "wilt_while_green",
+        "central_shoot_dead",
+        "air_temp_max_c"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "Calcareous yellowing is expected here rather than exceptional, so this tree will run often. That is correct — the alternative is urea applied to an iron lock-up every time.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "पिवळेपणावर थेट उपाय न देता निर्णय-वृक्षाने निदान करणे योग्य."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-CLS-002",
+      "category": "CLS",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "A machine learning model is proposed for the yellowing problem",
+        "marathi": "पिवळेपणाच्या समस्येसाठी machine learning मॉडेल सुचवले जात आहे"
+      },
+      "action": {
+        "english": "Keep the decision tree. Every branch has a stated reason, errors are traceable to a branch, and it needs no training data. Later, image recognition can answer two of the five questions automatically — but the tree does not change.",
+        "marathi": "निर्णय-वृक्षच ठेवा. प्रत्येक फांदीला स्पष्ट कारण आहे, चूक कुठे झाली ते कळते, आणि प्रशिक्षण डेटा लागत नाही. पुढे प्रतिमा-ओळख पाचपैकी दोन प्रश्नांची उत्तरे आपोआप देऊ शकेल — पण वृक्ष तोच राहील."
+      },
+      "reasoning": {
+        "agronomic_basis": "A classifier trained on no data cannot outperform a tree built from documented differential diagnosis. The tree is also auditable, which matters when two of the six outcomes involve telling the farmer not to spray.",
+        "yield_impact": "None. Prevents replacing a working method with an untrained one.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "Domain 12 why tree not model"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "leaf_yellowing_pattern",
+        "model_version"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The correct role for ML here is narrow — automating two observations inside a tree that stays human-authored. That is a much more defensible design than a end-to-end classifier.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-IMG-001",
+      "category": "IMG",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Season 1 or 2 AND a farmer submits a photograph",
+        "marathi": "पहिला किंवा दुसरा हंगाम, शेतकऱ्याने फोटो पाठवला"
+      },
+      "action": {
+        "english": "Store it and have an expert label it. Do not attempt automatic classification. Photographs cannot be collected retrospectively, so collection must begin before any model exists.",
+        "marathi": "फोटो साठवा आणि तज्ज्ञाकडून लेबल लावून घ्या. आपोआप वर्गीकरणाचा प्रयत्न करू नका. फोटो मागे जाऊन जमवता येत नाहीत — म्हणून मॉडेल नसतानाही जमवायला आत्ताच सुरुवात करावी लागते."
+      },
+      "reasoning": {
+        "agronomic_basis": "No public labelled image set exists for any of the eight candidate markers. Each class needs hundreds of images and they only appear when the condition actually occurs, so collection is opportunistic and slow.",
+        "yield_impact": "None this season. It is the precondition for image recognition ever working.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 12 image data reality"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "photo_uploaded_count",
+        "photo_labelled_count",
+        "model_version"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Marked irrecoverable because a season without photograph collection is a season of training data permanently lost, exactly like the operation records.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-IMG-002",
+      "category": "IMG",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Image recognition targets are being prioritised",
+        "marathi": "प्रतिमा-ओळखीचे लक्ष्य ठरवले जात आहे"
+      },
+      "action": {
+        "english": "Rank central shoot death first at u equals 0.70, then interveinal versus uniform yellowing, then straight-line holes as a safe first technical target because the stakes are low.",
+        "marathi": "क्रम — सुरळी मरणे प्रथम (u = ०.७०), मग शिरांमधील विरुद्ध एकसारखे पिवळे, मग सरळ रेषेतील छिद्रे. शेवटचा तांत्रिकदृष्ट्या सुरक्षित पहिला प्रयत्न आहे कारण त्यात चूक झाली तरी नुकसान कमी."
+      },
+      "reasoning": {
+        "agronomic_basis": "Central shoot death is the earliest visible sign of the largest factor, so it has the highest value. Straight-line holes in the whorl are the most visually distinctive pattern in the set and carry only 0.05, which makes them a safe place for a first model that may be wrong.",
+        "yield_impact": "Directs the modelling effort toward value and away from what is merely easy.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Domain 12 image candidates",
+          "Domain 11 u-value register"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest",
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_11_yield"
+        ]
+      },
+      "farm_brain_schema": [
+        "photo_labelled_count",
+        "central_shoot_dead",
+        "straight_line_holes_in_whorl"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The flowering spike at rank 6 is worth noting separately. It is not a disease sign but a stage marker, and it re-anchors the calendar and sets the earthing-up deadline even when the planting date was entered wrongly.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-VOI-001",
+      "category": "VOI",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Voice input is being considered for seasons 1 or 2",
+        "marathi": "पहिल्या किंवा दुसऱ्या हंगामासाठी आवाज-इनपुटचा विचार"
+      },
+      "action": {
+        "english": "Defer it. Templated messages with simple button responses are sufficient and safer. Voice becomes necessary once farmers start asking free-form questions, by which time the rule base should be stable.",
+        "marathi": "पुढे ढकला. साचेबद्ध संदेश आणि साधी बटण-उत्तरे पुरेशी आणि अधिक सुरक्षित आहेत. शेतकरी मुक्त प्रश्न विचारू लागल्यावर आवाजाची खरी गरज येते — आणि तोपर्यंत नियम-आधार स्थिर झालेला असावा."
+      },
+      "reasoning": {
+        "agronomic_basis": "ASR tools exist for Marathi through IndicWhisper and IndicWav2Vec, but they will not reliably recognise ginger technical terms without vocabulary biasing. Building voice before the vocabulary is complete produces a system that mishears the most important words.",
+        "yield_impact": "None. Sequences the technology work correctly.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "AI4Bharat ASR tools",
+          "Domain 12 voice limitation"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "asr_used",
+        "advisory_language"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Voice matters for accessibility where literacy is limited, so it is deferred rather than dismissed. Supplying the controlled vocabulary as ASR biasing hints is what makes it work when it arrives.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-COLD-001",
+      "category": "COLD",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "A required input is missing — calibration, soil test, local weather record",
+        "marathi": "आवश्यक माहिती उपलब्ध नाही — calibration, माती परीक्षण, स्थानिक हवामान नोंद"
+      },
+      "action": {
+        "english": "Degrade gracefully and say so. Fall back to the table, the safe default or the regional forecast, mark the confidence lower, and tell the user what is missing and what would improve it.",
+        "marathi": "प्रणाली थांबवू नका — कमी अचूकतेने चालू ठेवा आणि ते सांगा. तक्ता, सुरक्षित default किंवा प्रादेशिक अंदाजावर परत जा, विश्वासार्हता कमी दाखवा, आणि काय उपलब्ध नाही व काय केल्यास सुधारेल हे वापरकर्त्याला सांगा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Season one has zero field data, incomplete calibration and no soil test. A system that refuses to operate without them delivers nothing in the season where the largest decisions are made.",
+        "yield_impact": "Determines whether the advisory functions at all in the first season.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Domain 3 fallback rules",
+          "Domain 12 degradation table"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_4_nutrient"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "calibration_done",
+        "soil_test_available",
+        "prediction_interval_pct",
+        "bias_observation_count"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Saying what is missing also creates the incentive to fix it. A farmer told that a soil test would sharpen the fertiliser advice is more likely to get one than a farmer given confident-sounding generic doses.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-COLD-002",
+      "category": "COLD",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Any advisory is being displayed",
+        "marathi": "कोणताही सल्ला दाखवला जात आहे"
+      },
+      "action": {
+        "english": "Show the confidence level. Where it is low, explain why in one line. Never hide low confidence and never present an estimated value as a measured one.",
+        "marathi": "विश्वासार्हता पातळी दाखवा. कमी असल्यास एका ओळीत कारण सांगा. कमी विश्वासार्हता लपवू नका, आणि अंदाजित मूल्य मोजलेले म्हणून दाखवू नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "Twenty-two of thirty-five u-values are estimates and several key inputs are unmeasured. Presenting everything with equal confidence would misrepresent the basis of the advice and would fail the first time a confident recommendation turned out wrong.",
+        "yield_impact": "None. Determines whether the advisory is trusted after the first mistake.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Domain 11 source class policy",
+          "Domain 12 confidence display"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": [
+          "domain_11_yield"
+        ]
+      },
+      "farm_brain_schema": [
+        "prediction_interval_pct",
+        "u_value_source_class",
+        "calibration_done"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This is why every rule in the knowledge base carries a confidence score and a source class. Those fields exist so this rule can be implemented rather than promised.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-AL-001",
+      "category": "AL",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "A recommended action is not recorded within 3 days of its deadline",
+        "marathi": "सुचवलेले काम मुदतीनंतर तीन दिवसांत नोंदवले गेले नाही"
+      },
+      "action": {
+        "english": "Ask one question with fixed options — was it done, and if not what got in the way? Labour, time, cost, did not seem necessary, other.",
+        "marathi": "एकच प्रश्न, ठराविक पर्यायांसह — काम झाले का, आणि नसेल तर काय अडचण आली? मजूर, वेळ, खर्च, गरज वाटली नाही, इतर."
+      },
+      "reasoning": {
+        "agronomic_basis": "If the engine recommended something and it was not done, either the message failed or the recommendation was wrong for local conditions. Both are learnable. And implementation barriers are invisible to every sensor — a moisture probe cannot detect that labour was unavailable.",
+        "yield_impact": "None this season. It is the most valuable data the product collects.",
+        "confidence_score": 0.82,
+        "source_tier": "B",
+        "references": [
+          "Core C12.3",
+          "Domain 8 overdue operation query"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_8_operations"
+        ]
+      },
+      "farm_brain_schema": [
+        "non_compliance_reason",
+        "advisory_issued_count",
+        "advisory_completed_count",
+        "action_compliance_rate"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "If the answer is repeatedly labour unavailable in August, that is not a message problem — it is the earthing-up labour competition identified in Domain 8, and the fix is a reminder at 60 DAP rather than better wording.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-AL-002",
+      "category": "AL",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "A low-confidence decision, an unexpected outcome or a symptom outside the decision tree occurs",
+        "marathi": "कमी विश्वासार्हतेचा निर्णय, अनपेक्षित निकाल, किंवा निर्णय-वृक्षात न बसणारे लक्षण"
+      },
+      "action": {
+        "english": "Queue it for expert review with the full context. Include the rule that fired, the inputs it used, and the outcome if known.",
+        "marathi": "संपूर्ण संदर्भासह तज्ज्ञ तपासणीसाठी रांगेत ठेवा — कोणता नियम लागू झाला, त्याला कोणती माहिती मिळाली, आणि निकाल माहीत असल्यास तोही."
+      },
+      "reasoning": {
+        "agronomic_basis": "These are the cases where the rule base is weakest, and reviewing them is how the rules improve. Without the inputs alongside the decision, the reviewer cannot tell whether the rule or the data was at fault.",
+        "yield_impact": "None directly. It is the correction mechanism for the rule base.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Core C12.3 active learning queue"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "u_value_source_class",
+        "gap_unexplained_pct",
+        "model_version"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "A symptom outside the tree is the most interesting entry of the five. It means the differential diagnosis is incomplete, which is a finding worth having early.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-CLU-001",
+      "category": "CLU",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "A cluster-level advisory is being issued",
+        "marathi": "cluster पातळीवर सल्ला दिला जात आहे"
+      },
+      "action": {
+        "english": "Aggregate it. Say this area has raised disease pressure, never your neighbour's field has rot. Naming an affected farm breaches the consent basis.",
+        "marathi": "अनामीकृत करा. 'या भागात रोगाचा दाब वाढला आहे' असे म्हणा, 'शेजारच्या शेतात कूज आहे' असे कधीही नाही. बाधित शेताचे नाव सांगणे संमतीच्या आधाराचे उल्लंघन आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Cluster learning is genuinely valuable — a neighbour warned before symptoms appear has a preventive window that would not otherwise exist. But that value has to be delivered without identifying the source farm.",
+        "yield_impact": "Extends the preventive window across the cluster while staying within the consent basis.",
+        "confidence_score": 0.82,
+        "source_tier": "B",
+        "references": [
+          "Domain 6 cluster advisory",
+          "DPDP Act 2023"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "cluster_id",
+        "cluster_anonymised",
+        "rot_incidence_pct",
+        "consent_advisory"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "In a village of five to ten farms an aggregate statement may still effectively identify the source. That is a real limit and it argues for waiting until two or three farms show the condition before issuing the alert.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-CLU-002",
+      "category": "CLU",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "White grub is confirmed on any farm in the cluster",
+        "marathi": "cluster मधील कोणत्याही शेतात हुमणी आढळली"
+      },
+      "action": {
+        "english": "Issue a simultaneous alert to all farms in the cluster asking for beetle collection on the same three evenings. Individual action does not work because the beetles fly.",
+        "marathi": "cluster मधील सर्व शेतांना एकाच वेळी इशारा द्या — पुढील तीन संध्याकाळी सर्वांनी भुंगेरे गोळा करावेत. भुंगेरे उडतात, त्यामुळे एकट्याने केलेले नियंत्रण टिकत नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "The source states that integrated management carried out collectively is beneficial for this pest. A single treated field is recolonised from neighbouring untreated ones, so simultaneity is what makes the control work.",
+        "yield_impact": "Raises the effectiveness of the 0.10 white grub control from partial to substantial.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali and Mahajan white grub",
+          "Domain 5 cluster alert"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest"
+        ],
+        "depends_on": [
+          "domain_5_pest"
+        ]
+      },
+      "farm_brain_schema": [
+        "cluster_id",
+        "white_grub_suspected",
+        "cluster_pest_alert_active",
+        "cluster_anonymised"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "This is one of two things the cluster architecture makes possible that a single-farm app cannot replicate. The other is warning a neighbour before symptoms appear.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-DPDP-001",
+      "category": "DPDP",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": null,
+      "trigger": {
+        "english": "Farmer data is about to be collected AND consent_advisory is false",
+        "marathi": "शेतकऱ्याची माहिती गोळा केली जात आहे पण संमती घेतलेली नाही",
+        "expr": "consent_advisory IS FALSE OR consent_advisory IS NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "consent_advisory": false
+            },
+            "expect": "TRUE",
+            "label": "संमती नाही — डेटा गोळा करू नका"
+          },
+          {
+            "context": {
+              "consent_advisory": true
+            },
+            "expect": "FALSE",
+            "label": "संमती आहे"
+          },
+          {
+            "context": {},
+            "expect": "TRUE",
+            "label": "संमतीची नोंदच नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "BLOCK collection. Obtain explicit consent in Marathi, in plain language, at registration. State the purpose, the retention period and the right to erasure.",
+        "marathi": "माहिती गोळा करणे थांबवा. नोंदणीच्या वेळी मराठीत, सोप्या भाषेत स्पष्ट संमती घ्या. उद्देश, किती काळ माहिती ठेवली जाईल, आणि हटवण्याचा हक्क — तिन्ही सांगा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The system collects personally attributable data including name, location, land details, financial information and operation records. The DPDP Act 2023 requires consent that is explicit, informed and in a language the person understands.",
+        "yield_impact": "None. Legal compliance.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Digital Personal Data Protection Act 2023"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "consent_advisory",
+        "consent_date",
+        "data_retention_until",
+        "farmer_id"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "VERIFY",
+      "kannad_note": "The consent text must be drafted with legal advice. DPDP rules and enforcement are still evolving, so this is marked VERIFY rather than settled.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "SILENT_GUARD",
+      "immutable": true,
+      "immutable_reason": "Consent before collection is a legal requirement."
+    },
+    {
+      "rule_id": "D12-DPDP-002",
+      "category": "DPDP",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": null,
+      "trigger": {
+        "english": "Data is about to be shared with a research or commercial partner",
+        "marathi": "संशोधन किंवा व्यावसायिक भागीदाराला माहिती दिली जात आहे",
+        "expr": "consent_research IS FALSE OR consent_research IS NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "consent_research": false,
+              "consent_advisory": true
+            },
+            "expect": "TRUE",
+            "label": "संशोधन संमती नाही"
+          },
+          {
+            "context": {
+              "consent_research": true
+            },
+            "expect": "FALSE",
+            "label": "दोन्ही संमती"
+          }
+        ]
+      },
+      "action": {
+        "english": "Require separate consent. Consent to receive advisory does not cover data sharing. Refusing the second consent must not stop the service.",
+        "marathi": "स्वतंत्र संमती घ्या. सल्ला मिळवण्याची संमती ही माहिती सामायिक करण्याची संमती नाही. दुसरी संमती नाकारल्यास सेवा थांबवू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "The project's funding pathways include data partnerships. Under DPDP, purpose limitation means data collected to deliver advisory cannot be repurposed for a partnership without fresh consent, and consent obtained under pressure of losing the service is not free consent.",
+        "yield_impact": "None. Legal compliance and a condition of any data partnership being defensible.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "DPDP Act 2023 purpose limitation",
+          "project data partnership pathways"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "consent_research",
+        "consent_advisory",
+        "consent_date",
+        "cluster_anonymised"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "VERIFY",
+      "kannad_note": "Structuring this correctly from the start matters commercially as well as legally. A data asset assembled without clean consent is not a saleable asset.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "SILENT_GUARD",
+      "immutable": true,
+      "immutable_reason": "Separate consent for data sharing is a legal requirement."
+    },
+    {
+      "rule_id": "D12-DPDP-003",
+      "category": "DPDP",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "Data is being anonymised for sharing AND precise coordinates are included",
+        "marathi": "सामायिक करण्यासाठी माहिती अनामीकृत केली जात आहे पण नेमके निर्देशांक त्यात आहेत",
+        "expr": "cluster_anonymised IS FALSE AND consent_research IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "cluster_anonymised": false,
+              "consent_research": true
+            },
+            "expect": "TRUE",
+            "label": "निर्देशांक ढोबळ करा"
+          },
+          {
+            "context": {
+              "cluster_anonymised": true,
+              "consent_research": true
+            },
+            "expect": "FALSE",
+            "label": "अनामीकृत"
+          }
+        ]
+      },
+      "action": {
+        "english": "Coarsen the coordinates to cluster or village level. GPS coordinates cannot be anonymised — any field is identifiable from its location. Never share 7/12 number, Aadhaar or bank details. Agronomic records such as moisture, yield and rot percent may be shared.",
+        "marathi": "निर्देशांक cluster किंवा गाव पातळीवर ढोबळ करा. GPS निर्देशांक अनामीकृत करता येत नाहीत — कोणतेही शेत त्याच्या स्थानावरून ओळखता येते. ७/१२ क्रमांक, आधार किंवा बँक तपशील कधीही सामायिक करू नका. ओलावा, उत्पादन, कूज टक्केवारी यांसारख्या कृषी नोंदी सामायिक करता येतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "Anonymisation that leaves coordinates intact is not anonymisation. A field's location is a durable identifier that cannot be hashed away, because the physical field remains at that point.",
+        "yield_impact": "None. Prevents a compliance failure that would be discovered only after the data has been shared.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "DPDP Act 2023",
+          "Domain 12 anonymisation limit"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "cluster_id",
+        "cluster_anonymised",
+        "consent_research",
+        "plot_id"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This is the constraint most likely to be overlooked, because coordinates feel like technical data rather than personal data. They are the strongest identifier in the whole dataset.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "GPS coordinates, ७/१२, आधार, बँक तपशील share करू नयेत; cluster/village level anonymisation योग्य."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": true,
+      "immutable_reason": "GPS coordinates cannot be anonymised. Coarsening is the only compliant path."
+    },
+    {
+      "rule_id": "D12-DPDP-004",
+      "category": "DPDP",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "A farmer requests deletion of their data",
+        "marathi": "शेतकऱ्याने आपली माहिती हटवण्याची विनंती केली"
+      },
+      "action": {
+        "english": "Delete on request, including from any downstream copies. Note that this removes the plot's field history, which is a first-class input to disease rules — tell the farmer that consequence before deleting.",
+        "marathi": "विनंतीनुसार माहिती हटवा, पुढील प्रतींसह. यामुळे त्या प्लॉटचा रोग-इतिहास नष्ट होतो, आणि तो रोग नियमांचा प्राथमिक आधार आहे — हटवण्यापूर्वी हा परिणाम शेतकऱ्याला सांगा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The right to erasure is a legal requirement. But the field disease history is the input that the bacterial wilt rule depends on, and the bacterium persists in soil for many years, so the farmer should understand what is being lost.",
+        "yield_impact": "Removes an input that Domain 6 rules rely on in later seasons.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "DPDP Act 2023 right to erasure",
+          "Domain 6 field history rule"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "deletion_requested",
+        "field_history_rot",
+        "field_history_wilt",
+        "data_retention_until"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "VERIFY",
+      "kannad_note": "Informing without pressuring is the right balance here. The farmer's right is unconditional; the consequence is simply information they should have.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-EVAL-001",
+      "category": "EVAL",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "System performance is being measured or reported",
+        "marathi": "प्रणालीची कामगिरी मोजली किंवा नोंदवली जात आहे"
+      },
+      "action": {
+        "english": "Use action compliance rate as the primary metric — recommended actions completed on time divided by recommended actions issued. Target above 60 percent in season one and above 80 percent by season three. Do not report messages sent or app opens.",
+        "marathi": "मुख्य मापदंड म्हणून कृती-पालन दर वापरा — वेळेवर पूर्ण झालेल्या कृती भागिले सुचवलेल्या कृती. पहिल्या हंगामात ६०% वर, तिसऱ्या हंगामापर्यंत ८०% वर हे लक्ष्य. पाठवलेले संदेश किंवा ॲप उघडण्याची संख्या नोंदवू नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "Four decisions worth about Rs 2.85 lakh per acre all depend on doing something at the right time. So system success is whether the farmer acted on time, and that requires a record rather than a model to measure.",
+        "yield_impact": "None directly. It is the metric that connects advisory to yield.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "Domain 12 evaluation",
+          "Domain 11 economic conversion"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "action_compliance_rate",
+        "advisory_issued_count",
+        "advisory_completed_on_time_count"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Messages sent measures effort, app opens measures curiosity, and neither measures whether the crop was better. Compliance rate measures the only thing that converts advice into yield.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-EVAL-002",
+      "category": "EVAL",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "A trigger fired and the predicted event did not follow",
+        "marathi": "इशारा दिला पण अपेक्षित घटना घडली नाही"
+      },
+      "action": {
+        "english": "Record it as a false alarm but do not reflexively raise the threshold. For irrecoverable factors a high false alarm rate is the correct trade — ten unnecessary drainage inspections cost ten walks; one missed saturation event costs most of the crop.",
+        "marathi": "ती खोटी सूचना म्हणून नोंदवा, पण लगेच मर्यादा वाढवू नका. भरून न निघणाऱ्या घटकांसाठी जास्त खोट्या सूचना हा योग्य सौदा आहे — दहा अनावश्यक निचरा तपासण्या म्हणजे दहा फेऱ्या; एक चुकलेली संपृक्तता घटना म्हणजे बहुतांश पीक."
+      },
+      "reasoning": {
+        "agronomic_basis": "For a factor that cannot be recovered, detection after the event has no remedial value, so the trigger must fire on the precondition. The asymmetry between the cost of a false alarm and the cost of a miss justifies a high sensitivity setting.",
+        "yield_impact": "Protects the largest u-values in the register from being tuned away.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 6 trigger-based escalation",
+          "Domain 11 irrecoverability count"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_11_yield"
+        ]
+      },
+      "farm_brain_schema": [
+        "false_alarm_count",
+        "true_alarm_count",
+        "saturation_hours"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The counter-pressure is notification fatigue. The answer is to keep the advisory quiet in calm periods so that a red alert still carries weight, rather than to raise the threshold on the alerts that matter.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-EVAL-003",
+      "category": "EVAL",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "The effect of the advisory needs demonstrating",
+        "marathi": "advisory चा परिणाम सिद्ध करायचा आहे"
+      },
+      "action": {
+        "english": "Compare a new cluster against its own previous season rather than withholding advice from a control group. Withholding is ethically uncomfortable and practically difficult.",
+        "marathi": "नियंत्रण गट ठेवून काही शेतांना सल्ला नाकारण्याऐवजी, नवीन cluster ची तुलना त्याच्याच मागील हंगामाशी करा. सल्ला नाकारणे नैतिकदृष्ट्या नाजूक आणि व्यावहारिकदृष्ट्या अवघड आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "A true control group would give the cleanest evidence but requires denying advice to farmers who could benefit. A before-and-after comparison within the same cluster is weaker evidence but avoids that problem and is achievable.",
+        "yield_impact": "None. Determines whether the product's effect can be demonstrated to partners.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Domain 12 control group note"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "cluster_id",
+        "yield_quintal_per_acre_actual",
+        "action_compliance_rate"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "The before-and-after comparison is confounded by weather, which varies more here than in most belts. Reporting it alongside the season's rainfall against the long-term average is the honest way to present it.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-MOAT-001",
+      "category": "MOAT",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "The competitive position is being described",
+        "marathi": "स्पर्धात्मक स्थितीचे वर्णन केले जात आहे"
+      },
+      "action": {
+        "english": "Be accurate about what is and is not defensible. The language models are open, the agronomy is published and the hardware is purchasable. The defensible asset is the pairing of that knowledge with this plot's measurements and outcomes over several seasons.",
+        "marathi": "काय बचावयोग्य आहे आणि काय नाही याबद्दल अचूक रहा. भाषा मॉडेल खुली आहेत, कृषिशास्त्र प्रकाशित आहे, आणि hardware विकत मिळते. बचावयोग्य मालमत्ता म्हणजे ते ज्ञान या शेताच्या मोजमापांशी आणि निकालांशी अनेक हंगामांत जोडणे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Claiming the knowledge base itself as proprietary would be false — every source in Domains 1 to 13 is public. What cannot be copied is a weather bias correction for this village, a crop coefficient series derived here, and sensor readings paired with outcomes from the same plot.",
+        "yield_impact": "None. Makes the commercial argument survivable under scrutiny.",
+        "confidence_score": 0.82,
+        "source_tier": "B",
+        "references": [
+          "Domain 12 moat analysis"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "cluster_id",
+        "bias_observation_count",
+        "u_value_source_class"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The most undervalued asset is field disease history. Bacterial wilt persists for many years, prior outbreak is a first-class input, paper does not survive and memory is incomplete — and unlike almost everything else, it appreciates with age.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-ROAD-001",
+      "category": "ROAD",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Season 1 planning",
+        "marathi": "पहिल्या हंगामाचे नियोजन"
+      },
+      "action": {
+        "english": "Season 1 delivers the rule engine, templated Marathi messages, the ten minimum records, sensor calibration, photograph collection without labelling, compliance measurement and the DPDP consent structure. No machine learning.",
+        "marathi": "पहिला हंगाम — नियम-इंजिन कार्यरत, साचेबद्ध मराठी संदेश, दहा किमान नोंदी, sensor calibration, फोटो जमवणे (लेबल न लावता), कृती-पालन दर मोजणे, आणि DPDP संमती रचना. Machine learning नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Each season one item is either immediately valuable or is data that cannot be collected retrospectively. Nothing in the list depends on a model existing.",
+        "yield_impact": "Delivers the full layer 1 and layer 2 value in the first season.",
+        "confidence_score": 0.82,
+        "source_tier": "B",
+        "references": [
+          "Domain 12 season roadmap"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "season_record_complete",
+        "calibration_done",
+        "photo_uploaded_count",
+        "consent_advisory",
+        "action_compliance_rate"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Photograph collection is on the season one list despite no model existing, because photographs of a rot outbreak cannot be taken after the season ends.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-ROAD-002",
+      "category": "ROAD",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Season 4 or later AND the accumulated records support model training",
+        "marathi": "चौथा हंगाम किंवा नंतर, आणि जमा झालेल्या नोंदी मॉडेल प्रशिक्षणासाठी पुरेशा आहेत"
+      },
+      "action": {
+        "english": "At this point local u-values can feed back into the rule engine, a fine-tuned Marathi dialogue model becomes viable, and multi-cluster federated learning becomes possible. This is when the word AI can be used honestly.",
+        "marathi": "आता स्थानिक u मूल्ये नियम-इंजिनमध्ये परत जोडता येतील, मराठी संवाद मॉडेल fine-tune करता येईल, आणि अनेक cluster मध्ये federated learning शक्य होईल. याच टप्प्यावर 'AI' हा शब्द प्रामाणिकपणे वापरता येईल."
+      },
+      "reasoning": {
+        "agronomic_basis": "Three or four seasons of gap attribution move a substantial share of the 22 estimated u-values into FIELD class, and by then the controlled vocabulary and labelled images exist. The learning layer improves accuracy; it does not enable anything that was impossible before.",
+        "yield_impact": "Improves accuracy of predictions and triggers rather than adding new capability.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Domain 12 season roadmap",
+          "Domain 11 u-value validation"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_11_yield"
+        ]
+      },
+      "farm_brain_schema": [
+        "model_version",
+        "u_value_source_class",
+        "cluster_id",
+        "photo_labelled_count"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Stating when the claim becomes true is more useful than claiming it now. It also gives the team a concrete definition of done for the learning layer rather than an open-ended aspiration.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-LOG-004",
+      "category": "LOG",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G2",
+      "trigger": {
+        "english": "A light trap is installed AND nightly counts are not being recorded",
+        "marathi": "प्रकाश सापळा लावला आहे पण रोजची संख्या नोंदवली जात नाही"
+      },
+      "action": {
+        "english": "Record the nightly catch by hand from season one. The count is a direct measure of pest pressure and is currently discarded. Aggregated across a cluster it would produce a local pest pressure map, and it cannot be collected retrospectively.",
+        "marathi": "पहिल्या हंगामापासून रोजची संख्या हाताने नोंदवा. ती संख्या कीड-दाबाचे थेट माप आहे आणि सध्या ती फेकून दिली जाते. cluster मध्ये एकत्र केल्यास स्थानिक कीड-दाब नकाशा तयार होईल — आणि ही माहिती मागे जाऊन जमवता येत नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "The light trap is already a recommended practice for shoot borer, so the farmer will accept it. Adding a counter to the sub-node later would automate it, but the manual record is what makes the first two seasons of data exist at all.",
+        "yield_impact": "None directly. Builds a local dataset that exists nowhere else.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Domain 5 light trap product opportunity",
+          "Core C10.5 capability gap register"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest"
+        ],
+        "depends_on": [
+          "domain_5_pest"
+        ]
+      },
+      "farm_brain_schema": [
+        "light_trap_installed",
+        "light_trap_count_nightly",
+        "cluster_id"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "A device already in the field, already accepted by the farmer, producing a measurement that is currently thrown away. That is the cheapest data asset available in the whole system.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D12-COLD-003",
+      "category": "COLD",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "A VERIFY-class rule is used in production advisory",
+        "marathi": "उत्पादनातील सल्ल्यात VERIFY वर्गाचा नियम वापरला जात आहे"
+      },
+      "action": {
+        "english": "Flag it in the advisory and queue it for verification. VERIFY class means the value must be confirmed with a named institution before it is relied on, and using it without saying so misrepresents its basis.",
+        "marathi": "सल्ल्यात ते स्पष्ट करा आणि तपासणीसाठी रांगेत ठेवा. VERIFY वर्ग म्हणजे संबंधित संस्थेकडून पुष्टी झाल्याशिवाय त्यावर अवलंबून राहू नये — आणि तसे न सांगता वापरणे त्याचा आधार चुकीचा दाखवते."
+      },
+      "reasoning": {
+        "agronomic_basis": "VERIFY-class items include the CIB&RC label claims, the SO2 residue limits, the drought-prone taluka listing and the yield ceiling question. Each is used in advisory but none is confirmed, and the distinction between an unconfirmed value and a confirmed one matters most where a chemical or a subsidy is involved.",
+        "yield_impact": "None. Keeps the stated basis of the advice accurate.",
+        "confidence_score": 0.82,
+        "source_tier": "A",
+        "references": [
+          "Domain 1 source class definitions",
+          "Domain 10 VERIFY items"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_10_institutional"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "u_value_source_class",
+        "cibrc_list_checked_date",
+        "data_review_due"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Eight rules in Domain 10 alone are VERIFY class. Flagging them keeps the open item list live rather than letting unverified values quietly harden into assumed facts.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    }
+  ],
+  "open_items": [
+    {
+      "id": "D12-OI-01",
+      "item": "DPDP Act 2023 rules and enforcement status; consent text drafting",
+      "owner": "legal advice",
+      "source_class": "VERIFY",
+      "blocking": true,
+      "note": "Blocking for data collection at scale and for any partnership."
+    },
+    {
+      "id": "D12-OI-02",
+      "item": "Local Kannad terminology, including whether bharani and utalni are the same operation",
+      "owner": "field listening",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D12-OI-03",
+      "item": "ASR accuracy on ginger technical terms",
+      "owner": "field testing with IndicWhisper",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D12-OI-04",
+      "item": "Labelled symptom photographs for the eight candidate markers",
+      "owner": "three seasons of collection plus expert labelling",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D12-OI-05",
+      "item": "Control group or before-after comparison design",
+      "owner": "ethical and practical review",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D12-OI-06",
+      "item": "Marathi agricultural instruction dataset",
+      "owner": "does not exist; would have to be built",
+      "source_class": "FIELD",
+      "blocking": false,
+      "note": "Obstacle and opportunity together."
+    },
+    {
+      "id": "D12-OI-07",
+      "item": "Whether an aggregate cluster alert can identify the source farm in a 5 to 10 farm cluster",
+      "owner": "privacy review",
+      "source_class": "VERIFY",
+      "blocking": false
+    }
+  ],
+  "summary": {
+    "total_rules": 36,
+    "by_category": {
+      "POS": 3,
+      "ARCH": 1,
+      "LOG": 4,
+      "LANG": 2,
+      "VOC": 2,
+      "MOD": 2,
+      "CLS": 2,
+      "IMG": 2,
+      "VOI": 1,
+      "COLD": 3,
+      "AL": 2,
+      "CLU": 2,
+      "DPDP": 4,
+      "EVAL": 3,
+      "MOAT": 1,
+      "ROAD": 2
+    },
+    "by_priority": {
+      "5": 18,
+      "4": 13,
+      "3": 5
+    },
+    "by_severity": {
+      "blocking": 4,
+      "info": 18,
+      "red": 4,
+      "yellow": 10
+    },
+    "by_source_tier": {
+      "A": 14,
+      "B": 22,
+      "C": 0
+    },
+    "by_source_class": {
+      "DERIVED": 27,
+      "EST": 2,
+      "SRC-D": 3,
+      "FIELD": 1,
+      "VERIFY": 3
+    },
+    "confidence_range": {
+      "min": 0.7,
+      "max": 0.9,
+      "mean": 0.815
+    },
+    "rules_with_u_value": 0,
+    "irrecoverable_rules": 4,
+    "zero_cost_rules": [
+      "D12-POS-001",
+      "D12-POS-002",
+      "D12-POS-003",
+      "D12-CLS-001",
+      "D12-EVAL-001",
+      "D12-MOAT-001"
+    ],
+    "highest_value_rule": "D12-LOG-001",
+    "blocking_open_items": 1,
+    "by_decision_type": {
+      "BLOCK": 4,
+      "POLICY": 30,
+      "PLANNING_GUIDANCE": 2
+    },
+    "reviewed_t1": 5,
+    "rules_with_trigger_expr": 5,
+    "rules_with_delivery_class": 5,
+    "immutable_rules": 5
+  },
+  "next_steps": [
+    "1. Obtain legal advice on DPDP consent structure before collecting data at scale (D12-OI-01)",
+    "2. Set up the ten minimum records before season one begins — they cannot be reconstructed (D12-LOG-001)",
+    "3. Build the controlled vocabulary from the thirteen identified terms and add local Kannad usage from field listening (D12-VOC-001, D12-OI-02)",
+    "4. Begin photograph collection and light trap counting in season one even though no model exists (D12-IMG-001, D12-LOG-004)",
+    "5. Instrument the action compliance rate from the first advisory issued — it is the primary success metric (D12-EVAL-001)"
+  ],
+  "author_note": "This file contains 30 rules because that is what the source document supports. It is the final domain of the ginger knowledge base. Its organising position is that for the first two or three seasons this is a rule engine rather than a learning system, and that saying so plainly is both more honest and commercially safer — three rules exist purely to block overstated capability claims, and each of the five prohibited claims traces to a finding in another domain. The value does not depend on machine learning: four decisions worth about Rs 2.85 lakh per acre depend on timely reminders, which a rule engine delivers from day one. What machine learning needs is data, and data cannot be collected retrospectively, which is why the logging rules are marked irrecoverable. Two structural gaps are recorded: ginger's Marathi vocabulary is absent from every available corpus, and no Marathi agricultural instruction dataset exists at all. Status is PHASE_1_RAW_UNVALIDATED.",
+  "legal": {
+    "disclaimer_mr": "हा नियम-संच निर्णय-सहाय्य साधन आहे. अंतिम जबाबदारी शेतकऱ्याची.",
+    "disclaimer_en": "This rule set is a decision-support tool. Final responsibility rests with the cultivator.",
+    "dpdp_note": "DPDP Act 2023 rules and enforcement are evolving. The guidance here is general and is not a substitute for legal advice. Obtain qualified legal advice before collecting personal data and before any data partnership.",
+    "capability_claim_note": "Product material must not describe the system as learning AI, must not claim AI-driven yield prediction, must not claim the NPK probe measures NPK, and must not claim weather forecasting. Overstated claims create both regulatory and commercial risk.",
+    "data_note": "Two-consent model required. Refusal of the research consent must not affect service delivery. GPS coordinates cannot be anonymised and must be coarsened to cluster level before any sharing."
+  }
+}

@@ -1,0 +1,3209 @@
+{
+  "_schema": {
+    "schema_version": "2.0",
+    "inherits_from": "Domain1_Rules_Ginger_v2.json",
+    "inheritance_note": "The full _schema block is defined in Domain 1 and is NOT repeated here. Units (per acre), stage codes G0-G5, source tiers A/B/C, source classes, priority scale, recoverability, severity and confidence bounds are inherited unchanged. Domain 2 to 8 additions are also assumed present. Only Domain 9 additions are declared below.",
+    "additions": {
+      "rule_categories_domain_9": {
+        "MT": "maturity determination",
+        "WW": "water withdrawal before harvest",
+        "HV": "harvest operation",
+        "YD": "yield recording",
+        "PH": "post-harvest handling",
+        "GD": "grading",
+        "DR": "simple sun drying",
+        "PR": "chemical processing methods",
+        "PW": "powder and value addition",
+        "ST": "storage",
+        "MK": "market and price",
+        "SL": "selling decision",
+        "SF": "safety and food safety"
+      },
+      "new_farm_brain_fields": {
+        "harvest_date": "date",
+        "harvest_route": "enum:[green_early, green_full, dry_ginger_immediate, dry_ginger_stored, seed_rhizome]",
+        "skin_scrape_result": "enum:[not_done, peels_easily, firmly_attached]",
+        "pseudostem_lodged": "boolean",
+        "water_withdrawal_start_date": "date",
+        "water_withdrawal_pct": "number",
+        "yield_quintal_per_acre_actual": "number",
+        "grade_a_pct": "number",
+        "grade_b_pct": "number",
+        "grade_c_pct": "number",
+        "produce_washed": "boolean",
+        "graded_separately": "boolean",
+        "harvest_injury_observed": "boolean",
+        "dry_recovery_pct_actual": "number",
+        "drying_space_ready": "boolean",
+        "drying_method": "enum:[none, simple_sun, malabar_lime_sulphur, soda_khar, powder]",
+        "so2_treatment_used": "boolean",
+        "moisture_pct_final": "number",
+        "sale_market": "string",
+        "sale_price_per_quintal": "number",
+        "transport_cost_per_quintal": "number",
+        "storage_loss_monthly_pct": "number",
+        "processing_trained_operator": "boolean",
+        "ppe_available": "boolean"
+      },
+      "constants": {
+        "grading_price_spread_multiple": 2.7,
+        "dry_recovery_planning_pct": 19,
+        "dry_recovery_range_pct": [
+          18.7,
+          25
+        ],
+        "state_daily_arrival_quintal": [
+          1297,
+          3695
+        ],
+        "onion_daily_arrival_quintal_reference": 330007,
+        "sunth_breakeven_price_multiple": [
+          4,
+          5
+        ],
+        "final_moisture_target_pct": [
+          8,
+          10
+        ]
+      },
+      "safety_policy": {
+        "soda_khar": "Boiling 50 percent caustic soda causes severe burns and permanent blindness on eye contact. The engine must present the method as information with the safety warning FIRST, must never present it as a routine farm operation, and must recommend a group or cooperative processing facility instead.",
+        "sulphur_fumigation": "Burning sulphur in a closed room is a serious respiratory hazard, and SO2 residues are subject to FSSAI and export limits. Do not present the Malabar method as first choice until those limits are verified.",
+        "default_route": "Simple sun drying involves no chemicals and suits the Kannad climate. It is the first option in every case."
+      },
+      "decision_types": {
+        "AUTO_DECISION": {
+          "mr": "AI कधी व किती हे स्वतः ठरवतो",
+          "en": "engine computes the quantity or timing itself"
+        },
+        "SENSOR_ALERT": {
+          "mr": "sensor वर आधारित इशारा, कृती माणसाची",
+          "en": "sensor-triggered; the action is human work"
+        },
+        "SCHEDULED_REMINDER": {
+          "mr": "वेळापत्रकानुसार आठवण",
+          "en": "calendar or stage driven reminder"
+        },
+        "DIAGNOSTIC": {
+          "mr": "AI विचारतो, शेतकरी सांगतो",
+          "en": "engine asks, farmer answers, engine branches"
+        },
+        "DATA_CAPTURE": {
+          "mr": "नोंद किंवा मोजमाप मागतो",
+          "en": "engine requests a record or measurement"
+        },
+        "HUMAN_DECISION": {
+          "mr": "AI गणित दाखवतो, निर्णय माणसाचा",
+          "en": "engine presents arithmetic; person decides"
+        },
+        "BLOCK": {
+          "mr": "AI नाकारतो किंवा अडवतो",
+          "en": "engine refuses or blocks"
+        },
+        "PLANNING_GUIDANCE": {
+          "mr": "हंगामापूर्व निवड — शेतकरी ठरवतो",
+          "en": "pre-season choice the farmer makes"
+        },
+        "POLICY": {
+          "mr": "प्रॉडक्ट धोरण, शेतकऱ्यापर्यंत जात नाही",
+          "en": "product policy; never reaches a farmer"
+        }
+      },
+      "automation_levels": {
+        "full": "engine decides and acts without asking",
+        "assisted": "engine decides when, the person does the work or supplies the observation",
+        "advisory": "engine shows the arithmetic, the person chooses",
+        "refusal": "engine prevents an action",
+        "none": "internal policy, not farmer facing"
+      },
+      "trigger_dsl": {
+        "version": "dsl-1.0",
+        "logic": "three-valued: TRUE / FALSE / UNKNOWN",
+        "unknown_rule": "A rule whose trigger evaluates UNKNOWN must NOT fire and must NOT be treated as FALSE. Report reduced confidence and name the missing field (Domain 12 D12-COLD-001).",
+        "operators": [
+          "> >= < <= == !=",
+          "AND OR NOT",
+          "IN [..]",
+          "BETWEEN a AND b",
+          "IS NULL / IS NOT NULL / IS TRUE / IS FALSE",
+          "DURATION(field > x) > n HOURS",
+          "WITHIN(date_field, n DAYS)",
+          "MONTH IN [..]",
+          "STAGE IN [..]"
+        ],
+        "note": "Fields resolve against kb_farm_brain_fields. An undeclared name is a parse error, never a silent false."
+      },
+      "notification_policy": {
+        "version": "notify-1.0",
+        "why": "The season simulation issued 998 messages across 301 days before this existed. A trigger expresses a condition and a condition stays true; the advice is an event and must be delivered once.",
+        "classes": {
+          "ONCE_UNTIL_RESOLVED": "Standing precondition. Once, then a 7/21/45/90 day ladder with rising severity.",
+          "EVENT": "Transient physical event. Rising edge only; re-armed after it clears.",
+          "WINDOW": "Dated operation. Advance warning, the day, then 3 overdue reminders.",
+          "SILENT_GUARD": "Prevention rule. No message unless the prohibited action is attempted."
+        },
+        "result": "998 messages became 43 in the normal season, with no critical stage left silent for more than 15 days."
+      },
+      "override_policy": {
+        "version": "override-1.0",
+        "why": "The Tier-1 review worked but was offline. An agronomist looking at a live plot in August cannot edit JSON and wait for a deploy; by then the window has closed.",
+        "kinds": [
+          "THRESHOLD",
+          "DELIVERY",
+          "SEVERITY",
+          "DISABLE",
+          "PARAMETER"
+        ],
+        "scopes": [
+          "plot",
+          "cluster",
+          "global"
+        ],
+        "scope_precedence": "narrowest wins — plot over cluster over global",
+        "default_expiry_days": 240,
+        "max_expiry_days": 400,
+        "expiry_rationale": "A permanent change belongs in the knowledge base, not in the override table.",
+        "immutable_count": 16,
+        "immutable_rationale": "Some rules exist because getting them wrong causes harm no agronomic judgement outweighs. The API refuses them by code path, and a database trigger refuses them again if the application layer is bypassed.",
+        "audit": "Refused attempts are recorded, not discarded. An attempt to override an immutable rule is a governance signal."
+      }
+    }
+  },
+  "metadata": {
+    "domain": 9,
+    "domain_name": "Harvest & Post-Harvest",
+    "domain_name_mr": "काढणी व काढणीपश्चात",
+    "crop": "ginger",
+    "crop_mr": "आले",
+    "region": "Kannad, Chhatrapati Sambhajinagar, Marathwada",
+    "source_document": "AgroGuardian_Ginger_Domain9_Harvest_PostHarvest_RAW.docx",
+    "version": "1.0",
+    "status": "PHASE_1_RAW_UNVALIDATED",
+    "agronomist_validated": false,
+    "validation_note": "Market prices are dated observations from mid-2026 and change daily. Processing methods are described from a commercial source and carry safety and food-safety caveats that must be resolved before any of them is recommended. Dry ginger price, processing cost and monthly storage loss are all missing, so the selling-decision model cannot yet be run to a conclusion.",
+    "total_rules": 39,
+    "rule_count_note": "34 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count.",
+    "review_by": "2026-12-31",
+    "review_note": "Market prices and arrivals change continuously. The price observations in this file must be treated as illustrative of the SPREAD, never as current values.",
+    "purpose": "Harvest timing, post-harvest handling, grading, processing and selling for ginger in the Kannad belt. The central finding reframes the whole knowledge base: the largest single economic lever in this crop is not yield, it is grade.",
+    "key_innovations": [
+      "A 2.7 times price spread was recorded within one market on one day, purely on quality. Moving up a grade is worth more than any yield improvement available in Domains 1 to 8.",
+      "The two grading determinants that sit entirely inside this domain — pre-harvest water withdrawal and post-harvest washing and sorting — are both labour-only. The biggest economic lever is also among the cheapest.",
+      "Grades must be sold separately. Sold together, the lower grade drags the whole consignment to an average price.",
+      "Small markets pay more but cannot absorb volume. Split the consignment rather than choosing one market.",
+      "State daily arrival is roughly one percent of onion. This is a thin market, and the local APMC does not appear in the arrival lists at all.",
+      "Current prices are bullish and ginger is a strongly cyclical crop. The profit calculation must also be run at a crashed price, which is the economic counterpart of the 55 percent rainfall rule.",
+      "Dry ginger is not the default route. It is insurance against a price crash, and the capacity must exist before the crash rather than being arranged after it.",
+      "The caustic soda method is not safe at farm level. It belongs to a group or cooperative facility, and saying so plainly is more useful than describing the procedure."
+    ],
+    "central_finding": {
+      "statement": "The largest single economic lever in ginger is grade, not yield.",
+      "evidence": "Akola market, one day, 180 quintal arrival, price range Rs 6,000 to Rs 16,000 per quintal — a 2.7 times spread on the same crop in the same market on the same day.",
+      "comparison": "Raising yield from 9 to 11 tonnes per acre is a 22 percent gain. Moving from the lower grade band to the upper is over 100 percent.",
+      "where_grade_is_decided": "Two of the seven grading determinants sit entirely in this domain — skin condition, set by pre-harvest water withdrawal, and cleanliness and uniformity, set by washing and sorting. Both are labour-only.",
+      "implication": "Advice given in the final two weeks before harvest may be the most valuable advice of the entire season."
+    },
+    "primary_sources": [
+      "AgroWorld - Ale (Adrak) lagvad, utpadan, bene sathvan va prakriya, courtesy Dr. Bawasakar Technology (TIER C) - harvest handling, simple sun drying, Malabar method, soda khar method, powder, seed storage. Used for practice description only.",
+      "News18 Marathi - APMC daily market price reports, 2026 (TIER B) - market-wise arrivals and price ranges, the grading spread observation",
+      "Agrowon - Ale Lagvad Tantradnyan, Dr. Jitendra Kadam, Kasbe Digraj (TIER A) - yield, dry recovery, variety-wise figures",
+      "Spices Board / TNAU Agritech (TIER B) - dry recovery range",
+      "ICAR-AICRP on Spices (TIER A) - dry recovery",
+      "Tractorkarvan, CropLibrary, AgriFarming (TIER B) - maturity indicators, water withdrawal",
+      "Directorate of Agriculture Maharashtra 2023 (TIER A) - state average yield"
+    ],
+    "review_log": {
+      "tier_1_review_date": "2026-07-31",
+      "rules_reviewed": 3,
+      "rules_total": 39,
+      "note": "Rule-level status is authoritative. Domain status stays PHASE_1_RAW_UNVALIDATED until T3 and T4 are also reviewed and one season of field data exists."
+    }
+  },
+  "reference_data": {
+    "harvest_routes": [
+      {
+        "route": "green_early",
+        "name_mr": "लवकर हिरवे",
+        "timing_dap": 180,
+        "timing_months": 6,
+        "criterion": "fibre still low, weight adequate",
+        "tradeoff": "lower weight and lower dry recovery, but cash arrives earlier",
+        "source_tier": "C"
+      },
+      {
+        "route": "green_full",
+        "name_mr": "पूर्ण पक्व हिरवे",
+        "timing_dap": 230,
+        "criterion": "full maturity",
+        "tradeoff": "higher weight, price uncertain",
+        "source_tier": "C"
+      },
+      {
+        "route": "market_75pct",
+        "name_mr": "७५% पक्व",
+        "timing_dap": null,
+        "criterion": "75 percent mature is acceptable to the market",
+        "tradeoff": "lets the farmer respond to a good price without waiting for full maturity, at the cost of weight, dry recovery and storability",
+        "source_tier": "C"
+      },
+      {
+        "route": "dry_ginger",
+        "name_mr": "सुंठ",
+        "timing_dap": 240,
+        "timing_months": 8,
+        "criterion": "full maturity required for processing",
+        "tradeoff": "price timing control, but 75 to 80 percent weight loss",
+        "source_tier": "C"
+      },
+      {
+        "route": "seed_rhizome",
+        "name_mr": "बेणे",
+        "timing_dap": 240,
+        "criterion": "full maturity MANDATORY",
+        "tradeoff": "immature seed does not survive storage and does not sprout",
+        "source_tier": "A"
+      }
+    ],
+    "maturity_indicators": [
+      {
+        "rank": 1,
+        "indicator_en": "skin scrape test",
+        "indicator_mr": "सालीची चाचणी",
+        "method": "dig a rhizome and rub the skin with the thumb; if it peels easily the crop is immature, if it is firmly attached it is mature",
+        "reliability": "highest",
+        "equipment": "none",
+        "source_tier": "B"
+      },
+      {
+        "rank": 2,
+        "indicator_en": "leaves yellow and dry, pseudostem lodges",
+        "indicator_mr": "पाने पिवळी व वाळणे, खोड कोसळणे",
+        "reliability": "high",
+        "caveat": "only valid after about 200 DAP; before that, yellowing has at least six other causes in this belt",
+        "source_tier": "B"
+      },
+      {
+        "rank": 3,
+        "indicator_en": "sample dig and weigh",
+        "indicator_mr": "खोदून नमुना वजन",
+        "reliability": "high",
+        "destructive": true,
+        "source_tier": "B"
+      },
+      {
+        "rank": 4,
+        "indicator_en": "day count",
+        "indicator_mr": "दिवस मोजणी",
+        "reliability": "medium",
+        "caveat": "drifts with variety, season and planting date",
+        "source_tier": "B"
+      }
+    ],
+    "water_withdrawal": {
+      "start_before_harvest": "one to two months",
+      "complete_stop_before_harvest": "one to two weeks",
+      "purpose": "improves rhizome quality — skin corks and hardens, dry matter rises",
+      "taper_schedule_derived": [
+        {
+          "days_before_harvest": 60,
+          "irrigation_pct": 100,
+          "note": "begin gradual reduction"
+        },
+        {
+          "days_before_harvest": 45,
+          "irrigation_pct": 80
+        },
+        {
+          "days_before_harvest": 30,
+          "irrigation_pct": 60
+        },
+        {
+          "days_before_harvest": 15,
+          "irrigation_pct": 30
+        },
+        {
+          "days_before_harvest": 7,
+          "irrigation_pct": 0
+        }
+      ],
+      "taper_source_class": "EST",
+      "taper_note": "The percentage steps are fitted inside the sourced framework of one to two months gradual and one to two weeks stopped. Verify against the skin scrape test in season one.",
+      "black_soil_caution": "Abrupt cessation cracks vertisol, which makes lifting difficult and injures rhizomes — and harvest injury becomes storage rot. The word gradual is the operative instruction on this soil.",
+      "quality_effect": "Continued irrigation to harvest keeps the rhizome heavier but leaves the skin uncured, which lowers storability, lowers dry recovery and lowers grade.",
+      "source_tier": "B"
+    },
+    "harvest_operation": {
+      "sequence": [
+        {
+          "step": 1,
+          "operation_en": "cut the foliage",
+          "operation_mr": "पाला कापणे"
+        },
+        {
+          "step": 2,
+          "operation_en": "lift rhizomes without injury",
+          "operation_mr": "गड्डे इजा न करता बाहेर काढणे"
+        },
+        {
+          "step": 3,
+          "operation_en": "separate mother rhizome from new fingers",
+          "operation_mr": "मातृ गड्डा व नवीन बोटे वेगळी करणे"
+        },
+        {
+          "step": 4,
+          "operation_en": "wash clean, free of soil",
+          "operation_mr": "स्वच्छ धुणे"
+        },
+        {
+          "step": 5,
+          "operation_en": "drain in shade in a thin layer",
+          "operation_mr": "सावलीत पातळ थरात निथळणे"
+        },
+        {
+          "step": 6,
+          "operation_en": "grade",
+          "operation_mr": "प्रतवारी"
+        },
+        {
+          "step": 7,
+          "operation_en": "market, process or store",
+          "operation_mr": "बाजार, प्रक्रिया किंवा साठवण"
+        }
+      ],
+      "injury_warning": "Take care that the rhizomes are not injured while being lifted. Affected rhizomes soften and disintegrate during handling and storage, so a small wound at harvest becomes a large loss in store — and by then the entire season's investment is committed.",
+      "practical_technique": "Dig from the side of the bed rather than from directly above, keeping the implement away from the rhizome.",
+      "timing_of_day": {
+        "value": "early morning",
+        "source_class": "EST",
+        "reason": "rhizomes are cooler, dehydration is lower, and labour works in less heat"
+      },
+      "source_tier": "C"
+    },
+    "yield_reference": {
+      "sources_t_per_ha": [
+        {
+          "source": "Agrowon Maharashtra",
+          "range": [
+            15,
+            23
+          ],
+          "tier": "A"
+        },
+        {
+          "source": "AgroWorld",
+          "range": [
+            18,
+            30
+          ],
+          "tier": "C"
+        },
+        {
+          "source": "state average",
+          "value": 13.2,
+          "tier": "A"
+        }
+      ],
+      "targets_quintal_per_acre": {
+        "minimum_viable": 60,
+        "target": 90,
+        "stretch": 110,
+        "theoretical_max": 130
+      },
+      "consistency_note": "The upper bound of 30 t/ha aligns with the stretch and theoretical maximum levels set in Domain 1, so the revised targets are ambitious but not unrealistic."
+    },
+    "dry_recovery": {
+      "planning_pct": 19,
+      "by_source": [
+        {
+          "source": "AgroWorld simple drying",
+          "range": [
+            20,
+            25
+          ],
+          "tier": "C"
+        },
+        {
+          "source": "ICAR-AICRP",
+          "range": [
+            15,
+            20
+          ],
+          "tier": "A"
+        },
+        {
+          "source": "Spices Board / TNAU",
+          "range": [
+            16,
+            25
+          ],
+          "tier": "B"
+        }
+      ],
+      "by_variety_pct": {
+        "rejatha": 23.0,
+        "varada": 20.07,
+        "mahima": 19.0,
+        "mahim": 18.7
+      },
+      "variety_note": "Recovery varies by variety, so the route decision and the variety decision are linked. If dry ginger is the strategic route, Rejatha at 23 percent becomes a serious candidate despite ranking third on fresh yield.",
+      "low_fibre_varieties_for_sunth": [
+        "Jamaica",
+        "Bangkok",
+        "China",
+        "Rio de Janeiro",
+        "Mahim"
+      ],
+      "fibre_check": "Mahima has the lowest recorded fibre of the four main varieties at 3.26 percent, so the primary recommendation survives the low-fibre criterion for dry ginger."
+    },
+    "grading": {
+      "observed_spread": {
+        "market": "Akola",
+        "arrival_quintal": 180,
+        "price_range_per_quintal": [
+          6000,
+          16000
+        ],
+        "spread_multiple": 2.7,
+        "date_context": "mid 2026",
+        "source_tier": "B"
+      },
+      "determinants": [
+        {
+          "factor": "rhizome size and fullness",
+          "decided_in_domain": [
+            3,
+            4,
+            8
+          ],
+          "note": "water, potassium, spacing"
+        },
+        {
+          "factor": "skin condition, cured or uncured",
+          "decided_in_domain": [
+            9
+          ],
+          "note": "pre-harvest water withdrawal — labour only"
+        },
+        {
+          "factor": "cleanliness, free of soil",
+          "decided_in_domain": [
+            9
+          ],
+          "note": "washing — labour only"
+        },
+        {
+          "factor": "absence of rot and blemish",
+          "decided_in_domain": [
+            5,
+            6
+          ]
+        },
+        {
+          "factor": "fibre content",
+          "decided_in_domain": [
+            1,
+            8
+          ],
+          "note": "variety and growth regulator"
+        },
+        {
+          "factor": "uniformity",
+          "decided_in_domain": [
+            9
+          ],
+          "note": "sorting — labour only"
+        },
+        {
+          "factor": "freshness",
+          "decided_in_domain": [
+            9
+          ],
+          "note": "handling and transport"
+        }
+      ],
+      "formal_standards": {
+        "available": false,
+        "source_class": "FIELD",
+        "note": "No published grading standard was located. The list above is reasoned from the price observation and from handling practice."
+      },
+      "selling_rule": "Sell grades separately. Sold together, the lower grade drags the whole consignment to an average price."
+    },
+    "simple_sun_drying": {
+      "steps": [
+        "wash clean and remove roots",
+        "soak overnight in water",
+        "scrape the skin with a sharpened bamboo edge, not a metal knife",
+        "wash again",
+        "sun dry for 7 to 8 days",
+        "spread no thicker than 1 to 1.5 inches",
+        "lay on clean plastic or tarpaulin",
+        "turn frequently by hand for even drying",
+        "in the evening cover with tarpaulin WITHOUT gathering the produce, to avoid darkening from smoke",
+        "dry until moisture is 8 to 10 percent",
+        "finish by rubbing between the hands"
+      ],
+      "recovery_pct": [
+        20,
+        25
+      ],
+      "chemicals_used": "none",
+      "critical_details": [
+        {
+          "detail": "scrape, do not peel deeply",
+          "reason": "the oil and aroma compounds sit immediately below the skin, so deep peeling loses both weight and quality — which is why bamboo is specified rather than a metal knife"
+        },
+        {
+          "detail": "cover in the evening without gathering",
+          "reason": "cooking smoke in rural evenings darkens the produce, and darkened ginger drops a grade. The remedy costs nothing."
+        }
+      ],
+      "kannad_suitability": {
+        "verdict": "close to ideal",
+        "reasons": [
+          "February rainfall is 2 to 3 mm, effectively nil",
+          "semi-arid dry sun",
+          "low humidity",
+          "space available on adjoining dryland"
+        ],
+        "comparison": "Kerala has high humidity at harvest and drying is difficult. Here the February and March sun is almost perfect for it, which makes dry ginger a naturally convenient route in this belt."
+      },
+      "source_tier": "C"
+    },
+    "malabar_method": {
+      "steps": [
+        "select and soak 8 to 10 hours",
+        "peel",
+        "2 percent lime solution for 6 to 7 hours",
+        "sulphur fumigation 12 hours in a closed room, 6 to 10 g sulphur per kg of rhizome",
+        "lime again for 6 hours",
+        "fumigate again for 12 hours",
+        "repeat the cycle three times in total to obtain a bright white colour",
+        "sun dry to 8 to 10 percent moisture",
+        "clean in a gunny bag"
+      ],
+      "product": "bright white dry ginger",
+      "warnings": [
+        "sulphur fumigation leaves sulphur dioxide residues in the product",
+        "many countries, especially export markets, impose strict SO2 residue limits and some buyers reject sulphur-treated produce outright",
+        "burning sulphur in a closed room is a serious respiratory hazard to the operator"
+      ],
+      "regulatory_status": {
+        "so2_limit_verified": false,
+        "source_class": "VERIFY",
+        "note": "FSSAI and export limits for SO2 in ginger must be checked before this method is presented as a first option."
+      },
+      "calcium_note": "Dry ginger produced by the Malabar method retains a higher calcium content, which is the stated reason the soda khar product is preferred in foreign markets.",
+      "source_tier": "C"
+    },
+    "soda_khar_method": {
+      "steps": [
+        "select and soak 8 to 10 hours",
+        "peel",
+        "load into a galvanised wire cage of about 1.5 by 2 feet, light enough to lift by hand",
+        "prepare three boiling caustic soda solutions at 20, 25 and 50 percent",
+        "dip 5 minutes in the 20 percent solution",
+        "dip 1 minute in the 25 percent solution",
+        "dip half a minute in the 50 percent solution",
+        "immerse in 4 percent citric acid for 2 hours",
+        "drain and sun dry",
+        "rub off any remaining skin"
+      ],
+      "advantage": "Better demand in foreign markets, because Malabar-method ginger retains higher calcium.",
+      "safety": {
+        "severity": "extreme",
+        "hazards": [
+          "boiling 50 percent caustic soda causes immediate severe burns on skin contact",
+          "permanent blindness on eye contact",
+          "boiling liquid splashes"
+        ],
+        "verdict": "This is not a task for a farmer's yard without training and protective equipment.",
+        "required_ppe": [
+          "rubber gloves",
+          "face shield or goggles",
+          "apron",
+          "closed footwear"
+        ],
+        "recommended_alternative": "a group or cooperative processing facility"
+      },
+      "source_tier": "C"
+    },
+    "powder": {
+      "method": "grind well-dried ginger to a fine powder, sieve through a 50 to 60 mesh screen, pack in airtight plastic bags",
+      "uses": [
+        "oleoresin extraction",
+        "spice products"
+      ],
+      "source_tier": "C"
+    },
+    "value_addition_economics": {
+      "recovery_pct": [
+        20,
+        25
+      ],
+      "breakeven_multiple": [
+        4,
+        5
+      ],
+      "statement": "100 kg of fresh ginger yields 20 to 25 kg of dry ginger, so the dry price must be four to five times the fresh price merely to break even — before counting labour, fuel, space and time.",
+      "when_processing_is_rational": [
+        {
+          "condition": "fresh price high, above about Rs 15,000 per quintal",
+          "decision": "sell fresh, do not process"
+        },
+        {
+          "condition": "fresh price crashed, around Rs 6,000",
+          "decision": "process and store"
+        },
+        {
+          "condition": "lower grade produce",
+          "decision": "process — appearance matters less once dried"
+        },
+        {
+          "condition": "no storage space or labour",
+          "decision": "do not process"
+        }
+      ],
+      "framing": "Dry ginger is not the default route. It is insurance against a price crash. And because it is insurance, the capacity has to exist before the crash rather than being arranged after it.",
+      "missing_figures": [
+        "dry ginger price",
+        "processing cost",
+        "monthly storage loss for dry ginger"
+      ]
+    },
+    "storage": {
+      "types": [
+        {
+          "type": "green ginger",
+          "duration": "weeks",
+          "purpose": "awaiting sale",
+          "guidance_source": "FIELD"
+        },
+        {
+          "type": "seed rhizome",
+          "duration": "4 to 5 months",
+          "purpose": "next season",
+          "loss_pct": [
+            28,
+            40
+          ],
+          "domain_ref": 8
+        },
+        {
+          "type": "dry ginger",
+          "duration": "months to a year",
+          "purpose": "price timing control",
+          "condition": "moisture 8 to 10 percent, cool and dry"
+        }
+      ],
+      "green_storage_principles": {
+        "source_class": "DERIVED",
+        "rules": [
+          "cool, shaded, air circulating",
+          "do not pack wet",
+          "separate out injured rhizomes, because one rotting rhizome infects its neighbours",
+          "avoid closed tin, cement or tile rooms"
+        ]
+      },
+      "critical_gap": {
+        "item": "monthly storage loss for dry ginger",
+        "why": "The hold-or-sell decision cannot be computed without it. Net return in month m equals expected price times one minus cumulative storage loss, minus storage cost.",
+        "source_class": "FIELD",
+        "method": "weigh a sample each month"
+      }
+    },
+    "market": {
+      "observations_2026": [
+        {
+          "market": "Mumbai",
+          "arrival_quintal": [
+            884,
+            1556
+          ],
+          "price_range": [
+            10000,
+            17000
+          ]
+        },
+        {
+          "market": "Nagpur",
+          "arrival_quintal": [
+            730,
+            1203
+          ],
+          "price_range": [
+            9007,
+            15346
+          ]
+        },
+        {
+          "market": "Akola",
+          "arrival_quintal": [
+            180,
+            240
+          ],
+          "price_range": [
+            6000,
+            16000
+          ]
+        },
+        {
+          "market": "Chandrapur",
+          "arrival_quintal": [
+            8,
+            25
+          ],
+          "price_range": [
+            17000,
+            17500
+          ]
+        },
+        {
+          "market": "Solapur",
+          "arrival_quintal": 10,
+          "price_range": [
+            14000,
+            14000
+          ]
+        },
+        {
+          "market": "Ratnagiri",
+          "arrival_quintal": 15,
+          "price_range": [
+            15000,
+            15000
+          ]
+        }
+      ],
+      "state_daily_arrival_quintal": [
+        1297,
+        3695
+      ],
+      "onion_comparison_quintal": 330007,
+      "thinness_ratio": "about 1 percent of onion",
+      "local_apmc": {
+        "market": "Chhatrapati Sambhajinagar",
+        "appears_in_arrival_lists": false,
+        "implication": "no reportable ginger arrival",
+        "action": "enquire directly with local traders and the APMC"
+      },
+      "three_findings": [
+        "grading spread within a single market is large — 2.7 times at Akola",
+        "small arrivals command higher prices — Chandrapur at 8 to 25 quintal took the highest price of the day — but a small market cannot absorb a large consignment",
+        "the state market is thin, at roughly one percent of onion arrivals"
+      ],
+      "price_cyclicality": {
+        "current_state": "bullish",
+        "mechanism": "high price, everyone plants next year, arrivals rise, price crashes, nobody plants, price rises again",
+        "why_severe_in_ginger": [
+          "eight month crop, so the response is slow",
+          "large seed cost, so the decision is made once",
+          "small market, so a modest increase in arrivals moves the price a long way"
+        ],
+        "planning_rule": "Run the profit calculation at a crashed price as well. This is the economic counterpart of the 55 percent rainfall rule in Domain 7."
+      },
+      "distance_estimates_km": {
+        "chhatrapati_sambhajinagar": 60,
+        "nashik": 200,
+        "mumbai": 350,
+        "nagpur": 500
+      },
+      "distance_source_class": "EST",
+      "source_tier": "B"
+    },
+    "selling_options": [
+      {
+        "option": 1,
+        "route": "green_early",
+        "timing_months": 6,
+        "advantage": "cash sooner, lower risk",
+        "disadvantage": "lower weight"
+      },
+      {
+        "option": 2,
+        "route": "green_full",
+        "timing_months": 8,
+        "advantage": "higher weight",
+        "disadvantage": "price uncertain"
+      },
+      {
+        "option": 3,
+        "route": "dry_ginger_immediate",
+        "timing_months": [
+          8,
+          9
+        ],
+        "advantage": "less dependent on appearance and grade",
+        "disadvantage": "labour, 75 to 80 percent weight loss"
+      },
+      {
+        "option": 4,
+        "route": "dry_ginger_stored",
+        "timing_months": "9 plus",
+        "advantage": "control over price timing",
+        "disadvantage": "capital locked up, storage loss unmeasured"
+      }
+    ],
+    "consignment_split_strategy": {
+      "source_class": "DERIVED",
+      "allocation": [
+        {
+          "share_pct": [
+            20,
+            30
+          ],
+          "grade": "best",
+          "destination": "local or small market",
+          "reason": "small arrivals attract higher prices"
+        },
+        {
+          "share_pct": [
+            50,
+            60
+          ],
+          "grade": "middle",
+          "destination": "large market such as Mumbai or Nagpur",
+          "reason": "absorbs volume"
+        },
+        {
+          "share_pct": [
+            10,
+            20
+          ],
+          "grade": "lowest",
+          "destination": "processing rather than sale",
+          "reason": "appearance matters less once dried"
+        }
+      ]
+    }
+  },
+  "rules": [
+    {
+      "rule_id": "D09-GD-001",
+      "category": "GD",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Harvest preparation begins, about 30 days before expected harvest",
+        "marathi": "काढणीची तयारी सुरू, अपेक्षित काढणीच्या सुमारे तीस दिवस आधी",
+        "expr": "days_to_harvest BETWEEN 25 AND 35",
+        "expr_version": "dsl-1.0",
+        "expr_note": "A 2.7 times spread was recorded within one market on one day, purely on quality.",
+        "golden_tests": [
+          {
+            "context": {
+              "days_to_harvest": 30
+            },
+            "expect": "TRUE",
+            "label": "प्रतवारीचा फरक सांगा"
+          },
+          {
+            "context": {
+              "days_to_harvest": 60
+            },
+            "expect": "FALSE",
+            "label": ""
+          }
+        ]
+      },
+      "action": {
+        "english": "State the grading spread plainly. A 2.7 times price difference was recorded within one market on one day, purely on quality. Washing and grading before sale is worth more than any yield improvement available this season.",
+        "marathi": "प्रतवारीचा फरक स्पष्ट सांगा. एकाच बाजारात, एकाच दिवशी, केवळ प्रतीमुळे २.७ पट भाव फरक नोंदवला गेला आहे. धुऊन आणि प्रतवारी करून विकल्यास हा फरक मिळतो — आणि तो या हंगामातील कोणत्याही उत्पादन-वाढीपेक्षा मोठा आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Akola market recorded Rs 6,000 to Rs 16,000 per quintal on a 180 quintal arrival on a single day. Two of the seven grading determinants — skin condition and cleanliness with uniformity — sit entirely in this domain, and both are labour-only.",
+        "yield_impact": "Not a yield factor. On 90 quintal at the two ends of that band the difference is roughly Rs 9 lakh, which exceeds every yield factor in the knowledge base combined.",
+        "confidence_score": 0.82,
+        "source_tier": "B",
+        "references": [
+          "News18 Marathi APMC daily report 2026"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "grade_a_pct",
+        "grade_b_pct",
+        "grade_c_pct",
+        "produce_washed",
+        "graded_separately",
+        "sale_price_per_quintal"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "This reframes the whole knowledge base. Domains 1 to 8 work on yield; this single observation says grade matters more, and grade is set by two labour-only operations in the last fortnight.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-GD-002",
+      "category": "GD",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Produce is being prepared for sale AND graded_separately is false",
+        "marathi": "माल विक्रीसाठी तयार केला जात आहे पण श्रेणी वेगळ्या केलेल्या नाहीत",
+        "expr": "graded_separately IS FALSE AND WITHIN(harvest_date, 7 DAYS)",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "graded_separately": false,
+              "days_to_harvest": 3
+            },
+            "expect": "TRUE",
+            "label": "प्रतवारी नाही"
+          },
+          {
+            "context": {
+              "graded_separately": true,
+              "days_to_harvest": 3
+            },
+            "expect": "FALSE",
+            "label": "प्रतवारी झाली"
+          }
+        ]
+      },
+      "action": {
+        "english": "Sort into grades and sell each grade separately. Sold together, the lower grade drags the whole consignment down to an average price.",
+        "marathi": "प्रतवारी करून प्रत्येक श्रेणी वेगळी विका. सर्व एकत्र विकल्यास खालच्या प्रतीचा माल वरच्या प्रतीचा भावही खाली खेचतो आणि सरासरी भाव मिळतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "The observed spread exists because buyers price on quality. A mixed lot is priced on its weakest visible fraction rather than on its average, so separation captures value that already exists in the crop.",
+        "yield_impact": "Pure price effect. The cost is sorting labour.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "News18 Marathi APMC spread observation"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "graded_separately",
+        "grade_a_pct",
+        "grade_b_pct",
+        "grade_c_pct",
+        "sale_price_per_quintal"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Sorting is the single cheapest way to raise realised price. It requires no equipment and no input, only the decision to do it before loading rather than after.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-GD-003",
+      "category": "GD",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G5",
+      "trigger": {
+        "english": "Grading criteria are needed",
+        "marathi": "प्रतवारीचे निकष हवे आहेत"
+      },
+      "action": {
+        "english": "Present the seven determinants and flag which are still changeable. Size, rot and fibre are already fixed by this point; skin condition, cleanliness, uniformity and freshness are still in the farmer's hands.",
+        "marathi": "सात निकष सांगा आणि कोणते अजून बदलता येतात ते स्पष्ट करा. आकार, कूज आणि तंतू आता ठरलेले आहेत; सालीची स्थिती, स्वच्छता, एकसारखेपणा आणि ताजेपणा अजून शेतकऱ्याच्या हातात आहेत."
+      },
+      "reasoning": {
+        "agronomic_basis": "No published grading standard for ginger was located, so the list is reasoned from the price observation and from handling practice. Separating the fixed determinants from the changeable ones directs effort where it can still act.",
+        "yield_impact": "Directs the grading effort.",
+        "confidence_score": 0.65,
+        "source_tier": "B",
+        "references": [
+          "Domain 9 grading determinants",
+          "absence of a published standard"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle",
+          "domain_6_disease"
+        ]
+      },
+      "farm_brain_schema": [
+        "produce_washed",
+        "graded_separately",
+        "skin_scrape_result",
+        "rot_incidence_pct"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "EST",
+      "kannad_note": "Formal grading standards from the Spices Board or APMC are an open item. Until they exist, the reasoned list is workable but should be presented as such rather than as an official specification.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-MT-001",
+      "category": "MT",
+      "priority": 5,
+      "severity": "info",
+      "stage": "G5",
+      "trigger": {
+        "english": "dap at or above 200",
+        "marathi": "दोनशे दिवस झाले",
+        "expr": "dap > 200 AND skin_scrape_result IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "The simplest high-value test in the knowledge base. It needs a thumb.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 215
+            },
+            "expect": "TRUE",
+            "label": "सालीची चाचणी करा"
+          },
+          {
+            "context": {
+              "dap": 215,
+              "skin_scrape_result": "firmly_attached"
+            },
+            "expect": "FALSE",
+            "label": "केली"
+          },
+          {
+            "context": {
+              "dap": 180
+            },
+            "expect": "FALSE",
+            "label": "अजून लवकर"
+          }
+        ]
+      },
+      "action": {
+        "english": "Use the skin scrape test as the primary maturity indicator. Dig a rhizome and rub the skin with the thumb. Peels easily means immature; firmly attached means mature. This is more reliable than counting days.",
+        "marathi": "गड्डा उकरून अंगठ्याने साल घासा. साल सहज निघते म्हणजे अपक्व; साल घट्ट बसलेली म्हणजे पक्व. ही चाचणी दिवस मोजण्यापेक्षा जास्त विश्वासार्ह आहे आणि तिला कोणतेही उपकरण लागत नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Maturity varies with variety, season and planting date, so day count drifts. Skin corking is a direct physiological indicator of the process that determines storability and dry recovery.",
+        "yield_impact": "Premature harvest carries u = 0.10 to 0.15 plus much larger storage losses.",
+        "confidence_score": 0.82,
+        "source_tier": "B",
+        "references": [
+          "Tractorkarvan",
+          "CropLibrary",
+          "ICAR-AICRP"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "skin_scrape_result",
+        "dap",
+        "current_stage",
+        "harvest_route"
+      ],
+      "u_value": 0.12,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "The simplest high-value test in the knowledge base. It needs a thumb, and it beats the calendar.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-MT-002",
+      "category": "MT",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G4",
+      "trigger": {
+        "english": "Leaf yellowing reported AND dap below 200",
+        "marathi": "पाने पिवळी पडली पण दोनशे दिवस झालेले नाहीत",
+        "expr": "leaf_yellowing_pattern IS NOT NULL AND dap < 200",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "leaf_yellowing_pattern": "uniform_old",
+              "dap": 170
+            },
+            "expect": "TRUE",
+            "label": "लवकर पिवळेपणा"
+          },
+          {
+            "context": {
+              "leaf_yellowing_pattern": "uniform_old",
+              "dap": 220
+            },
+            "expect": "FALSE",
+            "label": "पक्वता शक्य"
+          }
+        ]
+      },
+      "action": {
+        "english": "BLOCK the maturity conclusion. Yellowing before 200 DAP has at least six other causes in this belt. Run the diagnosis sequence before any harvest planning.",
+        "marathi": "पाने पिवळी पडली म्हणजे पक्वता नव्हे. या भागात दोनशे दिवसांच्या आत पिवळेपणाची किमान सहा वेगळी कारणे आहेत. काढणीचे नियोजन करण्यापूर्वी निदान करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Yellowing in this belt can be nitrogen deficiency, iron or zinc lock-up from free lime, waterlogging, soft rot, bacterial wilt or heat scorch. Reading it as maturity would mean harvesting early and, worse, missing a rot diagnosis.",
+        "yield_impact": "Prevents both premature harvest and a missed disease diagnosis worth up to 0.70.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Domain 4 yellowing diagnosis",
+          "Domain 6 differential diagnosis"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": [
+          "domain_4_nutrient",
+          "domain_6_disease"
+        ]
+      },
+      "farm_brain_schema": [
+        "dap",
+        "leaf_yellowing_pattern",
+        "skin_scrape_result",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "Calcareous yellowing is expected here rather than exceptional, so this block will fire often. That is correct — the alternative is a farmer harvesting a month early because the leaves looked ready.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-MT-003",
+      "category": "MT",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "harvest_route is seed_rhizome AND early harvest is being considered",
+        "marathi": "बेण्यासाठीचे पीक पूर्ण पक्वतेपूर्वी काढण्याचा विचार",
+        "expr": "harvest_route == 'seed_rhizome' AND skin_scrape_result == 'peels_easily'",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "harvest_route": "seed_rhizome",
+              "skin_scrape_result": "peels_easily"
+            },
+            "expect": "TRUE",
+            "label": "अपक्व बेणे"
+          },
+          {
+            "context": {
+              "harvest_route": "seed_rhizome",
+              "skin_scrape_result": "firmly_attached"
+            },
+            "expect": "FALSE",
+            "label": "पक्व"
+          }
+        ]
+      },
+      "action": {
+        "english": "REFUSE early harvest for the seed crop. Full maturity is mandatory. Immature rhizome does not survive storage and does not sprout the following season.",
+        "marathi": "बेण्यासाठीचे पीक कधीही लवकर काढू नये. पूर्ण पक्वता अनिवार्य आहे. अपक्व गड्डा साठवणीत टिकत नाही आणि पुढच्या हंगामात उगवत नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Skin corking and dry matter accumulation complete only at full maturity, and both determine survival across the four to five month gap to next planting. Seed rhizome already loses 28 to 40 percent of its weight in storage; starting that clock with an immature rhizome worsens both the loss and the germination.",
+        "yield_impact": "Affects next season, compounding into establishment loss and wasted seed cost.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam",
+          "Domain 8 seed storage"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_8_operations",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "harvest_route",
+        "target_product",
+        "dap",
+        "skin_scrape_result"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "The seed crop follows a different rule from the market crop and the two are often harvested together. If part of the field is destined for seed, that part waits.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D09-MT-004",
+      "category": "MT",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G5",
+      "trigger": {
+        "english": "Market price is high and the crop is around 75 percent mature",
+        "marathi": "बाजारभाव चांगला आहे आणि पीक सुमारे ७५% पक्व आहे"
+      },
+      "action": {
+        "english": "Note that produce at about 75 percent maturity is acceptable to the market. Present the trade-off honestly — lower weight, lower dry recovery, poorer storability — and let the farmer decide.",
+        "marathi": "साधारण ७५% पक्वतेचा माल बाजारात चालतो. तडजोड स्पष्ट सांगा — वजन कमी, सुंठ उतारा कमी, साठवण कमी — आणि निर्णय शेतकऱ्यावर सोडा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The source states that harvest at about 75 percent maturity is marketable. This is a genuine flexibility point that lets the grower respond to a good price rather than being locked to a date.",
+        "yield_impact": "Trades weight for timing. Whether it pays depends on the price differential, not on agronomy.",
+        "confidence_score": 0.7,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld harvest timing"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "harvest_route",
+        "dap",
+        "sale_price_per_quintal",
+        "skin_scrape_result"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-D",
+      "kannad_note": "This is an economic decision wearing agronomic clothes. The engine should present the numbers and not recommend, because the right answer depends on the farmer's cash position as much as on the price.",
+      "decision_type": "HUMAN_DECISION",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-WW-001",
+      "category": "WW",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "About 60 days to expected harvest AND water_withdrawal_start_date is empty",
+        "marathi": "काढणीला सुमारे साठ दिवस उरले, पाणी उतरण सुरू केलेली नाही",
+        "expr": "days_to_harvest BETWEEN 55 AND 62 AND water_withdrawal_start_date IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Skin condition is a grading determinant and the spread is 2.7 times.",
+        "golden_tests": [
+          {
+            "context": {
+              "days_to_harvest": 60
+            },
+            "expect": "TRUE",
+            "label": "पाणी उतरण सुरू करा"
+          },
+          {
+            "context": {
+              "days_to_harvest": 60,
+              "water_withdrawal_start_date": "done"
+            },
+            "expect": "FALSE",
+            "label": "सुरू आहे"
+          },
+          {
+            "context": {
+              "days_to_harvest": 30
+            },
+            "expect": "FALSE",
+            "label": "खिडकी गेली"
+          }
+        ]
+      },
+      "action": {
+        "english": "Begin gradual water withdrawal. Reduce to about 80 percent at 45 days, 60 percent at 30 days, 30 percent at 15 days, and stop completely 7 days before harvest. This determines skin condition, which is a grading determinant.",
+        "marathi": "पाणी हळूहळू कमी करायला सुरुवात करा — ४५ दिवसांवर सुमारे ८०%, ३० दिवसांवर ६०%, १५ दिवसांवर ३०%, आणि काढणीच्या सात दिवस आधी पूर्ण बंद. यावरून सालीची स्थिती ठरते, आणि तीच प्रतवारीचा निकष आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Continued irrigation to harvest keeps the rhizome heavier but leaves the skin uncured, which lowers storability, lowers dry recovery and lowers grade. Withdrawal is what hardens the skin. The temptation to keep watering is strong because the crop looks heavier.",
+        "yield_impact": "Does not change weight materially but strongly affects grade, and the observed grade spread is 2.7 times.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "CropLibrary",
+          "Agrowon descending water table",
+          "Domain 9 grading determinants"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "water_withdrawal_start_date",
+        "water_withdrawal_pct",
+        "dap",
+        "harvest_date"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "The percentage steps are fitted inside the sourced framework of one to two months gradual and one to two weeks stopped. Check them against the skin scrape test in season one and correct.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-WW-002",
+      "category": "WW",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "soil_texture_class is heavy AND water withdrawal in progress",
+        "marathi": "भारी जमीन आणि पाणी उतरण सुरू आहे",
+        "expr": "water_withdrawal_start_date IS NOT NULL AND soil_texture_class == 'heavy'",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Abrupt drying cracks vertisol; harvest injury becomes storage rot.",
+        "golden_tests": [
+          {
+            "context": {
+              "water_withdrawal_start_date": "done",
+              "soil_texture_class": "heavy"
+            },
+            "expect": "TRUE",
+            "label": "उतरण हळू ठेवा"
+          },
+          {
+            "context": {
+              "water_withdrawal_start_date": "done",
+              "soil_texture_class": "light"
+            },
+            "expect": "FALSE",
+            "label": "हलकी जमीन"
+          }
+        ]
+      },
+      "action": {
+        "english": "Make the taper slower than the standard schedule. Abrupt drying cracks black soil, which makes lifting difficult and injures the rhizomes — and harvest injury becomes storage rot.",
+        "marathi": "काळ्या जमिनीत उतरण अधिक हळू ठेवा. एकदम पाणी बंद केल्यास जमीन फुटते, काढणी कठीण होते आणि गड्ड्याला इजा होते — आणि तीच इजा साठवणीत कूज बनते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Vertisol shrinks and cracks on drying. Harvest injury is the documented entry route for storage rot, and by harvest the entire season's cost is committed, so a loss at this point is the most expensive kind.",
+        "yield_impact": "Acts on post-harvest loss rather than field yield.",
+        "confidence_score": 0.72,
+        "source_tier": "B",
+        "references": [
+          "Domain 2 vertisol behaviour",
+          "Domain 6 handling and storage rot"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_2_soil",
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "soil_texture_class",
+        "water_withdrawal_pct",
+        "harvest_injury_observed"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "EST",
+      "kannad_note": "The word gradual appears in both sources and is not incidental. On this soil it is the operative instruction, and it is the difference between lifting clean rhizomes and prising them out of cracked clay.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-HV-001",
+      "category": "HV",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Harvest day",
+        "marathi": "काढणीचा दिवस",
+        "expr": "days_to_harvest BETWEEN 0 AND 3 AND skin_scrape_result == 'firmly_attached'",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "days_to_harvest": 1,
+              "skin_scrape_result": "firmly_attached"
+            },
+            "expect": "TRUE",
+            "label": "काढणीचा क्रम"
+          },
+          {
+            "context": {
+              "days_to_harvest": 1,
+              "skin_scrape_result": "peels_easily"
+            },
+            "expect": "FALSE",
+            "label": "अपक्व"
+          }
+        ]
+      },
+      "action": {
+        "english": "Issue the harvest sequence: cut foliage, lift without injury digging from the side of the bed rather than from above, separate mother rhizome from fingers, wash clean, drain in shade in a thin layer, then grade.",
+        "marathi": "काढणीचा क्रम — पाला कापा, वाफ्याच्या बाजूने खोदून इजा न करता गड्डे काढा, मातृ गड्डा व बोटे वेगळी करा, स्वच्छ धुवा, सावलीत पातळ थरात निथळू द्या, मग प्रतवारी करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Each step protects the next. Injury during lifting becomes storage rot; unwashed produce loses grade and has soil deducted from weight; wet produce heaped rather than drained generates heat and moisture at the centre and begins to rot.",
+        "yield_impact": "Protects realised value rather than weight.",
+        "confidence_score": 0.8,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld harvest sequence"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "harvest_date",
+        "produce_washed",
+        "harvest_injury_observed",
+        "graded_separately"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "Digging from the side rather than from above is the practical detail that prevents most harvest injury. It costs nothing and is easily lost when the crew is working fast.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-HV-002",
+      "category": "HV",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G5",
+      "trigger": {
+        "english": "Harvest in progress",
+        "marathi": "काढणी चालू आहे"
+      },
+      "action": {
+        "english": "Instruct that rhizomes must not be injured while lifting. Affected rhizomes soften and disintegrate during handling and storage, so a small wound now becomes a large loss in store.",
+        "marathi": "गड्डे बाहेर काढताना इजा होणार नाही याची खबरदारी घ्या. इजा झालेले गड्डे हाताळणी व साठवणीत मऊ होऊन विरघळतात — आत्ताची छोटी जखम साठवणीत मोठे नुकसान बनते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Rot-affected rhizomes disintegrate during handling and storage. Mechanical injury at harvest creates exactly the wound that allows that, and by this point the whole season's cost is already spent.",
+        "yield_impact": "Prevents post-harvest loss on a fully committed investment.",
+        "confidence_score": 0.85,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld injury warning",
+          "Domain 6 storage rot"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "harvest_injury_observed",
+        "harvest_date",
+        "rot_incidence_pct"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "The injury rule appears three times across the knowledge base — weeding, earthing up and now harvest. It is the same wound and the same pathogen every time, and it is free to avoid.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-HV-003",
+      "category": "HV",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Produce has been washed",
+        "marathi": "माल धुऊन झाला आहे"
+      },
+      "action": {
+        "english": "Drain in shade in a thin layer before bagging. Do not heap wet produce or put it straight into sacks — heat and moisture build at the centre and rot begins.",
+        "marathi": "ओले गड्डे थेट पोत्यात किंवा ढिगात भरू नका. सावलीत पातळ थरात निथळू द्या, मगच भरा — ढिगाच्या आतल्या भागात उष्णता व ओलावा साचून कूज सुरू होते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Soft rot is favoured by warm humid conditions. A heap of freshly washed rhizomes reproduces exactly those conditions at its centre, so the washing that improves grade can itself start a rot if the draining step is skipped.",
+        "yield_impact": "Prevents a post-harvest loss created by a post-harvest improvement.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Domain 6 soft rot conditions",
+          "AgroWorld handling"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "produce_washed",
+        "harvest_date",
+        "rot_incidence_pct"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "Easy to miss because washing feels like the last step. On a hot harvest day a heaped wet load can start heating within hours.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-HV-004",
+      "category": "HV",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G5",
+      "trigger": {
+        "english": "Harvest scheduling",
+        "marathi": "काढणीचे वेळापत्रक",
+        "expr": "days_to_harvest BETWEEN 0 AND 2 AND air_temp_max_c > 33",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Early morning harvest. Rhizomes are cooler and the crew works in less heat.",
+        "golden_tests": [
+          {
+            "context": {
+              "days_to_harvest": 1,
+              "air_temp_max_c": 36
+            },
+            "expect": "TRUE",
+            "label": "सकाळी काढा"
+          },
+          {
+            "context": {
+              "days_to_harvest": 1,
+              "air_temp_max_c": 27
+            },
+            "expect": "FALSE",
+            "label": "थंड"
+          }
+        ]
+      },
+      "action": {
+        "english": "Prefer early morning harvest. Rhizomes are cooler, dehydration is lower and the crew works in less heat.",
+        "marathi": "सकाळी लवकर काढणी करा. गड्डे थंड राहतात, पाणी कमी उडते, आणि मजुरांना उन्हाचा त्रास कमी होतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "Not stated in any source. Reasoned from field temperature and dehydration behaviour, and from labour productivity in a belt recording maxima near 46 C.",
+        "yield_impact": "Marginal, but free.",
+        "confidence_score": 0.6,
+        "source_tier": "B",
+        "references": [
+          "reasoned; no source"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "harvest_date",
+        "air_temp_max_c"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "Marked EST because no source addresses it. In February and March the mornings here are cool and the afternoons are not, so the practical gain is larger than in a milder belt.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D09-YD-001",
+      "category": "YD",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Harvest complete",
+        "marathi": "काढणी पूर्ण झाली",
+        "expr": "harvest_date IS NOT NULL AND yield_quintal_per_acre_actual IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Twenty-two of thirty-five u-values are estimates. This is how they become measurements.",
+        "golden_tests": [
+          {
+            "context": {
+              "harvest_date": "done"
+            },
+            "expect": "TRUE",
+            "label": "उत्पादन नोंदवा"
+          },
+          {
+            "context": {
+              "harvest_date": "done",
+              "yield_quintal_per_acre_actual": 92
+            },
+            "expect": "FALSE",
+            "label": "नोंदवले"
+          }
+        ]
+      },
+      "action": {
+        "english": "Record actual yield in quintal per acre, the grade split, and the rot and wilt incidence. These are the inputs that let Domain 11 correct its estimated u-values against reality.",
+        "marathi": "प्रत्यक्ष उत्पादन क्विंटल प्रति एकर, श्रेणीनिहाय विभागणी, आणि कूज व मर रोगाचे प्रमाण नोंदवा. याच नोंदींवरून अंदाजित u मूल्ये प्रत्यक्ष आकड्यांनी दुरुस्त होतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "Twenty-two of the thirty u-values in Domain 11 are estimates. They can only become measurements through recorded harvest outcomes matched against the season's operation record.",
+        "yield_impact": "None this season. Foundational for every following season.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Domain 11 gap attribution",
+          "Domain 12 minimum record set"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield",
+          "domain_12_ai",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "yield_quintal_per_acre_actual",
+        "grade_a_pct",
+        "grade_b_pct",
+        "grade_c_pct",
+        "rot_incidence_pct",
+        "wilt_incidence_pct"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "One of the ten minimum records identified in Domain 12. Without it the whole first season produces advice but no learning.",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-YD-002",
+      "category": "YD",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G5",
+      "trigger": {
+        "english": "Actual yield recorded",
+        "marathi": "प्रत्यक्ष उत्पादन नोंदवले"
+      },
+      "action": {
+        "english": "Compare against the target range of 60, 90 and 110 quintal per acre and against the state average of 53. Run the gap attribution using the season's operation record.",
+        "marathi": "लक्ष्य श्रेणीशी तुलना करा — किमान ६०, लक्ष्य ९०, ताणून ११० क्विंटल प्रति एकर, आणि राज्य सरासरी ५३. हंगामातील कृती नोंदींवरून दरी-विश्लेषण चालवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The gap between the ceiling and the actual yield is attributable to recorded events and omissions. Running that attribution is what turns a season's records into corrected coefficients.",
+        "yield_impact": "None directly. Produces the learning that improves later seasons.",
+        "confidence_score": 0.78,
+        "source_tier": "A",
+        "references": [
+          "Domain 11 gap attribution method",
+          "Domain 1 yield targets"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle"
+        ]
+      },
+      "farm_brain_schema": [
+        "yield_quintal_per_acre_actual",
+        "yield_target_quintal_per_acre",
+        "earthing_up_date",
+        "mulch_stage_1_done",
+        "rot_incidence_pct"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The comparison against the state average of 53 quintal matters for the product argument as much as for the farmer. That gap is management, and management is what the engine addresses.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-YD-003",
+      "category": "YD",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G5",
+      "trigger": {
+        "english": "Dry ginger has been produced",
+        "marathi": "सुंठ तयार झाली"
+      },
+      "action": {
+        "english": "Record the actual dry recovery percentage. Planning uses 19 percent; published ranges run from 15 to 25 and vary by variety.",
+        "marathi": "प्रत्यक्ष सुंठ उतारा नोंदवा. नियोजनात १९% वापरला आहे; प्रकाशित श्रेणी १५ ते २५% आहे आणि ती जातीनुसार बदलते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Recovery varies by variety from 18.7 to 23 percent among the four main options, and drying method affects it too. The actual figure for this variety under this method on this plot is not knowable from publications.",
+        "yield_impact": "Determines whether the processing route is economic.",
+        "confidence_score": 0.75,
+        "source_tier": "A",
+        "references": [
+          "Agrowon variety recovery figures",
+          "AgroWorld 20 to 25 percent"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle"
+        ]
+      },
+      "farm_brain_schema": [
+        "dry_recovery_pct_actual",
+        "variety",
+        "drying_method",
+        "moisture_pct_final"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "If dry ginger becomes the main route, Rejatha at 23 percent recovery becomes a serious candidate despite ranking third on fresh yield. The recovery figure is what settles that choice.",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-DR-001",
+      "category": "DR",
+      "priority": 5,
+      "severity": "info",
+      "stage": "G5",
+      "trigger": {
+        "english": "Dry ginger route selected",
+        "marathi": "सुंठ हा मार्ग निवडला"
+      },
+      "action": {
+        "english": "Use simple sun drying as the first option. Wash, remove roots, soak overnight, scrape the skin with a bamboo edge, wash again, then sun dry 7 to 8 days in a layer no thicker than 1 to 1.5 inches on clean plastic or tarpaulin, turning frequently, until moisture reaches 8 to 10 percent.",
+        "marathi": "साधी वाळवणी पद्धत प्रथम वापरा. धुवा, मुळे काढा, रात्रभर भिजवा, बांबूच्या कडेने साल खरडून काढा, पुन्हा धुवा, मग स्वच्छ प्लॅस्टिक किंवा ताडपत्रीवर १ ते १.५ इंचापेक्षा जाड नाही अशा थरात ७ ते ८ दिवस उन्हात वाळवा, वरचेवर हात घालत रहा, पाण्याचा अंश ८ ते १०% येईपर्यंत."
+      },
+      "reasoning": {
+        "agronomic_basis": "This method uses no chemicals, needs no equipment beyond tarpaulin, and gives 20 to 25 percent recovery. The February and March climate here — 2 to 3 mm rainfall, dry semi-arid sun, low humidity — is close to ideal for it, which is not true of Kerala at harvest time.",
+        "yield_impact": "Enables the price-timing route at negligible cost and with no safety or residue exposure.",
+        "confidence_score": 0.78,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld simple drying method",
+          "Domain 7 February rainfall"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "drying_method",
+        "moisture_pct_final",
+        "dry_recovery_pct_actual",
+        "drying_space_ready"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "A genuine local advantage. The same dryness that makes the crop difficult to grow here makes it easy to process, so the belt's weakness in cultivation is its strength in post-harvest.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-DR-002",
+      "category": "DR",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Skin removal in progress for drying",
+        "marathi": "सुंठेसाठी साल काढली जात आहे"
+      },
+      "action": {
+        "english": "Scrape the skin, do not peel it deeply, and use a sharpened bamboo edge rather than a metal knife. The oil and aroma compounds sit immediately below the skin.",
+        "marathi": "साल फक्त खरडून काढा, खोल काढू नका, आणि धातूच्या सुरीऐवजी बांबूची टोकदार कड वापरा. तेल आणि सुगंधी घटक सालीच्या अगदी खाली असतात — खोल साल काढल्यास वजन आणि प्रत दोन्ही जाते."
+      },
+      "reasoning": {
+        "agronomic_basis": "The source specifies bamboo rather than metal. Bamboo is softer and does not cut deep, which preserves the sub-surface oil layer that carries the aroma. Aroma is the main quality determinant for dry ginger and oil.",
+        "yield_impact": "Protects both recovery weight and quality grade.",
+        "confidence_score": 0.75,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld bamboo scraping"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "drying_method",
+        "dry_recovery_pct_actual"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "A tool-choice instruction that looks trivial and is not. Metal knives are faster and more available, and the loss they cause is invisible until the product is graded.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-DR-003",
+      "category": "DR",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Ginger is spread out for sun drying and evening approaches",
+        "marathi": "सुंठ वाळत घातली आहे आणि संध्याकाळ होत आहे"
+      },
+      "action": {
+        "english": "Cover with tarpaulin in the evening WITHOUT gathering the produce into a heap. Cooking smoke darkens the produce and darkened ginger drops a grade.",
+        "marathi": "सायंकाळी पसरलेले आले गोळा न करता ताडपत्रीने झाकून घ्या. गावात संध्याकाळी चुली पेटतात आणि धुराने माल काळपट पडतो — आणि काळपट पडलेली सुंठ खालच्या प्रतीत जाते."
+      },
+      "reasoning": {
+        "agronomic_basis": "The source gives this instruction explicitly with the reason. Rural evenings mean cooking smoke, and it discolours drying produce. Gathering the produce would also trap moisture and slow drying.",
+        "yield_impact": "Pure grade protection at zero cost.",
+        "confidence_score": 0.78,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld evening covering instruction"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "drying_method",
+        "grade_a_pct"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Free, specific, and the kind of detail that only appears in a practitioner source. It is also exactly the sort of instruction a daily reminder handles well.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-DR-004",
+      "category": "DR",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G4",
+      "trigger": {
+        "english": "dap approximately 200",
+        "marathi": "सुमारे दोनशे दिवस झाले",
+        "expr": "dap BETWEEN 195 AND 205 AND drying_space_ready IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Dry ginger is insurance against a price crash and insurance must be in place before the event.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 200,
+              "drying_space_ready": false
+            },
+            "expect": "TRUE",
+            "label": "वाळवणीची जागा तयार आहे का"
+          },
+          {
+            "context": {
+              "dap": 200,
+              "drying_space_ready": true
+            },
+            "expect": "FALSE",
+            "label": "तयार"
+          }
+        ]
+      },
+      "action": {
+        "english": "Ask whether drying space and tarpaulin are ready. If the price crashes at harvest, drying is the fallback — and there will be no time to arrange it then.",
+        "marathi": "वाळवणीची जागा आणि ताडपत्री तयार आहे का ते विचारा. काढणीच्या वेळी भाव कोसळल्यास सुंठ हा पर्याय लागेल, आणि तेव्हा तयारीला वेळ नसेल."
+      },
+      "reasoning": {
+        "agronomic_basis": "Dry ginger is insurance against a price crash rather than a default route. Insurance has to be in place before the event. Arranging tarpaulin and space after prices fall means either selling at the crashed price or delaying while the produce deteriorates.",
+        "yield_impact": "Preserves the option rather than the crop.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Domain 9 value addition framing",
+          "Domain 7 poor-year planning logic"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "drying_space_ready",
+        "dap",
+        "harvest_route",
+        "sale_price_per_quintal"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The cost of building this option here is tarpaulin and space, because the February climate does the rest. That makes the insurance unusually cheap in this belt.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-PR-001",
+      "category": "PR",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": "G5",
+      "trigger": {
+        "english": "The soda khar caustic method is requested or about to be described as a farm operation",
+        "marathi": "सोडा खार पद्धत विचारली जात आहे किंवा शेतातील नेहमीचे काम म्हणून सांगितली जात आहे",
+        "expr": "drying_method == 'soda_khar'",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "drying_method": "soda_khar"
+            },
+            "expect": "TRUE",
+            "label": "सुरक्षा इशारा प्रथम"
+          },
+          {
+            "context": {
+              "drying_method": "simple_sun"
+            },
+            "expect": "FALSE",
+            "label": "साधी वाळवणी"
+          }
+        ]
+      },
+      "action": {
+        "english": "Present the safety warning FIRST, before any procedure. Boiling 50 percent caustic soda causes immediate severe burns and permanent blindness on eye contact. Do not present this as a routine farm operation. Recommend a group or cooperative processing facility. If the method is described at all, list the required protective equipment and state that it must not be attempted without a trained operator.",
+        "marathi": "आधी सुरक्षा इशारा द्या, मग पद्धत. उकळते ५०% कॉस्टिक सोडा द्रावण त्वचेवर पडल्यास तात्काळ गंभीर भाजते आणि डोळ्यात गेल्यास कायमचे अंधत्व येते. हे शेतकऱ्याच्या अंगणातील नेहमीचे काम नाही. गट किंवा सहकारी प्रक्रिया केंद्राचा पर्याय सुचवा. पद्धत सांगायचीच असल्यास संरक्षक साधने आणि प्रशिक्षित व्यक्तीशिवाय करू नये हे स्पष्ट सांगा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The method requires three boiling caustic soda solutions at 20, 25 and 50 percent, with dipping times measured in seconds. The margin for error is small and the consequence of error is permanent. The stated advantage — better foreign market demand because Malabar-method ginger retains higher calcium — is real, but it does not change the hazard.",
+        "yield_impact": "None. This is a safety rule.",
+        "confidence_score": 0.92,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld soda khar method",
+          "caustic soda handling hazards"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_10_institutional",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "drying_method",
+        "processing_trained_operator",
+        "ppe_available"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Export-grade dry ginger is an attractive route and it is not safe at individual farm level. The honest answer is that this belongs to a shared facility, and the MoFPI food processing scheme noted in Domain 10 may be the institutional route to one.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "कॉस्टिक सोडा प्रक्रियेस सुरक्षा सूचना आवश्यक."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": true,
+      "immutable_reason": "The safety warning must precede the method, always."
+    },
+    {
+      "rule_id": "D09-PR-002",
+      "category": "PR",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G5",
+      "trigger": {
+        "english": "The Malabar lime and sulphur method is being considered",
+        "marathi": "मलबार पद्धतीचा विचार केला जात आहे",
+        "expr": "drying_method == 'malabar_lime_sulphur'",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "drying_method": "malabar_lime_sulphur"
+            },
+            "expect": "TRUE",
+            "label": "SO2 मर्यादा तपासा"
+          },
+          {
+            "context": {
+              "drying_method": "simple_sun"
+            },
+            "expect": "FALSE",
+            "label": ""
+          }
+        ]
+      },
+      "action": {
+        "english": "Warn on two counts before describing the method. Sulphur fumigation leaves SO2 residues that face strict limits in export markets, with some buyers rejecting treated produce outright. And burning sulphur in a closed room is a serious respiratory hazard. Do not present this as first choice until FSSAI and export limits have been verified.",
+        "marathi": "पद्धत सांगण्यापूर्वी दोन इशारे. गंधकाच्या धुरीने सल्फर डायऑक्साइडचे अवशेष राहतात, आणि निर्यात बाजारात त्यावर कठोर मर्यादा आहेत — काही खरेदीदार गंधक-प्रक्रिया केलेला माल स्वीकारतच नाहीत. तसेच बंद खोलीत गंधक जाळणे श्वसनास गंभीर धोकादायक आहे. FSSAI व निर्यात मर्यादा तपासल्याशिवाय ही पद्धत पहिला पर्याय म्हणून देऊ नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "The method uses 6 to 10 g of sulphur per kg of rhizome across three 12-hour fumigation cycles in a closed room. That is both a residue source and an operator hazard, and the residue limit has not been checked.",
+        "yield_impact": "None. Food safety and market access.",
+        "confidence_score": 0.85,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld Malabar method",
+          "SO2 residue limits in export markets"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_10_institutional"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "drying_method",
+        "so2_treatment_used",
+        "processing_trained_operator"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "VERIFY",
+      "kannad_note": "The method produces the bright white product that commands a premium, so the incentive to use it is real. That makes verifying the residue limit a priority rather than a formality.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "SILENT_GUARD",
+      "immutable": true,
+      "immutable_reason": "SO2 residue limits are unverified. Until they are, this method is not first choice."
+    },
+    {
+      "rule_id": "D09-PR-003",
+      "category": "PR",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G5",
+      "trigger": {
+        "english": "A processing method is being chosen",
+        "marathi": "प्रक्रिया पद्धत निवडली जात आहे"
+      },
+      "action": {
+        "english": "Rank simple sun drying first in every case. It uses no chemicals, is completely safe, suits this climate, needs almost no capital, and can be started today. Only move to a chemical method if a verified price premium justifies it and the safety and residue questions are settled.",
+        "marathi": "प्रत्येक वेळी साधी वाळवणी पद्धत प्रथम. तिला रसायन लागत नाही, ती पूर्णपणे सुरक्षित आहे, इथल्या हवामानाला अनुकूल आहे, भांडवल जवळपास शून्य आहे, आणि ती आजपासून करता येते. भाव-फरक निश्चित झाल्याशिवाय आणि सुरक्षा व अवशेषांचे प्रश्न सुटल्याशिवाय रासायनिक पद्धतीकडे जाऊ नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "Of the three methods, one uses no chemicals and two carry either a residue question or a serious hazard. The price differential that would justify the chemical methods has not been measured, so there is no basis for accepting the risk.",
+        "yield_impact": "Directs the route decision by evidence and safety rather than by product appearance.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 9 three-method comparison"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "drying_method",
+        "so2_treatment_used",
+        "ppe_available",
+        "sale_price_per_quintal"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The white colour that the chemical methods produce is a marketing attribute rather than a quality one. Until the premium is measured, accepting a burns hazard or a residue question to obtain it is not a rational trade.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-PW-001",
+      "category": "PW",
+      "priority": 2,
+      "severity": "info",
+      "stage": "G5",
+      "trigger": {
+        "english": "Further value addition is being considered beyond dry ginger",
+        "marathi": "सुंठेच्या पुढे मूल्यवर्धनाचा विचार"
+      },
+      "action": {
+        "english": "Powder is the next step — grind well-dried ginger, sieve through 50 to 60 mesh, pack airtight. Note that every step up the ladder raises value per kilo and reduces total weight, so the price multiple has to be checked at each step.",
+        "marathi": "पुढील टप्पा पावडर — चांगली वाळलेली सुंठ दळून ५० ते ६० मेशच्या चाळणीतून चाळा आणि हवाबंद पिशवीत भरा. प्रत्येक टप्प्यावर प्रति किलो मूल्य वाढते पण एकूण वजन घटते, म्हणून प्रत्येक पायरीवर भावाचा पट तपासावा लागतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "Powder is used for oleoresin extraction and spice products. The value chain runs fresh, dry, powder, oleoresin, with value rising and weight falling at each stage.",
+        "yield_impact": "Depends entirely on prices that are not yet known.",
+        "confidence_score": 0.65,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld powder section"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "drying_method",
+        "sale_price_per_quintal"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-D",
+      "kannad_note": "Ranked low because the prices for dry ginger and powder are both unknown. Processing more is not automatically earning more, and without the price data the ladder cannot be evaluated.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-ST-001",
+      "category": "ST",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Green ginger is being held before sale",
+        "marathi": "हिरवे आले विक्रीपूर्वी ठेवले जात आहे"
+      },
+      "action": {
+        "english": "Store cool, shaded and with air circulating. Do not pack wet. Separate out injured rhizomes first, because one rotting rhizome infects its neighbours. Avoid closed tin, cement or tile rooms.",
+        "marathi": "थंड, सावलीत, हवा खेळती अशा जागी ठेवा. ओले पॅक करू नका. इजा झालेले गड्डे आधीच वेगळे काढा — एक कुजका गड्डा शेजारच्यांना संक्रमित करतो. बंद पत्र्याच्या, सिमेंटच्या किंवा कौलारू खोलीत ठेवू नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "No source gives specific short-term green storage guidance, so the principles are derived from the soft rot conditions in Domain 6 and from the seed storage guidance which explicitly warns against closed rooms of tin, cement or tile.",
+        "yield_impact": "Protects realised value on a fully committed crop.",
+        "confidence_score": 0.65,
+        "source_tier": "B",
+        "references": [
+          "Domain 6 soft rot conditions",
+          "AgroWorld seed storage warnings"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "produce_washed",
+        "harvest_injury_observed",
+        "storage_loss_monthly_pct"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "Marked DERIVED because no source addresses green storage for ginger. It is a real gap — the crop is often held for days awaiting a price, and no guidance exists for that period.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-ST-002",
+      "category": "ST",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Dry ginger is being stored AND storage_loss_monthly_pct is unknown",
+        "marathi": "सुंठ साठवली जात आहे पण मासिक घट माहीत नाही"
+      },
+      "action": {
+        "english": "Weigh a sample each month and record the loss. Without this figure the hold-or-sell decision cannot be computed at all — net return equals expected price times one minus cumulative loss, minus storage cost.",
+        "marathi": "दर महिन्याला नमुना वजन करून घट नोंदवा. हा आकडा नसेल तर विकावे की थांबावे हा निर्णय मोजताच येत नाही — निव्वळ परतावा म्हणजे अपेक्षित भाव गुणिले (एक वजा संचित घट) उणे साठवण खर्च."
+      },
+      "reasoning": {
+        "agronomic_basis": "The storage decision model requires the loss rate as an input and no source supplies it for dry ginger. Two weighings a month apart begin to answer it, and a season of them answers it properly.",
+        "yield_impact": "None directly. Unblocks the most valuable economic decision in the domain.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Core C8.3 storage decision formula",
+          "Domain 9 critical gap"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "storage_loss_monthly_pct",
+        "moisture_pct_final",
+        "drying_method"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "FIELD",
+      "kannad_note": "This is the single measurement that converts the storage strategy from guesswork into arithmetic, and it costs a set of scales and one weighing a month.",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-ST-003",
+      "category": "ST",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Dry ginger stored AND moisture_pct_final above 10",
+        "marathi": "सुंठ साठवली आहे पण पाण्याचा अंश दहा टक्क्यांहून जास्त",
+        "expr": "drying_method IS NOT NULL AND moisture_pct_final > 10",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "drying_method": "simple_sun",
+              "moisture_pct_final": 14
+            },
+            "expect": "TRUE",
+            "label": "अजून वाळवा"
+          },
+          {
+            "context": {
+              "drying_method": "simple_sun",
+              "moisture_pct_final": 9
+            },
+            "expect": "FALSE",
+            "label": "साठवण्यायोग्य"
+          }
+        ]
+      },
+      "action": {
+        "english": "Do not store until moisture is down to 8 to 10 percent. Above that, mould develops and the whole lot is at risk.",
+        "marathi": "पाण्याचा अंश ८ ते १०% येईपर्यंत साठवू नका. त्यापेक्षा जास्त असल्यास बुरशी लागते आणि संपूर्ण लॉट धोक्यात येतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "Both drying methods specify 8 to 10 percent final moisture. Above that the product supports mould growth during storage, and a stored lot fails as a whole rather than partially.",
+        "yield_impact": "Protects the entire processed output.",
+        "confidence_score": 0.82,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld drying endpoint"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "moisture_pct_final",
+        "drying_method",
+        "storage_loss_monthly_pct"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "The hand-rubbing finish described in the source is the traditional test for this endpoint. A moisture meter would be more reliable and is inexpensive.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D09-MK-001",
+      "category": "MK",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Pre-season planning AND current market prices are high",
+        "marathi": "हंगामापूर्व नियोजन आणि सध्याचे बाजारभाव चांगले आहेत"
+      },
+      "action": {
+        "english": "Warn that ginger is strongly cyclical and current prices are bullish. Run the profit calculation at a crashed price as well as at the current one. Ask directly whether the costs are covered at around Rs 6,000 per quintal.",
+        "marathi": "अद्रक हे तीव्र चक्रीय पीक आहे आणि सध्याचे भाव तेजीत आहेत. नफ्याचे गणित कोसळलेल्या भावावरही तपासा — सुमारे ६,००० रुपये प्रति क्विंटल भावात खर्च निघतो का, हा प्रश्न स्पष्ट विचारा."
+      },
+      "reasoning": {
+        "agronomic_basis": "High price leads to more planting, higher arrivals and a crash. In ginger the cycle is severe because it is an eight month crop so the response is slow, the seed cost is large so the decision is made once, and the market is thin so a modest arrival increase moves the price a long way.",
+        "yield_impact": "None on yield. Prevents an area decision based on a price that will not hold.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "News18 Marathi price reports describing a bullish market",
+          "Domain 9 cyclicality mechanism"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "sale_price_per_quintal",
+        "area_acre",
+        "season_water_plan_basis"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This is the economic counterpart of the 55 percent rainfall rule in Domain 7. Both say the same thing — plan on the bad case, because the good case does not need planning.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-MK-002",
+      "category": "MK",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G5",
+      "trigger": {
+        "english": "Market selection for a consignment",
+        "marathi": "माल कोणत्या बाजारात न्यायचा हे ठरवायचे आहे"
+      },
+      "action": {
+        "english": "Split the consignment rather than choosing one market. Send 20 to 30 percent of the best grade to a small or local market where arrivals are low and prices higher, 50 to 60 percent to a large market that can absorb volume, and consider processing the lowest 10 to 20 percent instead of selling it.",
+        "marathi": "एकच बाजार निवडण्याऐवजी माल विभागून पाठवा. सर्वोत्तम प्रतीचा २० ते ३०% भाग लहान किंवा स्थानिक बाजारात — तिथे आवक कमी आणि भाव जास्त. ५० ते ६०% मोठ्या बाजारात — तो मोठे प्रमाण शोषतो. आणि खालच्या प्रतीचा १० ते २०% भाग विकण्याऐवजी सुंठ करण्याचा विचार करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Chandrapur took the highest price of the day on an arrival of 8 to 25 quintal, while Mumbai handled 884 to 1,556 quintal at a lower range. Small arrivals command higher prices but a small market cannot absorb a large consignment — sending it all there would collapse the price.",
+        "yield_impact": "Pure price capture. Costs transport planning.",
+        "confidence_score": 0.72,
+        "source_tier": "B",
+        "references": [
+          "News18 Marathi market-wise arrivals and prices"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "sale_market",
+        "grade_a_pct",
+        "grade_b_pct",
+        "grade_c_pct",
+        "transport_cost_per_quintal"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Transport cost has not been measured and it decides whether the split is worth making. Mumbai is roughly 350 km and Nagpur roughly 500 km from here, so the freight on a 10 tonne load is material.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-MK-003",
+      "category": "MK",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Market access is being assessed before planting",
+        "marathi": "लागवडीपूर्वी बाजाराची उपलब्धता तपासली जात आहे"
+      },
+      "action": {
+        "english": "State that this is a thin market. State-wide daily arrivals run 1,297 to 3,695 quintal against 330,007 for onion — roughly one percent. The local APMC does not appear in the arrival lists at all, so enquire directly with local traders before planting a large area.",
+        "marathi": "हा पातळ बाजार आहे. राज्यभर दैनिक आवक १,२९७ ते ३,६९५ क्विंटल, तर कांद्याची ३,३०,००७ — म्हणजे सुमारे एक टक्का. स्थानिक बाजार समिती आवकेच्या यादीत कुठेही नाही, म्हणून मोठे क्षेत्र लावण्यापूर्वी स्थानिक व्यापाऱ्यांकडे थेट चौकशी करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "A thin market means a modest increase in arrivals moves the price a long way, and it means the local outlet may not exist at all. Both matter more for a high-value crop with a large sunk cost than for a staple.",
+        "yield_impact": "Informs the area decision before the money is spent.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "News18 Marathi state arrival figures",
+          "absence of local APMC from arrival lists"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_10_institutional",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "sale_market",
+        "area_acre",
+        "transport_cost_per_quintal"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "Market thinness is also why storage capacity matters here. In a thin market the ability to wait is the only real bargaining power a grower has.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-MK-004",
+      "category": "MK",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Any market price is about to be displayed",
+        "marathi": "कोणताही बाजारभाव दाखवला जात आहे"
+      },
+      "action": {
+        "english": "Display the date of the observation and state that prices change daily. Never present a stored price as current. Direct the farmer to check the live rate before selling.",
+        "marathi": "भाव कोणत्या तारखेचा आहे ते दाखवा आणि भाव रोज बदलतात हे सांगा. साठवलेला भाव चालू म्हणून दाखवू नका. विक्रीपूर्वी चालू भाव तपासण्यास सांगा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The prices recorded here are dated observations from mid-2026, kept to illustrate the spread and the market structure rather than to state current values. Presenting them as current would be actively misleading in a market this volatile.",
+        "yield_impact": "None. Protects credibility and prevents a decision on stale data.",
+        "confidence_score": 0.9,
+        "source_tier": "B",
+        "references": [
+          "Domain 9 metadata review_by date"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "sale_price_per_quintal",
+        "sale_market"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This is the only domain carrying a review_by date. The agronomy elsewhere is stable for years; these prices are stale within weeks.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-SL-001",
+      "category": "SL",
+      "priority": 5,
+      "severity": "info",
+      "stage": "G5",
+      "trigger": {
+        "english": "The sell-or-hold decision is being made",
+        "marathi": "विकावे की थांबावे हा निर्णय घ्यायचा आहे"
+      },
+      "action": {
+        "english": "Present the four options with their trade-offs and the arithmetic behind each. Do NOT recommend one. State plainly that the engine does not forecast prices — it shows today's actual rates, the storage loss and cost arithmetic, and what the net return would be at a given price.",
+        "marathi": "चार पर्याय आणि त्यांच्या तडजोडी गणितासह मांडा, पण एकाची शिफारस करू नका. स्पष्ट सांगा — engine भाव वर्तवत नाही. ते आजचे प्रत्यक्ष भाव, साठवण घट व खर्चाचे गणित, आणि दिलेल्या भावाला निव्वळ परतावा किती होईल एवढेच दाखवते."
+      },
+      "reasoning": {
+        "agronomic_basis": "In a thin market with high volatility a single recommendation would be a price forecast in disguise, and the engine has no basis for one. Presenting the arithmetic lets the farmer apply their own view of the price and their own cash position.",
+        "yield_impact": "None. It is the difference between decision support and a bet placed on the farmer's behalf.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "Core C8.4 thin market constraint"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "harvest_route",
+        "sale_price_per_quintal",
+        "storage_loss_monthly_pct",
+        "dry_recovery_pct_actual"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Four of the five inputs the decision model needs are still missing — dry ginger price, processing cost, monthly storage loss and a multi-year price series. The engine should present the framework and ask the farmer to supply the local numbers, which they can get from a trader more accurately than we can estimate.",
+      "decision_type": "HUMAN_DECISION",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-SL-002",
+      "category": "SL",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G5",
+      "trigger": {
+        "english": "Processing is being considered as a route",
+        "marathi": "प्रक्रिया हा मार्ग विचारात घेतला जात आहे"
+      },
+      "action": {
+        "english": "Show the break-even arithmetic. 100 kg fresh yields 20 to 25 kg dry, so the dry price must be four to five times the fresh price merely to break even, before labour, fuel, space and time. Processing more is not automatically earning more.",
+        "marathi": "समतोल गणित दाखवा. १०० किलो ओल्या आल्यापासून २० ते २५ किलो सुंठ मिळते, म्हणजे सुंठेचा भाव ओल्या आल्याच्या चार ते पाच पट असल्याशिवाय बरोबरीही होत नाही — आणि त्यात श्रम, इंधन, जागा व वेळ धरलेला नाही. जास्त प्रक्रिया म्हणजे आपोआप जास्त पैसा नव्हे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Recovery of 20 to 25 percent sets the break-even multiple arithmetically. The assumption that processing always adds income is common and wrong, and the arithmetic settles it in one line.",
+        "yield_impact": "Prevents an unprofitable processing decision.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "AgroWorld recovery figures",
+          "Domain 9 value addition economics"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "dry_recovery_pct_actual",
+        "sale_price_per_quintal",
+        "harvest_route"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The dry ginger price is the missing number that makes this computable. A single enquiry with a local trader would supply it, and it is worth making before harvest rather than after.",
+      "decision_type": "HUMAN_DECISION",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-SL-003",
+      "category": "SL",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G5",
+      "trigger": {
+        "english": "Fresh price has crashed OR a substantial share of the produce is lower grade",
+        "marathi": "ओल्या आल्याचा भाव कोसळला आहे किंवा मालाचा मोठा भाग खालच्या प्रतीचा आहे"
+      },
+      "action": {
+        "english": "This is when processing becomes rational. At a crashed price, storing dry ginger buys time. For lower grade produce, appearance matters less once dried, so processing captures value that the fresh market would discount.",
+        "marathi": "आता प्रक्रिया तर्कसंगत ठरते. भाव कोसळला असल्यास सुंठ करून साठवल्यास वेळ मिळतो. आणि खालच्या प्रतीच्या मालाची सुंठ केल्यास दिसण्याचे महत्व कमी होते — म्हणजे ओल्या बाजारात कमी भाव मिळणारा माल इथे मूल्य मिळवतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "Grade discounts apply to visual attributes that largely disappear in the dried product. So the produce that suffers most in the fresh market is the produce that gains most from processing.",
+        "yield_impact": "Recovers value from the fraction that would otherwise sell at the bottom of the 2.7 times spread.",
+        "confidence_score": 0.72,
+        "source_tier": "B",
+        "references": [
+          "Domain 9 when processing is rational",
+          "grading spread observation"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "grade_c_pct",
+        "sale_price_per_quintal",
+        "harvest_route",
+        "drying_space_ready"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This is a genuinely useful pairing of two findings — the grading spread and the processing economics. The bottom fraction of the crop has a better destination than the fresh market.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-SF-001",
+      "category": "SF",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": "G5",
+      "trigger": {
+        "english": "A chemical processing method is being described AND ppe_available is false or processing_trained_operator is false",
+        "marathi": "रासायनिक प्रक्रिया पद्धत सांगितली जात आहे पण संरक्षक साधने नाहीत किंवा प्रशिक्षित व्यक्ती नाही",
+        "expr": "drying_method IN [soda_khar, malabar_lime_sulphur] AND (ppe_available IS FALSE OR processing_trained_operator IS FALSE)",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "drying_method": "soda_khar",
+              "ppe_available": false,
+              "processing_trained_operator": true
+            },
+            "expect": "TRUE",
+            "label": "PPE नाही"
+          },
+          {
+            "context": {
+              "drying_method": "soda_khar",
+              "ppe_available": true,
+              "processing_trained_operator": true
+            },
+            "expect": "FALSE",
+            "label": "दोन्ही आहेत"
+          },
+          {
+            "context": {
+              "drying_method": "simple_sun",
+              "ppe_available": false
+            },
+            "expect": "FALSE",
+            "label": "साधी पद्धत — लागू नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "BLOCK the procedure. Require rubber gloves, face shield or goggles, apron and closed footwear, and a trained operator, before any chemical method is described as actionable. Otherwise present only the safe simple drying route.",
+        "marathi": "पद्धत अडवा. रबरी हातमोजे, चष्मा किंवा फेस शील्ड, ॲप्रन आणि बंद बूट, आणि प्रशिक्षित व्यक्ती — यांशिवाय कोणतीही रासायनिक पद्धत करण्याजोगी म्हणून सांगू नये. त्याऐवजी फक्त सुरक्षित साधी वाळवणी पद्धत दाखवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Boiling caustic soda and closed-room sulphur fumigation both carry consequences that are permanent rather than merely costly. Describing the procedure without the equipment in place makes the harm more likely rather than less.",
+        "yield_impact": "None. Operator safety.",
+        "confidence_score": 0.92,
+        "source_tier": "B",
+        "references": [
+          "Domain 9 safety policy",
+          "caustic soda and sulphur handling hazards"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "ppe_available",
+        "processing_trained_operator",
+        "drying_method",
+        "so2_treatment_used"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The engine can describe a method and still refuse to present it as actionable. That distinction matters here, because the information is legitimate and the unsupervised execution is not.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "PPE शिवाय रासायनिक प्रक्रिया सुचवू नये."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": true,
+      "immutable_reason": "Boiling caustic soda causes permanent injury. PPE and training are not negotiable."
+    },
+    {
+      "rule_id": "D09-SF-002",
+      "category": "SF",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": "G5",
+      "trigger": {
+        "english": "Harvest approaching AND a chemical was applied within its pre-harvest interval, or the interval is unknown",
+        "marathi": "काढणी जवळ आली आणि प्रतीक्षा कालावधीत रसायन वापरले गेले आहे, किंवा तो कालावधी माहीत नाही",
+        "expr": "phi_days_remaining IS NULL AND WITHIN(harvest_date, 30 DAYS)",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Duplication group: pre_harvest_interval_block.",
+        "golden_tests": [
+          {
+            "context": {
+              "days_to_harvest": 10
+            },
+            "expect": "TRUE",
+            "label": "PHI अज्ञात, काढणी जवळ"
+          },
+          {
+            "context": {
+              "days_to_harvest": 10,
+              "phi_days_remaining": 0
+            },
+            "expect": "FALSE",
+            "label": "PHI पूर्ण"
+          }
+        ]
+      },
+      "action": {
+        "english": "BLOCK harvest advisory until the pre-harvest interval has elapsed. Where the interval is unknown apply a conservative 30 day default. Residue matters more on the dry ginger route because export buyers apply stricter limits.",
+        "marathi": "प्रतीक्षा कालावधी संपेपर्यंत काढणीचा सल्ला अडवा. कालावधी माहीत नसल्यास ३० दिवसांचा सुरक्षित डिफॉल्ट वापरा. सुंठेच्या मार्गावर अवशेषांचे महत्व अधिक — निर्यात खरेदीदार कठोर मर्यादा लावतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "Residue on a harvested rhizome is a food safety and market access issue. A rejected consignment loses the entire quality premium that the grading effort was meant to capture.",
+        "yield_impact": "None on weight. Protects the value that grading and processing were intended to realise.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "Domain 5 and Domain 6 PHI rules",
+          "Core C5.3"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": [
+          "domain_5_pest",
+          "domain_6_disease"
+        ]
+      },
+      "farm_brain_schema": [
+        "phi_days_remaining",
+        "last_insecticide_date",
+        "last_fungicide_date",
+        "harvest_date",
+        "harvest_route"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The same rule appears in Domains 5 and 6 for the spray decision. Here it appears again for the harvest decision, because the two can be separated by weeks and the constraint binds at both ends.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "PHI पूर्ण झाल्यावरच काढणी."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": true,
+      "immutable_reason": "Same, at the harvest decision rather than the spray decision."
+    },
+    {
+      "rule_id": "D09-PH-001",
+      "category": "PH",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Harvest complete AND produce_washed is false",
+        "marathi": "काढणी झाली पण माल धुतलेला नाही",
+        "expr": "harvest_date IS NOT NULL AND produce_washed IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Cleanliness is one of three grading determinants still in the farmer hands at this point.",
+        "golden_tests": [
+          {
+            "context": {
+              "harvest_date": "done",
+              "produce_washed": false
+            },
+            "expect": "TRUE",
+            "label": "धुवा"
+          },
+          {
+            "context": {
+              "harvest_date": "done",
+              "produce_washed": true
+            },
+            "expect": "FALSE",
+            "label": "धुतले"
+          }
+        ]
+      },
+      "action": {
+        "english": "Wash the rhizomes clean and free of soil before sale. Soil-covered produce looks like a lower grade and the trader deducts the soil from the weight, so the loss falls twice.",
+        "marathi": "विक्रीपूर्वी गड्डे स्वच्छ धुवून मातीपासून वेगळे करा. मातीने माखलेला माल खालच्या प्रतीचा दिसतो आणि व्यापारी वजनातून मातीही वजा करतो — नुकसान दोनदा होते."
+      },
+      "reasoning": {
+        "agronomic_basis": "The source instructs washing before dispatch. Cleanliness is one of the three grading determinants that remain in the farmer's hands at this point, and unwashed produce is penalised on both appearance and weight.",
+        "yield_impact": "Directly affects realised price through the 2.7 times grading spread.",
+        "confidence_score": 0.8,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld post-harvest handling"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "produce_washed",
+        "grade_a_pct",
+        "sale_price_per_quintal"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "Washing is labour, and it is repaid in the price rather than in the weight. That makes it easy to skip when labour is short at harvest and expensive to have skipped when the lot is graded.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-PH-002",
+      "category": "PH",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G5",
+      "trigger": {
+        "english": "Harvest complete AND part of the crop is destined for seed",
+        "marathi": "काढणी झाली आणि पिकाचा काही भाग बेण्यासाठी आहे"
+      },
+      "action": {
+        "english": "Separate the seed fraction now, break off the thick roots, and treat before storage. The pre-storage treatment is the step most often skipped because the next crop feels distant in December.",
+        "marathi": "बेण्याचा भाग आत्ताच वेगळा काढा, जाड मुळ्या तोडा, आणि साठवणीपूर्वी प्रक्रिया करा. डिसेंबरमध्ये पुढचे पीक दूर वाटते, म्हणून साठवणीपूर्वीची प्रक्रिया हीच सर्वात जास्त वेळा वगळली जाते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Seed rhizome is treated twice, once before storage and once before planting. Treating only at planting does not address infection established inside the rhizome during four to five months of storage.",
+        "yield_impact": "Affects next season's establishment ceiling and seed cost.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Domain 6 twice-treated seed rule",
+          "AgroWorld root removal"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_8_operations",
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_6_disease"
+        ]
+      },
+      "farm_brain_schema": [
+        "harvest_route",
+        "seed_stored_kg",
+        "seed_storage_method",
+        "hot_water_treatment_done"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "Blocked entirely if the plot has a recorded rot or wilt history. In that case the seed comes from elsewhere regardless of the cost comparison.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D09-YD-004",
+      "category": "YD",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G5",
+      "trigger": {
+        "english": "Harvest complete",
+        "marathi": "काढणी पूर्ण झाली"
+      },
+      "action": {
+        "english": "Record the actual cost incurred line by line — seed, land preparation, mulch, fertiliser, plant protection, labour, harvest and transport. The Domain 13 model currently runs on estimates for several of these.",
+        "marathi": "प्रत्यक्ष खर्च बाबनिहाय नोंदवा — बेणे, पूर्वमशागत, आच्छादन, खते, कीड-रोग नियंत्रण, मजुरी, काढणी आणि वाहतूक. सध्याचे आर्थिक गणित यांपैकी अनेक बाबींवर अंदाजाने चालते."
+      },
+      "reasoning": {
+        "agronomic_basis": "The Kannad cost estimate of about Rs 1,45,000 per acre adds mulch, drainage and micronutrient lines that the standard published sheet omits, and several figures are estimates. Only recorded actuals can correct them.",
+        "yield_impact": "None. Corrects the economics model.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 13 cost structure",
+          "Domain 12 minimum record set"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics",
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "yield_quintal_per_acre_actual",
+        "transport_cost_per_quintal",
+        "sale_price_per_quintal",
+        "seed_at_planting_kg"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Transport cost in particular is unmeasured and it decides whether the market-splitting strategy is worth executing. It is a single number that unlocks a whole rule.",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    }
+  ],
+  "open_items": [
+    {
+      "id": "D09-OI-01",
+      "item": "Dry ginger price at local and regional level",
+      "owner": "local traders, Spices Board",
+      "source_class": "FIELD",
+      "blocking": true,
+      "note": "Without it the processing break-even and the sell-or-hold decision cannot be computed."
+    },
+    {
+      "id": "D09-OI-02",
+      "item": "Monthly storage loss for dry ginger",
+      "owner": "own measurement, monthly sample weighing",
+      "source_class": "FIELD",
+      "blocking": true,
+      "note": "Required input to the hold-or-sell formula."
+    },
+    {
+      "id": "D09-OI-03",
+      "item": "Processing cost per quintal for simple sun drying",
+      "owner": "own record, season one",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D09-OI-04",
+      "item": "Formal grading standards for ginger",
+      "owner": "Spices Board or APMC",
+      "source_class": "VERIFY",
+      "blocking": false,
+      "note": "The current determinant list is reasoned rather than official."
+    },
+    {
+      "id": "D09-OI-05",
+      "item": "FSSAI and export SO2 residue limits for ginger",
+      "owner": "FSSAI, Spices Board",
+      "source_class": "VERIFY",
+      "blocking": true,
+      "note": "Blocking for the Malabar method specifically."
+    },
+    {
+      "id": "D09-OI-06",
+      "item": "Green ginger short-term storage guidance",
+      "owner": "further literature search",
+      "source_class": "VERIFY",
+      "blocking": false,
+      "note": "No source addresses the days between harvest and sale."
+    },
+    {
+      "id": "D09-OI-07",
+      "item": "Three or more years of seasonal price data",
+      "owner": "APMC historical records",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D09-OI-08",
+      "item": "Transport cost per quintal to Mumbai and Nagpur",
+      "owner": "local transporters",
+      "source_class": "FIELD",
+      "blocking": false,
+      "note": "Decides whether the market-splitting strategy pays."
+    },
+    {
+      "id": "D09-OI-09",
+      "item": "Whether Chhatrapati Sambhajinagar APMC trades ginger at all",
+      "owner": "direct APMC enquiry",
+      "source_class": "VERIFY",
+      "blocking": false
+    },
+    {
+      "id": "D09-OI-10",
+      "item": "Harvest labour days per acre",
+      "owner": "season one record",
+      "source_class": "FIELD",
+      "blocking": false
+    }
+  ],
+  "summary": {
+    "total_rules": 39,
+    "by_category": {
+      "GD": 3,
+      "MT": 4,
+      "WW": 2,
+      "HV": 4,
+      "YD": 4,
+      "DR": 4,
+      "PR": 3,
+      "PW": 1,
+      "ST": 3,
+      "MK": 4,
+      "SL": 3,
+      "SF": 2,
+      "PH": 2
+    },
+    "by_priority": {
+      "5": 17,
+      "4": 18,
+      "3": 3,
+      "2": 1
+    },
+    "by_severity": {
+      "yellow": 16,
+      "info": 17,
+      "red": 3,
+      "blocking": 3
+    },
+    "by_source_tier": {
+      "A": 6,
+      "B": 22,
+      "C": 11
+    },
+    "by_source_class": {
+      "SRC-Q": 10,
+      "DERIVED": 17,
+      "EST": 3,
+      "SRC-D": 7,
+      "VERIFY": 1,
+      "FIELD": 1
+    },
+    "confidence_range": {
+      "min": 0.6,
+      "max": 0.92,
+      "mean": 0.787
+    },
+    "rules_with_u_value": 1,
+    "irrecoverable_rules": 8,
+    "zero_cost_rules": [
+      "D09-GD-002",
+      "D09-DR-003",
+      "D09-HV-002",
+      "D09-HV-003",
+      "D09-MK-004",
+      "D09-MT-001"
+    ],
+    "highest_value_rule": "D09-GD-001",
+    "blocking_open_items": 3,
+    "by_decision_type": {
+      "PLANNING_GUIDANCE": 17,
+      "DIAGNOSTIC": 6,
+      "BLOCK": 6,
+      "HUMAN_DECISION": 3,
+      "SCHEDULED_REMINDER": 2,
+      "SENSOR_ALERT": 1,
+      "DATA_CAPTURE": 4
+    },
+    "reviewed_t1": 3,
+    "rules_with_trigger_expr": 17,
+    "rules_with_delivery_class": 17,
+    "immutable_rules": 4
+  },
+  "next_steps": [
+    "1. Ask a local trader for the dry ginger price — a single enquiry that unblocks the entire processing and storage decision model (D09-OI-01)",
+    "2. Begin monthly sample weighing of any stored dry ginger from the first month (D09-OI-02)",
+    "3. Verify FSSAI and export SO2 limits before the Malabar method is presented as an option (D09-OI-05)",
+    "4. Build Domain 10 JSON inheriting the Domain 1 _schema block unchanged",
+    "5. Reconcile the pre-harvest interval rules — D05-CH-003, D06-CH-003 and D09-SF-002 all enforce the same 30 day default and must resolve to one block, not three"
+  ],
+  "author_note": "This file contains 34 rules because that is what the source document supports. The central finding reframes the knowledge base: a 2.7 times price spread was recorded within one market on one day, purely on quality, which makes grade a larger economic lever than any yield factor in Domains 1 to 8 — and the two grading determinants that sit in this domain are both labour-only. Three rules are safety blocks rather than agronomy: the caustic soda method is not safe at farm level and belongs to a shared facility, sulphur fumigation carries an unverified residue question, and simple sun drying is ranked first in every case because it is safe, chemical-free and suits this climate. Market prices are recorded as dated observations to illustrate structure and spread, never as current values, which is why this is the only domain carrying a review_by date. Four of the five inputs the selling-decision model needs are still missing and are marked blocking rather than estimated. Status is PHASE_1_RAW_UNVALIDATED.",
+  "legal": {
+    "disclaimer_mr": "हा नियम-संच निर्णय-सहाय्य साधन आहे. अंतिम जबाबदारी शेतकऱ्याची. या document मधील बाजारभाव विशिष्ट तारखांचे आहेत आणि ते सतत बदलतात. विक्रीपूर्वी चालू भाव तपासावेत.",
+    "disclaimer_en": "This rule set is a decision-support tool. Final responsibility rests with the cultivator. Market prices here are dated observations and change continuously; check live rates before selling.",
+    "price_forecast_note": "This rule set does not forecast prices. It presents current observed rates and the arithmetic of storage loss and cost.",
+    "safety_note": "The soda khar method uses boiling caustic soda and must not be attempted without training and protective equipment. Sulphur fumigation in a closed room is a respiratory hazard. Simple sun drying involves no chemicals and is the recommended route.",
+    "food_safety_note": "SO2 residues from sulphur fumigation are subject to FSSAI and export limits which have not been verified. Pre-harvest intervals for all applied chemicals must be observed before harvest.",
+    "data_note": "Farmer-attributable data handled under DPDP Act 2023; see Domain 12."
+  }
+}

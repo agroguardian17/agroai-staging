@@ -1,0 +1,3516 @@
+{
+  "_schema": {
+    "schema_version": "2.0",
+    "inherits_from": "Domain1_Rules_Ginger_v2.json",
+    "inheritance_note": "The full _schema block is defined in Domain 1 and is NOT repeated here. Units (per acre), stage codes G0-G5, source tiers A/B/C, source classes, priority scale, recoverability, severity and confidence bounds are inherited unchanged. Domain 2 to 7 additions are also assumed present. Only Domain 8 additions are declared below.",
+    "additions": {
+      "rule_categories_domain_8": {
+        "TL": "tillage and land preparation sequence",
+        "LY": "planting layout and plant population",
+        "SS": "seed storage",
+        "PL": "planting technique",
+        "WD": "weed management",
+        "MU": "mulching programme",
+        "EU": "earthing up",
+        "GF": "gap filling",
+        "GR": "growth regulators",
+        "IC": "intercropping and shade",
+        "BN": "operation bundling",
+        "LB": "labour planning",
+        "CA": "operations calendar"
+      },
+      "new_farm_brain_fields": {
+        "seed_stored_kg": "number",
+        "seed_at_planting_kg": "number",
+        "seed_storage_loss_pct": "number",
+        "seed_storage_method": "enum:[pit, shade_heap, cold_store, purchased_fresh]",
+        "seed_piece_weight_g": "number",
+        "seed_buds_per_piece": "integer",
+        "seed_sprouts_visible": "boolean",
+        "bud_orientation_instructed": "boolean",
+        "planting_depth_cm": "number",
+        "plants_per_acre": "integer",
+        "rows_per_bed": "integer",
+        "herbicide_pre_emergent_date": "date",
+        "herbicide_post_emergent_date": "date",
+        "emergence_started": "boolean",
+        "weeding_count": "integer",
+        "earthing_up_2_date": "date",
+        "water_stress_after_earthing_done": "boolean",
+        "gap_filling_done": "boolean",
+        "naa_spray_count": "integer",
+        "ethephon_spray_count": "integer",
+        "intercrop_selected": "string",
+        "shade_pct": "number",
+        "labour_arranged_date": "date",
+        "bed_former_arranged": "boolean"
+      },
+      "constants": {
+        "flat_bed_plants_per_ha": 198000,
+        "broad_ridge_kadam_plants_per_ha": 111000,
+        "broad_ridge_wide_plants_per_ha": 132000,
+        "seed_storage_loss_pct_range": [
+          28,
+          40
+        ],
+        "earthing_up_yield_loss_pct": [
+          10,
+          15
+        ],
+        "broad_ridge_yield_gain_pct": [
+          15,
+          20
+        ]
+      },
+      "herbicide_policy": {
+        "hard_rule": "No herbicide of any kind after emergence begins. Glyphosate is non-selective and will kill emerged ginger.",
+        "window_days": 15,
+        "note": "The entire herbicide window is 15 days long, and the second application at 12 to 15 DAP nearly coincides with emergence at 15 to 25 DAP. Mulch is the preferred alternative and must be shown above the chemical option.",
+        "label_note": "Ginger is a minor crop. CIB&RC label claim must be verified; the engine states timing and names the molecule but defers dose to the label."
+      },
+      "commercial_product_exclusion": {
+        "note": "The source document contains a full four-spray schedule of named commercial products from one company. It is deliberately excluded from this rule set.",
+        "reasons": [
+          "it is a specific commercial product schedule, not a general agronomic recommendation",
+          "independent evidence of efficacy was not verified",
+          "the engine must not recommend specific brands"
+        ],
+        "policy": "Emit the active ingredient — NAA, ethephon, urea — never a brand name."
+      },
+      "decision_types": {
+        "AUTO_DECISION": {
+          "mr": "AI कधी व किती हे स्वतः ठरवतो",
+          "en": "engine computes the quantity or timing itself"
+        },
+        "SENSOR_ALERT": {
+          "mr": "sensor वर आधारित इशारा, कृती माणसाची",
+          "en": "sensor-triggered; the action is human work"
+        },
+        "SCHEDULED_REMINDER": {
+          "mr": "वेळापत्रकानुसार आठवण",
+          "en": "calendar or stage driven reminder"
+        },
+        "DIAGNOSTIC": {
+          "mr": "AI विचारतो, शेतकरी सांगतो",
+          "en": "engine asks, farmer answers, engine branches"
+        },
+        "DATA_CAPTURE": {
+          "mr": "नोंद किंवा मोजमाप मागतो",
+          "en": "engine requests a record or measurement"
+        },
+        "HUMAN_DECISION": {
+          "mr": "AI गणित दाखवतो, निर्णय माणसाचा",
+          "en": "engine presents arithmetic; person decides"
+        },
+        "BLOCK": {
+          "mr": "AI नाकारतो किंवा अडवतो",
+          "en": "engine refuses or blocks"
+        },
+        "PLANNING_GUIDANCE": {
+          "mr": "हंगामापूर्व निवड — शेतकरी ठरवतो",
+          "en": "pre-season choice the farmer makes"
+        },
+        "POLICY": {
+          "mr": "प्रॉडक्ट धोरण, शेतकऱ्यापर्यंत जात नाही",
+          "en": "product policy; never reaches a farmer"
+        }
+      },
+      "automation_levels": {
+        "full": "engine decides and acts without asking",
+        "assisted": "engine decides when, the person does the work or supplies the observation",
+        "advisory": "engine shows the arithmetic, the person chooses",
+        "refusal": "engine prevents an action",
+        "none": "internal policy, not farmer facing"
+      },
+      "trigger_dsl": {
+        "version": "dsl-1.0",
+        "logic": "three-valued: TRUE / FALSE / UNKNOWN",
+        "unknown_rule": "A rule whose trigger evaluates UNKNOWN must NOT fire and must NOT be treated as FALSE. Report reduced confidence and name the missing field (Domain 12 D12-COLD-001).",
+        "operators": [
+          "> >= < <= == !=",
+          "AND OR NOT",
+          "IN [..]",
+          "BETWEEN a AND b",
+          "IS NULL / IS NOT NULL / IS TRUE / IS FALSE",
+          "DURATION(field > x) > n HOURS",
+          "WITHIN(date_field, n DAYS)",
+          "MONTH IN [..]",
+          "STAGE IN [..]"
+        ],
+        "note": "Fields resolve against kb_farm_brain_fields. An undeclared name is a parse error, never a silent false."
+      },
+      "notification_policy": {
+        "version": "notify-1.0",
+        "why": "The season simulation issued 998 messages across 301 days before this existed. A trigger expresses a condition and a condition stays true; the advice is an event and must be delivered once.",
+        "classes": {
+          "ONCE_UNTIL_RESOLVED": "Standing precondition. Once, then a 7/21/45/90 day ladder with rising severity.",
+          "EVENT": "Transient physical event. Rising edge only; re-armed after it clears.",
+          "WINDOW": "Dated operation. Advance warning, the day, then 3 overdue reminders.",
+          "SILENT_GUARD": "Prevention rule. No message unless the prohibited action is attempted."
+        },
+        "result": "998 messages became 43 in the normal season, with no critical stage left silent for more than 15 days."
+      },
+      "override_policy": {
+        "version": "override-1.0",
+        "why": "The Tier-1 review worked but was offline. An agronomist looking at a live plot in August cannot edit JSON and wait for a deploy; by then the window has closed.",
+        "kinds": [
+          "THRESHOLD",
+          "DELIVERY",
+          "SEVERITY",
+          "DISABLE",
+          "PARAMETER"
+        ],
+        "scopes": [
+          "plot",
+          "cluster",
+          "global"
+        ],
+        "scope_precedence": "narrowest wins — plot over cluster over global",
+        "default_expiry_days": 240,
+        "max_expiry_days": 400,
+        "expiry_rationale": "A permanent change belongs in the knowledge base, not in the override table.",
+        "immutable_count": 16,
+        "immutable_rationale": "Some rules exist because getting them wrong causes harm no agronomic judgement outweighs. The API refuses them by code path, and a database trigger refuses them again if the application layer is bypassed.",
+        "audit": "Refused attempts are recorded, not discarded. An attempt to override an immutable rule is a governance signal."
+      }
+    }
+  },
+  "metadata": {
+    "domain": 8,
+    "domain_name": "Cultivation Operations",
+    "domain_name_mr": "मशागत व आंतरमशागत",
+    "crop": "ginger",
+    "crop_mr": "आले",
+    "region": "Kannad, Chhatrapati Sambhajinagar, Marathwada",
+    "source_document": "AgroGuardian_Ginger_Domain8_Cultivation_Operations_RAW.docx",
+    "version": "1.0",
+    "status": "PHASE_1_RAW_UNVALIDATED",
+    "agronomist_validated": false,
+    "validation_note": "Operational detail is well documented across two Maharashtra sources plus one commercial source used for practice description only. Plant population figures are computed rather than published and must be verified by counting in season one. Seed storage loss is sourced but has not been measured on this plot.",
+    "total_rules": 38,
+    "rule_count_note": "34 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count.",
+    "review_by": null,
+    "review_note": "Operational agronomy is stable. Herbicide and growth regulator regulatory status must be rechecked annually.",
+    "purpose": "Field operations for ginger in the Kannad belt. This domain holds the cheapest yield levers in the knowledge base — five operations that require no purchased input and together account for a thirty to forty percent yield difference, all of which depend on a timely reminder rather than on money.",
+    "key_innovations": [
+      "Broad ridge layout uses 33 to 44 percent fewer plants and yields 15 to 20 percent more. Since seed is the largest cost line, the structural choice cuts the biggest expense and raises output at the same time — which means more plants equals more yield is a double error in this crop.",
+      "Seed rhizome loses 28 to 40 percent of its weight in storage. That cost appears in no cost sheet because it is paid in kind rather than in cash, and it directly challenges the assumption that retaining own seed is cheaper.",
+      "Farmyard manure is the main source of weed pressure. Heavy FYM brings weed seed, which forces more weeding, which injures the rhizome, which admits rot. Fully decomposed FYM therefore serves three domains from one condition.",
+      "The entire herbicide window is 15 days long, and the second application nearly coincides with emergence. Glyphosate is non-selective, so getting this wrong kills the crop.",
+      "Earthing up performs three jobs — new fibrous root formation, fertiliser incorporation, and covering exposed rhizomes against rhizome fly — and it must be completed before the flowering spike opens.",
+      "Excess direct sunlight reduces ginger aroma. That gives shade a second justification beyond heat protection, and it matters most if the dry ginger route is chosen.",
+      "The commercial spray schedule in the source is deliberately excluded. The engine emits active ingredients, never brands."
+    ],
+    "central_finding": {
+      "statement": "The cheapest yield levers in this knowledge base are all operations, and all of them depend on a timely reminder rather than on money.",
+      "levers": [
+        {
+          "operation": "broad ridge layout",
+          "cost": "structural, one time, no marginal cost",
+          "effect": "plus 15 to 20 percent yield"
+        },
+        {
+          "operation": "timely earthing up",
+          "cost": "labour only",
+          "effect": "avoids 10 to 15 percent loss"
+        },
+        {
+          "operation": "three stage mulching",
+          "cost": "medium",
+          "effect": "soft rot below 5 percent against 20 to 30 percent"
+        },
+        {
+          "operation": "planting by 7 June",
+          "cost": "zero",
+          "effect": "avoids rhizome fly and soft rot"
+        },
+        {
+          "operation": "covering exposed rhizomes",
+          "cost": "labour only",
+          "effect": "blocks rhizome fly entry"
+        }
+      ],
+      "implication": "None of these requires an expensive input. Together they account for a thirty to forty percent yield difference, which is beyond the reach of any fertiliser or chemical. And each depends on being done at the right time — which is precisely what a machine does well."
+    },
+    "primary_sources": [
+      "AgroWorld - Ale (Adrak) lagvad, utpadan, bene sathvan va prakriya, courtesy Dr. Bawasakar Technology (TIER C) - three layout geometries, bud orientation, herbicide schedule, seed storage loss, growth regulators, intercrops, aroma and sunlight relationship. Used for practice description only, NOT for yield or profit figures.",
+      "Agrowon - Ale Lagvad Tantradnyan, Dr. Jitendra Kadam, Halad Sanshodhan Yojana, Kasbe Digraj (TIER A) - broad ridge 120/60/60, earthing up, fertiliser splits, land preparation sequence",
+      "Agrowon - Ale pikasathi thibak sinchanane pani, khat vyavasthapan; Bitle and Deshmukh, Netafim (TIER A) - bed height 30 cm, paired row option",
+      "Agrowon - Halad, Ale pikatil kid-rog niyantran; Mali and Mahajan (TIER A) - cover exposed rhizomes during July to September",
+      "Agrowon - Kanda lagvad, bed forming machinery method (TIER A)",
+      "Organic Mandya, Spices Board / TNAU (TIER B) - three stage mulching programme",
+      "Vikaspedia, Bayer FarmRise (TIER B) - weeding schedule",
+      "Maharashtra News (TIER C) - alternative earthing up loss figure of 15 to 20 percent, not used"
+    ],
+    "review_log": {
+      "tier_1_review_date": "2026-07-31",
+      "rules_reviewed": 2,
+      "rules_total": 38,
+      "note": "Rule-level status is authoritative. Domain status stays PHASE_1_RAW_UNVALIDATED until T3 and T4 are also reviewed and one season of field data exists."
+    }
+  },
+  "reference_data": {
+    "tillage_sequence": [
+      {
+        "step": 1,
+        "operation_en": "deep ploughing",
+        "operation_mr": "खोल नांगरट",
+        "detail": "to about one foot, lengthwise and crosswise",
+        "timing": "March",
+        "source_tier": "A"
+      },
+      {
+        "step": 2,
+        "operation_en": "kulav passes",
+        "operation_mr": "कुळवाच्या पाळ्या",
+        "detail": "1 to 2 in the source; 3 to 4 realistic on black soil; rotavator often needed to finish",
+        "source_tier": "A"
+      },
+      {
+        "step": 3,
+        "operation_en": "remove perennial weed tubers and stones",
+        "operation_mr": "तण-कंद व दगड वेचणी",
+        "detail": "nutsedge, bermuda grass, kunda",
+        "source_tier": "A"
+      },
+      {
+        "step": 4,
+        "operation_en": "FYM incorporation",
+        "operation_mr": "शेणखत",
+        "detail": "14 to 16 t per acre, before the last kulav pass",
+        "source_tier": "A"
+      },
+      {
+        "step": 5,
+        "operation_en": "basal phosphorus and potassium",
+        "operation_mr": "स्फुरद व पालाश",
+        "detail": "full dose, 30 kg each per acre",
+        "source_tier": "A"
+      },
+      {
+        "step": 6,
+        "operation_en": "form beds or ridges",
+        "operation_mr": "वाफे किंवा वरंबे बांधणी",
+        "detail": "see layouts",
+        "source_tier": "A"
+      }
+    ],
+    "why_tillage_matters": {
+      "statement": "Because the crop stays in the soil for a long period and requires friable soil, good land preparation is essential",
+      "second_reason": "The rhizome grows horizontally, so it needs loose lateral soil to expand into. Compacted soil produces small and misshapen rhizomes regardless of nutrition.",
+      "implication": "Land preparation is not merely getting ready — it is a direct decision about final rhizome size.",
+      "source_tier": "A"
+    },
+    "layouts": [
+      {
+        "code": "flat_bed",
+        "name_mr": "सपाट वाफे",
+        "suitable_soil": "plateau flat, loam or sandy mixed",
+        "bed_size": "2 x 1 m or 2 x 3 m",
+        "spacing_cm": [
+          20,
+          22.5
+        ],
+        "plants_per_ha": 198000,
+        "plants_per_acre": 80000,
+        "yield_index": 1.0,
+        "suitable_for_kannad": false,
+        "source_tier": "C"
+      },
+      {
+        "code": "ridge_furrow",
+        "name_mr": "सरी वरंबा",
+        "suitable_soil": "medium and heavy",
+        "ridge_spacing_cm": 45,
+        "planting_position": "both sides of the ridge, leaving the upper one third",
+        "planting_depth_cm": 5,
+        "plant_spacing_cm": 22.5,
+        "yield_index": 1.0,
+        "suitable_for_kannad": "possible but inferior to broad ridge",
+        "source_tier": "C"
+      },
+      {
+        "code": "broad_ridge",
+        "name_mr": "रुंद वरंबा / गादी वाफा",
+        "suitable_soil": "black soils AND wherever sprinkler or drip is used",
+        "yield_gain_pct": [
+          15,
+          20
+        ],
+        "suitable_for_kannad": true,
+        "variants": [
+          {
+            "source": "Agrowon / Dr. Kadam",
+            "tier": "A",
+            "cycle_cm": 120,
+            "ridge_width_cm": 60,
+            "furrow_width_cm": 60,
+            "height_cm": [
+              20,
+              25
+            ],
+            "drip_lines_per_bed": 1,
+            "principle": "drainage priority — wide furrow",
+            "plants_per_ha": 111000,
+            "selected_for_kannad": true
+          },
+          {
+            "source": "AgroWorld / Dr. Bawasakar",
+            "tier": "C",
+            "cycle_cm": 135,
+            "ridge_width_cm": 90,
+            "furrow_width_cm": 45,
+            "height_cm": [
+              20,
+              25
+            ],
+            "drip_lines_per_bed": 2,
+            "principle": "plant population priority — wide ridge",
+            "plants_per_ha": 132000,
+            "selected_for_kannad": false
+          },
+          {
+            "source": "Agrowon / Netafim",
+            "tier": "A",
+            "cycle_cm": [
+              135,
+              150
+            ],
+            "ridge_width_cm": [
+              75,
+              90
+            ],
+            "furrow_width_cm": [
+              45,
+              60
+            ],
+            "height_cm": 30,
+            "drip_lines_per_bed": 1,
+            "principle": "height priority — avoid saturation",
+            "selected_for_kannad": "height adopted"
+          }
+        ],
+        "kannad_decision": {
+          "geometry": "Kadam 120 cm cycle with 60 cm ridge and 60 cm furrow",
+          "height_cm": [
+            25,
+            30
+          ],
+          "rationale": "The dominant risk here is waterlogging, so the wide furrow and greater height are chosen over the higher plant population. The 90 cm ridge with only a 45 cm furrow gives more plants but less drainage capacity, which is the wrong trade in a belt with 195 mm of July rainfall and October cyclonic rain.",
+          "drip_lines": 1,
+          "note": "The apparent conflict between one drip line and two is resolved by bed width — a 60 cm ridge needs one line, a 90 cm ridge needs two. It was never a contradiction."
+        }
+      }
+    ],
+    "plant_population_math": {
+      "method": "plants per ha = (rows per bed / cycle width in m) x (1 / in-row spacing in m)",
+      "worked": [
+        {
+          "layout": "flat bed at 22.5 x 22.5 cm",
+          "calc": "10000 / 0.0506",
+          "plants_per_ha": 198000,
+          "matches_source": true
+        },
+        {
+          "layout": "broad ridge 60 cm ridge, 120 cm cycle, 3 rows",
+          "calc": "(3 / 1.20) x (1 / 0.225) = 2.5 x 4.44",
+          "plants_per_ha": 111000,
+          "source_class": "DERIVED"
+        },
+        {
+          "layout": "broad ridge 90 cm ridge, 135 cm cycle, 4 rows",
+          "calc": "(4 / 1.35) x (1 / 0.225) = 2.96 x 4.44",
+          "plants_per_ha": 132000,
+          "source_class": "DERIVED"
+        }
+      ],
+      "finding": "Broad ridge uses 33 to 44 percent fewer plants and still yields 15 to 20 percent more.",
+      "mechanism": "In dense planting the plants compete, the rhizome has no lateral room to expand, air movement is poor and disease spreads. Wider spacing lets each rhizome grow larger.",
+      "economic_consequence": "Seed is the largest single cost at 28 to 35 percent of the total, so a 44 percent reduction in plant count is the largest cost saving available anywhere in the crop — and it comes with higher yield rather than a trade-off.",
+      "verification_required": "Sources do not publish plant population for the broad ridge layouts. The figures above are computed. Count actual plants in season one."
+    },
+    "seed_storage": {
+      "loss_statement": "Seed rhizome required for planting is 25 quintal per hectare. By planting time its weight falls, and depending on the storage method it comes to 15 to 18 quintal.",
+      "loss_pct": [
+        28,
+        40
+      ],
+      "shade_heap_loss_pct": [
+        25,
+        30
+      ],
+      "storage_duration_months": [
+        4,
+        5
+      ],
+      "harvest_month": "December",
+      "planting_month": "April to May",
+      "pit_method": {
+        "depth_cm": 60,
+        "alternate_depth_note": "one source says 1 metre",
+        "capacity": "45 x 45 x 60 cm holds 20 to 25 kg of seed",
+        "walls_and_floor": "plaster with a cow dung and mud mixture",
+        "drying_after_plaster_days": [
+          10,
+          15
+        ],
+        "base_layer": "2 cm of dry sand",
+        "layering": "10 cm of seed then sand, alternating",
+        "fill_height_cm": [
+          45,
+          50
+        ],
+        "headspace_cm": 10,
+        "cover": "wooden plank with a hole for air",
+        "over_cover": "dry grass thatch, to protect from unseasonal rain",
+        "water_table_requirement": "more than 1 metre below the pit floor"
+      },
+      "pre_storage_treatment": "quinalphos 20 ml plus carbendazim 15 g per 10 litres",
+      "other_preparation": "break off thick roots immediately after harvest",
+      "avoid": "closed rooms of tin, cement or tile",
+      "readiness_sign": "at two and a half to three months the buds swell and fine sprouts appear; seed showing such sprouts should be used",
+      "source_tier": "C",
+      "note": "Loss figure is corroborated by a second statement in the same source giving 25 to 30 percent for the simple shade method, so the range is internally consistent."
+    },
+    "seed_specification": {
+      "weight_g": {
+        "source_range": [
+          25,
+          55
+        ],
+        "alternate_range": [
+          30,
+          45
+        ],
+        "domain_1_range": [
+          20,
+          30
+        ],
+        "practical": [
+          30,
+          40
+        ]
+      },
+      "length_cm": [
+        2.5,
+        5
+      ],
+      "buds": {
+        "min": 2,
+        "max": 3,
+        "condition": "dormancy broken, swollen"
+      },
+      "reject": "rotten or partly decayed pieces",
+      "separation": "separate seed pieces from the mother rhizome",
+      "source_tier": "C"
+    },
+    "planting_technique": {
+      "bud_orientation": {
+        "correct": "bud facing UP and OUTWARD",
+        "effect_correct": "the shoot that emerges is strong and grows well",
+        "effect_wrong": "if the bud faces down and inward the shoot stays small and weak",
+        "cost": "zero — an instruction to the planting team",
+        "source_tier": "C"
+      },
+      "depth_cm": [
+        4,
+        5
+      ],
+      "depth_check": "ensure the rhizome is fully covered",
+      "ridge_furrow_depth_inches": 2,
+      "source_tier": "C"
+    },
+    "weed_management": {
+      "why_heavy": "Ginger requires large quantities of farmyard manure, and farmyard manure carries weed seed",
+      "causal_chain": [
+        "heavy FYM",
+        "weed seed introduced",
+        "high weed pressure",
+        "more weeding required",
+        "rhizome injury during weeding",
+        "Pythium and Fusarium enter",
+        "soft rot"
+      ],
+      "herbicide_schedule": [
+        {
+          "timing": "2 to 3 days after planting, soil moist",
+          "molecule": "atrazine",
+          "source_dose_per_litre_g": [
+            4,
+            5
+          ],
+          "type": "pre-emergent"
+        },
+        {
+          "timing": "12 to 15 days after planting",
+          "molecule": "glyphosate",
+          "source_dose_per_litre_ml": [
+            4,
+            5
+          ],
+          "type": "non-selective, on emerged weeds"
+        },
+        {
+          "timing": "after ginger emergence begins",
+          "molecule": null,
+          "instruction": "avoid all herbicide"
+        }
+      ],
+      "window_length_days": 15,
+      "emergence_days": [
+        15,
+        25
+      ],
+      "conflict_note": "The second herbicide application and ginger emergence nearly coincide. Glyphosate is non-selective, so a late application kills the crop.",
+      "manual_weeding": {
+        "count": [
+          3,
+          4
+        ],
+        "weed_free_period_weeks": [
+          4,
+          6
+        ],
+        "caution": "do not injure the rhizome"
+      },
+      "perennial_weeds_named": [
+        "lavhala (nutsedge)",
+        "harali (bermuda grass)",
+        "kunda"
+      ],
+      "source_tier": "C_for_doses_A_for_principle"
+    },
+    "mulch_programme": {
+      "stages": [
+        {
+          "stage": 1,
+          "timing": "immediately at planting",
+          "quantity_t_per_acre_source_1": [
+            8,
+            12
+          ],
+          "quantity_t_per_acre_source_2": [
+            4,
+            5
+          ]
+        },
+        {
+          "stage": 2,
+          "timing": "40 to 60 DAP, with earthing up",
+          "quantity_t_per_acre_source_1": [
+            3,
+            4
+          ],
+          "quantity_t_per_acre_source_2": 2
+        },
+        {
+          "stage": 3,
+          "timing": "90 to 120 DAP",
+          "quantity_t_per_acre_source_1": [
+            2,
+            3
+          ],
+          "quantity_t_per_acre_source_2": 2
+        }
+      ],
+      "quantity_conflict": "Two sources give different quantities but the principle is identical in both — three applications, not one.",
+      "five_functions": [
+        {
+          "function": "soft rot below 5 percent against 20 to 30 percent",
+          "domain": 6
+        },
+        {
+          "function": "lowers soil temperature against May maxima of 45 C",
+          "domain": 7
+        },
+        {
+          "function": "reduces irrigation demand",
+          "domain": 3
+        },
+        {
+          "function": "suppresses weeds, an alternative to herbicide",
+          "domain": 8
+        },
+        {
+          "function": "raises organic carbon",
+          "domain": 4
+        }
+      ],
+      "materials": [
+        {
+          "material": "sugarcane trash",
+          "availability_kannad": "available — neighbouring cane area"
+        },
+        {
+          "material": "wheat straw or stalks",
+          "availability_kannad": "available"
+        },
+        {
+          "material": "green leaf",
+          "availability_kannad": "FIELD"
+        },
+        {
+          "material": "paddy husk",
+          "availability_kannad": "limited"
+        },
+        {
+          "material": "ghaneri or nirgudi leaf",
+          "availability_kannad": "on field bunds; also reduces shoot borer"
+        },
+        {
+          "material": "weeds removed by hand weeding",
+          "availability_kannad": "free"
+        }
+      ],
+      "source_tier": "B"
+    },
+    "earthing_up": {
+      "name_mr": "उटाळणी",
+      "description": "Soil is moved with a long-handled khurpa. Roots break and new fibrous roots emerge in their place.",
+      "timing": {
+        "first": "when the crop is two and a half to three months old",
+        "second": "about 40 days after the first",
+        "minimum_operations": 2,
+        "hard_deadline": "before the flowering spike opens",
+        "flowering_timing_conflict": {
+          "agroworld": "6th to 7th month",
+          "kadam": "5th to 6th month"
+        }
+      },
+      "yield_loss_if_skipped_pct": {
+        "agroworld": [
+          10,
+          15
+        ],
+        "kadam": [
+          10,
+          15
+        ],
+        "maharashtra_news": [
+          15,
+          20
+        ],
+        "adopted": [
+          10,
+          15
+        ],
+        "rationale": "Two institutional-grade sources agree on 10 to 15 percent, so that is the figure used."
+      },
+      "physiology": "Earthing up breaks old roots and new fibrous roots emerge, the soil becomes friable so the rhizome has room to expand laterally, and the flowering spike then redirects assimilate from foliage to rhizome. So earthing up prepares the plant for that turning point, which is why it must precede it.",
+      "three_jobs": [
+        {
+          "job": "stimulates rhizome growth through new fibrous roots",
+          "domain": 8
+        },
+        {
+          "job": "incorporates the fertiliser split",
+          "domain": 4
+        },
+        {
+          "job": "covers exposed rhizomes, blocking rhizome fly entry",
+          "domain": 5
+        }
+      ],
+      "after_operation": "give a light water stress so tillering is stronger",
+      "source_tier": "A"
+    },
+    "growth_regulators": {
+      "items": [
+        {
+          "purpose": "yield increase and reduced fibre",
+          "actives": "2 percent urea plus 400 ppm NAA",
+          "timing_days": [
+            60,
+            75
+          ],
+          "source_tier": "C"
+        },
+        {
+          "purpose": "increase tiller number",
+          "actives": "200 ppm ethephon",
+          "timing": "from the 75th day, three sprays at 15 day intervals",
+          "source_tier": "C"
+        }
+      ],
+      "fibre_note": "Fibre content is a quality determinant. Variety fibre percentages range from 3.26 in Mahima to 4.5 in Varada, so a treatment that reduces fibre can move quality by about as much as the variety choice does.",
+      "caution": [
+        "ethephon is a plant hormone and excess can yellow the foliage",
+        "timing at 75 DAP falls while tillering is still active",
+        "CIB&RC registration applies to growth regulators as well",
+        "cost-benefit not verified"
+      ],
+      "policy": "Optional enhancement, not a required operation. Do not surface until the basic operations — earthing up, mulching, drainage — are complete.",
+      "brand_exclusion": "The source contains a four-spray schedule of named commercial products. Deliberately excluded. The engine emits active ingredients only."
+    },
+    "intercropping": {
+      "source_list": [
+        "coriander",
+        "marigold",
+        "chilli",
+        "tur",
+        "guar"
+      ],
+      "source_caution": "ensure the intercrop does not compete with the main crop",
+      "revised_list": [
+        {
+          "crop": "marigold",
+          "rank": 1,
+          "reason": "nematode trap crop plus early cash flow plus beneficial insects"
+        },
+        {
+          "crop": "coriander",
+          "rank": 2,
+          "reason": "early cash at about 60 days"
+        },
+        {
+          "crop": "tur",
+          "rank": 3,
+          "reason": "tall, provides partial shade, fixes nitrogen; watch competition"
+        },
+        {
+          "crop": "guar",
+          "rank": 4,
+          "reason": "nitrogen fixation"
+        }
+      ],
+      "excluded": {
+        "crops": [
+          "chilli",
+          "brinjal",
+          "tomato",
+          "potato"
+        ],
+        "reason": "hosts for bacterial wilt, which has no reliable cure in ginger",
+        "note": "The source recommends chilli. It is excluded here because cross-checking the intercrop list against the disease host list revealed the conflict. A crop excluded from the rotation cannot be acceptable as an intercrop, where it sits immediately adjacent all season."
+      }
+    },
+    "shade": {
+      "tolerance_pct": 25,
+      "benefit_statement": "The crop grows well in 25 percent shade, which is why it is grown as an intercrop in coconut, arecanut and coffee gardens",
+      "aroma_finding": "Trials found that when the crop receives excessive direct sunlight the aroma of the ginger declines",
+      "dual_argument_for_kannad": [
+        "protection from 45 C maxima, which affects yield",
+        "preserving aroma, which affects quality and price"
+      ],
+      "why_it_matters_more_here": "Kannad is an open-field, high-radiation belt, so the aroma risk is greater than in the shaded plantations of Kerala. Aroma is the main quality determinant for dry ginger and oil.",
+      "kannad_constraint": "There is no multi-storey plantation here, so shade must be created artificially or through a tall intercrop.",
+      "source_tier": "C"
+    },
+    "operation_bundles": [
+      {
+        "bundle": 1,
+        "name": "pre-planting",
+        "timing": "day -1 to 0",
+        "operations": [
+          "chemical seed treatment 15 to 20 minutes",
+          "shade dry 3 to 6 hours",
+          "biological treatment",
+          "mix Trichoderma into FYM",
+          "plant with bud up and outward",
+          "mulch stage 1 immediately"
+        ],
+        "domains": [
+          1,
+          2,
+          4,
+          5,
+          6,
+          8
+        ]
+      },
+      {
+        "bundle": 2,
+        "name": "herbicide window",
+        "timing": "2 to 15 DAP",
+        "operations": [
+          "atrazine at 2 to 3 days",
+          "glyphosate at 12 to 15 days, last opportunity"
+        ],
+        "domains": [
+          8
+        ]
+      },
+      {
+        "bundle": 3,
+        "name": "earthing up",
+        "timing": "75 to 90 DAP",
+        "priority": "highest — the most important field day of the season",
+        "operations": [
+          "weeding without rhizome injury",
+          "earthing up with long-handled khurpa",
+          "cover exposed rhizomes",
+          "final nitrogen split",
+          "neem cake",
+          "mulch stage 2",
+          "then 3 to 5 days light water stress"
+        ],
+        "domains": [
+          3,
+          4,
+          5,
+          6,
+          8
+        ],
+        "u_values_protected": [
+          0.125,
+          0.175,
+          0.2
+        ]
+      },
+      {
+        "bundle": 4,
+        "name": "second earthing",
+        "timing": "115 to 130 DAP",
+        "operations": [
+          "second earthing up",
+          "potassium split",
+          "mulch stage 3",
+          "micronutrient spray if not done at 90 DAP"
+        ],
+        "domains": [
+          4,
+          8
+        ]
+      }
+    ],
+    "labour_profile": [
+      {
+        "operation": "seed cutting and treatment",
+        "timing": "pre-plant",
+        "intensity": "high"
+      },
+      {
+        "operation": "planting",
+        "timing": "day 0",
+        "intensity": "highest"
+      },
+      {
+        "operation": "mulch stage 1",
+        "timing": "day 0",
+        "intensity": "high"
+      },
+      {
+        "operation": "weeding",
+        "timing": "30 to 60 DAP",
+        "intensity": "medium"
+      },
+      {
+        "operation": "earthing up",
+        "timing": "75 to 90 DAP",
+        "intensity": "high"
+      },
+      {
+        "operation": "second earthing",
+        "timing": "115 to 130 DAP",
+        "intensity": "medium"
+      },
+      {
+        "operation": "harvest",
+        "timing": "210 to 240 DAP",
+        "intensity": "highest"
+      }
+    ],
+    "labour_competition": {
+      "conflict_window": "75 to 90 DAP falls around August",
+      "competing_crops": [
+        "cotton",
+        "soybean",
+        "tur"
+      ],
+      "competing_operation": "intercultivation",
+      "consequence": "labour becomes scarce exactly when earthing up has a hard deadline",
+      "action": "arrange labour from about 60 DAP",
+      "gap": "per acre labour days not recorded in any source; needed for Domain 13 economics"
+    },
+    "operations_calendar": [
+      {
+        "dap": -90,
+        "month": "March",
+        "operation": "deep ploughing, soil sampling",
+        "priority": 5
+      },
+      {
+        "dap": -75,
+        "operation": "remove perennial weed tubers and stones",
+        "priority": 4
+      },
+      {
+        "dap": -60,
+        "month": "April",
+        "operation": "soil solarization",
+        "priority": 3
+      },
+      {
+        "dap": -30,
+        "operation": "kulav passes at vafsa",
+        "priority": 4
+      },
+      {
+        "dap": -25,
+        "operation": "FYM 14 to 16 t per acre plus basal P and K",
+        "priority": 5
+      },
+      {
+        "dap": -20,
+        "operation": "form broad ridges 60/60, height 25 to 30 cm",
+        "priority": 5
+      },
+      {
+        "dap": -15,
+        "operation": "lay and test drip, cut drainage channels",
+        "priority": 5
+      },
+      {
+        "dap": -7,
+        "operation": "seed grading — 30 to 40 g, 2 to 3 buds",
+        "priority": 4
+      },
+      {
+        "dap": -1,
+        "operation": "seed treatment chemical then dry then biological",
+        "priority": 5
+      },
+      {
+        "dap": 0,
+        "operation": "planting by 7 June, bud up and outward, 4 to 5 cm deep",
+        "priority": 5
+      },
+      {
+        "dap": 0,
+        "operation": "mulch stage 1 immediately",
+        "priority": 5
+      },
+      {
+        "dap": 2,
+        "operation": "atrazine on moist soil",
+        "priority": 3
+      },
+      {
+        "dap": 3,
+        "operation": "ambavani irrigation",
+        "priority": 4
+      },
+      {
+        "dap": 13,
+        "operation": "glyphosate — LAST opportunity",
+        "priority": 4
+      },
+      {
+        "dap": 20,
+        "operation": "emergence begins — stop all herbicide",
+        "priority": 5
+      },
+      {
+        "dap": 30,
+        "operation": "prepare castor seed bait",
+        "priority": 4
+      },
+      {
+        "dap": 35,
+        "operation": "count establishment, decide on gap filling",
+        "priority": 4
+      },
+      {
+        "dap": 50,
+        "operation": "light trap, micronutrient spray 1",
+        "priority": 4
+      },
+      {
+        "dap": 60,
+        "operation": "arrange labour for earthing up; count tillers",
+        "priority": 4
+      },
+      {
+        "dap": 60,
+        "operation": "NAA spray, optional",
+        "priority": 2
+      },
+      {
+        "dap": 82,
+        "operation": "BUNDLE 3 — earthing up plus five other operations",
+        "priority": 5
+      },
+      {
+        "dap": 86,
+        "operation": "light water stress for 3 to 5 days",
+        "priority": 4
+      },
+      {
+        "dap": 90,
+        "operation": "micronutrient spray 2, recount tillers",
+        "priority": 4
+      },
+      {
+        "dap": 110,
+        "operation": "potassium split",
+        "priority": 4
+      },
+      {
+        "dap": 120,
+        "operation": "BUNDLE 4 — second earthing plus mulch stage 3",
+        "priority": 4
+      },
+      {
+        "dap": 120,
+        "operation": "dig a sample plant, count fingers",
+        "priority": 4
+      },
+      {
+        "dap": 140,
+        "operation": "potassium split",
+        "priority": 4
+      },
+      {
+        "dap": 165,
+        "operation": "flowering spike — earthing up window has closed",
+        "priority": 3
+      },
+      {
+        "dap": 180,
+        "operation": "dig sample and weigh; mark next season's seed",
+        "priority": 4
+      },
+      {
+        "dap": 215,
+        "operation": "begin gradual water withdrawal",
+        "priority": 4
+      },
+      {
+        "dap": 235,
+        "operation": "harvest",
+        "priority": 5
+      }
+    ]
+  },
+  "rules": [
+    {
+      "rule_id": "D08-LY-001",
+      "category": "LY",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G0",
+      "trigger": {
+        "english": "soil_type is vertisol AND has_drip is true AND planting_layout is not broad_ridge",
+        "marathi": "काळी जमीन, ठिबक आहे, पण रुंद वरंबा पद्धत निवडलेली नाही",
+        "expr": "soil_type == 'vertisol' AND has_drip IS TRUE AND planting_layout != 'broad_ridge'",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "soil_type": "vertisol",
+              "has_drip": true,
+              "planting_layout": "flat_bed"
+            },
+            "expect": "TRUE",
+            "label": "काळी + ठिबक + सपाट"
+          },
+          {
+            "context": {
+              "soil_type": "vertisol",
+              "has_drip": true,
+              "planting_layout": "broad_ridge"
+            },
+            "expect": "FALSE",
+            "label": "रुंद वरंबा — बरोबर"
+          }
+        ]
+      },
+      "action": {
+        "english": "Require broad ridge layout. It is the recommended method specifically for black soils and for fields using drip or sprinkler, and it yields 15 to 20 percent more than the alternatives while using 33 to 44 percent fewer plants.",
+        "marathi": "रुंद वरंबा पद्धत वापरा. काळ्या जमिनी आणि ठिबक-तुषार वापरल्या जाणाऱ्या ठिकाणी हीच पद्धत शिफारसीत आहे. ती १५ ते २०% जास्त उत्पादन देते आणि त्याच वेळी ३३ ते ४४% कमी रोपे लागतात — म्हणजे खर्च कमी आणि उत्पादन जास्त."
+      },
+      "reasoning": {
+        "agronomic_basis": "Both qualifying conditions hold at Kannad — the soil is black and drip is a precondition. The method lifts the root zone above standing water and suits single-line drip. Computed plant population falls from about 198,000 per hectare on flat beds to about 111,000 on the Kadam geometry, because wider spacing lets each rhizome expand laterally rather than competing.",
+        "yield_impact": "u = 0.167 for not using it, derived from the recorded 20 percent gain. Separately it cuts the largest cost line by roughly 44 percent.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Jitendra Kadam",
+          "AgroWorld layout comparison",
+          "computed plant population"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil",
+          "domain_3_water",
+          "domain_6_disease",
+          "domain_11_yield",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "planting_layout",
+        "soil_type",
+        "has_drip",
+        "plants_per_acre"
+      ],
+      "u_value": 0.167,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "The highest-return structural decision in the knowledge base and its marginal cost is close to zero, because a bed former takes the same time either way. More plants equals more yield is a double error here — it costs more and delivers less.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-LY-002",
+      "category": "LY",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "planting_layout is broad_ridge AND bed geometry not yet fixed",
+        "marathi": "रुंद वरंबा निवडला, मोजमापे ठरवायची आहेत"
+      },
+      "action": {
+        "english": "Set 120 cm cycle, 60 cm ridge, 60 cm furrow, height 25 to 30 cm, planting 22.5 x 22.5 cm, depth 4 to 5 cm, one drip line per bed. Lay beds along the slope.",
+        "marathi": "१२० सेंमी अंतरावर सरी — वरंबा ६० सेंमी, पाट ६० सेंमी, उंची २५ ते ३० सेंमी, लागवड २२.५ × २२.५ सेंमी, खोली ४ ते ५ सेंमी, एका वाफ्यावर एक ठिबक नळी. वाफे उताराला अनुसरून."
+      },
+      "reasoning": {
+        "agronomic_basis": "Three published geometries exist. The 90 cm ridge with a 45 cm furrow gives more plants but less drainage capacity, which is the wrong trade where July delivers 195 mm and cyclonic rain can arrive in October. The wide furrow and greater height are chosen deliberately over plant population.",
+        "yield_impact": "Realises the 0.167 captured by D08-LY-001.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam 120/60/60",
+          "Agrowon - Bitle and Deshmukh 30 cm height",
+          "AgroWorld 135/90/45"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil",
+          "domain_3_water"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "bed_width_cm",
+        "furrow_width_cm",
+        "bed_height_cm",
+        "rows_per_bed",
+        "drip_lateral_spacing_ft"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "The apparent conflict between one drip line and two is not a contradiction — it is a consequence of bed width. A 60 cm ridge needs one line; a 90 cm ridge needs two. Reading the two sources together resolves it.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-LY-003",
+      "category": "LY",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Seed quantity is being estimated",
+        "marathi": "बेण्याचे प्रमाण ठरवले जात आहे"
+      },
+      "action": {
+        "english": "Compute seed requirement from area, spacing and piece weight rather than using a rule of thumb. Show the calculation. A wrong assumption here moves the largest cost line in the crop.",
+        "marathi": "बेण्याचे प्रमाण गृहीत धरून सांगू नका — क्षेत्र, अंतर आणि तुकड्याचे वजन यावरून गणित करून दाखवा. इथली चूक सर्वात मोठ्या खर्च रेषेवर परिणाम करते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Reported seed rates and computed plant populations do not reconcile. At 850 kg per acre and 35 g per piece the count is about 24,300 per acre, roughly 60,000 per hectare, against a computed broad ridge population of about 111,000 per hectare. Either the rate is higher than reported, the spacing is wider in practice, or the pieces are lighter.",
+        "yield_impact": "Seed is 28 to 35 percent of total cost. A factor-of-two error in the estimate is the single largest budgeting error available.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Domain 8 plant population computation",
+          "Domain 13 seed cost line"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle"
+        ]
+      },
+      "farm_brain_schema": [
+        "plants_per_acre",
+        "seed_piece_weight_g",
+        "seed_at_planting_kg",
+        "area_acre",
+        "rows_per_bed"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This reconciliation must be settled by counting in season one. It is flagged rather than resolved because the sources genuinely disagree and guessing would put a wrong number into the biggest line of the budget.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-LY-004",
+      "category": "LY",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Bed forming scheduled AND area_acre above 1 AND bed_former_arranged is false",
+        "marathi": "वाफे बांधायचे आहेत, क्षेत्र एक एकरहून जास्त, सरी यंत्र ठरवलेले नाही"
+      },
+      "action": {
+        "english": "Arrange a tractor-drawn bed former in advance and settle the 60/60 setting with the operator before the day. Hand forming is not practical beyond a small area.",
+        "marathi": "ट्रॅक्टरचे सरी यंत्र आधीच ठरवा, आणि ६०/६० रचनेसाठी यंत्राची मांडणी चालकाशी बोलून निश्चित करा. मोठ्या क्षेत्रावर हाताने वाफे बांधणे व्यवहार्य नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Bed geometry determines drainage, plant population and drip layout together. If the machine cannot be set correctly the layout decision fails at execution rather than at planning.",
+        "yield_impact": "Protects the 0.167 from being lost during implementation.",
+        "confidence_score": 0.7,
+        "source_tier": "A",
+        "references": [
+          "Agrowon bed forming machinery method for onion"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "bed_former_arranged",
+        "bed_width_cm",
+        "area_acre"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "EST",
+      "kannad_note": "Documented machine settings exist for 120 cm beds in onion. The 60 cm ridge with 60 cm furrow arrangement for ginger needs confirming with a local operator before March.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-SS-001",
+      "category": "SS",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Seed rhizome is being put into storage",
+        "marathi": "बेणे साठवणीत ठेवले जात आहे"
+      },
+      "action": {
+        "english": "Warn that 28 to 40 percent of the weight will be lost by planting time. To have a given quantity at planting, store roughly 1.4 times that amount. Record both weights.",
+        "marathi": "साठवणीत बेण्याचे वजन २८ ते ४०% घटते. लागवडीच्या वेळी जेवढे हवे आहे त्याच्या सुमारे १.४ पट आत्ता साठवावे लागेल. साठवणीचे आणि लागवडीच्या वेळचे — दोन्ही वजन नोंदवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source states that 25 quintal per hectare is required at planting but by then the stored weight has fallen to 15 to 18 quintal. A separate statement in the same source gives 25 to 30 percent loss for simple shade storage, so the range is internally consistent.",
+        "yield_impact": "Not a yield factor. It is a cost of roughly half the seed line again, paid in kind rather than in cash, and therefore invisible in every cost sheet.",
+        "confidence_score": 0.78,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld seed storage section"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "seed_stored_kg",
+        "seed_at_planting_kg",
+        "seed_storage_loss_pct",
+        "seed_storage_method"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "This directly challenges the assumption that retaining own seed is cheaper. The loss is real but invisible, so it never enters the comparison. Two weighings — one at storage, one at planting — settle it for this plot.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-SS-002",
+      "category": "SS",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Seed storage method being decided",
+        "marathi": "बेणे साठवणीची पद्धत ठरवली जात आहे"
+      },
+      "action": {
+        "english": "Use the pit method rather than a shade heap. Pit 60 cm deep, walls and floor plastered with cow dung and mud, dried 10 to 15 days, 2 cm sand base, then alternating 10 cm seed and sand layers to 45 to 50 cm, leaving 10 cm headspace under a wooden plank with an air hole and a grass thatch above. Confirm the water table is more than a metre below the pit floor.",
+        "marathi": "सावलीत रचून ठेवण्यापेक्षा खड्डा पद्धत वापरा. ६० सेंमी खोल खड्डा, भिंती व तळ शेण-मातीने सारवा, १०-१५ दिवस वाळू द्या, तळाला २ सेंमी कोरडी वाळू, नंतर १० सेंमी बेणे व वाळू आलटून-पालटून ४५-५० सेंमीपर्यंत, वर १० सेंमी मोकळी जागा, हवेसाठी भोक असलेली लाकडी फळी, आणि वर वाळलेल्या गवताचे छप्पर. खड्ड्याखाली पाण्याची पातळी एक मीटरहून खोल असल्याची खात्री करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Simple shade storage loses 25 to 30 percent. The pit method controls temperature and humidity, and the plaster, sand layering and air hole together manage moisture and respiration. Closed rooms of tin, cement or tile are explicitly to be avoided.",
+        "yield_impact": "Reducing loss from 30 to 20 percent saves roughly 150 kg of seed on an 850 kg requirement, at negligible cost.",
+        "confidence_score": 0.75,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld pit storage detail"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "seed_storage_method",
+        "seed_stored_kg",
+        "seed_storage_loss_pct"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Cost is digging, sand, a plank and thatch. Against a saving of roughly 150 kg of the most expensive input on the farm, the return is large and immediate.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-SS-003",
+      "category": "SS",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Seed is being taken out of storage AND seed_sprouts_visible is false",
+        "marathi": "बेणे साठवणीतून काढले जात आहे पण डोळे फुगलेले किंवा कोंब दिसत नाहीत"
+      },
+      "action": {
+        "english": "Treat as a quality warning. At two and a half to three months in storage the buds should have swollen and fine sprouts should be visible. Seed showing no sprouts is suspect and germination should be tested before committing the whole lot.",
+        "marathi": "अडीच ते तीन महिन्यांत डोळे फुगून बारीक कोंब यायला हवेत. कोंब न आलेले बेणे संशयास्पद आहे — संपूर्ण लॉट लावण्यापूर्वी उगवण तपासा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source states that at two and a half to three months the buds swell and fine sprouts appear, and that seed showing such sprouts should be used. Absence of sprouts after that period indicates the seed is either dead or still fully dormant.",
+        "yield_impact": "Protects establishment, which is a hard ceiling for the season.",
+        "confidence_score": 0.75,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld readiness sign"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "seed_sprouts_visible",
+        "seed_stored_kg",
+        "establishment_pct"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "A free quality check at the point where it can still change the decision. Discovering dead seed after planting means discovering it at 35 DAP, when nothing can be done.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-PL-001",
+      "category": "PL",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G1",
+      "trigger": {
+        "english": "Planting day AND bud_orientation_instructed is false",
+        "marathi": "लागवडीचा दिवस, डोळ्याच्या दिशेबद्दल सूचना दिलेली नाही"
+      },
+      "action": {
+        "english": "Instruct the planting team that the bud must face UP and OUTWARD. A bud facing down and inward produces a small weak shoot.",
+        "marathi": "मजुरांना स्पष्ट सूचना द्या — कंदावरील डोळा वरती आणि बाहेरच्या बाजूला असावा. डोळा खाली आणि आतल्या बाजूला राहिल्यास कोंब लहान आणि कमकुवत राहतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source states that when the bud faces up and outward the emerging shoot is strong and grows well, and that the reverse orientation gives a small weak shoot. A weak shoot means fewer tillers, and tiller count sets rhizome number.",
+        "yield_impact": "u = 0.05. Small individually but entirely free, and it compounds across every plant in the field.",
+        "confidence_score": 0.72,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld bud orientation"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "bud_orientation_instructed",
+        "planting_date",
+        "establishment_pct"
+      ],
+      "u_value": 0.05,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "Zero cost and easily lost, because on planting day the priority is speed. A diagram in the day's instruction list works better than a sentence.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-PL-002",
+      "category": "PL",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G1",
+      "trigger": {
+        "english": "Planting in progress",
+        "marathi": "लागवड सुरू आहे"
+      },
+      "action": {
+        "english": "Plant at 4 to 5 cm depth and confirm the rhizome is fully covered. Too shallow exposes it to heat and to rhizome fly; too deep delays emergence.",
+        "marathi": "४ ते ५ सेंमी खोलीवर लावा आणि गड्डा पूर्ण झाकला जाईल याची खात्री करा. उथळ लावल्यास उष्णता आणि कंदमाशीचा धोका; खोल लावल्यास उगवण लांबते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source specifies 4 to 5 cm with the instruction to ensure full covering. Exposed rhizomes are the documented entry route for rhizome fly, which is the primary pest here.",
+        "yield_impact": "u = 0.05 estimated. Also feeds the rhizome fly pathway.",
+        "confidence_score": 0.75,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld planting depth",
+          "Agrowon - Mali and Mahajan exposed rhizome entry"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest",
+          "domain_7_weather"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "planting_depth_cm",
+        "exposed_rhizomes_observed"
+      ],
+      "u_value": 0.05,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Full covering matters more here than in cooler belts, because bare black soil in May runs well above the 25 to 26 C germination optimum and an exposed piece bakes.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-PL-003",
+      "category": "PL",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Seed grading in progress",
+        "marathi": "बेणे प्रतवारी चालू आहे"
+      },
+      "action": {
+        "english": "Grade to 30 to 40 g pieces with 2 to 3 swollen buds, 2.5 to 5 cm long. Reject rotten or partly decayed pieces. Separate pieces from the mother rhizome.",
+        "marathi": "३० ते ४० ग्रॅम वजनाचे, २ ते ३ फुगलेले डोळे असलेले, २.५ ते ५ सेंमी लांबीचे तुकडे करा. कुजलेले किंवा अर्धवट सडलेले तुकडे वापरू नका. मातृकंदापासून तुकडे वेगळे करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Sources give 25 to 55 g, 30 to 45 g and 20 to 30 g. The overlapping practical range is 30 to 40 g. Bud count matters more than weight because each bud is a potential shoot, and rejecting decayed pieces removes carried inoculum at the cheapest possible point.",
+        "yield_impact": "Feeds the establishment ceiling and the seed cost line simultaneously.",
+        "confidence_score": 0.75,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld seed specification",
+          "Agrowon - Dr. Kadam",
+          "Vikaspedia"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_6_disease",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "seed_piece_weight_g",
+        "seed_buds_per_piece",
+        "seed_at_planting_kg"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Piece weight interacts with the seed rate reconciliation in D08-LY-003. Recording actual average piece weight in season one settles both questions at once.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-WD-001",
+      "category": "WD",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": "G1",
+      "trigger": {
+        "english": "Herbicide proposed AND (emergence_started is true OR dap at or above 15)",
+        "marathi": "तणनाशकाचा प्रस्ताव, पण अद्रक उगवू लागले आहे किंवा १५ दिवस झाले आहेत",
+        "expr": "(emergence_started IS TRUE OR dap >= 15) AND herbicide_post_emergent_date IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Glyphosate is non-selective. This kills the crop if it fires late.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 18
+            },
+            "expect": "TRUE",
+            "label": "१८ दिवस — तणनाशक अडवा"
+          },
+          {
+            "context": {
+              "emergence_started": true,
+              "dap": 12
+            },
+            "expect": "TRUE",
+            "label": "उगवण सुरू — अडवा"
+          },
+          {
+            "context": {
+              "dap": 10,
+              "emergence_started": false
+            },
+            "expect": "FALSE",
+            "label": "१० दिवस, उगवण नाही — खिडकी उघडी"
+          }
+        ]
+      },
+      "action": {
+        "english": "BLOCK all herbicide. Glyphosate is non-selective and will kill emerged ginger. From here on, weed control is manual weeding and mulch only.",
+        "marathi": "कोणतेही तणनाशक वापरू नका. ग्लायफोसेट अनिवडक आहे — ते उगवलेल्या अद्रकालाही मारते. यापुढे तण नियंत्रण फक्त खुरपणी आणि आच्छादनाने."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source instructs that herbicide be avoided once emergence begins. Ginger emerges at 15 to 25 DAP while the second herbicide application falls at 12 to 15 DAP, so the two nearly coincide and the margin for error is a few days.",
+        "yield_impact": "Prevents catastrophic crop loss rather than a proportional one.",
+        "confidence_score": 0.88,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld herbicide schedule",
+          "Domain 1 emergence timing"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "emergence_started",
+        "dap",
+        "herbicide_post_emergent_date"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "The whole herbicide window is 15 days long and the closing edge sits right next to emergence. This is the one place in the domain where a timing error destroys the crop rather than reducing it.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-WD-002",
+      "category": "WD",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G1",
+      "trigger": {
+        "english": "dap equals 11 AND herbicide_post_emergent_date is empty",
+        "marathi": "अकरा दिवस झाले, दुसरी तणनाशक फवारणी बाकी",
+        "expr": "dap BETWEEN 10 AND 13 AND herbicide_post_emergent_date IS NULL AND emergence_started IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "The window closes in three days and emergence follows immediately.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 11,
+              "emergence_started": false
+            },
+            "expect": "TRUE",
+            "label": "शेवटची संधी"
+          },
+          {
+            "context": {
+              "dap": 11,
+              "emergence_started": true
+            },
+            "expect": "FALSE",
+            "label": "उगवण सुरू — अडवा"
+          },
+          {
+            "context": {
+              "dap": 11,
+              "herbicide_post_emergent_date": "done",
+              "emergence_started": false
+            },
+            "expect": "FALSE",
+            "label": "झाले"
+          }
+        ]
+      },
+      "action": {
+        "english": "Warn that the glyphosate window closes in three to four days, after which ginger begins to emerge and no herbicide can be used. Offer mulch as the alternative if the window is missed.",
+        "marathi": "ग्लायफोसेट फवारणीची शेवटची संधी पुढील तीन-चार दिवसांत. त्यानंतर अद्रक उगवू लागेल आणि तणनाशक वापरता येणार नाही. संधी गेल्यास आच्छादन हा पर्याय."
+      },
+      "reasoning": {
+        "agronomic_basis": "The window is defined at one end by planting and at the other by emergence, and the second application sits close to the closing edge. A three to four day warning is the practical lead time for arranging labour and spray.",
+        "yield_impact": "Prevents a weed pressure problem that would otherwise force more weeding, and weeding injures the rhizome.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "AgroWorld schedule",
+          "Domain 8 window reasoning"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "dap",
+        "herbicide_post_emergent_date",
+        "mulch_stage_1_done"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "Mulch is genuinely a substitute here rather than a consolation. It suppresses weeds, and it is already required for three other reasons.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-WD-003",
+      "category": "WD",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G2",
+      "trigger": {
+        "english": "Manual weeding scheduled",
+        "marathi": "खुरपणी ठरली आहे",
+        "expr": "dap BETWEEN 25 AND 60 AND weeding_count < 2",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Heavy FYM brings weed seed. More weeding means more chance of rhizome injury.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 40,
+              "weeding_count": 0
+            },
+            "expect": "TRUE",
+            "label": "खुरपणी"
+          },
+          {
+            "context": {
+              "dap": 40,
+              "weeding_count": 3
+            },
+            "expect": "FALSE",
+            "label": "पुरेशा"
+          }
+        ]
+      },
+      "action": {
+        "english": "Instruct that the rhizome must not be injured. Keep the field weed free for the first four to six weeks; three to four weedings across the season depending on pressure.",
+        "marathi": "खुरपणी करताना गड्ड्याला इजा होणार नाही याची काळजी घ्या. पहिले चार ते सहा आठवडे शेत तणविरहित ठेवा; हंगामभर तणाच्या तीव्रतेनुसार तीन ते चार खुरपण्या."
+      },
+      "reasoning": {
+        "agronomic_basis": "Injury during weeding allows Pythium and Fusarium to enter. Because heavy FYM raises weed pressure, ginger needs more weeding than most crops, which raises the injury exposure proportionally.",
+        "yield_impact": "Prevents entry into the 0.50 to 0.90 rot pathway at zero cost.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali and Mahajan injury route",
+          "Vikaspedia weeding schedule"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest",
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "weeding_count",
+        "current_stage",
+        "fym_t_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "The causal chain runs from FYM to weed seed to more weeding to rhizome injury to rot. Fully decomposed FYM breaks it at the first link, which is why that one condition serves three domains.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "WINDOW"
+    },
+    {
+      "rule_id": "D08-WD-004",
+      "category": "WD",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Land preparation phase AND perennial_weeds_removed is false",
+        "marathi": "पूर्वमशागत सुरू, बहुवार्षिक तणांचे कंद काढलेले नाहीत"
+      },
+      "action": {
+        "english": "Physically remove perennial weed tubers and rhizomes — nutsedge, bermuda grass and kunda — along with stones. Do not rely on later weeding.",
+        "marathi": "लव्हाळा, हराळी, कुंदा यांचे कंद व काश्या वेचून काढा, तसेच दगड. नंतरच्या खुरपणीवर विसंबून राहू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "Ginger emerges slowly and cannot outcompete established perennial weeds. More importantly, controlling them later means heavy weeding around a developing rhizome, which is the injury route into rot.",
+        "yield_impact": "Acts through the disease pathway rather than through competition alone.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "AgroWorld weed species",
+          "Agrowon - Dr. Kadam land preparation"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "perennial_weeds_removed",
+        "weeding_count"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "Doing this two months before planting is a disease prevention operation, not a tidiness one. The sources name the three species, which makes the instruction specific enough to act on.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-WD-005",
+      "category": "WD",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G1",
+      "trigger": {
+        "english": "A herbicide option is about to be presented",
+        "marathi": "तणनाशकाचा पर्याय दाखवला जात आहे"
+      },
+      "action": {
+        "english": "Show mulch above the chemical option. Name the molecule and the timing but defer the dose to the label, and append that CIB&RC label claim for ginger must be verified.",
+        "marathi": "रासायनिक पर्यायाच्या वर आच्छादन दाखवा. रसायनाचे नाव व वेळ सांगा पण मात्रा लेबलनुसार म्हणा, आणि लेबलवर अद्रकासाठी नोंदणी तपासण्याचा शेरा जोडा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Ginger is a minor crop, so atrazine and glyphosate may not carry a ginger label claim even though extension material lists them. Mulch achieves weed suppression and is already required for disease, water and temperature reasons.",
+        "yield_impact": "Regulatory compliance. Also directs the farmer toward an input that does four jobs instead of one.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "AgroWorld doses recorded for reference",
+          "CIB&RC minor crop position"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_10_institutional"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "herbicide_pre_emergent_date",
+        "herbicide_post_emergent_date",
+        "mulch_stage_1_done"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The herbicide doses in the source come from a commercial page rather than a state research centre, which is a further reason to present them as reference and to lead with mulch.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-MU-001",
+      "category": "MU",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G1",
+      "trigger": {
+        "english": "Planting completed AND mulch_stage_1_done is false",
+        "marathi": "लागवड झाली पण आच्छादन घातलेले नाही",
+        "expr": "dap BETWEEN 0 AND 4 AND mulch_stage_1_done IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Not a moisture improvement here. Bare black soil in May exceeds the 25-26 C sprouting optimum.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 1,
+              "mulch_stage_1_done": false
+            },
+            "expect": "TRUE",
+            "label": "लगेच आच्छादन"
+          },
+          {
+            "context": {
+              "dap": 1,
+              "mulch_stage_1_done": true
+            },
+            "expect": "FALSE",
+            "label": "घातले"
+          },
+          {
+            "context": {
+              "dap": 20,
+              "mulch_stage_1_done": false
+            },
+            "expect": "FALSE",
+            "label": "खिडकी गेली"
+          }
+        ]
+      },
+      "action": {
+        "english": "Apply mulch immediately, the same day. This is a precondition for emergence in this belt, not a moisture-saving improvement.",
+        "marathi": "लागवडीच्या दिवशीच आच्छादन घाला. इथे ते ओलावा टिकवण्याची सुधारणा नाही — उगवणीची अट आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Germination needs a soil temperature of 25 to 26 C while May maxima here reach 45.9 C and bare black soil runs hotter than air. Mulch is the only practical way to bring the surface temperature into range. It also carries the largest documented disease benefit of any single operation.",
+        "yield_impact": "u = 0.20 across the full three-stage programme, with the disease effect being the largest component.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "Organic Mandya field records",
+          "Spices Board / TNAU",
+          "Domain 7 May temperatures"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_3_water",
+          "domain_6_disease",
+          "domain_7_weather"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "mulch_stage_1_done",
+        "dap",
+        "soil_temp_c",
+        "air_temp_max_c"
+      ],
+      "u_value": 0.2,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Mulch appears in five domains — water, disease, weeds, temperature and organic carbon. Nothing else in this knowledge base does that, and it is absent from the standard per-acre cost sheet, which is why roughly Rs 15,000 had to be added to the Kannad budget.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-MU-002",
+      "category": "MU",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "dap in the 40 to 60 or 90 to 120 band AND the corresponding mulch stage not done",
+        "marathi": "आच्छादनाचा दुसरा किंवा तिसरा टप्पा बाकी आहे",
+        "expr": "((dap BETWEEN 40 AND 60 AND mulch_stage_2_done IS FALSE) OR (dap BETWEEN 90 AND 120 AND mulch_stage_3_done IS FALSE))",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 50,
+              "mulch_stage_2_done": false
+            },
+            "expect": "TRUE",
+            "label": "दुसरा टप्पा बाकी"
+          },
+          {
+            "context": {
+              "dap": 100,
+              "mulch_stage_3_done": false
+            },
+            "expect": "TRUE",
+            "label": "तिसरा टप्पा बाकी"
+          },
+          {
+            "context": {
+              "dap": 50,
+              "mulch_stage_2_done": true
+            },
+            "expect": "FALSE",
+            "label": "झाला"
+          }
+        ]
+      },
+      "action": {
+        "english": "Apply the next mulch stage. Bundle stage two with earthing up so both happen in one field visit.",
+        "marathi": "आच्छादनाचा पुढील टप्पा घाला. दुसरा टप्पा उटाळणीसोबत करा — एकाच फेरीत दोन्ही कामे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Two sources give different quantities but both specify three applications rather than one. Cumulative cover is what sustains the effect through the season, and stage two coincides naturally with earthing up.",
+        "yield_impact": "Completes the 0.20 mulch programme.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Organic Mandya three-stage programme",
+          "Spices Board / TNAU"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "mulch_stage_2_done",
+        "mulch_stage_3_done",
+        "dap",
+        "earthing_up_date"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "Bundling matters because the farmer visits the field once. Three separate notifications on three days produce three ignored notifications.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-MU-003",
+      "category": "MU",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Mulch material is being sourced",
+        "marathi": "आच्छादनाचे साहित्य जमवले जात आहे"
+      },
+      "action": {
+        "english": "Prefer sugarcane trash and wheat straw, which are available locally. Ghaneri or nirgudi leaf from field bunds additionally reduces shoot borer. Weeds removed by hand weeding can be used and cost nothing.",
+        "marathi": "उसाचे पाचट आणि गव्हाचे काड स्थानिक उपलब्ध आहेत. बांधावरील घाणेरी किंवा निर्गुडीचा पाला वापरल्यास खोडकिडा कमी होतो. खुरपून काढलेले तणही वापरता येते आणि ते फुकट आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Material choice affects cost more than effect. Sugarcane trash is abundant in the neighbouring cane belt. Ghaneri and nirgudi carry a documented secondary pest effect, so the same operation does two jobs.",
+        "yield_impact": "Reduces the cost of achieving the 0.20 mulch benefit.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Domain 8 material list",
+          "Agrowon pest notes on nirgudi"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "mulch_stage_1_done",
+        "area_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "Local availability and cost of mulch material has not been surveyed and is an open item. It determines whether the Rs 15,000 estimate in the Kannad budget is right.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-EU-001",
+      "category": "EU",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G3",
+      "trigger": {
+        "english": "dap between 75 and 90 AND earthing_up_date is empty",
+        "marathi": "७५ ते ९० दिवस, उटाळणी झालेली नाही",
+        "expr": "dap BETWEEN 75 AND 90 AND earthing_up_date IS NULL AND flowering_observed IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Six operations from five domains in one visit. Suppressed by D08-EU-002 once flowering opens.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 82,
+              "flowering_observed": false
+            },
+            "expect": "TRUE",
+            "label": "उटाळणीची वेळ"
+          },
+          {
+            "context": {
+              "dap": 82,
+              "earthing_up_date": "done",
+              "flowering_observed": false
+            },
+            "expect": "FALSE",
+            "label": "झाली"
+          },
+          {
+            "context": {
+              "dap": 82,
+              "flowering_observed": true
+            },
+            "expect": "FALSE",
+            "label": "फुलोरा — खिडकी गेली"
+          }
+        ]
+      },
+      "action": {
+        "english": "Carry out earthing up now with a long-handled khurpa. Bundle with weeding, covering exposed rhizomes, the final nitrogen split, neem cake and mulch stage two. Skipping earthing up costs 10 to 15 percent yield.",
+        "marathi": "आत्ता लांब दांड्याच्या खुरप्याने उटाळणी करा. सोबतच खुरपणी, उघडे गड्डे झाकणे, नत्राचा शेवटचा हप्ता, निंबोळी पेंड आणि आच्छादनाचा दुसरा टप्पा — सर्व एकाच फेरीत. उटाळणी न केल्यास उत्पादनात १० ते १५% घट."
+      },
+      "reasoning": {
+        "agronomic_basis": "Moving the soil breaks old roots and new fibrous roots emerge in their place, and the soil becomes friable so the rhizome has room to expand laterally. It must precede the flowering spike, after which assimilate shifts from foliage to rhizome and there is no time to build new roots.",
+        "yield_impact": "u = 0.125. Two institutional-grade sources agree on 10 to 15 percent; a third gives 15 to 20 percent and is not used.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam",
+          "AgroWorld earthing up description"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient",
+          "domain_5_pest",
+          "domain_6_disease",
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "earthing_up_date",
+        "dap",
+        "n_split_2_date",
+        "mulch_stage_2_done",
+        "exposed_rhizomes_observed"
+      ],
+      "u_value": 0.125,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "This is the most important field day of the season — six operations from five domains in one visit. Preparation must start a week ahead so labour, fertiliser, cake and mulch are all on hand.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-EU-002",
+      "category": "EU",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G3",
+      "trigger": {
+        "english": "flowering_observed is true AND earthing_up_date is empty",
+        "marathi": "हुरडे बांड आले आणि उटाळणी झालेली नाही",
+        "expr": "flowering_observed IS TRUE AND earthing_up_date IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Window closed. Do NOT attempt earthing up now.",
+        "golden_tests": [
+          {
+            "context": {
+              "flowering_observed": true
+            },
+            "expect": "TRUE",
+            "label": "फुलोरा आला, उटाळणी नाही"
+          },
+          {
+            "context": {
+              "flowering_observed": true,
+              "earthing_up_date": "2026-08-20"
+            },
+            "expect": "FALSE",
+            "label": "उटाळणी झाली"
+          },
+          {
+            "context": {
+              "flowering_observed": false
+            },
+            "expect": "FALSE",
+            "label": "फुलोरा नाही — खिडकी उघडी"
+          }
+        ]
+      },
+      "action": {
+        "english": "Record that the earthing up window has closed and register a 12.5 percent yield penalty for Domain 11 gap attribution. Do not attempt earthing up now — disturbing roots during bulking causes further loss.",
+        "marathi": "उटाळणीची मुदत संपली आहे. उत्पादनात सुमारे १२.५% घट गृहीत धरा. आता उटाळणी करू नका — गड्डा भरत असताना मुळे हलवल्यास अधिक नुकसान होईल."
+      },
+      "reasoning": {
+        "agronomic_basis": "After the flowering spike opens, leaf growth stops and rhizome growth begins. Earthing up works by breaking roots so new fibrous roots form, which needs time. Doing it after bulking has started damages the root system without the compensating regrowth.",
+        "yield_impact": "u = 0.125, irrecoverable.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam flowering and rhizome growth",
+          "Domain 1 partition shift"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle"
+        ]
+      },
+      "farm_brain_schema": [
+        "flowering_observed",
+        "earthing_up_date",
+        "dap"
+      ],
+      "u_value": 0.125,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "Telling the farmer not to do the operation is the right advice once the window has closed. A late earthing up is worse than none, and recording the loss honestly is what lets Domain 11 learn from the season.",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-EU-003",
+      "category": "EU",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G3",
+      "trigger": {
+        "english": "earthing_up_date recorded AND water_stress_after_earthing_done is false",
+        "marathi": "उटाळणी झाली पण नंतर पाण्याचा ताण दिलेला नाही",
+        "expr": "earthing_up_date IS NOT NULL AND water_stress_after_earthing_done IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "An instruction to do less, in another domain. Easily lost.",
+        "golden_tests": [
+          {
+            "context": {
+              "earthing_up_date": "done",
+              "water_stress_after_earthing_done": false
+            },
+            "expect": "TRUE",
+            "label": "ठिबक कमी करा"
+          },
+          {
+            "context": {
+              "earthing_up_date": "done",
+              "water_stress_after_earthing_done": true
+            },
+            "expect": "FALSE",
+            "label": "केले"
+          },
+          {
+            "context": {
+              "water_stress_after_earthing_done": false
+            },
+            "expect": "FALSE",
+            "label": "उटाळणीच झालेली नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Reduce drip to about 60 percent for three to five days. A light water stress after earthing up produces stronger tillering.",
+        "marathi": "उटाळणीनंतर तीन ते पाच दिवस ठिबक सुमारे ६० टक्क्यांपर्यंत कमी करा. हलका पाण्याचा ताण दिल्यास फुटवे चांगले फुटतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "Both Maharashtra sources give this instruction. It is easily overlooked because it is an instruction to do less rather than more, and because it belongs to the water domain while the operation belongs to this one.",
+        "yield_impact": "Affects tiller number, which sets rhizome count.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam",
+          "AgroWorld"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water"
+        ],
+        "depends_on": [
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "earthing_up_date",
+        "water_stress_after_earthing_done",
+        "drip_runtime_min",
+        "tillers_per_plant"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "A clean example of a cross-domain dependency that a human operator would miss. The operations team finishes earthing up and the irrigation schedule carries on unchanged unless something connects them.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-EU-004",
+      "category": "EU",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G4",
+      "trigger": {
+        "english": "dap between 115 and 130 AND earthing_up_2_date is empty",
+        "marathi": "११५ ते १३० दिवस, दुसरी उटाळणी बाकी",
+        "expr": "dap BETWEEN 115 AND 130 AND earthing_up_2_date IS NULL AND earthing_up_date IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 120,
+              "earthing_up_date": "done"
+            },
+            "expect": "TRUE",
+            "label": "दुसरी उटाळणी बाकी"
+          },
+          {
+            "context": {
+              "dap": 120,
+              "earthing_up_date": "done",
+              "earthing_up_2_date": "done"
+            },
+            "expect": "FALSE",
+            "label": "झाली"
+          },
+          {
+            "context": {
+              "dap": 120
+            },
+            "expect": "FALSE",
+            "label": "पहिली उटाळणीच झालेली नाही — दुसरी सुचवू नये"
+          }
+        ]
+      },
+      "action": {
+        "english": "Carry out the second earthing up, about 40 days after the first. Bundle with the potassium split and mulch stage three. Minimum two earthing operations per season.",
+        "marathi": "पहिल्या उटाळणीनंतर सुमारे ४० दिवसांनी दुसरी उटाळणी करा. सोबत पालाशाचा हप्ता आणि आच्छादनाचा तिसरा टप्पा. हंगामात कमीत कमी दोन भर आवश्यक."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source specifies a minimum of two earthing operations with the second about 40 days after the first. Rhizome expansion continues, so the soil covering has to be renewed and exposed rhizomes covered again.",
+        "yield_impact": "Part of the 0.125 earthing up value and protects against rhizome fly re-exposure.",
+        "confidence_score": 0.82,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam second earthing"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient",
+          "domain_5_pest"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "earthing_up_2_date",
+        "earthing_up_date",
+        "dap",
+        "k_late_split_1_date",
+        "mulch_stage_3_done"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "The second earthing is quieter than the first and easier to skip, because by 120 DAP the crop looks established and the work feels finished. It is also the last chance to cover exposed rhizomes.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-GF-001",
+      "category": "GF",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G1",
+      "trigger": {
+        "english": "dap between 30 and 40 AND establishment_pct below 85",
+        "marathi": "३० ते ४० दिवस, उगवण ८५ टक्क्यांपेक्षा कमी",
+        "expr": "dap BETWEEN 33 AND 40 AND establishment_pct < 85",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Find the cause first. If it is rot, gap filling wastes a second lot of the most expensive input.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 35,
+              "establishment_pct": 72
+            },
+            "expect": "TRUE",
+            "label": "कारण शोधा"
+          },
+          {
+            "context": {
+              "dap": 35,
+              "establishment_pct": 90
+            },
+            "expect": "FALSE",
+            "label": "चांगली उगवण"
+          }
+        ]
+      },
+      "action": {
+        "english": "Assess before acting. Above 85 percent, do not gap fill. Between 70 and 85 percent, gap filling up to 35 DAP is an economic decision. Below 70 percent, find the cause FIRST — if it is rot, gap filling wastes a second lot of the most expensive input.",
+        "marathi": "आधी कारण शोधा, मग निर्णय. उगवण ८५% वर असल्यास नांगी भरणी नको. ७० ते ८५% असल्यास ३५ दिवसांपर्यंत भरता येईल — तो आर्थिक निर्णय. ७०% पेक्षा कमी असल्यास कारण शोधा — कूज असेल तर नांगी भरणे म्हणजे सर्वात महागडी निविष्ठा दुसऱ्यांदा वाया घालवणे."
+      },
+      "reasoning": {
+        "agronomic_basis": "No source gives a gap filling recommendation for ginger. Reasoning from the crop: emergence completes by 30 to 45 days, so plants set later never catch up, and establishment is a hard ceiling with no ratoon. If the cause is soft rot the replacement seed enters the same infested soil.",
+        "yield_impact": "Prevents a second seed loss on top of the first.",
+        "confidence_score": 0.65,
+        "source_tier": "B",
+        "references": [
+          "absence of source",
+          "Domain 1 establishment ceiling",
+          "Domain 6 rot pathway"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle"
+        ]
+      },
+      "farm_brain_schema": [
+        "establishment_pct",
+        "gap_filling_done",
+        "dap",
+        "soft_rhizome_found"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "EST",
+      "kannad_note": "Marked EST because no source addresses it. The diagnostic ordering is the valuable part — the instinct on seeing poor emergence is to replant, and if the cause is rot that instinct doubles the loss.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-GR-001",
+      "category": "GR",
+      "priority": 2,
+      "severity": "info",
+      "stage": "G2",
+      "trigger": {
+        "english": "dap at 60 or 75 AND all basic operations are complete",
+        "marathi": "६० किंवा ७५ दिवस, आणि मूलभूत कामे पूर्ण झाली आहेत",
+        "expr": "dap BETWEEN 58 AND 78 AND earthing_up_date IS NOT NULL AND mulch_stage_2_done IS TRUE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Optional enhancement. Only surfaced once the basic operations are complete.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 70,
+              "earthing_up_date": "done",
+              "mulch_stage_2_done": true
+            },
+            "expect": "TRUE",
+            "label": "ऐच्छिक सुधारणा"
+          },
+          {
+            "context": {
+              "dap": 70,
+              "mulch_stage_2_done": true
+            },
+            "expect": "FALSE",
+            "label": "उटाळणी बाकी"
+          }
+        ]
+      },
+      "action": {
+        "english": "Offer the optional growth regulator: 2 percent urea plus 400 ppm NAA, reported to raise yield and reduce fibre. Emit active ingredients only, never a brand. Do not surface this until earthing up, mulching and drainage are complete.",
+        "marathi": "ऐच्छिक सुधारणा — २% युरिया अधिक ४०० ppm NAA, उत्पादन वाढ आणि तंतू कमी करण्यासाठी. घटकांची नावे सांगा, ब्रँड नाही. उटाळणी, आच्छादन आणि निचरा पूर्ण झाल्याशिवाय हा पर्याय दाखवू नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source reports NAA with urea at 60 and 75 days for yield increase and fibre reduction. Fibre is a quality determinant and variety fibre ranges from 3.26 to 4.5 percent, so a treatment that reduces fibre can move quality by about as much as variety choice does.",
+        "yield_impact": "Not quantified in the source. Presented as optional because the cost-benefit is unverified and the source is commercial.",
+        "confidence_score": 0.6,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld growth regulator section"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "naa_spray_count",
+        "dap",
+        "earthing_up_date",
+        "mulch_stage_2_done"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-D",
+      "kannad_note": "Ranked low deliberately. Basic operations carry documented u-values of 0.125 to 0.20; this carries an unquantified claim from a commercial source. Sequencing the advisory by evidence strength matters more than listing everything available.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "WINDOW"
+    },
+    {
+      "rule_id": "D08-GR-002",
+      "category": "GR",
+      "priority": 2,
+      "severity": "info",
+      "stage": "G3",
+      "trigger": {
+        "english": "dap at or above 75 AND tiller count below variety expectation AND basic operations complete",
+        "marathi": "७५ दिवसांनंतर, फुटवे जातीच्या अपेक्षेपेक्षा कमी, मूलभूत कामे पूर्ण"
+      },
+      "action": {
+        "english": "Ethephon at 200 ppm, three sprays at 15 day intervals from the 75th day, is reported to increase tiller number. Caution — it is a plant hormone and excess can yellow the foliage. Rule out nematodes first, since low tiller count is also their earliest sign.",
+        "marathi": "इथेफॉन २०० ppm, ७५ व्या दिवसापासून १५ दिवसांच्या अंतराने तीन फवारण्या — फुटव्यांची संख्या वाढवण्यासाठी. सावधगिरी: हे वनस्पती संप्रेरक आहे, जास्त मात्रेत पाने पिवळी पडू शकतात. आधी सूत्रकृमी तपासा — कमी फुटवे हे त्यांचेही पहिले लक्षण आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source reports ethephon for increasing tiller number. But low tiller count against the variety norm is also the earliest visible nematode symptom, so treating the symptom with a hormone without excluding the pest would mask the real problem.",
+        "yield_impact": "Unquantified. The diagnostic ordering carries more value than the treatment.",
+        "confidence_score": 0.6,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld ethephon",
+          "Agrowon - Mali and Mahajan nematode symptoms"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": [
+          "domain_5_pest"
+        ]
+      },
+      "farm_brain_schema": [
+        "ethephon_spray_count",
+        "tillers_per_plant",
+        "variety",
+        "nematode_suspected",
+        "dap"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "This is where two domains would give opposite advice on the same observation. The pest domain says dig the roots; the operations domain says spray a hormone. The pest check must come first.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-GR-003",
+      "category": "GR",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": null,
+      "trigger": {
+        "english": "A recommendation would name a specific commercial product or brand",
+        "marathi": "विशिष्ट व्यावसायिक उत्पादनाचे किंवा ब्रँडचे नाव सुचवले जात आहे",
+        "expr": "brand_name_proposed IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Emit active ingredient only.",
+        "golden_tests": [
+          {
+            "context": {
+              "brand_name_proposed": "SomeProduct"
+            },
+            "expect": "TRUE",
+            "label": "ब्रँड नाव — अडवा"
+          },
+          {
+            "context": {},
+            "expect": "FALSE",
+            "label": "ब्रँड नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "BLOCK. Emit the active ingredient only. The source contains a four-spray schedule of named commercial products from one company; it is deliberately excluded.",
+        "marathi": "नाकारा. फक्त घटकाचे नाव द्या. स्रोतात एका कंपनीच्या उत्पादनांचे संपूर्ण फवारणी वेळापत्रक आहे — ते जाणीवपूर्वक वगळले आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "A brand schedule is not a general agronomic recommendation, its independent efficacy was not verified, and an advisory platform that names brands acquires both a commercial conflict and a liability it cannot support.",
+        "yield_impact": "None. Protects independence and credibility.",
+        "confidence_score": 0.9,
+        "source_tier": "B",
+        "references": [
+          "Domain 8 commercial product exclusion policy"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "naa_spray_count",
+        "ethephon_spray_count"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Worth encoding as a hard rule rather than a convention, because commercial schedules are exactly the kind of well-formatted content that gets ingested easily and looks authoritative.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "ब्रँडऐवजी Active Ingredient सुचवणे योग्य."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": true,
+      "immutable_reason": "Naming a commercial brand creates a conflict the platform cannot carry."
+    },
+    {
+      "rule_id": "D08-IC-001",
+      "category": "IC",
+      "priority": 4,
+      "severity": "red",
+      "stage": "G0",
+      "trigger": {
+        "english": "intercrop_selected is chilli, brinjal, tomato or potato",
+        "marathi": "आंतरपीक म्हणून मिरची, वांगी, टोमॅटो किंवा बटाटा निवडले",
+        "expr": "intercrop_selected IN [chilli, brinjal, tomato, potato]",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "intercrop_selected": "tomato"
+            },
+            "expect": "TRUE",
+            "label": "टोमॅटो — नाकारा"
+          },
+          {
+            "context": {
+              "intercrop_selected": "coriander"
+            },
+            "expect": "FALSE",
+            "label": "कोथिंबीर — चालेल"
+          }
+        ]
+      },
+      "action": {
+        "english": "REFUSE. These are hosts for bacterial wilt, which has no reliable cure in ginger. A crop excluded from the rotation cannot be acceptable as an intercrop, where it sits immediately adjacent all season.",
+        "marathi": "नाकारा. ही मर रोगाची यजमान पिके आहेत, आणि मर रोगावर खात्रीशीर उपाय नाही. फेरपालटीत टाळायचे पीक आंतरपीक म्हणूनही टाळावे — कारण ते तर तात्काळ शेजारीच असते."
+      },
+      "reasoning": {
+        "agronomic_basis": "The source lists chilli among recommended intercrops, but chilli is solanaceous and a host for Ralstonia. The exclusion was found by cross-checking the intercrop list against the disease host list, which is a contradiction that only appears when domains are validated against each other.",
+        "yield_impact": "Prevents exposure to the 0.30 to 0.70 bacterial wilt pathway.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "AgroWorld intercrop list",
+          "Domain 6 bacterial wilt host range",
+          "Domain 1 rotation conflict list"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_6_disease"
+        ]
+      },
+      "farm_brain_schema": [
+        "intercrop_selected",
+        "field_history_wilt",
+        "previous_crops_3yr"
+      ],
+      "u_value": 0.5,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "One of the clearest cases where reading two domains together changed a recommendation. Following the source unmodified would have introduced a wilt host into the field deliberately.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "वरीलप्रमाणेच — मर रोगाची यजमान पिके आंतरपीक म्हणून टाळावीत."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-IC-002",
+      "category": "IC",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Intercrop being considered",
+        "marathi": "आंतरपिकाचा विचार"
+      },
+      "action": {
+        "english": "Rank marigold first, then coriander, then tur, then guar. Marigold suppresses nematodes, gives cash at two to three months against ginger's eight, and attracts beneficial insects. Ensure the intercrop does not compete with the main crop.",
+        "marathi": "क्रमाने — झेंडू, कोथिंबीर, तूर, गवार. झेंडू सूत्रकृमी दाबतो, दोन-तीन महिन्यांत रोख देतो (अद्रकाला आठ महिने लागतात), आणि मित्रकीटक आकर्षित करतो. आंतरपिकाची मुख्य पिकाशी स्पर्धा होणार नाही याची खबरदारी घ्या."
+      },
+      "reasoning": {
+        "agronomic_basis": "Marigold appears in both the intercrop list and the nematode control list, so it does two jobs. Its two to three month cycle addresses the cash flow problem created by ginger's front-loaded investment and eight month duration.",
+        "yield_impact": "Reduces the 0.15 nematode value and improves cash flow rather than yield.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "AgroWorld intercrop list",
+          "Domain 5 marigold trap crop"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "intercrop_selected",
+        "marigold_planted",
+        "nematode_suspected"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "Marigold is the only intercrop here with a triple benefit — pest suppression, cash flow and beneficial insects. Layout and plant numbers are not in the source and should be recorded in season one.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-IC-003",
+      "category": "IC",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G1",
+      "trigger": {
+        "english": "Shade decision being made AND target_product is dry_ginger",
+        "marathi": "सावलीचा निर्णय आणि सुंठ हा मुख्य मार्ग आहे",
+        "expr": "target_product == 'dry_ginger' AND shade_pct IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Excess sunlight reduces aroma, which is the main quality determinant for dry ginger.",
+        "golden_tests": [
+          {
+            "context": {
+              "target_product": "dry_ginger"
+            },
+            "expect": "TRUE",
+            "label": "सावलीचा विचार"
+          },
+          {
+            "context": {
+              "target_product": "green",
+              "shade_pct": 0
+            },
+            "expect": "FALSE",
+            "label": "हिरवे आले"
+          }
+        ]
+      },
+      "action": {
+        "english": "Note that excessive direct sunlight reduces ginger aroma. Where dry ginger is the route, shade carries a quality argument as well as a heat argument. Consider a tall intercrop such as tur, or temporary netting during the hot months.",
+        "marathi": "जास्त सूर्यप्रकाशाने आल्याचा सुवास कमी होतो. सुंठ हा मार्ग असल्यास सावलीचा युक्तिवाद दुहेरी होतो — उष्णतेपासून बचाव आणि प्रत टिकवणे. तूरसारखे उंच आंतरपीक किंवा उन्हाळ्यात तात्पुरती जाळी विचारात घ्या."
+      },
+      "reasoning": {
+        "agronomic_basis": "Source states that trials found aroma declines with excessive direct sunlight, and separately that the crop grows well in 25 percent shade. Kannad is an open-field high-radiation belt with no multi-storey plantation, so the aroma risk is greater here than in the shaded gardens of Kerala. Aroma is the main quality determinant for dry ginger and oil.",
+        "yield_impact": "Affects quality and therefore price rather than weight. Given the grading spread observed in the market, that can exceed a yield effect.",
+        "confidence_score": 0.65,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld shade and aroma finding",
+          "Domain 9 grading spread"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest",
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "shade_pct",
+        "intercrop_selected",
+        "target_product",
+        "air_temp_max_c"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "The shade net subsidy under the state scheme is for a full structure, which is probably disproportionate for a crop needing shade in only the first two months. Cheaper options — mulch, a tall intercrop, temporary netting — should be tested first.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D08-BN-001",
+      "category": "BN",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Multiple operations fall due within a few days of each other",
+        "marathi": "काही दिवसांच्या अंतरात अनेक कामे येत आहेत",
+        "expr": "dap IN [0, 82, 120]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "The farmer visits the field once. Three notifications on three days produce three ignored notifications.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 82
+            },
+            "expect": "TRUE",
+            "label": "गुच्छ दिवस"
+          },
+          {
+            "context": {
+              "dap": 95
+            },
+            "expect": "FALSE",
+            "label": "सामान्य दिवस"
+          }
+        ]
+      },
+      "action": {
+        "english": "Bundle them into one field visit and issue a single combined instruction list. Do not send separate notifications for each.",
+        "marathi": "ती सर्व कामे एकाच फेरीत बांधा आणि एकच एकत्रित सूचना यादी द्या. प्रत्येक कामासाठी वेगळी सूचना पाठवू नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "The farmer visits the field once. Three separate instructions on three days produce three ignored instructions. The natural bundles are pre-planting, the herbicide window, earthing up, and the second earthing.",
+        "yield_impact": "Indirect but broad. Adherence is what converts a correct recommendation into a yield effect.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Core C7.1 operation bundling"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "dap",
+        "earthing_up_date",
+        "mulch_stage_2_done",
+        "n_split_2_date"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Bundle three at 75 to 90 DAP carries six operations from five domains and protects three separate u-values totalling half the season's controllable loss. It deserves a week of preparation lead time rather than a same-day notification.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D08-BN-002",
+      "category": "BN",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G2",
+      "trigger": {
+        "english": "dap equals 75",
+        "marathi": "पंचाहत्तर दिवस झाले",
+        "expr": "dap BETWEEN 73 AND 77 AND earthing_up_date IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "A week of preparation lead time protects three u-values totalling half the season controllable loss.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 75
+            },
+            "expect": "TRUE",
+            "label": "तयारीची यादी"
+          },
+          {
+            "context": {
+              "dap": 82
+            },
+            "expect": "FALSE",
+            "label": "दिवस आला"
+          }
+        ]
+      },
+      "action": {
+        "english": "Issue the bundle three preparation checklist a week ahead: labour confirmed, nitrogen ready, neem cake ready, mulch material on hand, long-handled khurpa available. Then plan reduced drip for three to five days afterwards.",
+        "marathi": "एका आठवड्याआधी तयारीची यादी द्या — मजूर ठरले आहेत का, नत्र तयार आहे का, निंबोळी पेंड आहे का, आच्छादनाचे साहित्य जागेवर आहे का, लांब दांड्याचा खुरपा आहे का. आणि नंतर तीन ते पाच दिवस ठिबक कमी करण्याचे नियोजन."
+      },
+      "reasoning": {
+        "agronomic_basis": "Six operations in one day fail if any input is missing on the day. Preparation lead time converts a hard-deadline operation into a routine one.",
+        "yield_impact": "Protects u-values of 0.125 earthing up, 0.175 rhizome fly and 0.200 mulch simultaneously.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 8 bundle definition",
+          "Core C7.1"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_4_nutrient",
+          "domain_5_pest",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "dap",
+        "labour_arranged_date",
+        "neem_cake_earthing_kg_per_acre",
+        "earthing_up_date"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This single rule protects more accumulated u-value than any other in the domain, and it does so purely by giving a week's notice.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-LB-001",
+      "category": "LB",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G2",
+      "trigger": {
+        "english": "dap equals 60 AND labour_arranged_date is empty",
+        "marathi": "साठ दिवस झाले, उटाळणीसाठी मजूर ठरवलेले नाहीत",
+        "expr": "dap BETWEEN 58 AND 64 AND labour_arranged_date IS NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 60
+            },
+            "expect": "TRUE",
+            "label": "मजूर ठरवा"
+          },
+          {
+            "context": {
+              "dap": 60,
+              "labour_arranged_date": "set"
+            },
+            "expect": "FALSE",
+            "label": "ठरले"
+          }
+        ]
+      },
+      "action": {
+        "english": "Arrange labour for earthing up now. August is also cotton, soybean and tur intercultivation season, so labour becomes scarce exactly when earthing up has a hard deadline.",
+        "marathi": "उटाळणीसाठी मजूर आत्ताच ठरवा. ऑगस्टमध्ये कापूस, सोयाबीन आणि तूर यांच्या आंतरमशागतीमुळे सर्वत्र मजुरांना मागणी असते — आणि उटाळणीला कठोर मुदत आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Earthing up falls at 75 to 90 DAP which is around August for a June planting. That coincides with intercultivation in the dominant local crops. Labour scarcity is the most likely reason the operation slips past the flowering deadline.",
+        "yield_impact": "Protects the 0.125 earthing up value through a logistics reminder rather than an agronomic one.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Core C7.3 labour feasibility",
+          "Domain 8 labour competition"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "labour_arranged_date",
+        "dap",
+        "earthing_up_date"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "Per acre labour days are not recorded in any source and are needed for the Domain 13 cost model. Season one should log days for planting, weeding, earthing up and harvest.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D08-TL-001",
+      "category": "TL",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Land preparation phase AND deep_ploughing_done is false",
+        "marathi": "पूर्वमशागत सुरू, खोल नांगरट झालेली नाही"
+      },
+      "action": {
+        "english": "Deep plough to about one foot, lengthwise and crosswise, then kulav until the tilth is friable and clod free. Expect three to four passes on black soil rather than the one or two the source states.",
+        "marathi": "एक फुटापर्यंत उभी व आडवी खोल नांगरट करा, नंतर जमीन भुसभुशीत होईपर्यंत कुळवाच्या पाळ्या द्या. काळ्या जमिनीत ढेकळे मोठी होतात, त्यामुळे स्रोतातील एक-दोन पाळ्यांऐवजी तीन-चार लागू शकतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "The crop stays in the soil for eight months and needs friable soil. The rhizome grows horizontally, so it needs loose lateral soil to expand into — compacted soil gives small misshapen rhizomes regardless of nutrition. Black soil forms larger clods so more passes are needed.",
+        "yield_impact": "Acts through rhizome size rather than plant count, so it does not appear in establishment figures.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam",
+          "AgroWorld tillage sequence"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil",
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "deep_ploughing_done",
+        "kulav_passes",
+        "soil_texture_class"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Land preparation is a direct decision about final rhizome size rather than merely getting ready. That framing matters because tillage is the operation most often shortened when time is tight.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-TL-002",
+      "category": "TL",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Soil moisture enters the workable band after rain AND land preparation is incomplete",
+        "marathi": "पावसानंतर वाफसा आला आणि मशागत अपूर्ण आहे",
+        "expr": "vafsa_state == 'workable' AND kulav_passes < 3",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "vafsa_state": "workable",
+              "kulav_passes": 1
+            },
+            "expect": "TRUE",
+            "label": "अजून पाळ्या बाकी"
+          },
+          {
+            "context": {
+              "vafsa_state": "workable",
+              "kulav_passes": 4
+            },
+            "expect": "FALSE",
+            "label": "पुरेशा झाल्या"
+          }
+        ]
+      },
+      "action": {
+        "english": "Notify that the field is workable for approximately the next three to four days.",
+        "marathi": "पुढील तीन-चार दिवस मशागतीस योग्य आहेत. वाफसा गेल्यावर काळ्या जमिनीत काम करता येणार नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Vertisol is unworkable when wet because it forms clods and the structure is damaged, and resists implements when bone dry. The usable window is a few days and judging it by hand is coarse.",
+        "yield_impact": "Indirect. Protects soil structure and prevents lost operating days in a tight pre-season calendar.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Domain 2 vertisol behaviour",
+          "Core C3"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil"
+        ],
+        "depends_on": [
+          "domain_3_water",
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "vafsa_state",
+        "soil_moisture_vwc",
+        "deep_ploughing_done",
+        "kulav_passes"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "A genuinely sensor-enabled advisory with no manual equivalent. The farmer currently judges vafsa by squeezing a handful of soil, which is a coarse test on a narrow window.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-CA-001",
+      "category": "CA",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Pre-season planning initiated",
+        "marathi": "हंगामापूर्व नियोजन सुरू",
+        "expr": "days_to_planting BETWEEN 85 AND 95",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Issue the full operations calendar once, at the top of the chain.",
+        "golden_tests": [
+          {
+            "context": {
+              "days_to_planting": 90
+            },
+            "expect": "TRUE",
+            "label": "कालदर्शिका द्या"
+          },
+          {
+            "context": {
+              "days_to_planting": 40
+            },
+            "expect": "FALSE",
+            "label": "उशीर"
+          }
+        ]
+      },
+      "action": {
+        "english": "Issue the operations calendar from day minus 90 to harvest, with priorities. The chain is tight and terminates at a hard deadline, so losing March compresses everything downstream.",
+        "marathi": "वजा ९० दिवसांपासून काढणीपर्यंतची कृती कालदर्शिका प्राधान्यक्रमासह द्या. साखळी घट्ट आहे आणि ती कठोर मुदतीवर संपते — मार्च गमावला तर पुढील सर्व कामे दाटीवाटीने करावी लागतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "Every step has a predecessor. March deep ploughing, April solarization, May bed forming and drip, planting by 7 June. The narrow vertisol working window and the fixed planting cut-off leave no slack.",
+        "yield_impact": "Protects the 0.20 late planting value and the 0.167 layout value.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam sequence",
+          "Domain 2 land preparation calendar"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_2_soil",
+          "domain_3_water",
+          "domain_10_institutional"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "planting_date",
+        "deep_ploughing_done",
+        "solarization_done",
+        "bed_former_arranged",
+        "has_drip"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "The subsidy application chain runs six or more months ahead of this calendar and includes a lottery, so it starts before the calendar does rather than alongside it.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-CA-002",
+      "category": "CA",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "A calendar operation is overdue by more than five days",
+        "marathi": "कालदर्शिकेतील काम पाच दिवसांहून जास्त उशिरा झाले आहे"
+      },
+      "action": {
+        "english": "Ask one question — was the operation done, and if not what got in the way? Offer options: labour, time, cost, did not seem necessary, other.",
+        "marathi": "एकच प्रश्न विचारा — काम झाले का, आणि नसेल तर काय अडचण आली? पर्याय द्या: मजूर नाही, वेळ नाही, खर्च, गरज वाटली नाही, इतर."
+      },
+      "reasoning": {
+        "agronomic_basis": "If the engine recommended something and it was not done, either the message failed or the recommendation was wrong for local conditions. Both are learnable, and both are only discoverable by asking.",
+        "yield_impact": "None this season. It is the input that reveals implementation barriers, which no sensor can see.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Core C12.3 active learning queue",
+          "Domain 12 implementation barrier data"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield",
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "earthing_up_date",
+        "mulch_stage_2_done",
+        "weeding_count",
+        "labour_arranged_date"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The most valuable data the product collects, because it explains why correct advice did not become a yield effect. Sensors measure the field; only this measures the gap between advice and action.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-EU-005",
+      "category": "EU",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G2",
+      "trigger": {
+        "english": "Month is between July and September AND exposed_rhizomes_observed is true",
+        "marathi": "जुलै ते सप्टेंबर आणि शेतात उघडे गड्डे दिसत आहेत",
+        "expr": "MONTH IN [JUL, AUG, SEP] AND exposed_rhizomes_observed IS TRUE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "A standing instruction, not a scheduled operation. Exposure recurs between earthings.",
+        "golden_tests": [
+          {
+            "context": {
+              "current_month": 8,
+              "exposed_rhizomes_observed": true
+            },
+            "expect": "TRUE",
+            "label": "गड्डे झाका"
+          },
+          {
+            "context": {
+              "current_month": 8,
+              "exposed_rhizomes_observed": false
+            },
+            "expect": "FALSE",
+            "label": "नाहीत"
+          }
+        ]
+      },
+      "action": {
+        "english": "Cover exposed rhizomes with soil immediately, without waiting for the scheduled earthing up. Rhizome fly larvae enter through exposed rhizomes.",
+        "marathi": "उघडे पडलेले गड्डे तात्काळ मातीने झाकून घ्या — ठरलेल्या उटाळणीची वाट पाहू नका. कंदमाशीच्या अळ्या उघड्या गड्ड्यांमधून आत शिरतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "The source gives the explicit instruction to cover exposed rhizomes during July to September, which is the rhizome fly peak. Rhizome expansion and rainfall both push soil away from the crown, so exposure recurs between earthing operations.",
+        "yield_impact": "Blocks the entry event for a pest carrying 0.175 that also opens the rot pathway.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali and Mahajan"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "exposed_rhizomes_observed",
+        "current_stage",
+        "earthing_up_date"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "This is a standing instruction rather than a scheduled operation, which is why it needs its own rule rather than being folded into earthing up. Exposure happens between the two scheduled earthings.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D08-TL-003",
+      "category": "TL",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "FYM application scheduled",
+        "marathi": "शेणखत टाकण्याची वेळ"
+      },
+      "action": {
+        "english": "Apply 14 to 16 tonnes per acre of FULLY DECOMPOSED FYM before the final kulav pass. Decomposition matters for three separate reasons — weed seed, white grub, and rot.",
+        "marathi": "शेवटच्या कुळवाच्या पाळीअगोदर एकरी १४ ते १६ टन पूर्ण कुजलेले शेणखत मिसळा. पूर्ण कुजलेले असणे तीन वेगळ्या कारणांसाठी महत्वाचे — तणाचे बी, हुमणी, आणि कूज."
+      },
+      "reasoning": {
+        "agronomic_basis": "Decomposition heat kills weed seed, which reduces the weeding that injures rhizomes. Undecomposed organic matter is white grub larval food. And the FYM rate here is high, so both exposures scale with it.",
+        "yield_impact": "u = 0.10 for white grub traceable to undecomposed FYM, plus an indirect effect through the weeding and injury chain.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam FYM timing",
+          "Agrowon - Mali and Mahajan white grub",
+          "AgroWorld weed seed statement"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil",
+          "domain_4_nutrient",
+          "domain_5_pest",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "fym_t_per_acre",
+        "fym_fully_decomposed",
+        "perennial_weeds_removed"
+      ],
+      "u_value": 0.1,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "One condition serving four domains from a single check. It is also free — it costs waiting rather than money — which makes it among the best-value instructions in the whole knowledge base.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    }
+  ],
+  "open_items": [
+    {
+      "id": "D08-OI-01",
+      "item": "Actual plant population on the broad ridge layout, counted in the field",
+      "owner": "season one count",
+      "source_class": "FIELD",
+      "blocking": true,
+      "note": "Reported seed rate and computed plant population do not reconcile, and seed is the largest cost line. Shared with D08-OI-02."
+    },
+    {
+      "id": "D08-OI-02",
+      "item": "Average seed piece weight as actually cut",
+      "owner": "season one weighing",
+      "source_class": "FIELD",
+      "blocking": true,
+      "note": "Settles the seed rate reconciliation together with the plant count."
+    },
+    {
+      "id": "D08-OI-03",
+      "item": "Measured seed storage loss on this plot — two weighings",
+      "owner": "own record at storage and at planting",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D08-OI-04",
+      "item": "Per acre labour days for planting, weeding, earthing up and harvest",
+      "owner": "season one record",
+      "source_class": "FIELD",
+      "blocking": false,
+      "note": "Needed for the Domain 13 cost model."
+    },
+    {
+      "id": "D08-OI-05",
+      "item": "Gap filling recommendation for ginger",
+      "owner": "further literature search or field trial",
+      "source_class": "VERIFY",
+      "blocking": false,
+      "note": "No source addresses it; the current rule is reasoned rather than sourced."
+    },
+    {
+      "id": "D08-OI-06",
+      "item": "Cost-benefit of NAA and ethephon under Kannad conditions",
+      "owner": "trial strip",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D08-OI-07",
+      "item": "Measured effect of shade on aroma",
+      "owner": "trial strip plus quality assessment",
+      "source_class": "FIELD",
+      "blocking": false,
+      "note": "Decisive only if the dry ginger route is chosen."
+    },
+    {
+      "id": "D08-OI-08",
+      "item": "CIB&RC label claims for atrazine and glyphosate on ginger",
+      "owner": "CIB&RC current list",
+      "source_class": "VERIFY",
+      "blocking": false,
+      "note": "Not blocking because mulch is an effective alternative."
+    },
+    {
+      "id": "D08-OI-09",
+      "item": "Local availability and cost of mulch material",
+      "owner": "local survey",
+      "source_class": "FIELD",
+      "blocking": false,
+      "note": "Determines whether the Rs 15,000 mulch line in the Kannad budget is accurate."
+    },
+    {
+      "id": "D08-OI-10",
+      "item": "Bed former machine setting for 60 cm ridge and 60 cm furrow",
+      "owner": "local tractor operator",
+      "source_class": "FIELD",
+      "blocking": false
+    }
+  ],
+  "summary": {
+    "total_rules": 38,
+    "by_category": {
+      "LY": 4,
+      "SS": 3,
+      "PL": 3,
+      "WD": 5,
+      "MU": 3,
+      "EU": 5,
+      "GF": 1,
+      "GR": 3,
+      "IC": 3,
+      "BN": 2,
+      "LB": 1,
+      "TL": 3,
+      "CA": 2
+    },
+    "by_priority": {
+      "5": 14,
+      "4": 17,
+      "3": 5,
+      "2": 2
+    },
+    "by_severity": {
+      "red": 3,
+      "yellow": 24,
+      "info": 9,
+      "blocking": 2
+    },
+    "by_source_tier": {
+      "A": 14,
+      "B": 14,
+      "C": 10
+    },
+    "by_source_class": {
+      "SRC-Q": 15,
+      "DERIVED": 9,
+      "EST": 5,
+      "SRC-D": 9
+    },
+    "confidence_range": {
+      "min": 0.6,
+      "max": 0.9,
+      "mean": 0.783
+    },
+    "rules_with_u_value": 8,
+    "irrecoverable_rules": 17,
+    "zero_cost_rules": [
+      "D08-PL-001",
+      "D08-WD-001",
+      "D08-WD-003",
+      "D08-WD-004",
+      "D08-EU-005",
+      "D08-TL-003",
+      "D08-IC-001",
+      "D08-GR-003"
+    ],
+    "highest_value_rule": "D08-LY-001",
+    "blocking_open_items": 2,
+    "by_decision_type": {
+      "PLANNING_GUIDANCE": 14,
+      "DIAGNOSTIC": 9,
+      "BLOCK": 3,
+      "SCHEDULED_REMINDER": 8,
+      "SENSOR_ALERT": 3,
+      "DATA_CAPTURE": 1
+    },
+    "reviewed_t1": 2,
+    "rules_with_trigger_expr": 21,
+    "rules_with_delivery_class": 21,
+    "immutable_rules": 1
+  },
+  "next_steps": [
+    "1. Count actual plants and weigh actual seed pieces in season one — the two blocking items, and both bear on the largest cost line (D08-OI-01, D08-OI-02)",
+    "2. Weigh seed at storage and again at planting to measure the real storage loss on this plot (D08-OI-03)",
+    "3. Log labour days per operation; the Domain 13 cost model has no figure for this (D08-OI-04)",
+    "4. Build Domain 9 JSON inheriting the Domain 1 _schema block unchanged",
+    "5. Reconcile the mulch rules — D03-MU-001, D06-MU-001 and D08-MU-001 all fire on the same three-stage programme and must produce one instruction, not three"
+  ],
+  "author_note": "This file contains 34 rules because that is what the source document supports. The domain holds the cheapest yield levers in the knowledge base and they are all operations rather than inputs. Two corrections to the source are recorded: chilli is excluded as an intercrop because it is a bacterial wilt host, found by cross-checking the intercrop list against the disease host list; and the commercial four-spray product schedule in the source is deliberately excluded, with D08-GR-003 encoding brand exclusion as a hard rule. The seed rate and plant population figures do not reconcile and are flagged as blocking rather than guessed, because they bear on the largest cost line in the crop. The primary source for much of the operational detail is tier C, which is why yield and profit figures from it were not used anywhere. Status is PHASE_1_RAW_UNVALIDATED.",
+  "legal": {
+    "disclaimer_mr": "हा नियम-संच निर्णय-सहाय्य साधन आहे. अंतिम जबाबदारी शेतकऱ्याची.",
+    "disclaimer_en": "This rule set is a decision-support tool. Final responsibility rests with the cultivator.",
+    "herbicide_note": "Atrazine and glyphosate must carry a CIB&RC label claim for ginger. Label dose applies. No herbicide of any kind after emergence begins.",
+    "brand_note": "This rule set names active ingredients only. No commercial product or brand is recommended, and the four-spray commercial schedule present in the source document is deliberately excluded.",
+    "data_note": "Farmer-attributable data handled under DPDP Act 2023; see Domain 12."
+  }
+}

@@ -1,0 +1,2893 @@
+{
+  "_schema": {
+    "schema_version": "2.0",
+    "inherits_from": "Domain1_Rules_Ginger_v2.json",
+    "inheritance_note": "The full _schema block is defined in Domain 1 and is NOT repeated here. Units (per acre), stage codes G0-G5, source tiers A/B/C, source classes, priority scale, recoverability, severity and confidence bounds are inherited unchanged. Domain 2 to 9 additions are also assumed present. Only Domain 10 additions are declared below.",
+    "additions": {
+      "rule_categories_domain_10": {
+        "GEO": "geography and administrative classification",
+        "ACZ": "agro-climatic zone",
+        "CROP": "state crop statistics",
+        "VAR": "variety registry and seed sources",
+        "INST": "research and extension institutions",
+        "SUB": "subsidy schemes",
+        "APP": "application process",
+        "INS": "insurance and credit",
+        "MKT": "market registry",
+        "REG": "regulatory framework",
+        "LAB": "soil testing infrastructure",
+        "ACT": "contact and action register",
+        "FRESH": "data freshness"
+      },
+      "new_farm_brain_fields": {
+        "taluka": "string",
+        "district": "string",
+        "drought_prone_listed": "enum:[yes, no, unverified]",
+        "farmer_category": "enum:[small_marginal, other, unverified]",
+        "priority_category": "enum:[martyr_family, suicide_affected, bpl, widow_or_deserted, small_marginal, other]",
+        "subsidy_scheme_applied": "string",
+        "subsidy_applied_date": "date",
+        "subsidy_lottery_result": "enum:[pending, selected, not_selected, not_applied]",
+        "pre_sanction_received": "boolean",
+        "pre_sanction_date": "date",
+        "subsidy_documents_ready": "boolean",
+        "drip_subsidy_pct_applicable": "number",
+        "farm_pond_planned": "boolean",
+        "geo_tagging_done": "boolean",
+        "cgwb_block_category": "enum:[safe, semi_critical, critical, over_exploited, unverified]",
+        "pmfby_notified_for_ginger": "enum:[yes, no, unverified]",
+        "scale_of_finance_per_acre": "number",
+        "soil_lab_selected": "string",
+        "research_centre_contacted": "boolean",
+        "kvk_contacted": "boolean",
+        "seed_supplier_identified": "boolean",
+        "cibrc_list_checked_date": "date",
+        "data_review_due": "date"
+      },
+      "data_freshness_policy": {
+        "principle": "This is the only domain whose content expires. Agronomy in Domains 1 to 9 holds for years; subsidy rates, scheme eligibility and contacts here change annually by government resolution.",
+        "mechanism": "Every rule in this domain carries a review_by date at domain level. When it has passed, the engine must append a verification note to any advisory drawing on this domain rather than presenting the figure as current.",
+        "never_state_as_fact": [
+          "exact subsidy amount",
+          "guaranteed selection",
+          "current scheme eligibility without checking"
+        ]
+      },
+      "constants": {
+        "drought_prone_taluka_count": 149,
+        "drip_subsidy_small_marginal_pct": 80,
+        "drip_subsidy_other_pct": 75,
+        "pmksy_alone_drought_area_pct": 60,
+        "farm_pond_lining_subsidy_pct": 50,
+        "farm_pond_lining_ceiling_inr": 75000,
+        "greenhouse_ceiling_inr": 100000,
+        "shadenet_ceiling_inr": 100000,
+        "state_ginger_area_ha": 4000,
+        "state_ginger_production_t": 132000,
+        "state_avg_yield_t_per_ha": 13.2,
+        "india_ginger_area_ha": 300000
+      },
+      "decision_types": {
+        "AUTO_DECISION": {
+          "mr": "AI कधी व किती हे स्वतः ठरवतो",
+          "en": "engine computes the quantity or timing itself"
+        },
+        "SENSOR_ALERT": {
+          "mr": "sensor वर आधारित इशारा, कृती माणसाची",
+          "en": "sensor-triggered; the action is human work"
+        },
+        "SCHEDULED_REMINDER": {
+          "mr": "वेळापत्रकानुसार आठवण",
+          "en": "calendar or stage driven reminder"
+        },
+        "DIAGNOSTIC": {
+          "mr": "AI विचारतो, शेतकरी सांगतो",
+          "en": "engine asks, farmer answers, engine branches"
+        },
+        "DATA_CAPTURE": {
+          "mr": "नोंद किंवा मोजमाप मागतो",
+          "en": "engine requests a record or measurement"
+        },
+        "HUMAN_DECISION": {
+          "mr": "AI गणित दाखवतो, निर्णय माणसाचा",
+          "en": "engine presents arithmetic; person decides"
+        },
+        "BLOCK": {
+          "mr": "AI नाकारतो किंवा अडवतो",
+          "en": "engine refuses or blocks"
+        },
+        "PLANNING_GUIDANCE": {
+          "mr": "हंगामापूर्व निवड — शेतकरी ठरवतो",
+          "en": "pre-season choice the farmer makes"
+        },
+        "POLICY": {
+          "mr": "प्रॉडक्ट धोरण, शेतकऱ्यापर्यंत जात नाही",
+          "en": "product policy; never reaches a farmer"
+        }
+      },
+      "automation_levels": {
+        "full": "engine decides and acts without asking",
+        "assisted": "engine decides when, the person does the work or supplies the observation",
+        "advisory": "engine shows the arithmetic, the person chooses",
+        "refusal": "engine prevents an action",
+        "none": "internal policy, not farmer facing"
+      },
+      "trigger_dsl": {
+        "version": "dsl-1.0",
+        "logic": "three-valued: TRUE / FALSE / UNKNOWN",
+        "unknown_rule": "A rule whose trigger evaluates UNKNOWN must NOT fire and must NOT be treated as FALSE. Report reduced confidence and name the missing field (Domain 12 D12-COLD-001).",
+        "operators": [
+          "> >= < <= == !=",
+          "AND OR NOT",
+          "IN [..]",
+          "BETWEEN a AND b",
+          "IS NULL / IS NOT NULL / IS TRUE / IS FALSE",
+          "DURATION(field > x) > n HOURS",
+          "WITHIN(date_field, n DAYS)",
+          "MONTH IN [..]",
+          "STAGE IN [..]"
+        ],
+        "note": "Fields resolve against kb_farm_brain_fields. An undeclared name is a parse error, never a silent false."
+      },
+      "notification_policy": {
+        "version": "notify-1.0",
+        "why": "The season simulation issued 998 messages across 301 days before this existed. A trigger expresses a condition and a condition stays true; the advice is an event and must be delivered once.",
+        "classes": {
+          "ONCE_UNTIL_RESOLVED": "Standing precondition. Once, then a 7/21/45/90 day ladder with rising severity.",
+          "EVENT": "Transient physical event. Rising edge only; re-armed after it clears.",
+          "WINDOW": "Dated operation. Advance warning, the day, then 3 overdue reminders.",
+          "SILENT_GUARD": "Prevention rule. No message unless the prohibited action is attempted."
+        },
+        "result": "998 messages became 43 in the normal season, with no critical stage left silent for more than 15 days."
+      },
+      "override_policy": {
+        "version": "override-1.0",
+        "why": "The Tier-1 review worked but was offline. An agronomist looking at a live plot in August cannot edit JSON and wait for a deploy; by then the window has closed.",
+        "kinds": [
+          "THRESHOLD",
+          "DELIVERY",
+          "SEVERITY",
+          "DISABLE",
+          "PARAMETER"
+        ],
+        "scopes": [
+          "plot",
+          "cluster",
+          "global"
+        ],
+        "scope_precedence": "narrowest wins — plot over cluster over global",
+        "default_expiry_days": 240,
+        "max_expiry_days": 400,
+        "expiry_rationale": "A permanent change belongs in the knowledge base, not in the override table.",
+        "immutable_count": 16,
+        "immutable_rationale": "Some rules exist because getting them wrong causes harm no agronomic judgement outweighs. The API refuses them by code path, and a database trigger refuses them again if the application layer is bypassed.",
+        "audit": "Refused attempts are recorded, not discarded. An attempt to override an immutable rule is a governance signal."
+      }
+    }
+  },
+  "metadata": {
+    "domain": 10,
+    "domain_name": "Maharashtra & Kannad-Specific Data",
+    "domain_name_mr": "महाराष्ट्र व Kannad विशिष्ट माहिती",
+    "crop": "ginger",
+    "crop_mr": "आले",
+    "region": "Kannad, Chhatrapati Sambhajinagar, Marathwada",
+    "source_document": "AgroGuardian_Ginger_Domain10_Maharashtra_Kannad_Data_RAW.docx",
+    "version": "1.0",
+    "status": "PHASE_1_RAW_UNVALIDATED",
+    "agronomist_validated": false,
+    "validation_note": "Scheme rates and eligibility are from published scheme pages and are subject to annual government resolution. Every figure must be confirmed with the Taluka Agriculture Officer before an application is made. Several institutional facts are inferences rather than confirmations and are marked accordingly.",
+    "total_rules": 35,
+    "rule_count_note": "32 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count.",
+    "review_by": "2027-03-31",
+    "review_note": "This is the only domain with expiring content. Subsidy rates change by annual GR, contacts change with postings, and CIB&RC listings are revised. Half of this file will be out of date within a year.",
+    "purpose": "The institutional layer — what exists, what is available, and who to ask. Domains 1 to 9 establish what the crop needs; this domain establishes whether the local system can supply it and at what cost.",
+    "key_innovations": [
+      "The three things Domains 3, 7 and 8 declared preconditions — drip, water storage and shade — each have a dedicated state subsidy scheme, and Kannad sits in the priority region for all three. That is not coincidence; the schemes exist precisely for drought-prone areas like this one.",
+      "A farm pond solves two problems at once. Monsoon water must be removed from the root zone to prevent soft rot, and the same water is short four months later. Storage converts a disposal problem into a supply solution.",
+      "The subsidy chain includes a lottery and takes months, so it begins six or more months before planting rather than alongside land preparation. And work started before pre-sanction is not eligible at all.",
+      "Five domains rest on one research centre at Kasbe Digraj. Contacting it is the highest-value action available in Phase 2, and it is a phone call.",
+      "Ginger is a horticultural crop, so enquiries at the state university go to the College of Horticulture rather than the general agronomy department. A small distinction that saves weeks.",
+      "Aurangabad appears as a ginger district in two of three source lists and a landrace called Aurangabadi exists. Local tradition here is probably older than assumed, which changes who is worth asking.",
+      "This domain expires. Everything else in the knowledge base holds for years; half of this is stale within twelve months, and the engine has to know that about itself."
+    ],
+    "central_finding": {
+      "statement": "Every precondition the agronomy imposes has an institutional answer available, and the whole economics turns on whether the farmer reaches it in time.",
+      "mapping": [
+        {
+          "constraint": "water supply, Domains 3 and 7",
+          "scheme": "drip irrigation",
+          "subsidy": "75 to 80 percent"
+        },
+        {
+          "constraint": "October to February storage shortfall, Domain 3",
+          "scheme": "farm pond with lining",
+          "subsidy": "50 percent or Rs 75,000"
+        },
+        {
+          "constraint": "May heat at 45 C, Domain 7",
+          "scheme": "shadenet house",
+          "subsidy": "Rs 1,00,000"
+        }
+      ],
+      "implication": "Ginger economics at Kannad with subsidy and without subsidy are entirely different propositions. Domain 13 must model both.",
+      "constraint": "Selection is by lottery, so the engine must never promise the subsidy — only the application window and the process."
+    },
+    "primary_sources": [
+      "govtyojanamaharashtra.com - Mukhyamantri Shashwat Krushi Sinchan Yojana 2026 (TIER B) - drip 75 to 80 percent, farm pond lining, shadenet, greenhouse, application process, documents, priority order",
+      "marathisheti.in - PMKSY Per Drop More Crop (TIER B) - 60 percent for small and marginal in drought-prone areas",
+      "mahakisanyojana.com - MahaDBT farmer schemes (TIER B) - single application across multiple schemes",
+      "kvkchhatrapatisambhajinagar.blogspot.com (TIER A) - KVK-1 Paithan Road, NARP Chhatrapati Sambhajinagar",
+      "vnmkv.ac.in and coh.vnmkv.ac.in (TIER A) - VNMKV Parbhani, College of Horticulture",
+      "Agrowon articles by Dr. Jitendra Kadam, Dr. Manoj Mali and Dr. Sachin Mahajan, Halad Sanshodhan Yojana, Kasbe Digraj (TIER A) - the primary source for Domains 2, 4, 5, 6 and 8",
+      "Directorate of Agriculture Maharashtra 2023 via AgriTimes (TIER A) - state area and average yield",
+      "Agro-Climatic Zonation of Marathwada, IMD plus Hydrological Project Nashik 1980-2016 (TIER A)",
+      "News18 Marathi APMC reports 2026 (TIER B) - market registry",
+      "Government of Maharashtra Gazetteer, Aurangabad District (TIER A)"
+    ],
+    "review_log": {
+      "tier_1_review_date": "2026-07-31",
+      "rules_reviewed": 2,
+      "rules_total": 35,
+      "note": "Rule-level status is authoritative. Domain status stays PHASE_1_RAW_UNVALIDATED until T3 and T4 are also reviewed and one season of field data exists."
+    }
+  },
+  "reference_data": {
+    "location": {
+      "taluka": "Kannad",
+      "district": "Chhatrapati Sambhajinagar",
+      "former_district_name": "Aurangabad",
+      "region": "Marathwada",
+      "latitude": 20.27,
+      "longitude": 75.13,
+      "elevation_m": 633,
+      "terrain": "western part of the district, near the Ajanta range"
+    },
+    "administrative_classification": {
+      "drought_prone_taluka_scheme": {
+        "total_talukas_covered": 149,
+        "scheme": "Mukhyamantri Shashwat Krushi Sinchan Yojana",
+        "also_covers": [
+          "suicide-affected districts",
+          "naxal-affected districts"
+        ],
+        "priority_regions": [
+          "Vidarbha",
+          "Marathwada",
+          "North Maharashtra"
+        ],
+        "kannad_status": {
+          "value": "unverified",
+          "source_class": "VERIFY",
+          "note": "Marathwada is a priority region, but whether Kannad specifically appears on the 149-taluka list must be confirmed with the Taluka Agriculture Officer. It is worth roughly 5 percentage points of subsidy."
+        }
+      }
+    },
+    "agro_climatic_zone": {
+      "region": "Marathwada",
+      "zone_count": 3,
+      "moisture_index_range": [
+        -21.17,
+        6.77
+      ],
+      "zones": [
+        {
+          "zone": "western",
+          "rainfall_mm": [
+            600,
+            750
+          ],
+          "mean_temp_c": "below 26",
+          "recommended_crops": [
+            "jowar",
+            "cotton",
+            "groundnut"
+          ]
+        },
+        {
+          "zone": "central",
+          "rainfall_mm": [
+            600,
+            800
+          ],
+          "mean_temp_c": "26 to 27"
+        },
+        {
+          "zone": "eastern",
+          "source_class": "VERIFY"
+        }
+      ],
+      "kannad_assignment": {
+        "zone": "western",
+        "source_class": "DERIVED",
+        "basis": "western part of the district, above 600 m, near the Ajanta range"
+      },
+      "ginger_in_recommended_list": false,
+      "interpretation": "The recommended list is a rainfed list. Ginger belongs here as an irrigated, high-value, high-risk crop — which is exactly why drip, mulch and raised beds are preconditions rather than options.",
+      "source_tier": "A"
+    },
+    "state_crop_statistics": {
+      "maharashtra_area_ha": [
+        3800,
+        4000
+      ],
+      "maharashtra_production_t": 132000,
+      "maharashtra_avg_yield_t_per_ha": 13.2,
+      "maharashtra_avg_yield_quintal_per_acre": 53,
+      "india_area_ha": 300000,
+      "maharashtra_share_pct": 1.3,
+      "district_lists": [
+        {
+          "source": "Directorate of Agriculture 2023",
+          "districts": [
+            "Satara",
+            "Sangli",
+            "Kolhapur",
+            "Nashik"
+          ]
+        },
+        {
+          "source": "Agrowon, Dr. Kadam",
+          "districts": [
+            "Satara",
+            "Aurangabad",
+            "Pune",
+            "Raigad"
+          ]
+        },
+        {
+          "source": "AgroWorld",
+          "districts": [
+            "Satara",
+            "Sangli",
+            "Raigad",
+            "Thane",
+            "Aurangabad",
+            "Latur",
+            "Nanded"
+          ]
+        }
+      ],
+      "expanding_areas": [
+        "Khandesh",
+        "Vidarbha"
+      ],
+      "satara_in_all_lists": true,
+      "aurangabad_in_two_lists": true,
+      "local_tradition_signal": "Aurangabad appears in two of three lists and a landrace called Aurangabadi is separately recorded. Local experience is probably deeper than assumed, so older growers and seed sellers are worth asking.",
+      "thin_market_consequences": [
+        {
+          "type": "opportunity",
+          "detail": "local supply is limited, so prices can be good"
+        },
+        {
+          "type": "risk",
+          "detail": "thin market — a modest increase in arrivals moves the price a long way"
+        },
+        {
+          "type": "risk",
+          "detail": "limited local technical support"
+        },
+        {
+          "type": "risk",
+          "detail": "seed availability is uncertain because the seed market is small too"
+        }
+      ],
+      "source_tier": "A"
+    },
+    "variety_registry": {
+      "main_four": [
+        {
+          "code": "mahima",
+          "duration_days": 200,
+          "tillers": [
+            12,
+            13
+          ],
+          "dry_recovery_pct": 19.0,
+          "fibre_pct": 3.26,
+          "yield_t_per_ha": 23.2,
+          "nematode_resistant": true,
+          "origin": "ICAR-IISR Kozhikode 2001",
+          "rank": 1
+        },
+        {
+          "code": "rejatha",
+          "duration_days": 200,
+          "tillers": [
+            8,
+            9
+          ],
+          "dry_recovery_pct": 23.0,
+          "fibre_pct": 4.0,
+          "essential_oil_pct": 2.36,
+          "yield_t_per_ha": 22.4,
+          "origin": "ICAR-IISR Kozhikode 2001",
+          "rank": 3
+        },
+        {
+          "code": "varada",
+          "duration_days": 200,
+          "tillers": [
+            9,
+            10
+          ],
+          "dry_recovery_pct": 20.07,
+          "fibre_pct": [
+            3.29,
+            4.5
+          ],
+          "yield_t_per_ha": 22.3,
+          "disease_pest_tolerant": true,
+          "origin": "ICAR-IISR Kozhikode 1996",
+          "rank": 2
+        },
+        {
+          "code": "mahim",
+          "duration_days": 210,
+          "tillers": [
+            6,
+            12
+          ],
+          "dry_recovery_pct": 18.7,
+          "yield_t_per_ha": 20.0,
+          "locally_available": true,
+          "origin": "Maharashtra local",
+          "rank": 4
+        }
+      ],
+      "other_groups": {
+        "for_dry_ginger": [
+          "Karakkal",
+          "Nadia",
+          "Naran",
+          "Wayanad",
+          "Mananthody",
+          "Valluvanad",
+          "Ernad",
+          "Kuruppampadi"
+        ],
+        "for_green_ginger": [
+          "Rio de Janeiro",
+          "China",
+          "Wayanad local",
+          "Tafengiya"
+        ],
+        "low_fibre": [
+          "Jamaica",
+          "Bangkok",
+          "China"
+        ],
+        "high_oil": [
+          "Ernad",
+          "Chernad",
+          "China",
+          "Kuruppampadi",
+          "Rio de Janeiro"
+        ],
+        "maharashtra_common": [
+          "Rio de Janeiro",
+          "Mahim",
+          "local"
+        ],
+        "place_named": [
+          "Calicut",
+          "Cochin",
+          "Assam",
+          "Bharat",
+          "Udaipuri",
+          "Aurangabadi",
+          "Godhra"
+        ],
+        "cpcri_improved": [
+          "Suprabha",
+          "Suruchi",
+          "Surabhi"
+        ]
+      },
+      "seed_sources": [
+        {
+          "institution": "Central Plantation Crops Research Institute",
+          "location": "Post Kudlu, Kasaragod, Kerala",
+          "for": "improved varieties"
+        },
+        {
+          "institution": "ICAR-IISR",
+          "location": "Kozhikode, Kerala",
+          "for": "Mahima, Rejatha, Varada"
+        },
+        {
+          "institution": "local seed traders",
+          "location": "Satara-Sangli belt likely",
+          "for": "practical sourcing",
+          "source_class": "FIELD"
+        }
+      ],
+      "kannad_recommendation": {
+        "primary": "mahima",
+        "alternate": "varada",
+        "if_dry_ginger_route": "rejatha",
+        "fallback": "mahim",
+        "investigate": "aurangabadi"
+      },
+      "source_tier": "A"
+    },
+    "institutions": {
+      "primary_research_centre": {
+        "name": "Halad Sanshodhan Yojana, Krishi Sanshodhan Kendra, Kasbe Digraj",
+        "district": "Sangli",
+        "affiliation": "MPKV",
+        "named_officers": [
+          {
+            "name": "Dr. Jitendra Kadam",
+            "role": "officer in charge",
+            "domains": [
+              2,
+              4,
+              8
+            ]
+          },
+          {
+            "name": "Dr. Manoj Mali",
+            "role": "officer in charge",
+            "domains": [
+              5,
+              6
+            ]
+          },
+          {
+            "name": "Dr. Sachin Mahajan",
+            "role": "plant pathologist",
+            "domains": [
+              5,
+              6
+            ]
+          }
+        ],
+        "why_it_matters": "Domains 2, 4, 5, 6 and 8 all rest primarily on this one centre. Turmeric and ginger are in the same family, so its research applies directly.",
+        "phase_2_priority": "highest",
+        "questions_to_ask": [
+          "Marathwada and black soil specific recommendations for ginger",
+          "CIB&RC registered chemicals with ginger label claims",
+          "reliable source for Mahima and Varada seed rhizome",
+          "economic threshold levels for the main pests",
+          "whether the published variety trial yields already used broad ridge layout",
+          "dry ginger price and monthly storage loss"
+        ]
+      },
+      "regional": [
+        {
+          "name": "Vasantrao Naik Marathwada Krishi Vidyapeeth (VNMKV)",
+          "location": "Parbhani",
+          "role": "regional agricultural university",
+          "web": "vnmkv.ac.in"
+        },
+        {
+          "name": "College of Horticulture",
+          "location": "Parbhani",
+          "role": "correct department for ginger — it is a horticultural crop, not a field crop",
+          "web": "coh.vnmkv.ac.in"
+        },
+        {
+          "name": "Krishi Vigyan Kendra (KVK) 1",
+          "location": "Paithan Road, Chhatrapati Sambhajinagar",
+          "role": "nearest extension centre"
+        },
+        {
+          "name": "National Agricultural Research Project (NARP)",
+          "location": "Chhatrapati Sambhajinagar",
+          "role": "research"
+        },
+        {
+          "name": "District Superintending Agriculture Officer",
+          "location": "Chhatrapati Sambhajinagar",
+          "role": "schemes, permits, insurance notification"
+        },
+        {
+          "name": "Taluka Agriculture Officer",
+          "location": "Kannad",
+          "role": "subsidy applications, pre-sanction, drought-prone list confirmation"
+        }
+      ],
+      "department_note": "Ginger is a spice and horticultural crop. Enquiries at VNMKV should go to the College of Horticulture rather than the general agronomy department — a small distinction that saves weeks.",
+      "kvk_precedent": "VNMKV women scientists ran a programme on organic turmeric cultivation guidance. Turmeric is the same family, so applicable knowledge exists locally.",
+      "source_tier": "A"
+    },
+    "subsidy_schemes": {
+      "drip_irrigation": {
+        "central_scheme": "Pradhan Mantri Krishi Sinchayee Yojana, Per Drop More Crop",
+        "state_topup": "Mukhyamantri Shashwat Krushi Sinchan Yojana",
+        "combined_rates_pct": {
+          "small_and_marginal": 80,
+          "other_farmers": 75
+        },
+        "pmksy_alone_drought_prone_pct": 60,
+        "rate_conflict_note": "Sources give 60 to 80 percent. The likely explanation is that PMKSY alone gives 60 and the state top-up raises it to 75 to 80. The exact current rate is set annually by GR and must be confirmed with the Taluka Agriculture Officer.",
+        "coverage": "149 drought-prone talukas, suicide-affected districts and naxal-affected districts, with priority to Vidarbha, Marathwada and North Maharashtra",
+        "source_class": "VERIFY",
+        "source_tier": "B"
+      },
+      "farm_pond_lining": {
+        "subsidy_pct": 50,
+        "ceiling_inr": 75000,
+        "source_tier": "B"
+      },
+      "greenhouse": {
+        "ceiling_inr": 100000,
+        "source_tier": "B"
+      },
+      "shadenet_house": {
+        "ceiling_inr": 100000,
+        "source_tier": "B",
+        "caveat": "This is a full structure. Ginger needs about 25 percent shade for the first two months only, so a full shadenet house is probably disproportionate. Cheaper options — mulch, a tall intercrop such as tur, temporary netting — should be tested first."
+      },
+      "sprinkler": {
+        "note": "within available funds",
+        "source_tier": "B"
+      },
+      "possible_others": [
+        {
+          "scheme": "MIDH, Mission for Integrated Development of Horticulture",
+          "relevance": "planting subsidy for spice crops",
+          "source_class": "VERIFY"
+        },
+        {
+          "scheme": "Spices Board schemes",
+          "relevance": "spice development and processing",
+          "source_class": "VERIFY"
+        },
+        {
+          "scheme": "National Food Security Mission",
+          "relevance": "seed, storage, pipeline",
+          "source_class": "VERIFY"
+        },
+        {
+          "scheme": "MoFPI food processing",
+          "relevance": "dry ginger processing unit — the institutional route to a shared facility, which Domain 9 identified as the safe answer for chemical processing",
+          "source_class": "VERIFY"
+        }
+      ]
+    },
+    "farm_pond_dual_benefit": {
+      "problem_1": "Monsoon water must leave the root zone to prevent soft rot — Domain 6",
+      "problem_2": "October to February requires about 27 lakh litres per acre entirely from the well, at exactly the time the water table is falling — Domain 3",
+      "solution": "Store the monsoon runoff that the drainage channels are already carrying away, and use it after October.",
+      "subsidy": "50 percent or Rs 75,000 for plastic lining",
+      "sizing_gap": {
+        "item": "pond size against the 27 lakh litre shortfall",
+        "source_class": "FIELD"
+      }
+    },
+    "application_process": {
+      "portal": "mahadbt.maharashtra.gov.in",
+      "steps": [
+        {
+          "step": 1,
+          "action": "online application"
+        },
+        {
+          "step": 2,
+          "action": "upload documents"
+        },
+        {
+          "step": 3,
+          "action": "scrutiny by Taluka Agriculture Officer"
+        },
+        {
+          "step": 4,
+          "action": "beneficiary selection by LOTTERY"
+        },
+        {
+          "step": 5,
+          "action": "pre-sanction issued"
+        },
+        {
+          "step": 6,
+          "action": "farmer completes the work"
+        },
+        {
+          "step": 7,
+          "action": "geo-tagging verification"
+        },
+        {
+          "step": 8,
+          "action": "subsidy paid by RTGS to the bank account"
+        }
+      ],
+      "critical_condition": "Work started before pre-sanction is NOT eligible. This is the most common and most expensive mistake.",
+      "lead_time": "six or more months before planting",
+      "documents": [
+        "Aadhaar card",
+        "7/12 extract",
+        "8-A extract",
+        "passport size photograph",
+        "Aadhaar-linked bank passbook",
+        "caste certificate where applicable"
+      ],
+      "multi_scheme": "A single MahaDBT application can cover tractor, irrigation and horticulture subsidies together, so drip and farm pond can be applied for at once.",
+      "priority_order": [
+        "families of martyred soldiers",
+        "families of farmers who died by suicide",
+        "below poverty line farmers",
+        "widowed or deserted women",
+        "small and marginal farmers",
+        "other farmers"
+      ],
+      "source_tier": "B"
+    },
+    "insurance_and_credit": {
+      "pmfby": {
+        "ginger_notified": "unverified",
+        "source_class": "VERIFY",
+        "questions": [
+          "is ginger a notified crop for this district",
+          "if not, does the restructured weather-based horticulture insurance apply",
+          "premium and sum insured",
+          "application deadline — typically 31 July for kharif, which fits a 7 June planting"
+        ]
+      },
+      "why_it_matters": "Investment is about Rs 1.45 lakh per acre over eight months, with the main risks being water exhaustion, soft rot and price collapse. For a crop this exposed the insurance question is decisive rather than incidental.",
+      "crop_loan": {
+        "scale_of_finance": "unverified",
+        "source_class": "VERIFY",
+        "owner": "district lead bank",
+        "note": "Sets the credit limit, which matters for a high-cost crop."
+      },
+      "loan_waiver_scheme_noted": "Punyashlok Ahilyadevi Holkar farmer loan waiver scheme"
+    },
+    "market_registry": {
+      "markets": [
+        {
+          "market": "Mumbai",
+          "arrival_quintal": [
+            884,
+            1556
+          ],
+          "price_range_inr_per_quintal": [
+            10000,
+            17000
+          ],
+          "distance_km_est": 350
+        },
+        {
+          "market": "Nagpur",
+          "arrival_quintal": [
+            730,
+            1203
+          ],
+          "price_range_inr_per_quintal": [
+            9007,
+            15346
+          ],
+          "distance_km_est": 500
+        },
+        {
+          "market": "Akola",
+          "arrival_quintal": [
+            180,
+            240
+          ],
+          "price_range_inr_per_quintal": [
+            6000,
+            16000
+          ]
+        },
+        {
+          "market": "Chandrapur",
+          "arrival_quintal": [
+            8,
+            25
+          ],
+          "price_range_inr_per_quintal": [
+            17000,
+            17500
+          ]
+        },
+        {
+          "market": "Solapur",
+          "arrival_quintal": 10,
+          "price_range_inr_per_quintal": 14000
+        },
+        {
+          "market": "Ratnagiri",
+          "arrival_quintal": 15,
+          "price_range_inr_per_quintal": 15000
+        }
+      ],
+      "local_apmc": {
+        "name": "Chhatrapati Sambhajinagar",
+        "appears_in_arrival_lists": false,
+        "distance_km_est": 60,
+        "action": "enquire directly whether ginger is traded and at what price"
+      },
+      "alternative_channels": [
+        {
+          "channel": "eNAM",
+          "status": "VERIFY — is the local APMC linked"
+        },
+        {
+          "channel": "direct trader",
+          "status": "FIELD"
+        },
+        {
+          "channel": "farmer producer company",
+          "status": "FIELD — does one exist in the area"
+        },
+        {
+          "channel": "processing industry",
+          "status": "VERIFY"
+        }
+      ],
+      "date_context": "mid 2026",
+      "source_tier": "B"
+    },
+    "regulatory": {
+      "cibrc": {
+        "status": "the largest remaining gap in the knowledge base",
+        "affected_domains": [
+          1,
+          5,
+          6,
+          8
+        ],
+        "affected_uses": [
+          "seed treatment chemicals",
+          "insecticides and pre-harvest intervals",
+          "fungicides",
+          "herbicides"
+        ],
+        "core_problem": "Ginger is a minor crop. Many chemicals lack a ginger-specific label claim even though state extension literature recommends them. Being recommended and being registered are different things, and only the second is a legal basis for use.",
+        "engine_behaviour_until_resolved": [
+          "biological and cultural options first, always",
+          "name the molecule and its mode of action group",
+          "state the source-reported dose as reference and defer the actual dose to the label",
+          "append that CIB&RC label claim for ginger must be verified",
+          "where the pre-harvest interval is unknown, block spraying within 30 days of harvest",
+          "BHC and monocrotophos remain on the hard blocklist"
+        ],
+        "source_class": "VERIFY"
+      },
+      "fssai": {
+        "so2_limit_for_ginger": "unverified",
+        "relevance": "Malabar sulphur fumigation method, Domain 9",
+        "source_class": "VERIFY"
+      },
+      "groundwater": {
+        "cgwb_block_category": "unverified",
+        "relevance": "new borewell permission depends on block classification; if over-exploited, the farm pond becomes the only expansion route",
+        "source_class": "VERIFY"
+      },
+      "records": "Seed purchase bills and receipts are needed for loan and insurance claims."
+    },
+    "soil_testing": {
+      "mandatory_panel": [
+        {
+          "n": 1,
+          "parameter": "pH",
+          "in_routine_report": true
+        },
+        {
+          "n": 2,
+          "parameter": "free lime CaCO3",
+          "in_routine_report": false,
+          "critical_here": true
+        },
+        {
+          "n": 3,
+          "parameter": "EC",
+          "in_routine_report": true
+        },
+        {
+          "n": 4,
+          "parameter": "organic carbon",
+          "in_routine_report": true
+        },
+        {
+          "n": 5,
+          "parameter": "available N, P, K",
+          "in_routine_report": true
+        },
+        {
+          "n": 6,
+          "parameter": "zinc",
+          "in_routine_report": false,
+          "critical_here": true
+        },
+        {
+          "n": 7,
+          "parameter": "iron",
+          "in_routine_report": false,
+          "critical_here": true
+        },
+        {
+          "n": 8,
+          "parameter": "sulphur",
+          "in_routine_report": false,
+          "desirable": true
+        }
+      ],
+      "must_request_separately": [
+        "free lime",
+        "zinc",
+        "iron"
+      ],
+      "reason": "These three are absent from the standard soil health card and they are precisely the parameters that drive the calcareous yellowing problem and the entire Domain 4 micronutrient schedule.",
+      "facilities": [
+        {
+          "facility": "Government soil survey and soil testing laboratory",
+          "location": "VERIFY"
+        },
+        {
+          "facility": "KVK Chhatrapati Sambhajinagar",
+          "location": "Paithan Road",
+          "status": "VERIFY whether testing is offered"
+        },
+        {
+          "facility": "VNMKV Parbhani",
+          "status": "VERIFY"
+        },
+        {
+          "facility": "private laboratories",
+          "status": "FIELD"
+        },
+        {
+          "facility": "Soil Health Card scheme",
+          "status": "VERIFY — free or subsidised"
+        }
+      ],
+      "field_test": {
+        "name": "percolation pit test",
+        "method": "30 cm pit, fill and drain fully, refill and time the second drain",
+        "cost": "zero",
+        "duration": "one day",
+        "why_it_matters_more": "For ginger the governing soil risk is physical drainage, not chemical fertility, and no laboratory report measures infiltration on this plot."
+      }
+    },
+    "action_register": [
+      {
+        "rank": 1,
+        "contact": "Halad Sanshodhan Yojana, Kasbe Digraj, Sangli",
+        "purpose": "Marathwada recommendations, CIB&RC list, ETLs, seed source, broad ridge trial question",
+        "priority": "highest",
+        "time_sensitive": false
+      },
+      {
+        "rank": 2,
+        "contact": "Taluka Agriculture Officer, Kannad",
+        "purpose": "drought-prone list confirmation, current drip subsidy rate, application deadline",
+        "priority": "highest",
+        "time_sensitive": true
+      },
+      {
+        "rank": 3,
+        "contact": "KVK Chhatrapati Sambhajinagar, Paithan Road",
+        "purpose": "soil testing, local experience, Aurangabadi landrace",
+        "priority": "high",
+        "time_sensitive": false
+      },
+      {
+        "rank": 4,
+        "contact": "College of Horticulture, VNMKV Parbhani",
+        "purpose": "ginger-specific recommendations, crop coefficient and GDD data",
+        "priority": "high",
+        "time_sensitive": false
+      },
+      {
+        "rank": 5,
+        "contact": "District Superintending Agriculture Officer",
+        "purpose": "schemes, insurance notification",
+        "priority": "high",
+        "time_sensitive": false
+      },
+      {
+        "rank": 6,
+        "contact": "District lead bank",
+        "purpose": "scale of finance for ginger",
+        "priority": "medium",
+        "time_sensitive": false
+      },
+      {
+        "rank": 7,
+        "contact": "local seed traders",
+        "purpose": "Mahima and Varada availability and price",
+        "priority": "high",
+        "time_sensitive": true
+      },
+      {
+        "rank": 8,
+        "contact": "Chhatrapati Sambhajinagar APMC",
+        "purpose": "is ginger traded, at what price",
+        "priority": "medium",
+        "time_sensitive": false
+      },
+      {
+        "rank": 9,
+        "contact": "CGWB or groundwater department",
+        "purpose": "Kannad block classification",
+        "priority": "medium",
+        "time_sensitive": false
+      },
+      {
+        "rank": 10,
+        "contact": "CIB&RC online list",
+        "purpose": "ginger label claims",
+        "priority": "high",
+        "time_sensitive": false
+      }
+    ],
+    "online_sources": [
+      {
+        "purpose": "subsidy application",
+        "url": "mahadbt.maharashtra.gov.in"
+      },
+      {
+        "purpose": "government resolutions",
+        "url": "krishi.maharashtra.gov.in"
+      },
+      {
+        "purpose": "regional university",
+        "url": "vnmkv.ac.in"
+      },
+      {
+        "purpose": "horticulture college",
+        "url": "coh.vnmkv.ac.in"
+      },
+      {
+        "purpose": "nearest KVK",
+        "url": "kvkchhatrapatisambhajinagar.blogspot.com"
+      }
+    ]
+  },
+  "rules": [
+    {
+      "rule_id": "D10-SUB-001",
+      "category": "SUB",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Pre-season planning AND has_drip is false AND subsidy_lottery_result is not_applied",
+        "marathi": "हंगामापूर्व नियोजन, ठिबक नाही, अनुदान अर्जही केलेला नाही"
+      },
+      "action": {
+        "english": "Start the drip subsidy application now. Combined central and state schemes give up to 80 percent for small and marginal farmers and 75 percent for others in this region. Apply at least six months before planting.",
+        "marathi": "ठिबक अनुदानाचा अर्ज आत्ताच सुरू करा. केंद्र आणि राज्य योजना मिळून अल्प व अत्यल्प भूधारकांना ८०% पर्यंत आणि इतर शेतकऱ्यांना ७५% पर्यंत अनुदान मिळते. लागवडीच्या किमान सहा महिने आधी अर्ज करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Domains 3 and 7 make drip a precondition rather than an option — the belt receives 725 to 775 mm against a crop requirement of 1320 to 1520 mm, and 55 percent of years fall below the average. The scheme covers 149 drought-prone talukas with priority to Marathwada, so the largest capital cost of the crop has an institutional answer available.",
+        "yield_impact": "Not a yield factor. It changes whether the crop is economically viable, by a factor of about five on the largest capital line.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "govtyojanamaharashtra.com Mukhyamantri Shashwat Krushi Sinchan Yojana",
+          "marathisheti.in PMKSY"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "has_drip",
+        "subsidy_scheme_applied",
+        "subsidy_applied_date",
+        "farmer_category",
+        "drip_subsidy_pct_applicable"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "The three things the agronomy declared preconditions — drip, water storage and shade — each have a dedicated scheme, and this region is a priority area for all three. The schemes exist precisely for places like this.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-SUB-002",
+      "category": "SUB",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": "G0",
+      "trigger": {
+        "english": "Subsidised work about to begin AND pre_sanction_received is false",
+        "marathi": "अनुदानाचे काम सुरू होणार आहे पण पूर्वसंमती मिळालेली नाही",
+        "expr": "pre_sanction_received IS FALSE AND subsidy_scheme_applied IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Work before pre-sanction forfeits the subsidy.",
+        "golden_tests": [
+          {
+            "context": {
+              "pre_sanction_received": false,
+              "subsidy_scheme_applied": "drip"
+            },
+            "expect": "TRUE",
+            "label": "पूर्वसंमती नाही"
+          },
+          {
+            "context": {
+              "pre_sanction_received": true,
+              "subsidy_scheme_applied": "drip"
+            },
+            "expect": "FALSE",
+            "label": "पूर्वसंमती मिळाली"
+          }
+        ]
+      },
+      "action": {
+        "english": "BLOCK. Work started before pre-sanction is not eligible for subsidy. Wait for the pre-sanction letter before laying drip or excavating a pond.",
+        "marathi": "थांबा. पूर्वसंमतीपूर्वी सुरू केलेल्या कामाला अनुदान मिळत नाही. ठिबक अंथरण्यापूर्वी किंवा शेततळे खोदण्यापूर्वी पूर्वसंमतीचे पत्र येऊ द्या."
+      },
+      "reasoning": {
+        "agronomic_basis": "The scheme process is application, scrutiny, lottery, pre-sanction, then work. Starting early because the planting calendar is tight is the most common and most expensive error, because it forfeits the entire subsidy on work that was going to be done anyway.",
+        "yield_impact": "None on yield. It can cost the whole subsidy on the largest capital item.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "govtyojanamaharashtra.com application process"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "pre_sanction_received",
+        "pre_sanction_date",
+        "subsidy_lottery_result",
+        "has_drip"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "This collides directly with the tight land preparation calendar. The resolution is to start the application six months early rather than to start the work early, and the engine has to say so before March.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-SUB-003",
+      "category": "SUB",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Subsidy discussion in progress",
+        "marathi": "अनुदानाची चर्चा सुरू आहे"
+      },
+      "action": {
+        "english": "State clearly that selection is by lottery and never promise the subsidy. Present both the with-subsidy and without-subsidy cost cases. If not selected, the fallback is to reduce area rather than to skip drip.",
+        "marathi": "निवड लॉटरी पद्धतीने होते हे स्पष्ट सांगा — अनुदान मिळेल असे आश्वासन कधीही देऊ नका. अनुदानासह आणि अनुदानाशिवाय अशी दोन्ही गणिते दाखवा. निवड झाली नाही तर ठिबक वगळण्याऐवजी क्षेत्र कमी करावे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Beneficiary selection is explicitly by lottery. A farmer who plans on receiving it and does not is left either without drip, which makes the crop unviable here, or with an unplanned capital cost.",
+        "yield_impact": "None directly. Prevents a plan built on an uncertain input.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "govtyojanamaharashtra.com lottery selection"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "subsidy_lottery_result",
+        "area_acre",
+        "has_drip"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "Reducing area rather than dropping drip is the right fallback, because drip is a precondition here while area is a choice. The same logic as the poor-year water planning rule.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-SUB-004",
+      "category": "SUB",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Water availability assessed as marginal for October to February",
+        "marathi": "ऑक्टोबर ते फेब्रुवारीसाठी पाणी जेमतेम आहे"
+      },
+      "action": {
+        "english": "Recommend a lined farm pond, subsidised at 50 percent up to Rs 75,000. It stores the monsoon water that the drainage channels are already carrying away and supplies it back after October.",
+        "marathi": "अस्तरीकरण केलेले शेततळे विचारात घ्या — ५०% किंवा ₹७५,००० पर्यंत अनुदान. मान्सूनमध्ये जे पाणी निचरा चरातून वाहून जाते तेच साठवून ऑक्टोबरनंतर वापरता येते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Two problems solve each other. Monsoon water must leave the root zone to prevent soft rot, and about 27 lakh litres per acre are needed from October to February when rainfall has ended. Storage converts the disposal problem into the supply.",
+        "yield_impact": "Reduces exposure to both the waterlogging pathway and the late-season exhaustion pathway.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "govtyojanamaharashtra.com farm pond lining",
+          "Domain 3 water budget",
+          "Domain 6 drainage requirement"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_6_disease",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "farm_pond_planned",
+        "water_available_oct_feb_litres",
+        "subsidy_scheme_applied"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Pond sizing against the 27 lakh litre shortfall has not been done and is an open item. The subsidy ceiling of Rs 75,000 may or may not cover a pond of the required size.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-SUB-005",
+      "category": "SUB",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Shadenet subsidy being considered for ginger",
+        "marathi": "अद्रकासाठी शेडनेट अनुदानाचा विचार"
+      },
+      "action": {
+        "english": "Caution against it as a first step. The scheme funds a full shadenet house, whereas ginger needs about 25 percent shade for roughly the first two months. Test mulch, a tall intercrop such as tur, or temporary netting first.",
+        "marathi": "हा पहिला पर्याय म्हणून घेऊ नका. योजना पूर्ण शेडनेट हाऊससाठी आहे, तर अद्रकाला साधारण पहिले दोन महिने सुमारे २५% सावली लागते. आधी आच्छादन, तूरसारखे उंच आंतरपीक, किंवा तात्पुरती जाळी तपासा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The crop's shade requirement is seasonal and partial, while the scheme funds a permanent full structure. Spending the capital on a disproportionate solution crowds out cheaper measures that address the same May heat problem.",
+        "yield_impact": "Prevents misallocated capital rather than adding yield.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "govtyojanamaharashtra.com shadenet ceiling",
+          "Domain 7 heat window",
+          "Domain 8 shade and aroma"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_8_operations",
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "shade_pct",
+        "subsidy_scheme_applied",
+        "intercrop_selected"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Worth revisiting if the dry ginger route is chosen, because excess sunlight reduces aroma and aroma is the main quality determinant for dry ginger. The quality argument could justify what the heat argument alone does not.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-APP-001",
+      "category": "APP",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Subsidy application about to be filed AND subsidy_documents_ready is false",
+        "marathi": "अनुदान अर्ज करायचा आहे पण कागदपत्रे तयार नाहीत"
+      },
+      "action": {
+        "english": "Assemble the documents first: Aadhaar, 7/12 extract, 8-A extract, passport photograph, Aadhaar-linked bank passbook, and caste certificate where applicable. Apply on mahadbt.maharashtra.gov.in.",
+        "marathi": "आधी कागदपत्रे जमवा — आधार कार्ड, ७/१२ उतारा, ८-अ उतारा, पासपोर्ट फोटो, आधार-लिंक बँक पासबुक, आणि लागू असल्यास जात प्रमाणपत्र. अर्ज mahadbt.maharashtra.gov.in वर."
+      },
+      "reasoning": {
+        "agronomic_basis": "The application cannot proceed without the full document set, and assembling 7/12 and 8-A extracts takes time at the talathi office. Starting the assembly late compresses an already long chain.",
+        "yield_impact": "None. Protects the application timeline.",
+        "confidence_score": 0.82,
+        "source_tier": "B",
+        "references": [
+          "govtyojanamaharashtra.com document list"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "subsidy_documents_ready",
+        "subsidy_applied_date",
+        "farmer_id"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "The Aadhaar-linked bank account matters specifically because payment is by RTGS to that account. A mismatch there stalls the payment after all the work is done.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-APP-002",
+      "category": "APP",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Multiple subsidy needs identified",
+        "marathi": "एकापेक्षा जास्त अनुदानाची गरज आहे"
+      },
+      "action": {
+        "english": "Apply for drip and farm pond together in one MahaDBT application. The portal allows multiple schemes in a single application.",
+        "marathi": "ठिबक आणि शेततळे यांचा अर्ज एकाच वेळी करा. MahaDBT वर एकाच अर्जात अनेक योजनांसाठी अर्ज करता येतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "Both are needed at Kannad and both have the same document set and the same process. A single application halves the administrative work and keeps the two on the same timeline.",
+        "yield_impact": "None. Reduces friction in the highest-value institutional action.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "mahakisanyojana.com multi-scheme application"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "subsidy_scheme_applied",
+        "farm_pond_planned",
+        "subsidy_applied_date"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-D",
+      "kannad_note": "Keeping the two on one timeline also means one lottery outcome rather than two, which simplifies the fallback planning considerably.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-APP-003",
+      "category": "APP",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Subsidised work complete AND geo_tagging_done is false",
+        "marathi": "अनुदानाचे काम पूर्ण झाले पण जिओ टॅगिंग झालेले नाही"
+      },
+      "action": {
+        "english": "Arrange geo-tagging verification. Payment is released by RTGS only after it, so an unverified completed installation earns nothing.",
+        "marathi": "जिओ टॅगिंग तपासणी करून घ्या. ती झाल्यानंतरच RTGS ने अनुदान खात्यात जमा होते — तपासणीशिवाय पूर्ण झालेल्या कामाचे पैसे मिळत नाहीत."
+      },
+      "reasoning": {
+        "agronomic_basis": "Geo-tagging is step seven of eight in the process. Skipping or delaying it leaves the farmer having spent the capital and completed the work with no reimbursement.",
+        "yield_impact": "None. Completes the subsidy chain.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "govtyojanamaharashtra.com process steps"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "geo_tagging_done",
+        "pre_sanction_date",
+        "subsidy_scheme_applied"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "Easy to lose track of because the work feels finished when the drip is laid. The chain has one more step and it is the one that pays.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-APP-004",
+      "category": "APP",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Farmer belongs to a priority category",
+        "marathi": "शेतकरी प्राधान्य गटात मोडतो"
+      },
+      "action": {
+        "english": "Note the priority order and ensure the supporting document is attached. Order is families of martyred soldiers, families of farmers who died by suicide, below poverty line, widowed or deserted women, small and marginal farmers, then others.",
+        "marathi": "प्राधान्यक्रम लक्षात घ्या आणि त्याचे कागदपत्र जोडा. क्रम — शहीद जवानांचे कुटुंब, आत्महत्याग्रस्त शेतकरी कुटुंब, दारिद्र्य रेषेखालील, विधवा किंवा परित्यक्ता महिला, अल्प व अत्यल्प भूधारक, मग इतर."
+      },
+      "reasoning": {
+        "agronomic_basis": "Priority affects both selection likelihood in the lottery and the applicable subsidy percentage. Small and marginal status alone is worth about 5 percentage points on the drip subsidy.",
+        "yield_impact": "None. Affects the capital cost outcome.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "govtyojanamaharashtra.com priority order"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "priority_category",
+        "farmer_category",
+        "drip_subsidy_pct_applicable",
+        "subsidy_documents_ready"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "The engine should record the category but must handle it as administrative data only. It changes the subsidy percentage and nothing else in the advisory.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-GEO-001",
+      "category": "GEO",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "drought_prone_listed is unverified AND subsidy planning in progress",
+        "marathi": "तालुका अवर्षणप्रवण यादीत आहे का हे निश्चित नाही आणि अनुदानाचे नियोजन सुरू आहे"
+      },
+      "action": {
+        "english": "Confirm with the Taluka Agriculture Officer whether Kannad appears on the 149 drought-prone taluka list. It is worth about 5 percentage points of subsidy and it is a single phone call.",
+        "marathi": "कन्नड तालुका १४९ अवर्षणप्रवण तालुक्यांच्या यादीत आहे का, हे तालुका कृषी अधिकाऱ्याकडून निश्चित करा. त्यावर सुमारे ५ टक्के अनुदान अवलंबून आहे, आणि हे एका फोनवर कळेल."
+      },
+      "reasoning": {
+        "agronomic_basis": "Marathwada is named a priority region, but the scheme operates on a specific list of 149 talukas. Priority region status and list membership are not the same thing.",
+        "yield_impact": "None. Affects the subsidy percentage on the largest capital item.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "govtyojanamaharashtra.com coverage"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "drought_prone_listed",
+        "taluka",
+        "drip_subsidy_pct_applicable"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "VERIFY",
+      "kannad_note": "One of the two genuinely time-sensitive actions in the register. It gates the subsidy application, and the application gates the planting calendar.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-ACZ-001",
+      "category": "ACZ",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "agro_climatic_zone is unknown or unverified",
+        "marathi": "कृषी-हवामान विभाग निश्चित नाही"
+      },
+      "action": {
+        "english": "Assume Marathwada western zone provisionally — 600 to 750 mm and mean temperature below 26 C — and mark it as inferred. Confirm with VNMKV Parbhani or the district office.",
+        "marathi": "तात्पुरता पश्चिम विभाग गृहीत धरा — ६०० ते ७५० मिमी, सरासरी तापमान २६ अंशांखाली — पण हे अनुमान आहे. VNMKV परभणी किंवा जिल्हा कार्यालयाकडून पुष्टी घ्या."
+      },
+      "reasoning": {
+        "agronomic_basis": "Three zones are identified within Marathwada on climate and soil criteria. Kannad sits in the western part of the district, above 600 m, near the Ajanta range, which places it in the western zone on the available criteria. The study does not assign talukas individually.",
+        "yield_impact": "Determines which regional recommendations apply.",
+        "confidence_score": 0.65,
+        "source_tier": "A",
+        "references": [
+          "Agro-Climatic Zonation of Marathwada, IMD plus Hydrological Project Nashik"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_7_weather"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "agro_climatic_zone",
+        "taluka",
+        "district"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Ginger does not appear in the zone's recommended crop list, but that list is rainfed. Ginger sits here as an irrigated high-value crop, which is exactly why the irrigation preconditions carry the weight they do.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-CROP-001",
+      "category": "CROP",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Area planning or market assessment before planting",
+        "marathi": "लागवडीपूर्वी क्षेत्र नियोजन किंवा बाजार मूल्यांकन"
+      },
+      "action": {
+        "english": "State that Maharashtra has only about 4,000 hectares under ginger, roughly 1.3 percent of India's area. Local supply is limited so prices can be good, but the market is thin, technical support is limited, and seed availability is uncertain.",
+        "marathi": "महाराष्ट्रात अद्रकाखाली फक्त सुमारे ४,००० हेक्टर क्षेत्र आहे — भारताच्या क्षेत्राच्या सुमारे १.३%. स्थानिक पुरवठा कमी असल्याने भाव चांगला मिळू शकतो, पण बाजार पातळ आहे, स्थानिक तांत्रिक मदत मर्यादित आहे, आणि बेण्याची उपलब्धता अनिश्चित आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "A small state area produces four consequences at once — limited local supply supporting price, a thin market that moves sharply on modest arrivals, sparse extension experience, and a correspondingly small seed market.",
+        "yield_impact": "None directly. Shapes the area decision and the seed procurement timeline.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Directorate of Agriculture Maharashtra 2023 via AgriTimes"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "area_acre",
+        "seed_supplier_identified",
+        "sale_market"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "The seed market consequence is the one that bites first. A 4,000 hectare crop has a seed trade to match, so ordering late means taking whatever is available rather than the variety that was chosen.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-CROP-002",
+      "category": "CROP",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Local experience is being sought",
+        "marathi": "स्थानिक अनुभवाची चौकशी"
+      },
+      "action": {
+        "english": "Ask older growers and seed sellers in the district. Aurangabad appears as a ginger district in two of three published lists and a landrace called Aurangabadi is separately recorded, so local tradition is probably deeper than assumed.",
+        "marathi": "जिल्ह्यातील जुन्या शेतकऱ्यांकडे आणि बेणे विक्रेत्यांकडे चौकशी करा. तीनपैकी दोन यादींमध्ये औरंगाबाद अद्रक जिल्हा म्हणून नोंदवलेला आहे, आणि 'औरंगाबादी' नावाची स्थानिक जातही स्वतंत्रपणे नोंदवलेली आहे — म्हणजे इथली परंपरा वाटते त्यापेक्षा जुनी असावी."
+      },
+      "reasoning": {
+        "agronomic_basis": "Two independent signals point the same way. A place-named landrace usually indicates sustained local cultivation over a long period, and that means adapted material and accumulated practical knowledge may exist locally.",
+        "yield_impact": "Could surface a locally adapted variety and practical knowledge that no publication contains.",
+        "confidence_score": 0.65,
+        "source_tier": "B",
+        "references": [
+          "Agrowon district list",
+          "AgroWorld district list",
+          "AgroWorld variety list including Aurangabadi"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "seed_supplier_identified",
+        "variety",
+        "district"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-D",
+      "kannad_note": "This was an unexpected finding. The working assumption was that ginger is new to this district; two source lists and a landrace name suggest otherwise, which changes who is worth asking.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-VAR-001",
+      "category": "VAR",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Five months or less to planting AND seed_supplier_identified is false",
+        "marathi": "लागवडीला पाच महिने किंवा कमी उरले आणि बेण्याचा स्रोत निश्चित नाही",
+        "expr": "days_to_planting BETWEEN 140 AND 160 AND seed_supplier_identified IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "A 4,000 hectare state crop has a seed trade to match. Late ordering forfeits u=0.138.",
+        "golden_tests": [
+          {
+            "context": {
+              "days_to_planting": 150,
+              "seed_supplier_identified": false
+            },
+            "expect": "TRUE",
+            "label": "पाच महिने — बेणे ठरवा"
+          },
+          {
+            "context": {
+              "days_to_planting": 150,
+              "seed_supplier_identified": true
+            },
+            "expect": "FALSE",
+            "label": "ठरले आहे"
+          },
+          {
+            "context": {
+              "days_to_planting": 40,
+              "seed_supplier_identified": false
+            },
+            "expect": "FALSE",
+            "label": "खिडकी गेली"
+          }
+        ]
+      },
+      "action": {
+        "english": "Identify and order seed now. With only about 4,000 hectares in the state the seed market is small, and late ordering means accepting whatever is available rather than the chosen variety.",
+        "marathi": "बेण्याचा स्रोत आत्ताच निश्चित करा आणि order द्या. राज्यात फक्त ४,००० हेक्टर क्षेत्र असल्याने बेण्याचा बाजारही लहान आहे — उशिरा मागवल्यास निवडलेली जात नव्हे, मिळेल ते बेणे घ्यावे लागते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Variety selection carries a u-value of 0.138 between the best and weakest of the four main options, and seed is 28 to 35 percent of total cost. Both are forfeited if the variety is decided by availability rather than by choice.",
+        "yield_impact": "Protects the 0.138 variety value and the seed quality that sets the establishment ceiling.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Directorate of Agriculture area figures",
+          "Domain 1 variety register"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "seed_supplier_identified",
+        "variety",
+        "seed_at_planting_kg",
+        "planting_date"
+      ],
+      "u_value": 0.138,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "One of the two time-sensitive actions in the register. The Satara and Sangli belt is the likely practical source, and the research centre at Kasbe Digraj is in Sangli — so one contact may answer both the technical questions and the seed question.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "लागवडीला ५ महिने किंवा कमी उरले असल्यास बेण्याचा स्रोत आत्ताच निश्चित करणे योग्य."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-VAR-002",
+      "category": "VAR",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Improved variety seed is not available locally",
+        "marathi": "सुधारित जातीचे बेणे स्थानिक मिळत नाही"
+      },
+      "action": {
+        "english": "Institutional sources exist — CPCRI at Kasaragod, Kerala for improved varieties, and ICAR-IISR at Kozhikode for Mahima, Rejatha and Varada. Allow for transport time and quarantine considerations.",
+        "marathi": "संस्थात्मक स्रोत उपलब्ध आहेत — सुधारित जातींसाठी CPCRI, कासरगोड, केरळ; आणि महिमा, रीजाथा, वरदा यांसाठी ICAR-IISR, कोझिकोड. वाहतुकीचा वेळ आणि तपासणीचा विचार करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The three recommended varieties all originate from ICAR-IISR Kozhikode. Going to the source is slower and more certain than hoping a local trader stocks them.",
+        "yield_impact": "Enables the variety choice rather than defaulting to whatever is available.",
+        "confidence_score": 0.75,
+        "source_tier": "A",
+        "references": [
+          "AgroWorld CPCRI address",
+          "Domain 1 variety origins"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "seed_supplier_identified",
+        "variety"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "Long-distance seed rhizome transport carries its own risk of damage and disease introduction. The seed treatment rules in Domain 6 apply with more force to bought-in material from another state.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-INST-001",
+      "category": "INST",
+      "priority": 5,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "research_centre_contacted is false",
+        "marathi": "संशोधन केंद्राशी संपर्क झालेला नाही"
+      },
+      "action": {
+        "english": "Contact the Halad Sanshodhan Yojana at Kasbe Digraj, Sangli. Five domains rest primarily on this one centre. Ask about Marathwada-specific recommendations, the CIB&RC list for ginger, economic threshold levels, a reliable seed source, and whether the published variety trial yields already used broad ridge layout.",
+        "marathi": "हळद संशोधन योजना, कसबे डिग्रज, सांगली येथे संपर्क करा. या knowledge base मधील पाच Domain याच एका केंद्रावर आधारित आहेत. विचारायचे — मराठवाडा व काळ्या जमिनीसाठी विशिष्ट शिफारसी, अद्रकासाठी CIB&RC नोंदणीकृत रसायने, किडींच्या ETL पातळ्या, बेण्याचा विश्वसनीय स्रोत, आणि जातींचे प्रकाशित उत्पादन आकडे रुंद वरंब्यात घेतले होते का."
+      },
+      "reasoning": {
+        "agronomic_basis": "Domains 2, 4, 5, 6 and 8 draw primarily on this centre's published work. Turmeric and ginger are in the same family so its research applies directly, and one of the questions — the broad ridge trial question — is currently blocking the entire Domain 11 yield ceiling computation.",
+        "yield_impact": "Resolves a blocking open item that every u-value computation depends on.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon articles by Kadam, Mali and Mahajan"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_5_pest",
+          "domain_6_disease",
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "research_centre_contacted",
+        "cibrc_list_checked_date"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "The single highest-value Phase 2 action, and it is a phone call. Five domains and one blocking open item resolve through one conversation.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-INST-002",
+      "category": "INST",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "University enquiry being prepared",
+        "marathi": "विद्यापीठाकडे चौकशीची तयारी"
+      },
+      "action": {
+        "english": "Direct the enquiry to the College of Horticulture at VNMKV Parbhani, not the general agronomy department. Ginger is a spice and horticultural crop.",
+        "marathi": "चौकशी VNMKV परभणी येथील उद्यानविद्या महाविद्यालयाकडे करा, सामान्य कृषिविद्या विभागाकडे नाही. अद्रक हे मसाला व उद्यानविद्या पीक आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Crop classification determines which department holds the expertise. A ginger question sent to the agronomy department is likely to be redirected, which costs weeks in a season with a fixed planting deadline.",
+        "yield_impact": "None. Saves time on a time-constrained calendar.",
+        "confidence_score": 0.75,
+        "source_tier": "A",
+        "references": [
+          "coh.vnmkv.ac.in"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "kvk_contacted",
+        "research_centre_contacted"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "A small distinction that saves weeks. The same logic applies when asking about crop coefficient and GDD data, both of which are horticulture questions.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-INST-003",
+      "category": "INST",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Local technical support or soil testing needed",
+        "marathi": "स्थानिक तांत्रिक मदत किंवा माती परीक्षण हवे आहे"
+      },
+      "action": {
+        "english": "Contact KVK 1 at Paithan Road, Chhatrapati Sambhajinagar — the nearest extension centre. Ask about soil testing, local ginger experience, and the Aurangabadi landrace.",
+        "marathi": "कृषि विज्ञान केंद्र १, पैठण रोड, छत्रपती संभाजीनगर येथे संपर्क करा — हे सर्वात जवळचे विस्तार केंद्र आहे. माती परीक्षण, स्थानिक अद्रक अनुभव, आणि 'औरंगाबादी' जातीबद्दल विचारा."
+      },
+      "reasoning": {
+        "agronomic_basis": "KVK's mandate is exactly this — local technical guidance, soil testing, demonstrations and input advice. VNMKV women scientists have separately run a programme on organic turmeric guidance, and turmeric is the same family, so applicable local knowledge exists.",
+        "yield_impact": "Unblocks the soil test, which is a blocking item for Domains 2 and 4.",
+        "confidence_score": 0.78,
+        "source_tier": "A",
+        "references": [
+          "kvkchhatrapatisambhajinagar.blogspot.com",
+          "promkvparbhani.blogspot.com turmeric programme"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil",
+          "domain_4_nutrient"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "kvk_contacted",
+        "soil_lab_selected",
+        "soil_test_available"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "The nearest institutional resource to the plot, and the natural first stop for the soil test that two domains are waiting on.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-LAB-001",
+      "category": "LAB",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Soil test being arranged",
+        "marathi": "माती परीक्षणाची व्यवस्था केली जात आहे"
+      },
+      "action": {
+        "english": "Request free lime, zinc and iron SEPARATELY. They are absent from the standard soil health card and they are precisely the parameters that drive the calcareous yellowing problem and the whole micronutrient schedule.",
+        "marathi": "मुक्त चुनखडी, जस्त आणि लोह हे तीन घटक वेगळे मागा. नेहमीच्या मृदा आरोग्य पत्रिकेत ते नसतात — आणि तेच चुनखडीमुळे होणारा पिवळेपणा आणि संपूर्ण सूक्ष्म अन्नद्रव्य वेळापत्रक ठरवतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "The routine panel covers pH, EC, organic carbon and NPK. Free lime predicts whether the yellowing problem will occur; zinc and iron are the nutrients it locks up. Without them the Domain 4 micronutrient rules run on assumption.",
+        "yield_impact": "Enables correct micronutrient dosing, worth u = 0.11.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Domain 2 soil test panel",
+          "Domain 4 micronutrient schedule"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil",
+          "domain_4_nutrient"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "soil_lab_selected",
+        "soil_test_available",
+        "soil_free_lime_pct",
+        "soil_zn_ppm",
+        "soil_fe_ppm"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "Requesting them separately is the whole point. A farmer who simply asks for a soil test will receive a report without the three parameters that matter most here.",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-LAB-002",
+      "category": "LAB",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Soil assessment being planned",
+        "marathi": "जमिनीचे मूल्यांकन नियोजित"
+      },
+      "action": {
+        "english": "Run the percolation pit test alongside the laboratory test. Dig a 30 cm pit, fill and drain fully, refill and time the second drain. It costs nothing, takes a day, and for ginger it matters more than the chemical panel.",
+        "marathi": "प्रयोगशाळेच्या चाचणीसोबत खड्डा चाचणीही करा. ३० सेंमी खड्डा खणा, पाण्याने भरून पूर्ण मुरू द्या, पुन्हा भरा आणि वेळ मोजा. खर्च शून्य, वेळ एक दिवस — आणि अद्रकासाठी ती रासायनिक अहवालापेक्षा जास्त निर्णायक आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "For ginger the governing soil risk is physical drainage rather than chemical fertility, and no laboratory report measures infiltration on this plot. Above 12 hours the recommendation is to avoid ginger there altogether.",
+        "yield_impact": "Determines bed height, channel design, and in the worst case the go or no-go decision.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 2 percolation test method"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil",
+          "domain_3_water",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "percolation_time_hours",
+        "percolation_class",
+        "soil_test_available"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-D",
+      "kannad_note": "Zero cost, one day, no laboratory, and it can prevent a Rs 1.45 lakh loss on an unsuitable plot. It belongs in the same conversation as the soil test, not after it.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-REG-001",
+      "category": "REG",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Any chemical recommendation is about to be emitted AND cibrc_list_checked_date is empty or stale",
+        "marathi": "कोणतीही रासायनिक शिफारस दिली जात आहे आणि CIB&RC यादी तपासलेली नाही किंवा जुनी आहे"
+      },
+      "action": {
+        "english": "Apply the standing behaviour: biological and cultural options first, name the molecule and group, state the source dose as reference only, defer the actual dose to the label, and append that CIB&RC label claim for ginger must be verified. Where the pre-harvest interval is unknown, block spraying within 30 days of harvest.",
+        "marathi": "ठरलेले वर्तन पाळा — जैविक व सांस्कृतिक पर्याय प्रथम, रसायनाचे नाव व गट सांगा, स्रोतातील मात्रा फक्त संदर्भ म्हणून द्या, प्रत्यक्ष मात्रा लेबलनुसार, आणि अद्रकासाठी CIB&RC नोंदणी तपासण्याचा शेरा जोडा. प्रतीक्षा कालावधी माहीत नसल्यास काढणीपूर्वी ३० दिवस फवारणी अडवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Ginger is a minor crop and many chemicals recommended in state extension literature lack a ginger-specific label claim. This is the largest remaining gap in the knowledge base and it affects four domains, but it is not blocking because biological and cultural options cover the main pests and diseases.",
+        "yield_impact": "Regulatory compliance rather than yield. Protects the platform and the farmer.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "CIB&RC minor crop position",
+          "Domains 1, 5, 6 and 8 chemical rules"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest",
+          "domain_6_disease",
+          "domain_8_operations"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "cibrc_list_checked_date",
+        "last_insecticide_group",
+        "last_fungicide_group",
+        "phi_days_remaining"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "VERIFY",
+      "kannad_note": "Worth restating that this gap does not stop the product working. The free and biological tier covers the main pests and diseases, and for bacterial wilt no chemical works anyway.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-REG-002",
+      "category": "REG",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "New borewell or well deepening being considered AND cgwb_block_category is unverified",
+        "marathi": "नवीन बोअरवेल किंवा विहीर खोल करण्याचा विचार, आणि भूजल वर्गीकरण माहीत नाही"
+      },
+      "action": {
+        "english": "Check the CGWB block classification for Kannad before planning new extraction. If the block is over-exploited, permission may be restricted and the farm pond becomes the only expansion route.",
+        "marathi": "नवीन उपसा नियोजित करण्यापूर्वी कन्नड ब्लॉकचे भूजल वर्गीकरण तपासा. ब्लॉक अति-शोषित असल्यास परवानगी मिळणे अवघड होते आणि शेततळे हाच एकमेव विस्तार-पर्याय उरतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "October to February requires about 27 lakh litres per acre entirely from stored or pumped water. If the block classification restricts new extraction, the water plan must be built around storage instead, and that changes both the capital plan and the viable area.",
+        "yield_impact": "None directly. Determines whether the water plan is achievable at all.",
+        "confidence_score": 0.72,
+        "source_tier": "B",
+        "references": [
+          "Domain 3 water budget",
+          "CGWB block classification framework"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "cgwb_block_category",
+        "water_source_type",
+        "farm_pond_planned"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "VERIFY",
+      "kannad_note": "This is the check that decides whether the farm pond is an option or a necessity. In an over-exploited block it stops being a nice-to-have.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-REG-003",
+      "category": "REG",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Malabar sulphur fumigation method being considered",
+        "marathi": "मलबार गंधक धुरी पद्धतीचा विचार"
+      },
+      "action": {
+        "english": "Verify the FSSAI and export SO2 residue limits for ginger before proceeding. Until they are confirmed, present simple sun drying as the route.",
+        "marathi": "पुढे जाण्यापूर्वी अद्रकातील SO2 अवशेषांच्या FSSAI व निर्यात मर्यादा तपासा. त्या निश्चित होईपर्यंत साधी वाळवणी पद्धतच सुचवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The method uses 6 to 10 g of sulphur per kg across three 12-hour fumigation cycles. Export markets impose strict SO2 limits and some buyers reject treated produce outright, so an unverified limit is a market access risk rather than a technical one.",
+        "yield_impact": "None. Protects market access on the dry ginger route.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 9 Malabar method",
+          "FSSAI residue framework"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest"
+        ],
+        "depends_on": [
+          "domain_9_harvest"
+        ]
+      },
+      "farm_brain_schema": [
+        "so2_treatment_used",
+        "drying_method"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "VERIFY",
+      "kannad_note": "The method produces the bright white product that commands a premium, so the incentive to use it is real. That makes verifying the limit a priority rather than a formality.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-INS-001",
+      "category": "INS",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Pre-season planning AND pmfby_notified_for_ginger is unverified",
+        "marathi": "हंगामापूर्व नियोजन आणि अद्रक विमा अधिसूचित आहे का हे माहीत नाही",
+        "expr": "days_to_planting BETWEEN 40 AND 60 AND pmfby_notified_for_ginger == 'unverified'",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "days_to_planting": 50,
+              "pmfby_notified_for_ginger": "unverified"
+            },
+            "expect": "TRUE",
+            "label": "विमा तपासा"
+          },
+          {
+            "context": {
+              "days_to_planting": 50,
+              "pmfby_notified_for_ginger": "no"
+            },
+            "expect": "FALSE",
+            "label": "तपासले आहे"
+          }
+        ]
+      },
+      "action": {
+        "english": "Check with the District Superintending Agriculture Officer whether ginger is a notified crop under PMFBY for this district, and if not whether the restructured weather-based horticulture insurance applies. The kharif deadline of around 31 July fits a 7 June planting.",
+        "marathi": "जिल्हा अधीक्षक कृषी अधिकाऱ्याकडे तपासा — या जिल्ह्यासाठी अद्रक PMFBY मध्ये अधिसूचित पीक आहे का, आणि नसल्यास पुनर्रचित हवामान आधारित फळपीक विमा लागू होतो का. खरीपची साधारण ३१ जुलैची मुदत ७ जूनच्या लागवडीशी जुळते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Investment is about Rs 1.45 lakh per acre over eight months and the main risks — water exhaustion, soft rot and price collapse — are all capable of taking most of the crop. For an exposure this size the insurance question is decisive rather than incidental.",
+        "yield_impact": "None on yield. Changes the risk profile of the whole enterprise.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Domain 13 investment figure",
+          "PMFBY notification framework"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "pmfby_notified_for_ginger",
+        "planting_date",
+        "area_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "VERIFY",
+      "kannad_note": "Whether ginger is notified is likely to be a no, given how small the state area is. If so, the weather-based horticulture product is the fallback worth asking about.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-INS-002",
+      "category": "INS",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Crop loan being considered AND scale_of_finance_per_acre is unknown",
+        "marathi": "पीक कर्जाचा विचार आणि scale of finance माहीत नाही"
+      },
+      "action": {
+        "english": "Obtain the scale of finance for ginger from the district lead bank. It sets the credit limit, which matters for a crop costing about Rs 1.45 lakh per acre.",
+        "marathi": "जिल्हा अग्रणी बँकेकडून अद्रकाचा scale of finance घ्या. त्यावरून कर्जाची मर्यादा ठरते, आणि एकरी सुमारे १.४५ लाख खर्चाच्या पिकात ती महत्वाची आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Scale of finance is set by the district technical committee per crop. If it is set low for ginger, or not set at all because the crop is uncommon here, the credit available will not match the actual cost.",
+        "yield_impact": "None. Affects whether the plan is financeable.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Domain 13 cost structure"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "scale_of_finance_per_acre",
+        "area_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "VERIFY",
+      "kannad_note": "Worth asking early because if the scale of finance is low the area decision changes, and the area decision has to be made before the seed is ordered.",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-INS-003",
+      "category": "INS",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Inputs being purchased",
+        "marathi": "निविष्ठा खरेदी केल्या जात आहेत"
+      },
+      "action": {
+        "english": "Keep seed purchase bills and all input receipts. They are needed for loan documentation and for any insurance claim.",
+        "marathi": "बेणे खरेदीचे बिल आणि सर्व निविष्ठांच्या पावत्या जपून ठेवा. कर्ज आणि विमा दाव्यासाठी त्या लागतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "Claims and loan documentation require proof of expenditure. Seed is the largest single cost and the one most often bought informally, so it is the receipt most likely to be missing.",
+        "yield_impact": "None. Protects the claim.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Domain 10 records note"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "seed_supplier_identified",
+        "seed_at_planting_kg"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "The app can hold photographs of the bills, which is a small feature with a real payoff when a claim is made eight months later.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-MKT-001",
+      "category": "MKT",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Market access being assessed before planting",
+        "marathi": "लागवडीपूर्वी बाजाराची उपलब्धता तपासली जात आहे"
+      },
+      "action": {
+        "english": "Enquire directly with the Chhatrapati Sambhajinagar APMC and local traders whether ginger is traded and at what price. It does not appear in the state arrival lists at all.",
+        "marathi": "छत्रपती संभाजीनगर बाजार समिती आणि स्थानिक व्यापाऱ्यांकडे थेट चौकशी करा — इथे अद्रकाची खरेदी होते का आणि भाव काय. राज्याच्या आवक यादीत हा बाजार कुठेही दिसत नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Absence from the arrival lists means no reportable ginger arrival at the nearest market. The realistic outlets are Mumbai at roughly 350 km and Nagpur at roughly 500 km, so transport cost becomes a real component of net return.",
+        "yield_impact": "None. Informs the area decision and the transport budget.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "News18 Marathi APMC arrival lists",
+          "Domain 9 market registry"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "sale_market",
+        "transport_cost_per_quintal",
+        "area_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "VERIFY",
+      "kannad_note": "If the local market genuinely does not trade ginger, the transport cost to Mumbai or Nagpur has to enter the Domain 13 model as a fixed cost rather than as an option.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-MKT-002",
+      "category": "MKT",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Alternative selling channels being explored",
+        "marathi": "पर्यायी विक्री मार्गांचा शोध"
+      },
+      "action": {
+        "english": "Check whether the local APMC is linked to eNAM, whether a farmer producer company operates in the area, and whether any processing buyer exists. In a thin market an alternative channel can be worth more than a better price at the same channel.",
+        "marathi": "स्थानिक बाजार समिती eNAM शी जोडलेली आहे का, भागात शेतकरी उत्पादक कंपनी आहे का, आणि प्रक्रिया उद्योगाचा खरेदीदार आहे का — हे तपासा. पातळ बाजारात पर्यायी मार्ग हा त्याच बाजारातील थोड्या जास्त भावापेक्षा मौल्यवान ठरू शकतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "State daily arrivals are roughly one percent of onion, so the crop is exposed to a single thin channel. An alternative outlet reduces that concentration risk more effectively than optimising within the same channel.",
+        "yield_impact": "None. Reduces market risk.",
+        "confidence_score": 0.65,
+        "source_tier": "B",
+        "references": [
+          "Domain 9 thin market finding"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "sale_market",
+        "transport_cost_per_quintal"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "FIELD",
+      "kannad_note": "A farmer producer company would also address the shared processing facility question that Domain 9 raised for the caustic soda method. Two problems, one institution.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-ACT-001",
+      "category": "ACT",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Pre-season planning begins",
+        "marathi": "हंगामापूर्व नियोजन सुरू"
+      },
+      "action": {
+        "english": "Issue the contact and action register in priority order, flagging the two time-sensitive items — the Taluka Agriculture Officer for the subsidy window and local seed traders for variety availability. Everything else can wait; those two cannot.",
+        "marathi": "संपर्क व कृती यादी प्राधान्यक्रमाने द्या, आणि दोन वेळ-संवेदनशील मुद्दे ठळक करा — अनुदानाच्या मुदतीसाठी तालुका कृषी अधिकारी, आणि जातीच्या उपलब्धतेसाठी स्थानिक बेणे विक्रेते. बाकीचे थांबू शकते; ही दोन नाहीत."
+      },
+      "reasoning": {
+        "agronomic_basis": "Ten institutional actions are identified. Two of them gate downstream decisions with fixed deadlines — the subsidy chain takes six or more months and includes a lottery, and the seed market is small enough that late ordering forfeits the variety choice.",
+        "yield_impact": "Protects the 0.138 variety value and the capital structure of the whole enterprise.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Domain 10 action register"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_3_water",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "subsidy_applied_date",
+        "seed_supplier_identified",
+        "research_centre_contacted",
+        "kvk_contacted",
+        "drought_prone_listed"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Sequencing the register matters as much as its contents. Ten actions presented as a flat list produces none of them; two flagged as urgent produces two.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-FRESH-001",
+      "category": "FRESH",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Any advisory draws on Domain 10 data AND the domain review_by date has passed",
+        "marathi": "Domain 10 मधील माहिती वापरली जात आहे आणि तिची पुनरावलोकन तारीख उलटली आहे"
+      },
+      "action": {
+        "english": "Append a verification note rather than presenting the figure as current. Subsidy rates, scheme eligibility and contacts change annually by government resolution.",
+        "marathi": "आकडा चालू म्हणून दाखवण्याऐवजी तपासणीचा शेरा जोडा. अनुदानाचे दर, योजनांची पात्रता आणि संपर्क दरवर्षी शासन निर्णयाने बदलतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "This is the only domain whose content expires. Agronomy in Domains 1 to 9 holds for years; roughly half of this file is stale within twelve months. The engine has to know that about itself rather than treating all stored facts as equally durable.",
+        "yield_impact": "None. Prevents advice based on a lapsed scheme rate.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "Domain 10 data freshness policy"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "data_review_due",
+        "cibrc_list_checked_date",
+        "subsidy_scheme_applied"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This concept did not exist in the earlier domains and had to be added when Domain 10 was written. It belongs in the Core layer, because any future institutional domain for another crop will need it too.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-FRESH-002",
+      "category": "FRESH",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G0",
+      "trigger": {
+        "english": "A specific subsidy amount or eligibility is about to be stated to a farmer",
+        "marathi": "शेतकऱ्याला अनुदानाची नेमकी रक्कम किंवा पात्रता सांगितली जात आहे",
+        "expr": "data_review_due IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "data_review_due": "2027-03-31"
+            },
+            "expect": "TRUE",
+            "label": "नेमकी रक्कम सांगू नका"
+          },
+          {
+            "context": {},
+            "expect": "FALSE",
+            "label": ""
+          }
+        ]
+      },
+      "action": {
+        "english": "Do not state an exact amount or promise eligibility. Give the scheme name, the process and the document list, and direct the farmer to the Taluka Agriculture Officer or the current GR for the rate.",
+        "marathi": "नेमकी रक्कम सांगू नका आणि पात्रतेचे आश्वासन देऊ नका. योजनेचे नाव, प्रक्रिया आणि कागदपत्रांची यादी द्या, आणि दराससाठी तालुका कृषी अधिकारी किंवा चालू शासन निर्णय पहायला सांगा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Sources give drip subsidy rates ranging from 60 to 80 percent, which reflects a central scheme plus a state top-up and annual GR revision. Stating any single figure as current would be wrong more often than right.",
+        "yield_impact": "None. Protects credibility and prevents a financial plan built on a wrong rate.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "source rate conflict 60 to 80 percent",
+          "Domain 10 data freshness policy"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "drip_subsidy_pct_applicable",
+        "subsidy_scheme_applied",
+        "data_review_due"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The spread between 60 and 80 percent on the largest capital item is large enough that a wrong figure would misstate the whole enterprise budget. Naming the scheme and the office is both safer and more useful.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "अनुदानाची नेमकी रक्कम सांगण्याऐवजी योजना, प्रक्रिया, कागदपत्रे व अधिकृत GR कडे वळवणे योग्य."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-INST-004",
+      "category": "INST",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G5",
+      "trigger": {
+        "english": "Shared processing capacity being considered for dry ginger",
+        "marathi": "सुंठ प्रक्रियेसाठी सामायिक सुविधेचा विचार"
+      },
+      "action": {
+        "english": "Explore the MoFPI food processing scheme as the institutional route to a shared facility. Domain 9 identified a group or cooperative facility as the safe answer for chemical processing, and this is the funding path toward one.",
+        "marathi": "सामायिक प्रक्रिया सुविधेसाठी अन्न प्रक्रिया उद्योग मंत्रालयाच्या योजनेची चौकशी करा. रासायनिक प्रक्रिया वैयक्तिक पातळीवर सुरक्षित नाही आणि गट किंवा सहकारी केंद्र हेच उत्तर आहे — ही योजना त्याचा आर्थिक मार्ग असू शकते."
+      },
+      "reasoning": {
+        "agronomic_basis": "The caustic soda method produces export-grade dry ginger and is not safe at individual farm level. A shared facility resolves both the safety problem and the capital problem, and a food processing scheme is the normal route to funding one.",
+        "yield_impact": "None. Opens a value-addition route that is otherwise closed on safety grounds.",
+        "confidence_score": 0.6,
+        "source_tier": "B",
+        "references": [
+          "Domain 9 soda khar safety block",
+          "VNMKV MoFPI project note"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest",
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_9_harvest"
+        ]
+      },
+      "farm_brain_schema": [
+        "drying_method",
+        "processing_trained_operator",
+        "subsidy_scheme_applied"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "VERIFY",
+      "kannad_note": "A longer-term item rather than a first-season one. It is recorded because Domain 9 closed a route on safety grounds and this is the only way that route reopens.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-CROP-003",
+      "category": "CROP",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Comparison against state benchmarks requested",
+        "marathi": "राज्याच्या सरासरीशी तुलना विचारली"
+      },
+      "action": {
+        "english": "Use 53 quintal per acre as the state average benchmark. Reaching 90 is roughly 70 percent above it and 110 is more than double, which is the honest way to frame what good management is worth here.",
+        "marathi": "राज्य सरासरी ५३ क्विंटल प्रति एकर हा संदर्भ वापरा. ९० क्विंटल म्हणजे त्याहून सुमारे ७०% जास्त, आणि ११० म्हणजे दुपटीहून जास्त — चांगल्या व्यवस्थापनाचे मूल्य मांडण्याचा हा प्रामाणिक मार्ग आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "The state average of 13.2 tonnes per hectare converts to about 53 quintal per acre. The gap between that and the genetic ceiling is attributable to management rather than to climate or soil, which is the central argument of Domain 11.",
+        "yield_impact": "Framing rather than a factor. Sets a realistic and verifiable benchmark.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Directorate of Agriculture Maharashtra 2023",
+          "Domain 11 gap analysis"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "yield_target_quintal_per_acre",
+        "yield_quintal_per_acre_actual"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "This benchmark matters for the product argument as much as for the farmer. The gap between 53 and 90 is management, and management is what the engine addresses.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-ACT-002",
+      "category": "ACT",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "An institutional contact has been made and information received",
+        "marathi": "संस्थात्मक संपर्क झाला आणि माहिती मिळाली"
+      },
+      "action": {
+        "english": "Record the answer against the specific open item it resolves, with the date and the source. Several open items across Domains 1 to 9 are waiting on single institutional answers.",
+        "marathi": "मिळालेले उत्तर ज्या मोकळ्या जागेचे निराकरण करते तिच्याविरुद्ध, तारीख आणि स्रोतासह नोंदवा. Domain १ ते ९ मधील अनेक मोकळ्या जागा एकाच संस्थात्मक उत्तरावर थांबलेल्या आहेत."
+      },
+      "reasoning": {
+        "agronomic_basis": "The broad ridge trial question alone unblocks the Domain 11 yield ceiling, which every u-value computation depends on. Recording answers against items rather than as loose notes is what converts a phone call into a resolved dependency.",
+        "yield_impact": "None directly. Converts institutional contact into corrected knowledge base state.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Domain 11 blocking open item",
+          "Domain 10 action register"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield",
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "research_centre_contacted",
+        "kvk_contacted",
+        "cibrc_list_checked_date",
+        "data_review_due"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Ten contacts producing ten conversations and no recorded answers would leave the knowledge base exactly where it is. The recording step is the one that matters.",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D10-SUB-006",
+      "category": "SUB",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Economic model being run for the enterprise",
+        "marathi": "प्रकल्पाचे आर्थिक गणित चालवले जात आहे"
+      },
+      "action": {
+        "english": "Run the cost model twice — once with subsidy and once without. Ginger economics at Kannad differ fundamentally between the two, and the difference falls entirely on capital rather than on operating cost.",
+        "marathi": "खर्चाचे गणित दोनदा चालवा — अनुदानासह आणि अनुदानाशिवाय. इथे अद्रकाचे अर्थशास्त्र या दोन परिस्थितींत मूलभूतपणे वेगळे आहे, आणि तो फरक पूर्णपणे भांडवली खर्चावर पडतो, चालू खर्चावर नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Drip is a precondition, so its cost is unavoidable. Subsidy at 75 to 80 percent changes who bears it, not whether it is incurred. Since selection is by lottery, both cases are live until the result is known.",
+        "yield_impact": "None. Determines viability and the area decision.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 10 subsidy rates",
+          "Domain 13 cost structure"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "drip_subsidy_pct_applicable",
+        "subsidy_lottery_result",
+        "area_acre",
+        "farm_pond_planned"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Domain 13 currently leaves the drip capital cost as an open figure. Until a supplier quotation exists, neither version of the model can be completed.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    }
+  ],
+  "open_items": [
+    {
+      "id": "D10-OI-01",
+      "item": "Whether Kannad appears on the 149 drought-prone taluka list",
+      "owner": "Taluka Agriculture Officer, Kannad",
+      "source_class": "VERIFY",
+      "blocking": false,
+      "time_sensitive": true,
+      "note": "Worth about 5 percentage points of drip subsidy."
+    },
+    {
+      "id": "D10-OI-02",
+      "item": "Current drip subsidy rate and application deadline under the live GR",
+      "owner": "Taluka Agriculture Officer / krishi.maharashtra.gov.in",
+      "source_class": "VERIFY",
+      "blocking": false,
+      "time_sensitive": true
+    },
+    {
+      "id": "D10-OI-03",
+      "item": "CIB&RC label claims for ginger — insecticides, fungicides, herbicides and pre-harvest intervals",
+      "owner": "CIB&RC current list",
+      "source_class": "VERIFY",
+      "blocking": false,
+      "note": "Largest remaining gap, affecting four domains. Not blocking because biological and cultural options cover the main problems."
+    },
+    {
+      "id": "D10-OI-04",
+      "item": "Whether ginger is notified under PMFBY for this district",
+      "owner": "District Superintending Agriculture Officer",
+      "source_class": "VERIFY",
+      "blocking": false
+    },
+    {
+      "id": "D10-OI-05",
+      "item": "Scale of finance for ginger",
+      "owner": "district lead bank",
+      "source_class": "VERIFY",
+      "blocking": false
+    },
+    {
+      "id": "D10-OI-06",
+      "item": "CGWB block classification for Kannad",
+      "owner": "CGWB or groundwater department",
+      "source_class": "VERIFY",
+      "blocking": false
+    },
+    {
+      "id": "D10-OI-07",
+      "item": "Confirmed agro-climatic sub-zone for Kannad taluka",
+      "owner": "VNMKV Parbhani or district office",
+      "source_class": "VERIFY",
+      "blocking": false
+    },
+    {
+      "id": "D10-OI-08",
+      "item": "Local availability and price of Mahima and Varada seed rhizome",
+      "owner": "local seed traders, Satara-Sangli belt",
+      "source_class": "FIELD",
+      "blocking": false,
+      "time_sensitive": true
+    },
+    {
+      "id": "D10-OI-09",
+      "item": "Whether the Chhatrapati Sambhajinagar APMC trades ginger",
+      "owner": "direct APMC enquiry",
+      "source_class": "VERIFY",
+      "blocking": false
+    },
+    {
+      "id": "D10-OI-10",
+      "item": "Transport cost per quintal to Mumbai and Nagpur",
+      "owner": "local transporters",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D10-OI-11",
+      "item": "MIDH, Spices Board, NFSM and MoFPI scheme applicability to ginger",
+      "owner": "district horticulture office, Spices Board",
+      "source_class": "VERIFY",
+      "blocking": false
+    },
+    {
+      "id": "D10-OI-12",
+      "item": "FSSAI and export SO2 residue limits for ginger",
+      "owner": "FSSAI, Spices Board",
+      "source_class": "VERIFY",
+      "blocking": false,
+      "note": "Shared with Domain 9."
+    },
+    {
+      "id": "D10-OI-13",
+      "item": "Aurangabadi landrace — duration, yield, disease behaviour",
+      "owner": "local enquiry with older growers",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D10-OI-14",
+      "item": "Farm pond sizing against the 27 lakh litre October to February shortfall",
+      "owner": "own calculation plus subsidy ceiling",
+      "source_class": "FIELD",
+      "blocking": false
+    }
+  ],
+  "summary": {
+    "total_rules": 35,
+    "by_category": {
+      "SUB": 6,
+      "APP": 4,
+      "GEO": 1,
+      "ACZ": 1,
+      "CROP": 3,
+      "VAR": 2,
+      "INST": 4,
+      "LAB": 2,
+      "REG": 3,
+      "INS": 3,
+      "MKT": 2,
+      "ACT": 2,
+      "FRESH": 2
+    },
+    "by_priority": {
+      "5": 12,
+      "4": 13,
+      "3": 10
+    },
+    "by_severity": {
+      "yellow": 14,
+      "blocking": 1,
+      "info": 19,
+      "red": 1
+    },
+    "by_source_tier": {
+      "A": 11,
+      "B": 24,
+      "C": 0
+    },
+    "by_source_class": {
+      "SRC-Q": 12,
+      "DERIVED": 10,
+      "SRC-D": 4,
+      "VERIFY": 8,
+      "FIELD": 1
+    },
+    "confidence_range": {
+      "min": 0.6,
+      "max": 0.85,
+      "mean": 0.771
+    },
+    "rules_with_u_value": 1,
+    "irrecoverable_rules": 2,
+    "zero_cost_rules": [
+      "D10-GEO-001",
+      "D10-INST-001",
+      "D10-INST-002",
+      "D10-LAB-001",
+      "D10-LAB-002",
+      "D10-FRESH-002"
+    ],
+    "highest_value_rule": "D10-SUB-001",
+    "blocking_open_items": 0,
+    "time_sensitive_open_items": 3,
+    "by_decision_type": {
+      "PLANNING_GUIDANCE": 27,
+      "BLOCK": 2,
+      "SCHEDULED_REMINDER": 2,
+      "DATA_CAPTURE": 3,
+      "POLICY": 1
+    },
+    "reviewed_t1": 2,
+    "rules_with_trigger_expr": 4,
+    "rules_with_delivery_class": 4,
+    "immutable_rules": 0
+  },
+  "next_steps": [
+    "1. Call the Taluka Agriculture Officer at Kannad — drought-prone list status, current subsidy rate, application deadline. Time-sensitive and it gates the planting calendar (D10-OI-01, D10-OI-02)",
+    "2. Contact Halad Sanshodhan Yojana at Kasbe Digraj — five domains rest on it and one question there unblocks the Domain 11 yield ceiling",
+    "3. Identify and order seed now; the state seed market is small and late ordering forfeits the variety choice (D10-OI-08)",
+    "4. Build Domain 11 JSON inheriting the Domain 1 _schema block unchanged",
+    "5. Add the review_by and data-freshness concept to the Core layer, since any future institutional domain for another crop will need it"
+  ],
+  "author_note": "This file contains 32 rules because that is what the source document supports. Two structural findings distinguish it from the agronomy domains. First, every precondition the agronomy imposes — drip, water storage, shade — has a dedicated state scheme and Kannad sits in the priority region for all of them, which means the crop's economics with and without subsidy are entirely different propositions and Domain 13 must model both. Second, this is the only domain whose content expires: subsidy rates change by annual GR and roughly half of this file is stale within twelve months, so a review_by date and a freshness rule had to be introduced. That concept belongs in the Core layer rather than here, because any future institutional domain will need it. Selection is by lottery, so no rule promises the subsidy — only the window and the process. Status is PHASE_1_RAW_UNVALIDATED.",
+  "legal": {
+    "disclaimer_mr": "हा नियम-संच निर्णय-सहाय्य साधन आहे. अंतिम जबाबदारी शेतकऱ्याची. योजनांचे दर, पात्रता व मुदती दरवर्षी शासन निर्णयाने बदलतात — अर्जापूर्वी तालुका कृषी अधिकारी किंवा चालू शासन निर्णय तपासावा.",
+    "disclaimer_en": "This rule set is a decision-support tool. Final responsibility rests with the cultivator. Scheme rates, eligibility and deadlines change annually by government resolution; verify with the Taluka Agriculture Officer or the current GR before applying.",
+    "subsidy_note": "This rule set does not guarantee subsidy. Beneficiary selection is by lottery and work started before pre-sanction is not eligible.",
+    "regulatory_note": "CIB&RC label claims for ginger remain unverified. Every chemical must be checked against the current list before use.",
+    "data_note": "Farmer-attributable data handled under DPDP Act 2023; see Domain 12."
+  }
+}

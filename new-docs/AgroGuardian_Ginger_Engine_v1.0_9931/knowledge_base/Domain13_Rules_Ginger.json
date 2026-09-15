@@ -1,0 +1,3351 @@
+{
+  "_schema": {
+    "schema_version": "2.0",
+    "inherits_from": "Domain1_Rules_Ginger_v2.json",
+    "inheritance_note": "The full _schema block is defined in Domain 1 and is NOT repeated here. Units (per acre), stage codes G0-G5, source tiers A/B/C, source classes, priority scale, recoverability, severity and confidence bounds are inherited unchanged. Domain 2 to 12 additions are also assumed present. Only Domain 13 additions are declared below. This completes the ginger knowledge base.",
+    "additions": {
+      "rule_categories_domain_13": {
+        "CS": "cost structure",
+        "MI": "missing cost items",
+        "SD": "seed economics",
+        "SL": "seed storage loss",
+        "RP": "retain versus purchase",
+        "CP": "capital cost and subsidy",
+        "RV": "revenue and price",
+        "SRC": "source credibility",
+        "BE": "break-even",
+        "SN": "scenario matrix",
+        "CF": "cash flow",
+        "RR": "risk register",
+        "AD": "advisory presentation"
+      },
+      "new_farm_brain_fields": {
+        "total_cost_per_acre": "number",
+        "cost_land_prep": "number",
+        "cost_seed": "number",
+        "cost_seed_treatment_planting": "number",
+        "cost_fertiliser": "number",
+        "cost_mulch": "number",
+        "cost_micronutrients": "number",
+        "cost_plant_protection": "number",
+        "cost_drainage": "number",
+        "cost_earthing_labour": "number",
+        "cost_harvest_transport": "number",
+        "drip_capital_cost": "number",
+        "drip_annual_share": "number",
+        "drip_life_years": "number",
+        "seed_cost_per_kg": "number",
+        "seed_retained_or_purchased": "enum:[retained, purchased, mixed]",
+        "seed_opportunity_cost": "number",
+        "breakeven_price_per_quintal": "number",
+        "breakeven_yield_quintal": "number",
+        "net_return_per_acre": "number",
+        "cash_outflow_to_date": "number",
+        "cash_flow_gap_months": "number",
+        "intercrop_revenue": "number",
+        "crop_loan_taken": "boolean",
+        "interest_cost": "number",
+        "land_rent_or_opportunity": "number",
+        "mulch_material_price_per_tonne": "number",
+        "mulch_quantity_t_per_acre": "number"
+      },
+      "constants": {
+        "published_cost_per_acre": 115000,
+        "kannad_adjusted_cost_per_acre": 145000,
+        "seed_share_of_cost_pct": [
+          28,
+          35
+        ],
+        "seed_cost_per_kg_derived": 47,
+        "seed_storage_loss_pct": [
+          28,
+          40
+        ],
+        "breakeven_price_per_quintal": 1450,
+        "breakeven_yield_quintal_at_4000": 36,
+        "prevention_stack_cost": 24500,
+        "prevention_stack_share_pct": 17,
+        "avoidable_risk_value_min": 50000,
+        "avoidable_risk_value_max": 100000
+      },
+      "price_policy": {
+        "planning_price_per_quintal": 3500,
+        "expected_range": [
+          5000,
+          6000
+        ],
+        "crash_floor": 2000,
+        "upside": 10000,
+        "rule": "Never display a single price. Always show a range, always show the break-even, always run the crash case.",
+        "reason": "Published sources give 3,500 to 5,000 while APMC records show 6,000 to 17,500. The gap is explained by long-run versus current, farm gate versus market, grade, and transport and commission."
+      },
+      "source_credibility_policy": {
+        "cost_side": "usable — the itemised breakdown is detailed and internally consistent, and the seed share matches independent statements",
+        "yield_and_profit_side": "not usable — the same source gives three different profit figures and reports variety yields in tonnes per acre where institutional sources report tonnes per hectare",
+        "principle": "A source can be reliable for one part of its content and not another. Split it rather than accepting or rejecting the whole."
+      },
+      "decision_types": {
+        "AUTO_DECISION": {
+          "mr": "AI कधी व किती हे स्वतः ठरवतो",
+          "en": "engine computes the quantity or timing itself"
+        },
+        "SENSOR_ALERT": {
+          "mr": "sensor वर आधारित इशारा, कृती माणसाची",
+          "en": "sensor-triggered; the action is human work"
+        },
+        "SCHEDULED_REMINDER": {
+          "mr": "वेळापत्रकानुसार आठवण",
+          "en": "calendar or stage driven reminder"
+        },
+        "DIAGNOSTIC": {
+          "mr": "AI विचारतो, शेतकरी सांगतो",
+          "en": "engine asks, farmer answers, engine branches"
+        },
+        "DATA_CAPTURE": {
+          "mr": "नोंद किंवा मोजमाप मागतो",
+          "en": "engine requests a record or measurement"
+        },
+        "HUMAN_DECISION": {
+          "mr": "AI गणित दाखवतो, निर्णय माणसाचा",
+          "en": "engine presents arithmetic; person decides"
+        },
+        "BLOCK": {
+          "mr": "AI नाकारतो किंवा अडवतो",
+          "en": "engine refuses or blocks"
+        },
+        "PLANNING_GUIDANCE": {
+          "mr": "हंगामापूर्व निवड — शेतकरी ठरवतो",
+          "en": "pre-season choice the farmer makes"
+        },
+        "POLICY": {
+          "mr": "प्रॉडक्ट धोरण, शेतकऱ्यापर्यंत जात नाही",
+          "en": "product policy; never reaches a farmer"
+        }
+      },
+      "automation_levels": {
+        "full": "engine decides and acts without asking",
+        "assisted": "engine decides when, the person does the work or supplies the observation",
+        "advisory": "engine shows the arithmetic, the person chooses",
+        "refusal": "engine prevents an action",
+        "none": "internal policy, not farmer facing"
+      },
+      "trigger_dsl": {
+        "version": "dsl-1.0",
+        "logic": "three-valued: TRUE / FALSE / UNKNOWN",
+        "unknown_rule": "A rule whose trigger evaluates UNKNOWN must NOT fire and must NOT be treated as FALSE. Report reduced confidence and name the missing field (Domain 12 D12-COLD-001).",
+        "operators": [
+          "> >= < <= == !=",
+          "AND OR NOT",
+          "IN [..]",
+          "BETWEEN a AND b",
+          "IS NULL / IS NOT NULL / IS TRUE / IS FALSE",
+          "DURATION(field > x) > n HOURS",
+          "WITHIN(date_field, n DAYS)",
+          "MONTH IN [..]",
+          "STAGE IN [..]"
+        ],
+        "note": "Fields resolve against kb_farm_brain_fields. An undeclared name is a parse error, never a silent false."
+      },
+      "notification_policy": {
+        "version": "notify-1.0",
+        "why": "The season simulation issued 998 messages across 301 days before this existed. A trigger expresses a condition and a condition stays true; the advice is an event and must be delivered once.",
+        "classes": {
+          "ONCE_UNTIL_RESOLVED": "Standing precondition. Once, then a 7/21/45/90 day ladder with rising severity.",
+          "EVENT": "Transient physical event. Rising edge only; re-armed after it clears.",
+          "WINDOW": "Dated operation. Advance warning, the day, then 3 overdue reminders.",
+          "SILENT_GUARD": "Prevention rule. No message unless the prohibited action is attempted."
+        },
+        "result": "998 messages became 43 in the normal season, with no critical stage left silent for more than 15 days."
+      },
+      "override_policy": {
+        "version": "override-1.0",
+        "why": "The Tier-1 review worked but was offline. An agronomist looking at a live plot in August cannot edit JSON and wait for a deploy; by then the window has closed.",
+        "kinds": [
+          "THRESHOLD",
+          "DELIVERY",
+          "SEVERITY",
+          "DISABLE",
+          "PARAMETER"
+        ],
+        "scopes": [
+          "plot",
+          "cluster",
+          "global"
+        ],
+        "scope_precedence": "narrowest wins — plot over cluster over global",
+        "default_expiry_days": 240,
+        "max_expiry_days": 400,
+        "expiry_rationale": "A permanent change belongs in the knowledge base, not in the override table.",
+        "immutable_count": 16,
+        "immutable_rationale": "Some rules exist because getting them wrong causes harm no agronomic judgement outweighs. The API refuses them by code path, and a database trigger refuses them again if the application layer is bypassed.",
+        "audit": "Refused attempts are recorded, not discarded. An attempt to override an immutable rule is a governance signal."
+      }
+    }
+  },
+  "metadata": {
+    "domain": 13,
+    "domain_name": "Seed & Input Economics",
+    "domain_name_mr": "बेणे व निविष्ठा अर्थशास्त्र",
+    "crop": "ginger",
+    "crop_mr": "आले",
+    "region": "Kannad, Chhatrapati Sambhajinagar, Marathwada",
+    "source_document": "AgroGuardian_Ginger_Domain13_Seed_Input_Economics_RAW.docx",
+    "version": "1.0",
+    "status": "PHASE_1_RAW_UNVALIDATED",
+    "agronomist_validated": false,
+    "validation_note": "Most figures here are DERIVED from source values rather than sourced directly. The cost breakdown comes from a source whose yield and profit figures are internally contradictory and were not used. Drip capital cost, transport cost and actual labour days are all missing, so neither the with-subsidy nor the without-subsidy model can be completed.",
+    "total_rules": 39,
+    "rule_count_note": "32 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count. This completes the ginger knowledge base.",
+    "review_by": "2027-06-30",
+    "review_note": "Input prices, market prices and subsidy rates all change annually. The method is stable; the numbers are not.",
+    "purpose": "Establish what the crop actually costs at Kannad, what it must earn to break even, and where the real financial risk lies — so that the area decision, the seed decision and the prevention budget can be made on arithmetic rather than on the previous season's price.",
+    "key_innovations": [
+      "The biggest financial risk in this crop at Kannad is not the market — it is soft rot. The economics survive a price crash and survive losing half the yield, but a severe rot outbreak produces a loss of over a lakh per acre.",
+      "That reframes the prevention stack. Mulch, drainage, seed treatment and Trichoderma at about Rs 24,500 are not yield enhancements; they are an insurance premium of about 17 percent of cost against an exposure of Rs 1.8 to 3.2 lakh.",
+      "The standard published cost sheet omits three items that Kannad requires — mulch, drainage channels and micronutrient sprays. Mulch alone is about 10.5 percent of total cost and it delivers the best-quantified return in the knowledge base.",
+      "Seed rhizome loses 28 to 40 percent of its weight in storage. That cost is paid in kind rather than in cash so it appears in no cost sheet, and it directly challenges the assumption that retaining own seed is cheaper.",
+      "Break-even is about Rs 1,450 per quintal or about 36 quintal per acre — a safety margin of two to three times against realistic outcomes. That is the crop's genuine economic strength and it is rarely discussed, because the conversation is always about the lakhs of profit.",
+      "Four of the ten risks are entirely avoidable and all four depend on a timely reminder. Their combined value is Rs 50,000 to over a lakh per acre per season.",
+      "The source used for the cost breakdown gives three different profit figures in one document and repeats the tonnes-per-acre versus tonnes-per-hectare error independently. Its cost side was used and its yield side was not."
+    ],
+    "central_finding": {
+      "statement": "The economics are robust to price and fragile to disease.",
+      "evidence": [
+        {
+          "scenario": "price crashes to Rs 2,000 per quintal at 90 quintal yield",
+          "outcome": "still profitable"
+        },
+        {
+          "scenario": "yield halved to 50 quintal by rot at Rs 4,000",
+          "outcome": "still profitable"
+        },
+        {
+          "scenario": "yield down to 30 quintal by severe rot at Rs 5,000",
+          "outcome": "net return approximately zero"
+        },
+        {
+          "scenario": "yield down to 30 quintal at Rs 2,000",
+          "outcome": "loss of about Rs 85,000"
+        }
+      ],
+      "implication": "Every rupee of the prevention budget is better justified as insurance than as yield improvement, and the return ratio is roughly seven to thirteen times."
+    },
+    "primary_sources": [
+      "Shetkari Marg - Ale lagvad 2026 kharch, utpadan, bajarbhav ani napha, Parmeshwar Korde, June 2026 (TIER C) - full itemised per acre cost breakdown, seed rate and price, bed layout, fertigation schedule. COST SIDE ONLY; yield and profit figures are internally contradictory and were not used.",
+      "AgroWorld (TIER C) - seed storage loss 25 to 30 percent, 25 quintal reducing to 15 to 18 quintal",
+      "Agrowon - Dr. Jitendra Kadam, Kasbe Digraj (TIER A) - institutional variety figures, seed rate 25 quintal per hectare",
+      "News18 Marathi APMC 2026 (TIER B) - actual market prices and the grading spread",
+      "govtyojanamaharashtra.com (TIER B) - subsidy rates, via Domain 10",
+      "Agrowone (TIER C) - 222 raised beds per acre",
+      "Domains 1 to 12 (internal) - yield targets, u-values, technical requirements, and the three omitted cost items"
+    ],
+    "review_log": {
+      "tier_1_review_date": "2026-07-31",
+      "rules_reviewed": 9,
+      "rules_total": 39,
+      "note": "Rule-level status is authoritative. Domain status stays PHASE_1_RAW_UNVALIDATED until T3 and T4 are also reviewed and one season of field data exists."
+    }
+  },
+  "reference_data": {
+    "published_cost_structure": {
+      "source": "Shetkari Marg, June 2026",
+      "source_tier": "C",
+      "total_per_acre": 115000,
+      "items": [
+        {
+          "n": 1,
+          "item_en": "land preparation, ploughing and bed making",
+          "item_mr": "पूर्वमशागत, नांगरट व बेड मेकिंग",
+          "amount": 7000,
+          "share_pct": 6.1
+        },
+        {
+          "n": 2,
+          "item_en": "seed rhizome, 8 to 9 quintal",
+          "item_mr": "बेणे (८-९ क्विंटल)",
+          "amount": 40000,
+          "share_pct": 34.8
+        },
+        {
+          "n": 3,
+          "item_en": "seed treatment and planting labour",
+          "item_mr": "बेणे प्रक्रिया + लागवड मजुरी",
+          "amount": 9000,
+          "share_pct": 7.8
+        },
+        {
+          "n": 4,
+          "item_en": "fertiliser, FYM and fertigation inputs",
+          "item_mr": "रासायनिक खते, शेणखत, ठिबकची खते",
+          "amount": 20000,
+          "share_pct": 17.4
+        },
+        {
+          "n": 5,
+          "item_en": "pesticides, fungicides and spray labour",
+          "item_mr": "कीडनाशके, बुरशीनाशके, फवारणी मजुरी",
+          "amount": 8000,
+          "share_pct": 7.0
+        },
+        {
+          "n": 6,
+          "item_en": "earthing up labour",
+          "item_mr": "मोठी भर देणे मजूर",
+          "amount": 6000,
+          "share_pct": 5.2
+        },
+        {
+          "n": 7,
+          "item_en": "harvest, washing and transport",
+          "item_mr": "काढणी, धुणे, वाहतूक",
+          "amount": 25000,
+          "share_pct": 21.7
+        }
+      ],
+      "observations": [
+        "seed is the largest line at 34.8 percent",
+        "harvest and transport is second at 21.7 percent, which is larger than expected because ginger is heavy and the markets are far",
+        "labour across items 3, 6 and 7 is roughly 34 percent of total"
+      ]
+    },
+    "kannad_adjusted_cost": {
+      "total_per_acre": 142500,
+      "plus_drip_annual_share": [
+        4000,
+        20000
+      ],
+      "range_including_drip": [
+        145000,
+        162500
+      ],
+      "items": [
+        {
+          "item_en": "land preparation, beds and solarization",
+          "amount": 9000,
+          "basis": "raised from 7,000 — deeper ploughing, higher beds, solarization"
+        },
+        {
+          "item_en": "seed rhizome",
+          "amount": 40000,
+          "basis": "unchanged"
+        },
+        {
+          "item_en": "seed treatment and planting",
+          "amount": 9000,
+          "basis": "unchanged"
+        },
+        {
+          "item_en": "fertiliser and FYM",
+          "amount": 22000,
+          "basis": "raised from 20,000 — higher FYM on black soil"
+        },
+        {
+          "item_en": "mulch, three stages",
+          "amount": 15000,
+          "basis": "MISSING from the published sheet",
+          "added": true
+        },
+        {
+          "item_en": "micronutrient sprays, two",
+          "amount": 3500,
+          "basis": "MISSING from the published sheet",
+          "added": true
+        },
+        {
+          "item_en": "plant protection",
+          "amount": 8000,
+          "basis": "unchanged"
+        },
+        {
+          "item_en": "drainage channels",
+          "amount": 4000,
+          "basis": "MISSING from the published sheet",
+          "added": true
+        },
+        {
+          "item_en": "earthing up labour",
+          "amount": 6000,
+          "basis": "unchanged"
+        },
+        {
+          "item_en": "harvest, washing, grading and transport",
+          "amount": 30000,
+          "basis": "raised from 25,000 — markets are further away"
+        }
+      ],
+      "source_class": "DERIVED",
+      "not_included": [
+        "land rent or opportunity cost",
+        "own labour valued",
+        "interest on capital",
+        "drip capital where not subsidised"
+      ]
+    },
+    "missing_items_analysis": {
+      "count": 3,
+      "combined_value": 22500,
+      "share_of_kannad_cost_pct": 15.8,
+      "items": [
+        {
+          "item": "three-stage mulch",
+          "amount": 15000,
+          "share_pct": 10.5,
+          "required_by_domains": [
+            3,
+            6,
+            7
+          ],
+          "evidence": "soft rot below 5 percent against a district average of 20 to 30 percent",
+          "u_value": 0.2
+        },
+        {
+          "item": "drainage channels",
+          "amount": 4000,
+          "required_by_domains": [
+            2,
+            6,
+            7
+          ],
+          "evidence": "three levels required before planting; the third is most often omitted",
+          "u_value": 0.22
+        },
+        {
+          "item": "micronutrient sprays",
+          "amount": 3500,
+          "required_by_domains": [
+            2,
+            4
+          ],
+          "evidence": "foliar zinc gave 16.2 kg against 14.4 for soil application",
+          "u_value": 0.11
+        }
+      ],
+      "note": "Mulch is the single best-quantified preventive measure in the knowledge base and it is absent from the standard cost sheet. That absence is why it is also the operation most often skipped."
+    },
+    "seed_economics": {
+      "share_of_cost_pct": [
+        28,
+        35
+      ],
+      "rate_per_acre_quintal": [
+        8,
+        9
+      ],
+      "alternate_rate_statements": [
+        {
+          "source": "Shetkari Marg",
+          "rate": "8 to 9 quintal per acre"
+        },
+        {
+          "source": "other",
+          "rate": "800 to 1000 kg per acre"
+        },
+        {
+          "source": "Agrowon official Maharashtra",
+          "rate": "25 quintal per hectare, about 10 quintal per acre"
+        }
+      ],
+      "cost_total": 40000,
+      "cost_per_kg_derived": 47,
+      "derivation": "Rs 40,000 divided by 8.5 quintal equals about Rs 4,706 per quintal",
+      "price_relationship": "The seed price is close to the produce price, because seed is selected from marketable rhizome. So when the market price rises, next season's seed cost rises with it.",
+      "reconciliation_problem": {
+        "issue": "Reported seed rate and computed plant population do not agree",
+        "computation": "850 kg at 35 g per piece gives about 24,300 pieces per acre, roughly 60,000 per hectare",
+        "against": "computed broad ridge population of about 111,000 per hectare",
+        "discrepancy": "nearly double",
+        "possible_explanations": [
+          "actual rate is higher, closer to 15 to 20 quintal per acre",
+          "actual spacing is wider than assumed",
+          "pieces are lighter, closer to 20 g"
+        ],
+        "status": "FIELD",
+        "blocking": true,
+        "why_it_matters": "If the rate is double, the largest cost line doubles."
+      },
+      "quality_economics": {
+        "germination_untreated_pct": [
+          80,
+          83
+        ],
+        "germination_treated_pct": [
+          93,
+          98
+        ],
+        "difference_pct": 15,
+        "value_of_difference": "about 127 kg of seed equivalent, roughly Rs 6,000 on an 850 kg requirement",
+        "treatment_cost": [
+          2000,
+          3000
+        ],
+        "return": "at least two to one on germination alone, before counting disease prevention"
+      }
+    },
+    "storage_loss": {
+      "statement": "25 quintal per hectare is required at planting. By planting time the stored weight has fallen to 15 to 18 quintal depending on the storage method.",
+      "loss_pct": [
+        28,
+        40
+      ],
+      "corroboration": "A separate statement in the same source gives 25 to 30 percent loss for simple shade storage, so the range is internally consistent.",
+      "financial_effect": {
+        "needed_at_planting_kg": 850,
+        "must_store_kg": 1308,
+        "extra_kg": 458,
+        "extra_value_inr": 21500,
+        "as_share_of_seed_cost_pct": 54
+      },
+      "why_invisible": "The cost is paid in kind rather than in cash, so it appears in no cost sheet and never enters the retain-versus-purchase comparison.",
+      "true_seed_cost_if_retained": 61500,
+      "reduction_opportunity": {
+        "simple_shade_loss_pct": [
+          25,
+          30
+        ],
+        "pit_method_loss_pct": "FIELD — expected lower",
+        "saving_if_30_to_20_pct": "about 152 kg, roughly Rs 7,100",
+        "cost_of_pit_method": "digging, sand, a plank and thatch"
+      },
+      "measurement": "Two weighings settle it for this plot — one at storage, one at planting."
+    },
+    "retain_versus_purchase": {
+      "comparison": [
+        {
+          "factor": "cash outlay",
+          "retain": "zero",
+          "purchase": "Rs 40,000"
+        },
+        {
+          "factor": "opportunity cost",
+          "retain": "Rs 61,500 for 1,308 kg",
+          "purchase": "none"
+        },
+        {
+          "factor": "storage loss",
+          "retain": "28 to 40 percent, borne by the grower",
+          "purchase": "borne by the seller"
+        },
+        {
+          "factor": "storage cost and labour",
+          "retain": "pit, treatment, supervision",
+          "purchase": "none"
+        },
+        {
+          "factor": "disease risk",
+          "retain": "carries this field's condition forward",
+          "purchase": "seller's condition unknown"
+        },
+        {
+          "factor": "quality control",
+          "retain": "full",
+          "purchase": "limited"
+        },
+        {
+          "factor": "availability risk",
+          "retain": "none",
+          "purchase": "small state seed market"
+        }
+      ],
+      "price_dependence": {
+        "at_low_price_3000": {
+          "opportunity_cost": 39240,
+          "purchase_cost": "about 40,000 with seed price also low",
+          "verdict": "roughly equal; retaining slightly cheaper"
+        },
+        "at_high_price_10000": {
+          "opportunity_cost": 130800,
+          "verdict": "retaining is expensive; but seed purchase is also expensive that year"
+        }
+      },
+      "cyclical_note": "In a high-price year both options are expensive, which is part of what drives the ginger price cycle.",
+      "hard_rule": "If the field has a recorded rot or wilt outbreak within the persistence period, do not retain seed from it. The cost comparison does not apply — a cost advantage does not survive one introduction event, and the wilt bacterium persists in soil for many years.",
+      "first_season": "Purchase is unavoidable in season one, and it is also the opportunity to obtain the recommended variety."
+    },
+    "capital_costs": {
+      "items": [
+        {
+          "item": "drip system",
+          "cost": "FIELD",
+          "subsidy_pct": [
+            75,
+            80
+          ],
+          "farmer_share_pct": [
+            20,
+            25
+          ],
+          "blocking": true
+        },
+        {
+          "item": "farm pond with lining",
+          "cost": "FIELD",
+          "subsidy": "50 percent or Rs 75,000"
+        },
+        {
+          "item": "shadenet, optional",
+          "cost": "FIELD",
+          "subsidy": "Rs 1,00,000 ceiling",
+          "note": "probably disproportionate for a two-month shade requirement"
+        },
+        {
+          "item": "bed former",
+          "cost": "hired",
+          "subsidy": "none"
+        }
+      ],
+      "annual_share_method": "capital divided by useful life of about 5 to 7 years",
+      "subsidy_effect": "At 80 percent subsidy the farmer's annual share is about one fifth of the unsubsidised figure",
+      "critical_note": "Drip is a precondition rather than an option, so the cost is unavoidable. Subsidy changes who bears it, not whether it is incurred. And because selection is by lottery, both cases must be modelled.",
+      "first_season_burden": "Capital is spent before planting and revenue arrives eight months later, so the full burden falls in season one."
+    },
+    "revenue": {
+      "price_sources": [
+        {
+          "source": "Shetkari Marg 2026",
+          "range": [
+            3500,
+            5000
+          ],
+          "description": "average minimum price",
+          "tier": "C"
+        },
+        {
+          "source": "APMC records 2026",
+          "range": [
+            6000,
+            17500
+          ],
+          "description": "actual market observations",
+          "tier": "B"
+        },
+        {
+          "source": "APMC common range",
+          "range": [
+            10000,
+            16000
+          ],
+          "tier": "B"
+        }
+      ],
+      "conflict_multiple": "more than three times",
+      "explanations": [
+        {
+          "explanation": "long-run average versus current bullish market",
+          "weight": "high"
+        },
+        {
+          "explanation": "farm gate versus market price",
+          "weight": "high"
+        },
+        {
+          "explanation": "grading — the 2.7 times spread means low grade sells near Rs 6,000",
+          "weight": "high"
+        },
+        {
+          "explanation": "transport and commission deducted from the APMC figure",
+          "weight": "medium"
+        }
+      ],
+      "planning_usage": [
+        {
+          "purpose": "test whether costs are covered",
+          "price": 3500
+        },
+        {
+          "purpose": "expected return",
+          "price": [
+            5000,
+            6000
+          ]
+        },
+        {
+          "purpose": "worst case",
+          "price": 2000
+        },
+        {
+          "purpose": "upside",
+          "price": 10000
+        }
+      ],
+      "display_rule": "Never a single number. Always a range."
+    },
+    "source_contradictions": {
+      "profit_figures": [
+        {
+          "location": "introduction",
+          "yield": null,
+          "profit": "more than Rs 1.5 to 2 lakh"
+        },
+        {
+          "location": "main cost table",
+          "yield": "120 to 150 quintal",
+          "profit": 405000
+        },
+        {
+          "location": "FAQ",
+          "yield": "80 to 120 quintal",
+          "profit": "Rs 1.5 to 3 lakh"
+        }
+      ],
+      "assessment": "Three different figures in one document. The FAQ figures of 80 to 120 quintal and Rs 1.5 to 3 lakh align closely with the independently revised target of 90 to 110 quintal. The main table figures appear to be headline numbers.",
+      "variety_figures": {
+        "blog": [
+          {
+            "variety": "Mahim",
+            "duration_days": [
+              250,
+              270
+            ],
+            "yield": "12 to 15 t/acre"
+          },
+          {
+            "variety": "Varada",
+            "duration_days": [
+              240,
+              250
+            ],
+            "yield": "15 to 18 t/acre"
+          }
+        ],
+        "institutional": [
+          {
+            "variety": "Mahim",
+            "duration_days": 210,
+            "yield": "20 t/ha"
+          },
+          {
+            "variety": "Varada",
+            "duration_days": 200,
+            "yield": "22.3 t/ha"
+          }
+        ],
+        "error": "The blog reports in tonnes per ACRE what institutional sources report in tonnes per HECTARE — a 2.47 times difference. Varada at 15 to 18 t/acre would be 37 to 44 t/ha, roughly double any institutional record. Durations also disagree.",
+        "significance": "This is the same error made in Domain 1 version 2.0 and corrected in version 2.1. Finding it independently in a second source confirms the correction was right.",
+        "resolution": "Institutional figures used throughout."
+      },
+      "cost_side_assessment": "The itemised cost breakdown is detailed and internally consistent. Seed at 34.8 percent matches the independently stated 35 to 40 percent, and the derived seed price of about Rs 47 per kg is consistent with the produce price. The cost side was used; the yield and profit side was not.",
+      "method_principle": "A source can be reliable for one part of its content and not another. Split it rather than accepting or rejecting the whole."
+    },
+    "break_even": {
+      "cost_basis": 145000,
+      "breakeven_price_at_100_quintal": 1450,
+      "breakeven_price_per_kg": 14.5,
+      "breakeven_yield_at_4000": 36,
+      "breakeven_yield_tonnes_per_acre": 3.6,
+      "safety_margins": {
+        "price": {
+          "breakeven": 1450,
+          "realistic_range": [
+            3500,
+            16000
+          ],
+          "margin_multiple": [
+            2.4,
+            11
+          ]
+        },
+        "yield": {
+          "breakeven": 36,
+          "target_range": [
+            90,
+            110
+          ],
+          "margin_multiple": [
+            2.5,
+            3
+          ]
+        }
+      },
+      "interpretation": "Costs are covered even if the price collapses or the yield falls to a third of target. This is the crop's genuine economic strength and it is rarely discussed, because the conversation is always about the lakhs of profit rather than the floor.",
+      "combined_failure": {
+        "scenario": "price Rs 2,000 and yield 50 quintal from 50 percent rot",
+        "revenue": 100000,
+        "cost": 145000,
+        "loss": 45000,
+        "plausibility": "not remote — a price crash year is usually a year everyone planted, and dense planting also spreads disease"
+      },
+      "excluded_from_calculation": [
+        "land rent or opportunity cost",
+        "own labour valued",
+        "interest on capital",
+        "drip capital share where unsubsidised"
+      ],
+      "excluded_note": "Including these raises the break-even point. The figures above are a floor, not a full economic cost."
+    },
+    "scenario_matrix": {
+      "cost_assumed": 145000,
+      "unit": "net return in rupees per acre",
+      "rows": [
+        {
+          "yield_quintal": 30,
+          "label": "severe rot",
+          "at_2000": -85000,
+          "at_3500": -40000,
+          "at_5000": 5000,
+          "at_8000": 95000,
+          "at_12000": 215000
+        },
+        {
+          "yield_quintal": 50,
+          "label": "50 percent rot",
+          "at_2000": -45000,
+          "at_3500": 30000,
+          "at_5000": 105000,
+          "at_8000": 255000,
+          "at_12000": 455000
+        },
+        {
+          "yield_quintal": 70,
+          "label": "below target",
+          "at_2000": -5000,
+          "at_3500": 100000,
+          "at_5000": 205000,
+          "at_8000": 415000,
+          "at_12000": 695000
+        },
+        {
+          "yield_quintal": 90,
+          "label": "target",
+          "at_2000": 35000,
+          "at_3500": 170000,
+          "at_5000": 305000,
+          "at_8000": 575000,
+          "at_12000": 935000
+        },
+        {
+          "yield_quintal": 110,
+          "label": "stretch",
+          "at_2000": 75000,
+          "at_3500": 240000,
+          "at_5000": 405000,
+          "at_8000": 735000,
+          "at_12000": 1175000
+        }
+      ],
+      "readings": [
+        "Loss occurs only in the top-left corner — yield below about 50 quintal combined with a low price.",
+        "The yield axis matters more than the price axis. Moving from 50 to 90 quintal at Rs 3,500 changes the return from Rs 30,000 to Rs 1.7 lakh; moving the price from Rs 3,500 to Rs 5,000 at 50 quintal changes it from Rs 30,000 to Rs 1.05 lakh.",
+        "The 30 quintal row is the important one. That is roughly 70 percent crop loss, and even at Rs 5,000 the return is near zero. One rot event can erase the season regardless of price."
+      ]
+    },
+    "prevention_economics": {
+      "items": [
+        {
+          "item": "three-stage mulch",
+          "cost": 15000,
+          "prevents": "soft rot 20 to 30 percent reduced to below 5 percent"
+        },
+        {
+          "item": "drainage channels",
+          "cost": 4000,
+          "prevents": "waterlogging"
+        },
+        {
+          "item": "seed treatment",
+          "cost": 2500,
+          "prevents": "germination loss and pathogen introduction"
+        },
+        {
+          "item": "Trichoderma and neem cake",
+          "cost": 3000,
+          "prevents": "rot and nematodes"
+        }
+      ],
+      "total_cost": 24500,
+      "share_of_total_cost_pct": 17,
+      "exposure_protected": {
+        "yield_at_risk_pct": [
+          50,
+          90
+        ],
+        "value_at_90_quintal_and_4000": [
+          180000,
+          320000
+        ]
+      },
+      "return_ratio": [
+        7,
+        13
+      ],
+      "comparison": "No fertiliser, growth regulator or variety choice in this knowledge base approaches this ratio."
+    },
+    "cash_flow": {
+      "timeline": [
+        {
+          "dap": -180,
+          "item": "subsidy application",
+          "outflow": 0,
+          "cumulative": 0
+        },
+        {
+          "dap": -90,
+          "item": "drip, farmer's share",
+          "outflow": "FIELD",
+          "cumulative": "FIELD"
+        },
+        {
+          "dap": -60,
+          "item": "land preparation",
+          "outflow": 9000,
+          "cumulative": 9000
+        },
+        {
+          "dap": -30,
+          "item": "FYM and basal fertiliser",
+          "outflow": 15000,
+          "cumulative": 24000
+        },
+        {
+          "dap": -7,
+          "item": "seed rhizome",
+          "outflow": 40000,
+          "cumulative": 64000
+        },
+        {
+          "dap": 0,
+          "item": "planting and seed treatment",
+          "outflow": 9000,
+          "cumulative": 73000
+        },
+        {
+          "dap": 0,
+          "item": "mulch stage 1",
+          "outflow": 8000,
+          "cumulative": 81000
+        },
+        {
+          "dap": 60,
+          "item": "fertiliser and spray",
+          "outflow": 8000,
+          "cumulative": 89000
+        },
+        {
+          "dap": 82,
+          "item": "earthing up and mulch stage 2",
+          "outflow": 11000,
+          "cumulative": 100000
+        },
+        {
+          "dap": 120,
+          "item": "fertiliser and mulch stage 3",
+          "outflow": 9000,
+          "cumulative": 109000
+        },
+        {
+          "dap": 165,
+          "item": "fertiliser and spray",
+          "outflow": 6000,
+          "cumulative": 115000
+        },
+        {
+          "dap": 230,
+          "item": "harvest and transport",
+          "outflow": 30000,
+          "cumulative": 145000
+        },
+        {
+          "dap": 235,
+          "item": "sale",
+          "inflow": "Rs 3 to 4 lakh",
+          "cumulative": null
+        }
+      ],
+      "front_loading": {
+        "spent_by_day_zero": 73000,
+        "share_pct": 50,
+        "note": "About half the total cost is spent before the crop emerges, and 44 percent falls in the week around planting."
+      },
+      "gap_months": 8,
+      "mitigations": [
+        {
+          "option": "marigold or coriander intercrop",
+          "effect": "cash at 2 to 3 months against ginger's 8",
+          "note": "marigold also suppresses nematodes and attracts beneficial insects"
+        },
+        {
+          "option": "crop loan",
+          "effect": "smooths the gap",
+          "cost": "interest; scale of finance unverified"
+        },
+        {
+          "option": "split the area",
+          "effect": "part ginger, part a shorter crop"
+        },
+        {
+          "option": "early green harvest at 6 months",
+          "effect": "partial cash earlier at lower weight"
+        }
+      ],
+      "assessment": "This is ginger's largest practical challenge at Kannad, and it is financial rather than agronomic."
+    },
+    "risk_register": [
+      {
+        "n": 1,
+        "risk": "soft rot or wilt",
+        "probability": "high on black soil",
+        "impact_inr": [
+          180000,
+          320000
+        ],
+        "avoidable": false,
+        "mitigation": "mulch, drainage, seed treatment, Mahima variety"
+      },
+      {
+        "n": 2,
+        "risk": "water exhaustion October to February",
+        "probability": "medium to high",
+        "impact_inr": [
+          200000,
+          300000
+        ],
+        "avoidable": false,
+        "mitigation": "farm pond, limit area"
+      },
+      {
+        "n": 3,
+        "risk": "price collapse",
+        "probability": "medium, cyclical",
+        "impact_inr": [
+          100000,
+          200000
+        ],
+        "avoidable": false,
+        "mitigation": "dry ginger route, grading, split consignment"
+      },
+      {
+        "n": 4,
+        "risk": "seed unavailable in the chosen variety",
+        "probability": "medium, small market",
+        "impact": "delay or inferior seed",
+        "avoidable": true,
+        "mitigation": "order five months ahead"
+      },
+      {
+        "n": 5,
+        "risk": "storage loss above expectation",
+        "probability": "medium",
+        "impact_inr": [
+          10000,
+          20000
+        ],
+        "avoidable": false,
+        "mitigation": "pit storage method"
+      },
+      {
+        "n": 6,
+        "risk": "subsidy not received, lottery",
+        "probability": "medium",
+        "impact": "capital burden",
+        "avoidable": false,
+        "mitigation": "model both cases; reduce area if not selected"
+      },
+      {
+        "n": 7,
+        "risk": "late planting after 7 June",
+        "probability": "avoidable",
+        "impact": "rhizome fly and rot",
+        "avoidable": true,
+        "mitigation": "hard deadline rule",
+        "u_value": 0.2
+      },
+      {
+        "n": 8,
+        "risk": "earthing up missed",
+        "probability": "avoidable",
+        "impact_inr": [
+          30000,
+          50000
+        ],
+        "avoidable": true,
+        "mitigation": "timely reminder plus labour arranged at 60 DAP",
+        "u_value": 0.125
+      },
+      {
+        "n": 9,
+        "risk": "labour unavailable in August",
+        "probability": "medium",
+        "impact": "earthing up delayed",
+        "avoidable": false,
+        "mitigation": "arrange from 60 DAP"
+      },
+      {
+        "n": 10,
+        "risk": "produce not graded before sale",
+        "probability": "avoidable",
+        "impact": "2.7 times price spread",
+        "avoidable": true,
+        "mitigation": "wash and sort; sell grades separately"
+      }
+    ],
+    "avoidable_risks": {
+      "count": 4,
+      "items": [
+        "late planting",
+        "earthing up missed",
+        "produce not graded",
+        "seed ordered late"
+      ],
+      "cost_to_avoid": {
+        "late_planting": 0,
+        "earthing_up": 6000,
+        "grading": "labour",
+        "seed_ordering": 0
+      },
+      "combined_value_inr": [
+        50000,
+        100000
+      ],
+      "common_dependency": "all four depend on a timely reminder",
+      "statement": "The machine does not make fertiliser, bring rain or kill pathogens. It reminds at the right time, and this is what that is worth per acre per season."
+    }
+  },
+  "rules": [
+    {
+      "rule_id": "D13-CS-001",
+      "category": "CS",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "A cost estimate is being prepared for a Kannad plot",
+        "marathi": "Kannad मधील शेतासाठी खर्चाचा अंदाज तयार केला जात आहे"
+      },
+      "action": {
+        "english": "Use about Rs 1,45,000 per acre, not the published Rs 1,15,000. The standard sheet omits mulch, drainage channels and micronutrient sprays, which together are about Rs 22,500 and are all required here.",
+        "marathi": "एकरी सुमारे १,४५,००० रुपये धरा, प्रकाशित १,१५,००० नव्हे. प्रमाणित ताळेबंदात आच्छादन, निचरा चर आणि सूक्ष्म अन्नद्रव्य फवारणी या तीन बाबी नाहीत — त्या मिळून सुमारे २२,५०० रुपये आहेत आणि इथे तिन्ही आवश्यक आहेत."
+      },
+      "reasoning": {
+        "agronomic_basis": "Mulch is required by Domains 3, 6 and 7 and carries the best-quantified preventive value in the knowledge base. Drainage channels are a precondition on vertisol. Micronutrient sprays are needed because free lime locks up zinc and iron. None appears in the published sheet.",
+        "yield_impact": "None directly. An understated budget leads to items being dropped mid-season, and the dropped items are usually the ones that were not budgeted.",
+        "confidence_score": 0.75,
+        "source_tier": "C",
+        "references": [
+          "Shetkari Marg cost breakdown",
+          "Domains 2, 3, 4, 6 and 7 requirements"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_10_institutional"
+        ],
+        "depends_on": [
+          "domain_2_soil",
+          "domain_3_water",
+          "domain_6_disease"
+        ]
+      },
+      "farm_brain_schema": [
+        "total_cost_per_acre",
+        "cost_mulch",
+        "cost_drainage",
+        "cost_micronutrients"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The omissions are not accidental. The published sheet describes a belt where mulch is optional and drainage is natural. Here neither is true, and the difference is about 20 percent of the budget.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-MI-001",
+      "category": "MI",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Budget is being finalised AND cost_mulch is zero or absent",
+        "marathi": "अंदाजपत्रक अंतिम केले जात आहे आणि आच्छादनाची तरतूद नाही"
+      },
+      "action": {
+        "english": "Add a mulch line to the budget. Compute it from area, local material price and the three-stage quantity rather than using a fixed figure — about Rs 15,000 per acre is a working default for this belt where sugarcane trash and wheat straw are available. It is roughly 10.5 percent of total cost and it carries the best-quantified return in the knowledge base: soft rot below 5 percent against a district average of 20 to 30 percent.",
+        "marathi": "अंदाजपत्रकात आच्छादनाची तरतूद जोडा. ठराविक आकडा न वापरता क्षेत्र, स्थानिक साहित्याचा भाव आणि तीन टप्प्यांचे प्रमाण यावरून ती काढा — उसाचे पाचट व गव्हाचे काड उपलब्ध असलेल्या या भागासाठी एकरी सुमारे १५,००० रुपये हा कामचलाऊ अंदाज आहे. तो एकूण खर्चाच्या सुमारे १०.५% आहे आणि सर्वात चांगला मोजलेला परतावा देतो — कंदकूज ५% पेक्षा कमी, तर जिल्हा सरासरी २० ते ३०%."
+      },
+      "reasoning": {
+        "agronomic_basis": "Mulch appears in five domains — water, disease, weeds, temperature and organic carbon. Its documented effect on soft rot incidence is the strongest single number in the preventive stack, and soft rot is the largest loss factor in the crop. EXPERT AMENDMENT: the mulch provision must be computed from area, local material price and location rather than held at a fixed rupee figure.",
+        "yield_impact": "u = 0.20. On 113 quintal at Rs 4,000 that is about Rs 90,400 against a cost of Rs 15,000.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Organic Mandya field records",
+          "Domain 6 mulch rule",
+          "Tier-1 expert review, 2026-07-31"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_6_disease",
+          "domain_8_operations"
+        ]
+      },
+      "farm_brain_schema": [
+        "cost_mulch",
+        "total_cost_per_acre",
+        "mulch_stage_1_done",
+        "mulch_material_price_per_tonne",
+        "mulch_quantity_t_per_acre"
+      ],
+      "u_value": 0.2,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Absent from the cost sheet is why it is also absent from the field. An unbudgeted operation is the first one dropped when money is tight, and this is the one that should never be.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "amended",
+        "comment_mr": "आच्छादनासाठी ₹१५,००० ही तरतूद उपयुक्त आहे, पण ती fixed न ठेवता क्षेत्र/किंमत/स्थानानुसार dynamic करावी.",
+        "superseded": {
+          "trigger_en": "Budget is being finalised AND cost_mulch is zero or absent",
+          "action_en": "Add about Rs 15,000 for three-stage mulch. It is 10.5 percent of total cost and it carries the best-quantified return in the knowledge base — soft rot below 5 percent against a district average of 20 to 30 percent.",
+          "severity": "yellow",
+          "confidence_score": 0.8,
+          "source_class": "DERIVED",
+          "figure": "cost_mulch fixed at Rs 15,000 per acre",
+          "author_reasoning": "Single figure added to the budget because the published cost sheet omits mulch entirely."
+        }
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-MI-002",
+      "category": "MI",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Budget being finalised AND drainage or micronutrient provision is absent",
+        "marathi": "अंदाजपत्रकात निचरा चर किंवा सूक्ष्म अन्नद्रव्यांची तरतूद नाही"
+      },
+      "action": {
+        "english": "Add about Rs 4,000 for drainage channels and Rs 3,500 for two micronutrient sprays. Both are preconditions here rather than enhancements.",
+        "marathi": "निचरा चरांसाठी सुमारे ४,००० आणि सूक्ष्म अन्नद्रव्यांच्या दोन फवारण्यांसाठी ३,५०० रुपयांची तरतूद करा. इथे या दोन्ही सुधारणा नाहीत, पूर्वअटी आहेत."
+      },
+      "reasoning": {
+        "agronomic_basis": "Three drainage levels are required before planting on vertisol, and the third — the outlet channel — is the one most often omitted. Micronutrient sprays are needed because free lime locks up zinc and iron, and foliar delivery beat soil application by 12.5 percent in trial.",
+        "yield_impact": "Drainage carries u = 0.22 and micronutrients u = 0.11.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Domain 2 drainage levels",
+          "Domain 4 micronutrient schedule"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil",
+          "domain_4_nutrient"
+        ],
+        "depends_on": [
+          "domain_2_soil",
+          "domain_4_nutrient"
+        ]
+      },
+      "farm_brain_schema": [
+        "cost_drainage",
+        "cost_micronutrients",
+        "drainage_levels_present",
+        "micronutrient_spray_1_done"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Together with mulch these three are about 15.8 percent of the Kannad budget and all three are missing from the published sheet. Any cost estimate copied from a general source will be short by roughly that amount.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-SD-001",
+      "category": "SD",
+      "priority": 5,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Cost planning is being explained",
+        "marathi": "खर्चाचे नियोजन समजावून सांगायचे आहे"
+      },
+      "action": {
+        "english": "State that seed is the largest single cost at 28 to 35 percent, about Rs 40,000 per acre at roughly Rs 47 per kg. Every seed decision — variety, source, rate, treatment, storage — is therefore also a cost decision.",
+        "marathi": "बेणे ही सर्वात मोठी खर्च रेषा आहे — एकूण खर्चाच्या २८ ते ३५%, एकरी सुमारे ४०,००० रुपये, प्रति किलो सुमारे ४७ रुपये. म्हणून बेण्याचा प्रत्येक निर्णय — जात, स्रोत, प्रमाण, प्रक्रिया, साठवण — हा खर्चाचाही निर्णय आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "At 34.8 percent of the published breakdown, seed exceeds fertiliser, plant protection and land preparation combined. It is also spent before the season starts, which makes it unrecoverable if the crop fails.",
+        "yield_impact": "None directly. Frames why the seed rules across Domains 1, 6, 8 and 10 carry the priority they do.",
+        "confidence_score": 0.8,
+        "source_tier": "C",
+        "references": [
+          "Shetkari Marg cost breakdown",
+          "Core C13"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_8_operations"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "cost_seed",
+        "seed_cost_per_kg",
+        "total_cost_per_acre",
+        "seed_at_planting_kg"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "This is why Core C13 exists as a separate layer for ginger and did not for sugarcane. In sugarcane, seed is not the dominant cost; here it is.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-SD-002",
+      "category": "SD",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G0",
+      "trigger": {
+        "english": "Seed quantity is being estimated for a budget",
+        "marathi": "अंदाजपत्रकासाठी बेण्याचे प्रमाण ठरवले जात आहे",
+        "expr": "cost_seed IS NOT NULL AND (plants_per_acre IS NULL OR seed_piece_weight_g IS NULL)",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "cost_seed": 40000
+            },
+            "expect": "TRUE",
+            "label": "गणिताचा आधार नाही"
+          },
+          {
+            "context": {
+              "cost_seed": 40000,
+              "plants_per_acre": 24300,
+              "seed_piece_weight_g": 35
+            },
+            "expect": "FALSE",
+            "label": "गणित पूर्ण"
+          }
+        ]
+      },
+      "action": {
+        "english": "Compute it from area, spacing and piece weight and show the working. Do not use a rule of thumb. The reported rate and the computed plant population differ by nearly a factor of two, and this is the largest cost line.",
+        "marathi": "क्षेत्र, अंतर आणि तुकड्याचे वजन यांवरून गणित करून दाखवा — ठोकताळ्याने सांगू नका. नोंदवलेला दर आणि गणिताने काढलेली रोप संख्या यांत जवळपास दुप्पट फरक आहे, आणि हीच सर्वात मोठी खर्च रेषा आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "850 kg at 35 g per piece gives about 24,300 pieces per acre, roughly 60,000 per hectare, against a computed broad ridge population of about 111,000. Either the rate is higher, the spacing is wider, or the pieces are lighter. Guessing would put a wrong number into the biggest line of the budget.",
+        "yield_impact": "If the rate is double, the largest cost line doubles and the whole economic case changes.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Domain 8 plant population computation",
+          "Shetkari Marg seed rate"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": [
+          "domain_8_operations"
+        ]
+      },
+      "farm_brain_schema": [
+        "seed_at_planting_kg",
+        "seed_piece_weight_g",
+        "plants_per_acre",
+        "cost_seed",
+        "area_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Flagged as blocking rather than resolved, because the sources genuinely disagree. Counting plants and weighing pieces in season one settles it, and both measurements take an afternoon.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "क्षेत्र, अंतर आणि तुकड्याचे वजन यावरून गणिताने काढणे योग्य; अंदाज नको."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-SD-003",
+      "category": "SD",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Seed treatment cost is being questioned",
+        "marathi": "बेणे प्रक्रियेचा खर्च योग्य आहे का असा प्रश्न"
+      },
+      "action": {
+        "english": "Show the germination arithmetic. Untreated germination is 80 to 83 percent against 93 to 98 treated, a 15 percent difference worth about Rs 6,000 on an 850 kg requirement, against a treatment cost of Rs 2,000 to 3,000. The disease prevention value is separate and larger.",
+        "marathi": "उगवणीचे गणित दाखवा. प्रक्रिया न केलेले बेणे ८० ते ८३% उगवते, प्रक्रिया केलेले ९३ ते ९८%. १५% फरक म्हणजे ८५० किलोवर सुमारे ६,००० रुपयांचे बेणे, आणि प्रक्रियेचा खर्च २,००० ते ३,००० रुपये. रोग प्रतिबंधाचे मूल्य यापेक्षा वेगळे आणि मोठे आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "The return is at least two to one on germination alone. Adding the disease prevention value — seed rhizome is the primary introduction route for both soft rot and bacterial wilt — makes it substantially higher.",
+        "yield_impact": "u = 0.135 on establishment, which is a hard ceiling for the season.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Springer soft rot management study germination figures",
+          "Domain 6 seed treatment rule"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_6_disease"
+        ]
+      },
+      "farm_brain_schema": [
+        "cost_seed_treatment_planting",
+        "establishment_pct",
+        "seed_at_planting_kg"
+      ],
+      "u_value": 0.135,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "One of the clearest cost-benefit cases in the knowledge base, and it is arithmetic rather than judgement. The germination difference alone repays the treatment twice over.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-SL-001",
+      "category": "SL",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Seed is being retained and stored",
+        "marathi": "बेणे राखून साठवले जात आहे"
+      },
+      "action": {
+        "english": "Warn that 28 to 40 percent of the weight will be lost by planting. To have 850 kg at planting, store about 1,308 kg. That extra 458 kg is worth about Rs 21,500 — over half the seed cost again, paid in kind rather than cash.",
+        "marathi": "साठवणीत वजन २८ ते ४०% घटते. लागवडीच्या वेळी ८५० किलो हवे असल्यास आत्ता सुमारे १,३०८ किलो साठवावे लागेल. ते अतिरिक्त ४५८ किलो म्हणजे सुमारे २१,५०० रुपये — बेण्याच्या खर्चाच्या निम्म्याहून जास्त, आणि तो रोखीत नव्हे तर मालाच्या रूपात जातो."
+      },
+      "reasoning": {
+        "agronomic_basis": "The source states 25 quintal per hectare is needed at planting but the stored weight falls to 15 to 18 quintal. A separate statement gives 25 to 30 percent for simple shade storage, so the range is internally consistent.",
+        "yield_impact": "None on yield. It is a cost of about half the seed line again that appears in no cost sheet.",
+        "confidence_score": 0.78,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld seed storage",
+          "Domain 8 storage rule"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_8_operations"
+        ],
+        "depends_on": [
+          "domain_8_operations"
+        ]
+      },
+      "farm_brain_schema": [
+        "seed_stored_kg",
+        "seed_at_planting_kg",
+        "seed_storage_loss_pct",
+        "seed_opportunity_cost"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "Invisible because it is paid in kind. That is exactly why it never enters the retain-versus-purchase comparison and why retaining own seed feels cheaper than it is.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-SL-002",
+      "category": "SL",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G5",
+      "trigger": {
+        "english": "Storage method is being chosen",
+        "marathi": "साठवणीची पद्धत ठरवली जात आहे"
+      },
+      "action": {
+        "english": "Use the pit method rather than a shade heap. Reducing loss from 30 to 20 percent saves about 152 kg, roughly Rs 7,100, against a cost of digging, sand, a plank and thatch.",
+        "marathi": "सावलीत रचून ठेवण्याऐवजी खड्डा पद्धत वापरा. घट ३०% वरून २०% आणल्यास सुमारे १५२ किलो वाचते — म्हणजे सुमारे ७,१०० रुपये — आणि खर्च फक्त खोदणे, वाळू, फळी आणि गवताचे छप्पर."
+      },
+      "reasoning": {
+        "agronomic_basis": "Simple shade storage loses 25 to 30 percent. The pit method controls temperature and humidity through plaster, sand layering and an air hole, and the source explicitly warns against closed rooms of tin, cement or tile.",
+        "yield_impact": "None. A direct saving on the largest input.",
+        "confidence_score": 0.72,
+        "source_tier": "C",
+        "references": [
+          "AgroWorld pit storage detail"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_8_operations"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "seed_storage_method",
+        "seed_storage_loss_pct",
+        "seed_stored_kg"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "The saving is a guess until measured. Two weighings — one at storage and one at planting — settle the actual loss for this plot and this method.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-SL-003",
+      "category": "SL",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Seed is put into storage",
+        "marathi": "बेणे साठवणीत ठेवले"
+      },
+      "action": {
+        "english": "Weigh it now and weigh it again at planting. Two numbers settle the storage loss for this plot, and the figure feeds directly into the retain-versus-purchase decision every season after.",
+        "marathi": "आत्ता वजन करा आणि लागवडीच्या वेळी पुन्हा करा. दोनच आकडे या शेतासाठी साठवण घट निश्चित करतात, आणि तो आकडा पुढील प्रत्येक हंगामात 'राखावे की विकत घ्यावे' या निर्णयात थेट वापरला जातो."
+      },
+      "reasoning": {
+        "agronomic_basis": "The published range of 28 to 40 percent is wide, and the difference between the two ends is about Rs 10,000 per acre. Only measurement narrows it, and it costs a set of scales and two entries.",
+        "yield_impact": "None. Converts a wide assumption into a measured figure.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "Domain 13 storage loss measurement",
+          "Domain 12 minimum records"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "seed_stored_kg",
+        "seed_at_planting_kg",
+        "seed_storage_loss_pct",
+        "seed_storage_method"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Marked irrecoverable because the storage weighing has to happen in December when the next crop is nobody's concern. Missing it means another year of using a published range instead of a local figure.",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-RP-001",
+      "category": "RP",
+      "priority": 5,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "The retain versus purchase decision is being made",
+        "marathi": "बेणे राखावे की विकत घ्यावे हा निर्णय घ्यायचा आहे"
+      },
+      "action": {
+        "english": "Include the opportunity cost. Retaining 1,308 kg is not free — at Rs 47 per kg it is about Rs 61,500 of produce not sold. Compare that against the purchase cost of about Rs 40,000, not against zero.",
+        "marathi": "संधी-खर्च धरा. १,३०८ किलो बेणे राखणे फुकट नाही — प्रति किलो ४७ रुपये दराने ते सुमारे ६१,५०० रुपयांचा न विकलेला माल आहे. त्याची तुलना सुमारे ४०,००० रुपयांच्या खरेदी खर्चाशी करा, शून्याशी नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "The comparison is normally made between a cash outlay and nothing, which makes retention look free. Including the foregone sale plus the storage loss makes the true retained cost about Rs 61,500 rather than zero.",
+        "yield_impact": "None. Corrects a systematically wrong comparison.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Core C13.5",
+          "Domain 13 storage loss"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "seed_retained_or_purchased",
+        "seed_opportunity_cost",
+        "cost_seed",
+        "sale_price_per_quintal"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The answer depends on the price. At a low price the two are roughly equal; at a high price retention is expensive — but so is purchase, because seed is priced off the produce market.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-RP-002",
+      "category": "RP",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": "G0",
+      "trigger": {
+        "english": "Seed retention proposed AND field_history_rot or field_history_wilt is true within the persistence period",
+        "marathi": "बेणे राखण्याचा प्रस्ताव आणि या शेतावर कूज किंवा मर रोगाची नोंद आहे",
+        "expr": "seed_retained_or_purchased == 'retained' AND (field_history_rot IS TRUE OR field_history_wilt IS TRUE)",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Arithmetic is overruled by field history.",
+        "golden_tests": [
+          {
+            "context": {
+              "seed_retained_or_purchased": "retained",
+              "field_history_wilt": true
+            },
+            "expect": "TRUE",
+            "label": "मर रोगाचा इतिहास — बेणे राखू नका"
+          },
+          {
+            "context": {
+              "seed_retained_or_purchased": "retained",
+              "field_history_wilt": false,
+              "field_history_rot": false
+            },
+            "expect": "FALSE",
+            "label": "इतिहास स्वच्छ"
+          },
+          {
+            "context": {
+              "seed_retained_or_purchased": "purchased",
+              "field_history_wilt": true
+            },
+            "expect": "FALSE",
+            "label": "विकत घेतले — लागू नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "BLOCK. Do not retain seed from this field regardless of the cost comparison. A cost advantage does not survive one introduction event, and the wilt bacterium persists in soil for many years.",
+        "marathi": "थांबा. खर्चाची तुलना काहीही सांगो, या शेतातून बेणे राखू नये. एका रोग-प्रवेशापुढे खर्चाचा फायदा टिकत नाही, आणि मर रोगाचा जिवाणू जमिनीत अनेक वर्षे टिकतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "Seed rhizome is the primary introduction route for both soft rot and bacterial wilt. Retaining from an infected field carries the pathogen forward, and the resulting exposure is Rs 1.8 to 3.2 lakh against a seed saving of at most Rs 40,000.",
+        "yield_impact": "Prevents exposure to u = 0.50 to 0.70 in the following season.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Core C13.5",
+          "Domain 6 bacterial wilt persistence",
+          "Domain 1 seed retention rule"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_6_disease"
+        ]
+      },
+      "farm_brain_schema": [
+        "seed_retained_or_purchased",
+        "field_history_rot",
+        "field_history_wilt",
+        "rot_incidence_pct"
+      ],
+      "u_value": 0.5,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "This is the one place in the domain where the arithmetic is overruled. The economic comparison is not run at all when the field history says no.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-RP-003",
+      "category": "RP",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "First season AND no own seed exists",
+        "marathi": "पहिला हंगाम, स्वतःचे बेणे नाही",
+        "expr": "dap BETWEEN 178 AND 184 AND seed_retained_or_purchased IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Seed selection is a mid-season observation task disguised as a post-harvest one.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 180
+            },
+            "expect": "TRUE",
+            "label": "बेणे खुणावा"
+          },
+          {
+            "context": {
+              "dap": 180,
+              "seed_retained_or_purchased": "retained"
+            },
+            "expect": "FALSE",
+            "label": "ठरले"
+          }
+        ]
+      },
+      "action": {
+        "english": "Purchase is unavoidable, and it is also the opportunity to obtain the recommended variety. From the second season, mark healthy plants at 180 DAP while the crop is still green and run the comparison then.",
+        "marathi": "पहिल्या हंगामात खरेदी अपरिहार्य आहे — आणि तीच शिफारसीत जात मिळवण्याची संधी आहे. दुसऱ्या हंगामापासून १८० दिवसांना पीक हिरवे असतानाच निरोगी रोपे खुणावून ठेवा, आणि मग तुलना करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Seed selection is a mid-season observation task disguised as a post-harvest one — vigour and disease freedom are only visible on the standing crop. So the decision to retain has to be taken at 180 DAP, not at harvest.",
+        "yield_impact": "Affects the following season's seed quality and cost.",
+        "confidence_score": 0.78,
+        "source_tier": "A",
+        "references": [
+          "Domain 1 seed selection reminder",
+          "Domain 9 post-harvest seed separation"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle"
+        ]
+      },
+      "farm_brain_schema": [
+        "seed_retained_or_purchased",
+        "seed_supplier_identified",
+        "variety",
+        "dap"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-D",
+      "kannad_note": "The first-season purchase is not a cost to minimise. It is how the Mahima or Varada choice actually happens, and that choice carries u = 0.138.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "WINDOW"
+    },
+    {
+      "rule_id": "D13-CP-001",
+      "category": "CP",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Economic model being run AND drip_capital_cost is unknown",
+        "marathi": "आर्थिक गणित चालवले जात आहे पण ठिबकाचा भांडवली खर्च माहीत नाही"
+      },
+      "action": {
+        "english": "Obtain a supplier quotation before completing the model. Drip capital cost is the largest missing figure in this domain and neither the with-subsidy nor the without-subsidy case can be closed without it.",
+        "marathi": "गणित पूर्ण करण्यापूर्वी पुरवठादाराकडून कोटेशन घ्या. ठिबकाचा भांडवली खर्च हा या Domain मधील सर्वात मोठा गहाळ आकडा आहे — तो नसेल तर अनुदानासह किंवा अनुदानाशिवाय कोणतेही गणित पूर्ण होत नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Drip is a precondition, so the cost is incurred regardless. Subsidy at 75 to 80 percent changes who bears it, and because selection is by lottery both cases must be modelled. Without the base figure neither can be.",
+        "yield_impact": "None. Determines whether the enterprise is viable and at what area.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 3 drip precondition",
+          "Domain 10 subsidy rates"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_10_institutional"
+        ],
+        "depends_on": [
+          "domain_3_water",
+          "domain_10_institutional"
+        ]
+      },
+      "farm_brain_schema": [
+        "drip_capital_cost",
+        "drip_annual_share",
+        "drip_life_years",
+        "drip_subsidy_pct_applicable"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "FIELD",
+      "kannad_note": "One phone call to an irrigation supplier closes the largest open figure in the economics. It should have been made before the cost model was drafted.",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-CP-002",
+      "category": "CP",
+      "priority": 5,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Capital planning in progress",
+        "marathi": "भांडवली नियोजन सुरू आहे"
+      },
+      "action": {
+        "english": "Model both cases — with subsidy and without. At 80 percent subsidy the farmer's annual share is about one fifth of the unsubsidised figure. Selection is by lottery, so both cases are live until the result is known.",
+        "marathi": "दोन्ही परिस्थिती मांडा — अनुदानासह आणि अनुदानाशिवाय. ८०% अनुदानात शेतकऱ्याचा वार्षिक हिस्सा अनुदानाशिवायच्या सुमारे एक पंचमांश होतो. निवड लॉटरीने होते, म्हणून निकाल कळेपर्यंत दोन्ही शक्यता जिवंत आहेत."
+      },
+      "reasoning": {
+        "agronomic_basis": "The difference between the two cases falls entirely on capital rather than on operating cost, and it is large enough that the viable area differs between them. Planning on one case and receiving the other means either an unplanned capital burden or an unnecessarily small planting.",
+        "yield_impact": "None. Determines the area decision.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 10 subsidy rules"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_10_institutional"
+        ],
+        "depends_on": [
+          "domain_10_institutional"
+        ]
+      },
+      "farm_brain_schema": [
+        "drip_capital_cost",
+        "drip_subsidy_pct_applicable",
+        "subsidy_lottery_result",
+        "area_acre",
+        "total_cost_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The correct fallback if the lottery is lost is to reduce area rather than to skip drip, because drip is a precondition here and area is a choice.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-CP-003",
+      "category": "CP",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Farm pond being evaluated",
+        "marathi": "शेततळ्याचे मूल्यांकन"
+      },
+      "action": {
+        "english": "Count both returns. It stores monsoon water that must be removed to prevent rot and supplies it back when the well is under pressure from October. Value it against both the irrigation saving and the rot exposure avoided.",
+        "marathi": "दोन्ही परतावे मोजा. मान्सूनमध्ये जे पाणी कूज टाळण्यासाठी काढून टाकावे लागते तेच साठवते, आणि ऑक्टोबरनंतर विहिरीवर ताण असताना परत देते. सिंचन बचत आणि टाळलेला कूज-धोका — दोन्ही धरा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The pond addresses two separate exposures with one structure. Valuing it only on irrigation saving understates it by the rot exposure it also reduces, which is the larger of the two.",
+        "yield_impact": "Reduces exposure to both the waterlogging pathway and the late-season exhaustion pathway.",
+        "confidence_score": 0.72,
+        "source_tier": "B",
+        "references": [
+          "Domain 10 farm pond dual benefit",
+          "Domain 3 October to February shortfall"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_10_institutional"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "farm_pond_planned",
+        "water_available_oct_feb_litres",
+        "total_cost_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Pond sizing against the 27 lakh litre October to February shortfall has not been done, so whether the Rs 75,000 subsidy ceiling covers a useful pond is still unknown.",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-RV-001",
+      "category": "RV",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "A price is about to be used in a return calculation",
+        "marathi": "परताव्याच्या गणितात भाव वापरला जात आहे",
+        "expr": "sale_price_per_quintal IS NOT NULL AND breakeven_price_per_quintal IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Never show a price without the break-even beside it.",
+        "golden_tests": [
+          {
+            "context": {
+              "sale_price_per_quintal": 12000
+            },
+            "expect": "TRUE",
+            "label": "भाव आहे पण समतोल बिंदू नाही"
+          },
+          {
+            "context": {
+              "sale_price_per_quintal": 12000,
+              "breakeven_price_per_quintal": 1450
+            },
+            "expect": "FALSE",
+            "label": "दोन्ही आहेत"
+          }
+        ]
+      },
+      "action": {
+        "english": "Never use a single price. Use Rs 3,500 to test whether costs are covered, Rs 5,000 to 6,000 for expected return, Rs 2,000 for the worst case, and Rs 10,000 for upside. Show the range and the break-even together.",
+        "marathi": "कधीही एकच भाव वापरू नका. खर्च निघतो का हे तपासण्यासाठी ३,५००, अपेक्षित परताव्यासाठी ५,००० ते ६,०००, सर्वात वाईट परिस्थितीसाठी २,०००, आणि उत्तम परिस्थितीसाठी १०,०००. श्रेणी आणि समतोल बिंदू एकत्र दाखवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Published sources give Rs 3,500 to 5,000 while APMC records show Rs 6,000 to 17,500 — a gap of more than three times. It is explained by long-run versus current prices, farm gate versus market, grade, and transport and commission. A single figure hides all four.",
+        "yield_impact": "None. Prevents an area decision based on a price that will not hold.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Shetkari Marg price statement",
+          "News18 Marathi APMC records",
+          "Domain 9 price cyclicality"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest"
+        ],
+        "depends_on": [
+          "domain_9_harvest"
+        ]
+      },
+      "farm_brain_schema": [
+        "sale_price_per_quintal",
+        "net_return_per_acre",
+        "breakeven_price_per_quintal"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The three-times gap between sources is itself informative. It says the price a farmer receives and the price reported at a distant APMC are different numbers, and the difference is grade and freight.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "एकच भाव वापरण्याऐवजी range, worst case आणि best case दाखवणे योग्य."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-RV-002",
+      "category": "RV",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Area decision being made AND current prices are high",
+        "marathi": "क्षेत्राचा निर्णय घेतला जात आहे आणि सध्याचे भाव चांगले आहेत"
+      },
+      "action": {
+        "english": "Run the calculation at a crashed price before committing area. Ginger is strongly cyclical — high price, everyone plants, arrivals rise, price collapses. Ask directly whether the costs are covered at about Rs 6,000 per quintal.",
+        "marathi": "क्षेत्र निश्चित करण्यापूर्वी कोसळलेल्या भावावर गणित चालवा. अद्रक तीव्र चक्रीय पीक आहे — भाव चांगला, सगळे लावतात, आवक वाढते, भाव कोसळतो. सुमारे ६,००० रुपये प्रति क्विंटल भावात खर्च निघतो का, हा प्रश्न स्पष्ट विचारा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The cycle is severe in ginger because it is an eight month crop so the response is slow, the seed cost is large so the decision is made once, and the market is thin at about one percent of onion arrivals so a modest increase moves the price a long way.",
+        "yield_impact": "None. Prevents over-planting on a price that will not survive the season.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 9 price cyclicality",
+          "News18 Marathi bullish market description"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest"
+        ],
+        "depends_on": [
+          "domain_9_harvest"
+        ]
+      },
+      "farm_brain_schema": [
+        "sale_price_per_quintal",
+        "area_acre",
+        "net_return_per_acre",
+        "total_cost_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This is the economic counterpart of the 55 percent rainfall rule in Domain 7. Both say plan on the bad case, because the good case needs no planning.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-RV-003",
+      "category": "RV",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Revenue is being estimated from yield alone",
+        "marathi": "फक्त उत्पादनावरून उत्पन्नाचा अंदाज काढला जात आहे"
+      },
+      "action": {
+        "english": "Include the grade dimension. A 2.7 times price spread was recorded within one market on one day. On 90 quintal that is about Rs 9 lakh, which exceeds every yield factor in the knowledge base.",
+        "marathi": "प्रतवारीचा घटक जोडा. एकाच बाजारात, एकाच दिवशी २.७ पट भाव फरक नोंदवला गेला आहे. ९० क्विंटलवर तो सुमारे ९ लाख रुपये होतो — आणि तो या knowledge base मधील प्रत्येक उत्पादन घटकापेक्षा मोठा आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Grade and yield are separate dimensions. The two grading determinants that remain controllable at harvest — skin condition from water withdrawal, and cleanliness and uniformity from washing and sorting — are both labour-only.",
+        "yield_impact": "None on yield. It is the largest single economic lever in the crop.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "News18 Marathi grading spread",
+          "Domain 9 grading determinants",
+          "Domain 11 economic conversion"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest"
+        ],
+        "depends_on": [
+          "domain_9_harvest",
+          "domain_11_yield"
+        ]
+      },
+      "farm_brain_schema": [
+        "grade_a_pct",
+        "grade_b_pct",
+        "grade_c_pct",
+        "sale_price_per_quintal",
+        "net_return_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "Domains 1 to 8 all work on yield and Domain 9 found grade matters more. The economic model has to carry both or it tells a different story from the agronomy.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-SRC-001",
+      "category": "SRC",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "A yield or profit figure from a commercial or blog source is being used",
+        "marathi": "व्यावसायिक किंवा ब्लॉग स्रोतातील उत्पादन किंवा नफ्याचा आकडा वापरला जात आहे",
+        "expr": "yield_target_quintal_per_acre IS NOT NULL AND ceiling_basis == 'unverified'",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Commercial yield claims must not set the target while the ceiling is unresolved.",
+        "golden_tests": [
+          {
+            "context": {
+              "yield_target_quintal_per_acre": 150,
+              "ceiling_basis": "unverified"
+            },
+            "expect": "TRUE",
+            "label": "मर्यादा अनिश्चित"
+          },
+          {
+            "context": {
+              "yield_target_quintal_per_acre": 110,
+              "ceiling_basis": "variety_plus_broad_ridge_113"
+            },
+            "expect": "FALSE",
+            "label": "मर्यादा निश्चित"
+          }
+        ]
+      },
+      "action": {
+        "english": "Do not use it. The source used for the cost breakdown gives three different profit figures in one document — Rs 1.5 to 2 lakh in the introduction, Rs 4.05 lakh in the main table, and Rs 1.5 to 3 lakh in the FAQ. Use the cost side and reject the yield and profit side.",
+        "marathi": "तो वापरू नका. ज्या स्रोतातून खर्चाचा ताळेबंद घेतला त्याच लेखात नफ्याचे तीन वेगवेगळे आकडे आहेत — प्रस्तावनेत १.५ ते २ लाख, मुख्य तक्त्यात ४.०५ लाख, आणि FAQ मध्ये १.५ ते ३ लाख. खर्चाची बाजू वापरा, उत्पादन व नफ्याची बाजू नाकारा."
+      },
+      "reasoning": {
+        "agronomic_basis": "A document that contradicts itself three times on its central claim cannot be relied on for that claim. The FAQ figures of 80 to 120 quintal align with the independently revised target of 90 to 110, which suggests the main table figures are headline numbers rather than estimates.",
+        "yield_impact": "None. Prevents inflated expectations from entering the model.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "Shetkari Marg internal contradictions",
+          "Domain 1 yield targets"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "yield_target_quintal_per_acre",
+        "net_return_per_acre",
+        "total_cost_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "A source can be reliable for one part of its content and not another. Splitting it rather than accepting or rejecting the whole is what let the cost breakdown be used at all.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "परस्परविरोधी व्यावसायिक आकडे वापरू नयेत; खर्चाची बाजू घ्यावी, नफ्याचे दावे नाकारावेत."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-SRC-002",
+      "category": "SRC",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "A variety yield figure is quoted in tonnes per acre from a non-institutional source",
+        "marathi": "संस्थात्मक नसलेल्या स्रोतातून जातीचे उत्पादन टन प्रति एकर मध्ये दिले आहे"
+      },
+      "action": {
+        "english": "Check the unit. The same source reports Varada at 15 to 18 tonnes per ACRE where institutional sources give 22.3 tonnes per HECTARE — a 2.47 times error that would be roughly double any recorded figure. Use institutional values.",
+        "marathi": "एकक तपासा. त्याच स्रोतात वरदा जात १५ ते १८ टन प्रति एकर दिली आहे, तर संस्थात्मक स्रोतांत २२.३ टन प्रति हेक्टर — २.४७ पट फरक, आणि तो कोणत्याही नोंदवलेल्या आकड्याच्या जवळपास दुप्पट होईल. संस्थात्मक आकडे वापरा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Varada at 15 to 18 t/acre converts to 37 to 44 t/ha, roughly double the institutional record. Durations also disagree — 240 to 270 days in the blog against 200 to 210 institutionally. This is the same error made in Domain 1 version 2.0 and corrected in 2.1, found independently in a second source.",
+        "yield_impact": "Prevents a doubled yield expectation, which would propagate into fertiliser doses, water planning and the whole economic model.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Agrowon institutional variety figures",
+          "Shetkari Marg variety table",
+          "Domain 1 version 2.1 correction"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_4_nutrient"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle"
+        ]
+      },
+      "farm_brain_schema": [
+        "variety",
+        "yield_target_quintal_per_acre",
+        "ceiling_quintal_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "Finding the same unit error independently in a second source is the strongest confirmation available that the version 2.1 correction was right. It also suggests the error is common in commercial ginger material.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-BE-001",
+      "category": "BE",
+      "priority": 5,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Viability is being assessed before planting",
+        "marathi": "लागवडीपूर्वी व्यवहार्यता तपासली जात आहे"
+      },
+      "action": {
+        "english": "Show the break-even. At Rs 1,45,000 cost and 100 quintal yield, break-even price is about Rs 1,450 per quintal. At Rs 4,000 per quintal, break-even yield is about 36 quintal per acre. Both leave a margin of two to three times against realistic outcomes.",
+        "marathi": "समतोल बिंदू दाखवा. १,४५,००० खर्च आणि १०० क्विंटल उत्पादन धरल्यास समतोल भाव सुमारे १,४५० रुपये प्रति क्विंटल. ४,००० रुपये भावाला समतोल उत्पादन सुमारे ३६ क्विंटल प्रति एकर. दोन्हीत वास्तववादी निकालांविरुद्ध दोन ते तीन पट सुरक्षिततेचा पट्टा आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Costs are covered even if the price collapses to a third of the conservative planning figure or the yield falls to a third of target. This is the crop's genuine economic strength.",
+        "yield_impact": "None. Gives the farmer a floor rather than only a headline profit.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Domain 13 break-even computation"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "breakeven_price_per_quintal",
+        "breakeven_yield_quintal",
+        "total_cost_per_acre",
+        "yield_target_quintal_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Rarely discussed, because the conversation is always about lakhs of profit. The floor is more useful than the ceiling when deciding whether to plant at all.",
+      "decision_type": "HUMAN_DECISION",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-BE-002",
+      "category": "BE",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Break-even figures are being presented",
+        "marathi": "समतोल बिंदूचे आकडे मांडले जात आहेत"
+      },
+      "action": {
+        "english": "State what is excluded — land rent or opportunity cost, own labour valued, interest on capital, and the drip capital share where unsubsidised. Including these raises the break-even. The figure is a floor, not a full economic cost.",
+        "marathi": "काय वगळले आहे ते सांगा — जमिनीचे भाडे किंवा संधी-खर्च, स्वतःच्या मजुरीचे मूल्य, भांडवलावरील व्याज, आणि अनुदान न मिळाल्यास ठिबकाचा भांडवली हिस्सा. हे धरल्यास समतोल बिंदू वर सरकतो. हा आकडा तळ आहे, पूर्ण आर्थिक खर्च नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "A break-even that omits land, labour and capital is a cash break-even rather than an economic one. Presenting it without the caveat overstates the safety margin.",
+        "yield_impact": "None. Keeps the stated margin honest.",
+        "confidence_score": 0.82,
+        "source_tier": "B",
+        "references": [
+          "Domain 13 excluded items"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "breakeven_price_per_quintal",
+        "land_rent_or_opportunity",
+        "interest_cost",
+        "drip_annual_share"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Most farm budgets in circulation omit the same four items, so the figure is comparable to what a farmer will see elsewhere. Saying so is what makes the comparison fair.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-SN-001",
+      "category": "SN",
+      "priority": 5,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Expected return is being presented",
+        "marathi": "अपेक्षित परतावा मांडला जात आहे"
+      },
+      "action": {
+        "english": "Present the matrix, not a number. Show yield from 30 to 110 quintal against price from Rs 2,000 to 12,000. Loss occurs only where yield is below about 50 quintal and the price is low.",
+        "marathi": "एक आकडा न देता मॅट्रिक्स मांडा — उत्पादन ३० ते ११० क्विंटल विरुद्ध भाव २,००० ते १२,००० रुपये. तोटा फक्त तिथेच होतो जिथे उत्पादन सुमारे ५० क्विंटलपेक्षा कमी आणि भाव कमी असेल."
+      },
+      "reasoning": {
+        "agronomic_basis": "A single expected return figure hides the shape of the risk. The matrix shows immediately that the yield axis matters more than the price axis, which redirects attention to the agronomy where it belongs.",
+        "yield_impact": "None. Makes the risk structure visible before the money is committed.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Domain 13 scenario matrix"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": [
+          "domain_11_yield"
+        ]
+      },
+      "farm_brain_schema": [
+        "net_return_per_acre",
+        "yield_target_quintal_per_acre",
+        "sale_price_per_quintal",
+        "total_cost_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Moving from 50 to 90 quintal at Rs 3,500 is worth more than moving the price from Rs 3,500 to Rs 5,000 at 50 quintal. The farmer controls one of those and not the other.",
+      "decision_type": "HUMAN_DECISION",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-SN-002",
+      "category": "SN",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "The main financial risk is being identified",
+        "marathi": "मुख्य आर्थिक जोखीम ठरवली जात आहे"
+      },
+      "action": {
+        "english": "Name soft rot, not the market. The economics survive a price crash to Rs 2,000 and survive losing half the yield, but at 30 quintal from severe rot the return is near zero even at Rs 5,000, and about Rs 85,000 negative at Rs 2,000.",
+        "marathi": "बाजार नव्हे, कंदकूज. भाव २,००० पर्यंत कोसळला तरी आणि उत्पादन निम्मे झाले तरी अर्थशास्त्र टिकते — पण तीव्र कुजीमुळे ३० क्विंटलवर आल्यास ५,००० भावालाही परतावा जवळपास शून्य, आणि २,००० भावाला सुमारे ८५,००० रुपये तोटा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The matrix shows the loss region is confined to low yield combined with low price. Price alone does not produce a loss at target yield, and halved yield alone does not produce a loss at a reasonable price. Only severe crop loss does.",
+        "yield_impact": "Reframes the whole budget. Prevention spending is insurance rather than yield enhancement.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 13 scenario matrix",
+          "Domain 6 soft rot loss range"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_6_disease",
+          "domain_11_yield"
+        ]
+      },
+      "farm_brain_schema": [
+        "net_return_per_acre",
+        "rot_incidence_pct",
+        "yield_quintal_per_acre_actual",
+        "sale_price_per_quintal"
+      ],
+      "u_value": 0.7,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "This is the finding that changes how the budget should be read. The prevention stack is not an optional improvement — it is the item protecting against the only scenario that produces a real loss.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "कंदकूज हा भावापेक्षा मोठा आर्थिक धोका मानणे योग्य; हा निर्णय शेतकरी-हिताचा आहे."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-SN-003",
+      "category": "SN",
+      "priority": 5,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "The prevention budget is being questioned",
+        "marathi": "प्रतिबंधात्मक खर्चावर प्रश्न उपस्थित झाला"
+      },
+      "action": {
+        "english": "Show the ratio. Mulch, drainage, seed treatment and Trichoderma cost about Rs 24,500, roughly 17 percent of total, against an exposure of Rs 1.8 to 3.2 lakh. That is seven to thirteen times, and no fertiliser or variety choice approaches it.",
+        "marathi": "गुणोत्तर दाखवा. आच्छादन, निचरा, बेणे प्रक्रिया आणि ट्रायकोडर्मा यांचा खर्च सुमारे २४,५०० रुपये — एकूण खर्चाच्या सुमारे १७% — आणि टाळलेले संभाव्य नुकसान १.८ ते ३.२ लाख. म्हणजे सात ते तेरा पट, आणि कोणतेही खत किंवा जातीची निवड याच्या जवळपासही येत नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "The stack addresses the single loss factor capable of erasing the season. Its cost is known and its exposure is quantified, which makes this one of the few genuinely computable investment decisions in the crop.",
+        "yield_impact": "Protects u = 0.50 to 0.90.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Domain 6 prevention stack",
+          "Domain 13 prevention economics"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_6_disease"
+        ]
+      },
+      "farm_brain_schema": [
+        "cost_mulch",
+        "cost_drainage",
+        "cost_seed_treatment_planting",
+        "total_cost_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Presenting it as an insurance premium rather than as an input cost is what makes an unfamiliar budget line acceptable. Seventeen percent for a seven-to-thirteen-times return is an easy argument once it is framed that way.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-CF-001",
+      "category": "CF",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Pre-season planning AND cash flow has not been discussed",
+        "marathi": "हंगामापूर्व नियोजन आणि रोख प्रवाहाची चर्चा झालेली नाही"
+      },
+      "action": {
+        "english": "Show the timeline. About Rs 1.45 lakh goes out over eight months with no income until the end, and about half of it is spent before the crop emerges. This is ginger's largest practical challenge here, and it is financial rather than agronomic.",
+        "marathi": "कालरेषा दाखवा. सुमारे १.४५ लाख रुपये आठ महिन्यांत बाहेर जातात आणि शेवटपर्यंत उत्पन्न शून्य — आणि त्यातील सुमारे निम्मा खर्च पीक उगवण्यापूर्वीच होतो. Kannad मध्ये अद्रकाचे हे सर्वात मोठे व्यावहारिक आव्हान आहे, आणि ते कृषिशास्त्रीय नाही, आर्थिक आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Rs 73,000 of Rs 1,45,000 is spent by day zero and 44 percent falls in the week around planting, driven by the seed purchase. Revenue arrives at about day 235.",
+        "yield_impact": "None. Determines whether the farmer can complete the season without distress selling or borrowing badly.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 13 cash flow timeline"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_10_institutional"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "cash_outflow_to_date",
+        "cash_flow_gap_months",
+        "total_cost_per_acre",
+        "crop_loan_taken"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Front-loading is what makes a mid-season failure so expensive. By the time soft rot appears in August, roughly Rs 89,000 has already been committed and none of it is recoverable.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-CF-002",
+      "category": "CF",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Cash flow gap identified as a constraint",
+        "marathi": "रोख प्रवाहाचा खंड अडचण म्हणून समोर आला"
+      },
+      "action": {
+        "english": "Offer the mitigations. Marigold or coriander intercrop gives cash at two to three months against ginger's eight; a crop loan smooths the gap at an interest cost; splitting the area with a shorter crop works; and an early green harvest at six months gives partial cash at lower weight.",
+        "marathi": "उपाय मांडा. झेंडू किंवा कोथिंबीर आंतरपीक दोन ते तीन महिन्यांत रोख देते, अद्रकाला आठ महिने लागतात. पीक कर्ज खंड भरून काढते पण व्याज लागते. क्षेत्र विभागून काही भाग कमी कालावधीच्या पिकाला देता येतो. आणि सहा महिन्यांत हिरवे आले काढल्यास कमी वजनात काही रोख मिळते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Marigold is the strongest option because it also suppresses nematodes and attracts beneficial insects, so the cash flow benefit comes with two agronomic ones. The others each trade something — interest, area, or weight.",
+        "yield_impact": "Marigold reduces the 0.15 nematode exposure as a side effect.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Domain 5 marigold trap crop",
+          "Domain 8 intercrop ranking",
+          "Domain 9 early green harvest"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest",
+          "domain_8_operations"
+        ],
+        "depends_on": [
+          "domain_8_operations"
+        ]
+      },
+      "farm_brain_schema": [
+        "intercrop_revenue",
+        "intercrop_selected",
+        "cash_flow_gap_months",
+        "crop_loan_taken",
+        "harvest_route"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Marigold is the only mitigation that costs nothing and returns three benefits. It should be the first option presented rather than the loan.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-CF-003",
+      "category": "CF",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Crop loan being considered",
+        "marathi": "पीक कर्जाचा विचार"
+      },
+      "action": {
+        "english": "Obtain the scale of finance for ginger from the district lead bank and include the interest in the cost model. If the scale of finance is set low or not set at all for this crop, the available credit will not match the actual cost.",
+        "marathi": "जिल्हा अग्रणी बँकेकडून अद्रकाचा scale of finance घ्या आणि व्याज खर्चात धरा. या पिकासाठी तो कमी असेल किंवा ठरवलेलाच नसेल, तर उपलब्ध कर्ज प्रत्यक्ष खर्चाशी जुळणार नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Scale of finance is set per crop by the district technical committee. Ginger is uncommon here — about 4,000 hectares statewide — so it may be set low or absent, and that changes the viable area.",
+        "yield_impact": "None. Determines whether the plan is financeable at the intended area.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Domain 10 scale of finance item"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_10_institutional"
+        ],
+        "depends_on": [
+          "domain_10_institutional"
+        ]
+      },
+      "farm_brain_schema": [
+        "crop_loan_taken",
+        "scale_of_finance_per_acre",
+        "interest_cost",
+        "area_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "VERIFY",
+      "kannad_note": "Worth asking early, because if the credit limit is low the area decision changes and the area decision has to be made before the seed is ordered.",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-RR-001",
+      "category": "RR",
+      "priority": 5,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Risk assessment before planting",
+        "marathi": "लागवडीपूर्वी जोखमीचे मूल्यांकन",
+        "expr": "days_to_planting BETWEEN 85 AND 95",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "days_to_planting": 90
+            },
+            "expect": "TRUE",
+            "label": "जोखीम यादी द्या"
+          },
+          {
+            "context": {
+              "days_to_planting": 30
+            },
+            "expect": "FALSE",
+            "label": ""
+          }
+        ]
+      },
+      "action": {
+        "english": "Present all ten risks with their impact and mitigation, and separate the four that are entirely avoidable — late planting, earthing up missed, produce not graded, and seed ordered late.",
+        "marathi": "दहाही जोखमी परिणाम व उपायांसह मांडा, आणि पूर्णपणे टाळता येणाऱ्या चार वेगळ्या दाखवा — उशिरा लागवड, उटाळणी चुकणे, प्रतवारी न करणे, आणि बेणे उशिरा मागवणे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Six of the ten risks can only be mitigated, not eliminated. Four can be removed entirely, and separating them directs attention to where control actually exists.",
+        "yield_impact": "The four avoidable risks are worth Rs 50,000 to over a lakh per acre per season.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Domain 13 risk register"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": [
+          "domain_11_yield"
+        ]
+      },
+      "farm_brain_schema": [
+        "planting_date",
+        "earthing_up_date",
+        "graded_separately",
+        "seed_supplier_identified"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Six risks needing management and four needing only a reminder is a useful way to present the season. It also makes clear what the advisory engine is and is not for.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-RR-002",
+      "category": "RR",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "The advisory system's value is being quantified",
+        "marathi": "advisory प्रणालीचे मूल्य मोजले जात आहे",
+        "expr": "harvest_date IS NOT NULL AND action_compliance_rate IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Four avoidable risks worth Rs 50,000 to a lakh per acre, all depending on a timely reminder.",
+        "golden_tests": [
+          {
+            "context": {
+              "harvest_date": "done",
+              "action_compliance_rate": 78
+            },
+            "expect": "TRUE",
+            "label": "हंगामाचा आढावा"
+          },
+          {
+            "context": {
+              "harvest_date": "done"
+            },
+            "expect": "FALSE",
+            "label": "दर मोजलेला नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Use the four avoidable risks. All four depend on a timely reminder and their combined value is Rs 50,000 to over a lakh per acre per season. The machine does not make fertiliser, bring rain or kill pathogens — it reminds at the right time.",
+        "marathi": "चार टाळता येणाऱ्या जोखमी वापरा. चारही वेळेवर आठवणीवर अवलंबून आहेत आणि त्यांचे एकत्रित मूल्य एकरी प्रति हंगाम ५०,००० ते एक लाखाहून जास्त आहे. यंत्र खत बनवत नाही, पाऊस आणत नाही, रोग मारत नाही — ते वेळेवर आठवण देते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Late planting carries u = 0.20, earthing up 0.125, grading a 2.7 times price spread, and late seed ordering forfeits the variety choice worth 0.138. Three of the four cost nothing to avoid and the fourth costs about Rs 6,000 in labour.",
+        "yield_impact": "None directly. It is the clearest defensible statement of what a timing engine is worth.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Domain 13 avoidable risks",
+          "Domain 11 economic conversion",
+          "Domain 12 positioning"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": [
+          "domain_11_yield"
+        ]
+      },
+      "farm_brain_schema": [
+        "action_compliance_rate",
+        "planting_date",
+        "earthing_up_date",
+        "graded_separately"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This figure and the Rs 2.85 lakh figure in Domain 11 measure overlapping things from different angles. Domain 11 values the decisions; this values the reminders that make them happen on time.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D13-RR-003",
+      "category": "RR",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Water availability assessed as marginal AND area not yet fixed",
+        "marathi": "पाण्याची उपलब्धता जेमतेम आहे आणि क्षेत्र अजून ठरलेले नाही"
+      },
+      "action": {
+        "english": "Reduce area rather than reducing water per acre. Water exhaustion in October to February carries an impact of Rs 2 to 3 lakh because the seed cost is already sunk, so the loss is close to total rather than proportional.",
+        "marathi": "प्रति एकर पाणी कमी करण्याऐवजी क्षेत्र कमी करा. ऑक्टोबर ते फेब्रुवारीत पाणी संपल्यास परिणाम २ ते ३ लाख रुपये होतो — कारण बेण्याचा खर्च आधीच झालेला असतो, म्हणून नुकसान प्रमाणशीर नव्हे तर जवळपास संपूर्ण असते."
+      },
+      "reasoning": {
+        "agronomic_basis": "The largest cost is spent before the season starts and is unrecoverable. A crop that runs out of water at G4 has consumed the whole investment and returns little, whereas a smaller fully watered area returns proportionally.",
+        "yield_impact": "u = 0.20 to 0.40 for water exhaustion, with the financial loss weighted higher because of the sunk cost.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 3 water source assessment",
+          "Domain 7 poor-year planning"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water"
+        ],
+        "depends_on": [
+          "domain_3_water",
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "area_acre",
+        "water_available_oct_feb_litres",
+        "total_cost_per_acre",
+        "season_water_plan_basis"
+      ],
+      "u_value": 0.3,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Half the area fully watered beats the full area half watered, and the arithmetic of the sunk seed cost is what makes that true rather than merely prudent.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "पाणी कमी असल्यास क्षेत्र कमी करणे, प्रति एकर पाणी कमी करण्यापेक्षा योग्य."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-AD-001",
+      "category": "AD",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "A financial figure is about to be presented to a farmer",
+        "marathi": "शेतकऱ्याला आर्थिक आकडा दाखवला जात आहे"
+      },
+      "action": {
+        "english": "Show a range with the assumptions stated, never a single number. Include the break-even and the worst case. Do not present a profit figure without the price and yield it assumes.",
+        "marathi": "गृहीतकांसह श्रेणी दाखवा, एकच आकडा कधीही नाही. समतोल बिंदू आणि सर्वात वाईट परिस्थिती दोन्ही समाविष्ट करा. कोणता भाव आणि कोणते उत्पादन गृहीत धरले आहे हे सांगितल्याशिवाय नफ्याचा आकडा दाखवू नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "The same yield is worth very different amounts across the observed price range, and the source material demonstrates how easily a headline profit figure detaches from its assumptions — three different figures in one document.",
+        "yield_impact": "None. Prevents a planting decision based on a number whose basis is invisible.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "Domain 13 price policy",
+          "Domain 13 source contradictions"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "net_return_per_acre",
+        "sale_price_per_quintal",
+        "yield_target_quintal_per_acre",
+        "breakeven_price_per_quintal"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The temptation to quote a single attractive profit figure is exactly what produced the three contradictory numbers in the source. The engine should not repeat that pattern.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "आर्थिक आकडा दाखवताना assumptions, range आणि worst case सोबत द्यावे."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-AD-002",
+      "category": "AD",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": null,
+      "trigger": {
+        "english": "A profit guarantee or price forecast is about to be stated",
+        "marathi": "नफ्याची हमी किंवा भावाचे भाकीत केले जात आहे",
+        "expr": "profit_guarantee_proposed IS TRUE OR price_forecast_proposed IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "profit_guarantee_proposed": true
+            },
+            "expect": "TRUE",
+            "label": "हमी अडवा"
+          },
+          {
+            "context": {
+              "price_forecast_proposed": true
+            },
+            "expect": "TRUE",
+            "label": "भाकीत — अडवा"
+          },
+          {
+            "context": {
+              "profit_guarantee_proposed": false,
+              "price_forecast_proposed": false
+            },
+            "expect": "FALSE",
+            "label": "दोन्ही नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "BLOCK. The engine does not guarantee profit and does not forecast prices. It presents current observed rates, the cost arithmetic and the break-even, and lets the farmer apply their own view of the market.",
+        "marathi": "थांबा. engine नफ्याची हमी देत नाही आणि भावाचे भाकीत करत नाही. ते चालू निरीक्षित भाव, खर्चाचे गणित आणि समतोल बिंदू मांडते, आणि बाजाराबद्दलचा स्वतःचा अंदाज शेतकऱ्याने लावावा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Ginger prices are strongly cyclical in a thin market and no basis exists for forecasting them. A guarantee would also be a claim the platform cannot honour, with obvious commercial and legal exposure.",
+        "yield_impact": "None. Prevents a claim that cannot be supported.",
+        "confidence_score": 0.9,
+        "source_tier": "B",
+        "references": [
+          "Domain 9 selling decision rule",
+          "Domain 12 prohibited claims"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": [
+          "domain_9_harvest"
+        ]
+      },
+      "farm_brain_schema": [
+        "sale_price_per_quintal",
+        "net_return_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Consistent with the positioning rules in Domain 12. The system does arithmetic on observed numbers; it does not predict the market.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "नफ्याची हमी किंवा भावाचे भाकीत देऊ नये; break-even आणि observed price range दाखवणे योग्य."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": true,
+      "immutable_reason": "The engine does not guarantee profit or forecast prices."
+    },
+    {
+      "rule_id": "D13-AD-003",
+      "category": "AD",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G5",
+      "trigger": {
+        "english": "Harvest complete",
+        "marathi": "काढणी पूर्ण झाली"
+      },
+      "action": {
+        "english": "Record actual cost line by line — seed, land preparation, mulch, fertiliser, plant protection, labour, harvest and transport. Several figures in this model are estimates and only recorded actuals correct them.",
+        "marathi": "प्रत्यक्ष खर्च बाबनिहाय नोंदवा — बेणे, पूर्वमशागत, आच्छादन, खते, कीड-रोग नियंत्रण, मजुरी, काढणी आणि वाहतूक. या गणितातील अनेक आकडे अंदाजित आहेत आणि फक्त प्रत्यक्ष नोंदीच ते दुरुस्त करतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "The Kannad adjusted figure of about Rs 1,45,000 adds three lines to a published sheet and raises three others, all on reasoning rather than measurement. Transport cost and labour days in particular are unmeasured.",
+        "yield_impact": "None. Corrects the economic model for subsequent seasons.",
+        "confidence_score": 0.82,
+        "source_tier": "B",
+        "references": [
+          "Domain 9 cost recording rule",
+          "Domain 12 minimum records"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": [
+          "domain_9_harvest"
+        ]
+      },
+      "farm_brain_schema": [
+        "total_cost_per_acre",
+        "cost_seed",
+        "cost_mulch",
+        "cost_harvest_transport",
+        "transport_cost_per_quintal"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Marked irrecoverable for the same reason as the other logging rules. Costs remembered eight months later are not costs recorded.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-AD-004",
+      "category": "AD",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "A farmer asks whether ginger is worth planting",
+        "marathi": "अद्रक लावणे फायद्याचे आहे का असा प्रश्न"
+      },
+      "action": {
+        "english": "Answer with the structure, not a verdict. Break-even is about Rs 1,450 per quintal or 36 quintal per acre, the safety margin is two to three times, the real risk is soft rot rather than price, and roughly Rs 1.45 lakh goes out over eight months before any income.",
+        "marathi": "निवाडा न देता रचना मांडा. समतोल भाव सुमारे १,४५० रुपये प्रति क्विंटल किंवा ३६ क्विंटल प्रति एकर, सुरक्षिततेचा पट्टा दोन ते तीन पट, खरी जोखीम भाव नव्हे तर कंदकूज, आणि सुमारे १.४५ लाख रुपये आठ महिन्यांत बाहेर जातात — उत्पन्न शेवटी."
+      },
+      "reasoning": {
+        "agronomic_basis": "The decision depends on the farmer's water availability, cash position and risk tolerance, none of which the engine knows better than they do. What it can supply is the arithmetic and the risk structure.",
+        "yield_impact": "None. Supports the decision rather than making it.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 13 break-even",
+          "Domain 13 central finding"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "breakeven_price_per_quintal",
+        "breakeven_yield_quintal",
+        "cash_flow_gap_months",
+        "water_available_oct_feb_litres"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The honest answer is that the crop has an unusually safe floor and an unusually dangerous single failure mode. Both halves of that need saying together.",
+      "decision_type": "POLICY",
+      "automation": "none",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-CS-002",
+      "category": "CS",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Cost structure being explained",
+        "marathi": "खर्चाची रचना समजावून सांगायची आहे"
+      },
+      "action": {
+        "english": "Note that labour is about 34 percent of total across planting, earthing up and harvest, and harvest with transport alone is about 21 percent because ginger is heavy and the markets are far.",
+        "marathi": "लागवड, उटाळणी आणि काढणी मिळून मजुरी एकूण खर्चाच्या सुमारे ३४% आहे, आणि एकट्या काढणी-वाहतुकीचा वाटा सुमारे २१% — कारण आले जड आहे आणि बाजार दूर आहेत."
+      },
+      "reasoning": {
+        "agronomic_basis": "A hundred quintal crop is ten tonnes to lift, wash and move. Mumbai is roughly 350 km and Nagpur roughly 500 km from here, and the local APMC does not appear in the arrival lists at all.",
+        "yield_impact": "None. Explains why transport cost is a material unmeasured figure.",
+        "confidence_score": 0.78,
+        "source_tier": "C",
+        "references": [
+          "Shetkari Marg cost breakdown",
+          "Domain 9 market distances"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest"
+        ],
+        "depends_on": [
+          "domain_9_harvest"
+        ]
+      },
+      "farm_brain_schema": [
+        "cost_harvest_transport",
+        "transport_cost_per_quintal",
+        "sale_market",
+        "total_cost_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "The published 21.7 percent was raised to about 21 percent of a larger total here, because the markets are further away than in the belt the source describes.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-CS-003",
+      "category": "CS",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Labour planning for the season",
+        "marathi": "हंगामाचे मजूर नियोजन"
+      },
+      "action": {
+        "english": "Record labour days per operation this season. No source gives per acre labour days for ginger, so the labour share of about 34 percent rests on rupee figures rather than on measured days.",
+        "marathi": "या हंगामात प्रत्येक कामासाठी लागलेले मजूर-दिवस नोंदवा. अद्रकासाठी एकरी मजूर-दिवसांचा आकडा कोणत्याही स्रोतात नाही, त्यामुळे मजुरीचा सुमारे ३४% वाटा रुपयांवर आधारित आहे, मोजलेल्या दिवसांवर नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Rupee figures move with wage rates while day counts do not. Without day counts the cost model cannot be adjusted for a different wage level or a different area.",
+        "yield_impact": "None. Makes the cost model portable.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Domain 8 labour gap",
+          "Domain 13 cost structure"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_8_operations",
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "cost_earthing_labour",
+        "cost_harvest_transport",
+        "labour_arranged_date",
+        "area_acre"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "FIELD",
+      "kannad_note": "The August labour competition with cotton and soybean intercultivation is a known constraint but its cost has never been quantified. Day counts would let that be priced.",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-SD-004",
+      "category": "SD",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Market price is high in the season before planting",
+        "marathi": "लागवडीच्या आधीच्या हंगामात भाव चांगले आहेत"
+      },
+      "action": {
+        "english": "Warn that seed cost will rise with it. Seed is selected from marketable rhizome and is priced off the produce market, so a high-price year is followed by a high-cost season.",
+        "marathi": "बेण्याचा खर्चही तेवढाच वाढेल हे लक्षात घ्या. बेणे बाजारातील विक्रीयोग्य आल्यातूनच निवडले जाते आणि त्याचा भाव उत्पादनाच्या भावावरून ठरतो — म्हणून चांगल्या भावाच्या वर्षानंतरचा हंगाम महाग असतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "The derived seed price of about Rs 47 per kg is close to the produce price, which is expected because the same rhizome can go to either use. So the largest cost line tracks the market the grower is hoping to sell into.",
+        "yield_impact": "None. Explains part of the mechanism behind the price cycle.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Domain 13 seed price relationship",
+          "Core C13.4"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "seed_cost_per_kg",
+        "cost_seed",
+        "sale_price_per_quintal",
+        "total_cost_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This is part of why the ginger cycle is so severe. A high price raises both the incentive to plant and the cost of planting, so the correction when it comes is sharper.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D13-RR-004",
+      "category": "RR",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Seed availability risk being assessed",
+        "marathi": "बेणे उपलब्धतेच्या जोखमीचे मूल्यांकन",
+        "expr": "days_to_planting BETWEEN 140 AND 160 AND seed_supplier_identified IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Duplication group with D10-VAR-001 — same action, one message.",
+        "golden_tests": [
+          {
+            "context": {
+              "days_to_planting": 150,
+              "seed_supplier_identified": false
+            },
+            "expect": "TRUE",
+            "label": "बेणे मागवा"
+          },
+          {
+            "context": {
+              "days_to_planting": 150,
+              "seed_supplier_identified": true
+            },
+            "expect": "FALSE",
+            "label": "मागवले"
+          }
+        ]
+      },
+      "action": {
+        "english": "Order five months ahead. The state seed market is small at about 4,000 hectares, and late ordering means accepting whatever is available rather than the chosen variety — which forfeits u = 0.138.",
+        "marathi": "पाच महिने आधी order द्या. राज्यातील बेण्याचा बाजार लहान आहे — सुमारे ४,००० हेक्टर क्षेत्र — आणि उशिरा मागवल्यास निवडलेली जात नव्हे, मिळेल ते बेणे घ्यावे लागते, आणि जातीच्या निवडीचे मूल्य गमावले जाते."
+      },
+      "reasoning": {
+        "agronomic_basis": "A 4,000 hectare crop has a seed trade to match. Variety selection carries u = 0.138 between the best and weakest of the four main options, and it is forfeited if availability rather than choice decides.",
+        "yield_impact": "u = 0.138, irrecoverable once planted.",
+        "confidence_score": 0.78,
+        "source_tier": "A",
+        "references": [
+          "Directorate of Agriculture area figures",
+          "Domain 10 seed ordering rule"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_10_institutional"
+        ],
+        "depends_on": [
+          "domain_10_institutional"
+        ]
+      },
+      "farm_brain_schema": [
+        "seed_supplier_identified",
+        "variety",
+        "planting_date",
+        "cost_seed"
+      ],
+      "u_value": 0.138,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "One of the four fully avoidable risks and it costs nothing to avoid. The Satara and Sangli belt is the likely source, and the research centre at Kasbe Digraj is in the same district.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "बेणे उपलब्धतेचा धोका कमी करण्यासाठी ५ महिने आधी order देणे बरोबर."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    }
+  ],
+  "open_items": [
+    {
+      "id": "D13-OI-01",
+      "item": "Drip system capital cost per acre",
+      "owner": "supplier quotation",
+      "source_class": "FIELD",
+      "blocking": true,
+      "note": "Largest missing figure in the domain. Neither the with-subsidy nor the without-subsidy model closes without it."
+    },
+    {
+      "id": "D13-OI-02",
+      "item": "Seed rate and plant population reconciliation",
+      "owner": "season one count and weighing",
+      "source_class": "FIELD",
+      "blocking": true,
+      "note": "Reported rate and computed population differ by nearly a factor of two on the largest cost line."
+    },
+    {
+      "id": "D13-OI-03",
+      "item": "Measured seed storage loss for this plot",
+      "owner": "two weighings",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D13-OI-04",
+      "item": "Yield response curve for plant spacing",
+      "owner": "trial strips",
+      "source_class": "FIELD",
+      "blocking": false,
+      "note": "Needed for the economic optimum, which sits below the agronomic optimum when seed is this expensive."
+    },
+    {
+      "id": "D13-OI-05",
+      "item": "Dry ginger price and processing cost",
+      "owner": "local traders",
+      "source_class": "FIELD",
+      "blocking": false,
+      "note": "Shared with Domain 9."
+    },
+    {
+      "id": "D13-OI-06",
+      "item": "Transport cost per quintal to Mumbai and Nagpur",
+      "owner": "local transporters",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D13-OI-07",
+      "item": "Three or more years of seasonal price data",
+      "owner": "APMC historical records",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D13-OI-08",
+      "item": "Land rent or opportunity cost in the area",
+      "owner": "local enquiry",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D13-OI-09",
+      "item": "Crop loan interest rate and scale of finance",
+      "owner": "district lead bank",
+      "source_class": "VERIFY",
+      "blocking": false
+    },
+    {
+      "id": "D13-OI-10",
+      "item": "Labour days per operation per acre",
+      "owner": "season one record",
+      "source_class": "FIELD",
+      "blocking": false
+    }
+  ],
+  "summary": {
+    "total_rules": 39,
+    "by_category": {
+      "CS": 3,
+      "MI": 2,
+      "SD": 4,
+      "SL": 3,
+      "RP": 3,
+      "CP": 3,
+      "RV": 3,
+      "SRC": 2,
+      "BE": 2,
+      "SN": 3,
+      "CF": 3,
+      "RR": 4,
+      "AD": 4
+    },
+    "by_priority": {
+      "5": 24,
+      "4": 12,
+      "3": 3
+    },
+    "by_severity": {
+      "yellow": 13,
+      "info": 18,
+      "red": 6,
+      "blocking": 2
+    },
+    "by_source_tier": {
+      "A": 5,
+      "B": 29,
+      "C": 5
+    },
+    "by_source_class": {
+      "DERIVED": 28,
+      "SRC-Q": 6,
+      "SRC-D": 2,
+      "FIELD": 2,
+      "VERIFY": 1
+    },
+    "confidence_range": {
+      "min": 0.7,
+      "max": 0.9,
+      "mean": 0.791
+    },
+    "rules_with_u_value": 6,
+    "irrecoverable_rules": 11,
+    "zero_cost_rules": [
+      "D13-SD-002",
+      "D13-RP-002",
+      "D13-RV-002",
+      "D13-SRC-001",
+      "D13-SRC-002",
+      "D13-AD-002"
+    ],
+    "highest_value_rule": "D13-SN-002",
+    "blocking_open_items": 2,
+    "by_decision_type": {
+      "PLANNING_GUIDANCE": 19,
+      "DIAGNOSTIC": 1,
+      "DATA_CAPTURE": 5,
+      "BLOCK": 4,
+      "SCHEDULED_REMINDER": 4,
+      "POLICY": 4,
+      "HUMAN_DECISION": 2
+    },
+    "reviewed_t1": 9,
+    "rules_with_trigger_expr": 9,
+    "rules_with_delivery_class": 9,
+    "immutable_rules": 1
+  },
+  "next_steps": [
+    "1. Get a drip supplier quotation — it closes the largest open figure in the economics and unblocks both subsidy cases (D13-OI-01)",
+    "2. Count plants and weigh seed pieces in season one to settle the seed rate reconciliation on the largest cost line (D13-OI-02)",
+    "3. Weigh seed at storage and again at planting to measure the real storage loss (D13-OI-03)",
+    "4. Record actual costs line by line at harvest; several figures in this model are reasoned rather than measured (D13-AD-003)",
+    "5. This completes the ginger knowledge base. Next step is consolidating all thirteen rule sets into one queryable store so the twelve duplication groups in Domain 11 can be enforced globally."
+  ],
+  "author_note": "This file contains 32 rules because that is what the source document supports, and it completes the ginger knowledge base. The central finding reframes the budget: the economics survive a price crash and survive losing half the yield, but a severe rot outbreak produces a real loss — so the prevention stack at about 17 percent of cost is an insurance premium against an exposure of Rs 1.8 to 3.2 lakh, a return ratio of seven to thirteen times. Three cost items required at Kannad are missing from the published sheet, mulch being the largest at 10.5 percent and also the best-quantified preventive in the knowledge base. The source used for the cost breakdown gives three contradictory profit figures and repeats the tonnes-per-acre versus tonnes-per-hectare unit error independently, which confirmed the Domain 1 version 2.1 correction; its cost side was used and its yield side was rejected. Two figures are blocking — drip capital cost and the seed rate reconciliation — and both are flagged rather than estimated because both bear on the largest lines in the model. Status is PHASE_1_RAW_UNVALIDATED.",
+  "legal": {
+    "disclaimer_mr": "हा नियम-संच निर्णय-सहाय्य साधन आहे. अंतिम जबाबदारी शेतकऱ्याची. यातील सर्व आर्थिक आकडे अंदाज आहेत आणि प्रत्यक्ष खर्च, भाव व उत्पादन स्थानिक परिस्थिती, हवामान, बाजार व व्यवस्थापन यांवर अवलंबून बदलतात.",
+    "disclaimer_en": "This rule set is a decision-support tool. Final responsibility rests with the cultivator. All financial figures are estimates; actual costs, prices and yields vary with local conditions, weather, market and management.",
+    "no_guarantee_note": "This rule set does not guarantee profit and does not forecast prices. Investment decisions should be taken on the grower's own circumstances and with advice from the local agriculture officer and bank.",
+    "estimate_note": "Most figures in this domain are derived from source values rather than sourced directly. Drip capital cost, transport cost and labour days are unmeasured, so neither the with-subsidy nor the without-subsidy model is complete.",
+    "data_note": "Farmer-attributable data handled under DPDP Act 2023; see Domain 12."
+  }
+}

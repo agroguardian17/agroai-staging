@@ -1,0 +1,3201 @@
+{
+  "_schema": {
+    "schema_version": "2.0",
+    "inherits_from": "Domain1_Rules_Ginger_v2.json",
+    "inheritance_note": "The full _schema block is defined in Domain 1 and is NOT repeated here. Units (per acre), stage codes G0-G5, source tiers A/B/C, source classes, priority scale, recoverability, severity and confidence bounds are inherited unchanged. Domain 2 to 6 additions are also assumed present. Only Domain 7 additions are declared below.",
+    "additions": {
+      "rule_categories_domain_7": {
+        "CL": "climate classification and profile",
+        "TM": "temperature and stage suitability",
+        "HS": "heat stress",
+        "RF": "rainfall quantity, distribution and variability",
+        "MO": "monsoon onset and dry spells",
+        "CY": "post-monsoon cyclone risk",
+        "HU": "humidity, fog and leaf wetness",
+        "WS": "weather station measurement",
+        "BC": "bias correction and forecast handling",
+        "CC": "climate change trends"
+      },
+      "new_farm_brain_fields": {
+        "station_id": "string",
+        "agro_climatic_zone": "enum:[marathwada_western, marathwada_central, marathwada_eastern, unknown]",
+        "solar_radiation_mj_m2": "number",
+        "wind_speed_ms": "number",
+        "dew_point_c": "number",
+        "rainfall_ytd_mm": "number",
+        "rainfall_deviation_pct": "number",
+        "dry_spell_days": "integer",
+        "forecast_rain_48h_mm": "number",
+        "forecast_source": "string",
+        "forecast_bias_correction_mm": "number",
+        "bias_observation_count": "integer",
+        "cyclone_alert_active": "boolean",
+        "heat_stress_days_count": "integer",
+        "fog_observed": "boolean",
+        "season_water_plan_basis": "enum:[poor_year, average_year, good_year]",
+        "station_data_age_hours": "number — hours since the last weather station reading; above 24 the station is treated as down"
+      },
+      "constants": {
+        "kannad_latitude": 20.27,
+        "kannad_longitude": 75.13,
+        "kannad_elevation_m": 633,
+        "koppen_class": "BSh",
+        "district_annual_rainfall_mm": 734,
+        "gazetteer_annual_rainfall_mm": 725.8,
+        "marathwada_lta_mm": 776,
+        "years_below_lta_pct": 55,
+        "recorded_max_temp_c": 45.9,
+        "recorded_min_temp_c": 5.6,
+        "leaf_scorch_threshold_c": 35
+      },
+      "decision_types": {
+        "AUTO_DECISION": {
+          "mr": "AI कधी व किती हे स्वतः ठरवतो",
+          "en": "engine computes the quantity or timing itself"
+        },
+        "SENSOR_ALERT": {
+          "mr": "sensor वर आधारित इशारा, कृती माणसाची",
+          "en": "sensor-triggered; the action is human work"
+        },
+        "SCHEDULED_REMINDER": {
+          "mr": "वेळापत्रकानुसार आठवण",
+          "en": "calendar or stage driven reminder"
+        },
+        "DIAGNOSTIC": {
+          "mr": "AI विचारतो, शेतकरी सांगतो",
+          "en": "engine asks, farmer answers, engine branches"
+        },
+        "DATA_CAPTURE": {
+          "mr": "नोंद किंवा मोजमाप मागतो",
+          "en": "engine requests a record or measurement"
+        },
+        "HUMAN_DECISION": {
+          "mr": "AI गणित दाखवतो, निर्णय माणसाचा",
+          "en": "engine presents arithmetic; person decides"
+        },
+        "BLOCK": {
+          "mr": "AI नाकारतो किंवा अडवतो",
+          "en": "engine refuses or blocks"
+        },
+        "PLANNING_GUIDANCE": {
+          "mr": "हंगामापूर्व निवड — शेतकरी ठरवतो",
+          "en": "pre-season choice the farmer makes"
+        },
+        "POLICY": {
+          "mr": "प्रॉडक्ट धोरण, शेतकऱ्यापर्यंत जात नाही",
+          "en": "product policy; never reaches a farmer"
+        }
+      },
+      "automation_levels": {
+        "full": "engine decides and acts without asking",
+        "assisted": "engine decides when, the person does the work or supplies the observation",
+        "advisory": "engine shows the arithmetic, the person chooses",
+        "refusal": "engine prevents an action",
+        "none": "internal policy, not farmer facing"
+      },
+      "trigger_dsl": {
+        "version": "dsl-1.0",
+        "logic": "three-valued: TRUE / FALSE / UNKNOWN",
+        "unknown_rule": "A rule whose trigger evaluates UNKNOWN must NOT fire and must NOT be treated as FALSE. Report reduced confidence and name the missing field (Domain 12 D12-COLD-001).",
+        "operators": [
+          "> >= < <= == !=",
+          "AND OR NOT",
+          "IN [..]",
+          "BETWEEN a AND b",
+          "IS NULL / IS NOT NULL / IS TRUE / IS FALSE",
+          "DURATION(field > x) > n HOURS",
+          "WITHIN(date_field, n DAYS)",
+          "MONTH IN [..]",
+          "STAGE IN [..]"
+        ],
+        "note": "Fields resolve against kb_farm_brain_fields. An undeclared name is a parse error, never a silent false."
+      },
+      "notification_policy": {
+        "version": "notify-1.0",
+        "why": "The season simulation issued 998 messages across 301 days before this existed. A trigger expresses a condition and a condition stays true; the advice is an event and must be delivered once.",
+        "classes": {
+          "ONCE_UNTIL_RESOLVED": "Standing precondition. Once, then a 7/21/45/90 day ladder with rising severity.",
+          "EVENT": "Transient physical event. Rising edge only; re-armed after it clears.",
+          "WINDOW": "Dated operation. Advance warning, the day, then 3 overdue reminders.",
+          "SILENT_GUARD": "Prevention rule. No message unless the prohibited action is attempted."
+        },
+        "result": "998 messages became 43 in the normal season, with no critical stage left silent for more than 15 days."
+      },
+      "override_policy": {
+        "version": "override-1.0",
+        "why": "The Tier-1 review worked but was offline. An agronomist looking at a live plot in August cannot edit JSON and wait for a deploy; by then the window has closed.",
+        "kinds": [
+          "THRESHOLD",
+          "DELIVERY",
+          "SEVERITY",
+          "DISABLE",
+          "PARAMETER"
+        ],
+        "scopes": [
+          "plot",
+          "cluster",
+          "global"
+        ],
+        "scope_precedence": "narrowest wins — plot over cluster over global",
+        "default_expiry_days": 240,
+        "max_expiry_days": 400,
+        "expiry_rationale": "A permanent change belongs in the knowledge base, not in the override table.",
+        "immutable_count": 16,
+        "immutable_rationale": "Some rules exist because getting them wrong causes harm no agronomic judgement outweighs. The API refuses them by code path, and a database trigger refuses them again if the application layer is bypassed.",
+        "audit": "Refused attempts are recorded, not discarded. An attempt to override an immutable rule is a governance signal."
+      }
+    }
+  },
+  "metadata": {
+    "domain": 7,
+    "domain_name": "Weather & Climate",
+    "domain_name_mr": "हवामान",
+    "crop": "ginger",
+    "crop_mr": "आले",
+    "region": "Kannad, Chhatrapati Sambhajinagar, Marathwada",
+    "source_document": "AgroGuardian_Ginger_Domain7_Weather_Climate_RAW.docx",
+    "version": "1.0",
+    "status": "PHASE_1_RAW_UNVALIDATED",
+    "agronomist_validated": false,
+    "validation_note": "Climate figures are from government gazetteer and published climate databases and are reliable at district level. Kannad taluka-specific rainfall and evaporation are not available and must come from the cluster station. The agro-climatic sub-zone assignment is an inference, not a confirmed classification.",
+    "total_rules": 35,
+    "rule_count_note": "30 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count.",
+    "review_by": null,
+    "review_note": "Climate normals are stable. The declining rainfall trend means historical averages will drift, so the safety margin should be reviewed every few seasons rather than the rules themselves.",
+    "purpose": "Weather is not one domain among several — it is the input to all the others. Stage timing, daily water requirement, pest pressure and disease triggers all resolve to weather variables. This domain establishes what the Kannad climate actually is, where it conflicts with ginger, and what the cluster station must measure.",
+    "key_innovations": [
+      "55 percent of years fall below the long-term average rainfall. The average is therefore not the normal case — it is better than the median. Planning on it fails in more than half of years.",
+      "The Koppen classification is BSh, hot semi-arid steppe. This is not an opinion about suitability; it is the formal climate class, and it is not the class ginger belongs in.",
+      "Ten of twelve crop months have suitable temperatures. The single mismatched month is May, which is also the planting month — so all protective effort concentrates into the first five weeks rather than spreading across the season.",
+      "Post-monsoon cyclonic rainfall in October and November was missed by Domains 3 and 6, both of which assumed the rainy season ends in September. It arrives when the rhizome is fully formed and the drainage channels have been neglected for weeks.",
+      "Pre-monsoon rainfall has declined by about 31 percent, which quietly invalidates the traditional practice of planting with pre-monsoon showers.",
+      "The Marathwada winter is close to ideal for rhizome bulking and is a genuine local advantage that Kerala and Konkan do not have. Kannad's dryness and its cold winter come from the same geography.",
+      "We do not forecast. We correct the public forecast for this village and translate it into a crop decision. That is a more honest claim and a more defensible product."
+    ],
+    "central_finding": {
+      "statement": "Plan on a poor year, not an average one.",
+      "evidence": "Against the Marathwada long-term annual average of 776 mm, 55 percent of years recorded less.",
+      "why_it_matters_for_ginger": "In ginger the largest single cost — seed rhizome at 28 to 35 percent of total — is spent before the season starts. If water runs out mid-season the loss is close to total rather than proportional, because the investment is already sunk.",
+      "consequence": "Area should be sized against a poor-year water assumption. Half the area fully watered beats the full area half watered."
+    },
+    "primary_sources": [
+      "Government of Maharashtra Gazetteer, Aurangabad District, Climate chapter (TIER A) - 70 year rainfall 725.8 mm, seasons, May mean maximum 39.8 C, October secondary maximum",
+      "Arabian Journal of Geosciences, Springer 2022 - Rainfall distribution and trends over the semi-arid Marathwada region (TIER A) - 55 percent of years below LTA, winter -25.54 percent, pre-monsoon -30.81 percent",
+      "ResearchGate 2021 - Rainfall Trend And Seasonality Estimation For Marathwada Region (TIER A) - Aurangabad monsoon season 557.71 mm, Sen's slope negative",
+      "Agro-Climatic Zonation of Marathwada, IMD plus Hydrological Project Nashik, 1980-2016 (TIER A) - three zones, western zone 600-750 mm and below 26 C, moisture index -21.17 to 6.77",
+      "climate-data.org (TIER B) - Koppen BSh, 1991-2021 normals, annual mean 25.2 C",
+      "climatestotravel.com (TIER B) - cyclone seasonality with April-June and October-November peaks",
+      "District Profile, Chhatrapati Sambhajinagar (TIER A) - 734 mm, recorded extremes",
+      "ICAR-CRIDA seasonal contingency (TIER A) - monsoon covers most of Maharashtra by 10 June",
+      "The Wire Science, SIMA (TIER B) - dry spells of 20 to 45 days, Latur pulse losses 40 to 60 percent",
+      "Agrowon - Bitle and Deshmukh, Netafim (TIER A) - stage-wise temperature optima"
+    ],
+    "review_log": {
+      "tier_1_review_date": "2026-07-31",
+      "rules_reviewed": 1,
+      "rules_total": 35,
+      "note": "Rule-level status is authoritative. Domain status stays PHASE_1_RAW_UNVALIDATED until T3 and T4 are also reviewed and one season of field data exists."
+    }
+  },
+  "reference_data": {
+    "location": {
+      "taluka": "Kannad",
+      "district": "Chhatrapati Sambhajinagar",
+      "region": "Marathwada",
+      "latitude": 20.27,
+      "longitude": 75.13,
+      "elevation_m": 633,
+      "terrain_note": "western part of the district, near the Ajanta range, which is why the taluka sits higher than the district town at about 580 m"
+    },
+    "koppen": {
+      "class": "BSh",
+      "name": "hot semi-arid steppe",
+      "source_statement": "The climate is classified as a local steppe climate with little rainfall through the year",
+      "suitability_for_ginger": "not naturally suitable",
+      "comparison": [
+        {
+          "class": "Af / Am",
+          "belt": "Kerala",
+          "ginger_suitability": "ideal"
+        },
+        {
+          "class": "Aw",
+          "belt": "parts of Karnataka",
+          "ginger_suitability": "suitable"
+        },
+        {
+          "class": "BSh",
+          "belt": "Kannad",
+          "ginger_suitability": "not naturally suitable"
+        }
+      ],
+      "interpretation": "In Kerala nature supplies roughly seventy percent and management thirty. Here it is the reverse. That is exactly why advisory value is highest in this belt — where every condition must be created by management, an error is expensive and guidance is worth more.",
+      "source_tier": "B"
+    },
+    "seasons": [
+      {
+        "season_en": "cold",
+        "season_mr": "थंडी",
+        "months": [
+          "December",
+          "January",
+          "February"
+        ]
+      },
+      {
+        "season_en": "hot",
+        "season_mr": "उन्हाळा",
+        "months": [
+          "March",
+          "April",
+          "May"
+        ]
+      },
+      {
+        "season_en": "southwest monsoon",
+        "season_mr": "नैऋत्य मान्सून",
+        "months": [
+          "June",
+          "July",
+          "August",
+          "September"
+        ]
+      },
+      {
+        "season_en": "post monsoon",
+        "season_mr": "मान्सूनोत्तर",
+        "months": [
+          "October",
+          "November"
+        ]
+      }
+    ],
+    "temperature": {
+      "annual_mean_c": 25.2,
+      "annual_range_c": 10.6,
+      "hottest_month": "May",
+      "may_mean_daily_max_c": 39.8,
+      "may_mean_daily_min_c": 24.4,
+      "summer_peak_range_c": [
+        45,
+        46
+      ],
+      "recorded_max_c": 45.9,
+      "coldest_month": "December",
+      "december_mean_c": 20.8,
+      "recorded_min_c": 5.6,
+      "recorded_min_note": "5.6 to 5.8 C, January 2003 and December 2018",
+      "frost_risk": "none recorded",
+      "october_note": "After the monsoon withdraws in late September, day temperature rises again and October records a secondary maximum",
+      "source_tier": "A"
+    },
+    "crop_temperature_requirements": {
+      "germination_c": {
+        "min": 30,
+        "max": 35
+      },
+      "tillering_c": {
+        "min": 25,
+        "max": 30
+      },
+      "rhizome_formation_c": {
+        "min": 20,
+        "max": 25
+      },
+      "rhizome_growth_c": {
+        "min": 18,
+        "max": 20
+      },
+      "leaf_scorch_above_c": 35,
+      "growth_stops_above_c": 40,
+      "source_tier": "A"
+    },
+    "monthly_match": [
+      {
+        "month": "May",
+        "stage": "G0_G1",
+        "required_c": "30-35",
+        "kannad": "39.8 mean max, up to 45",
+        "match": false,
+        "note": "the single mismatched month, and it is the planting month"
+      },
+      {
+        "month": "June",
+        "stage": "G1",
+        "required_c": "30-35",
+        "kannad": "falling with monsoon",
+        "match": true
+      },
+      {
+        "month": "July",
+        "stage": "G2",
+        "required_c": "25-30",
+        "kannad": "about 31 max",
+        "match": true
+      },
+      {
+        "month": "August",
+        "stage": "G2",
+        "required_c": "25-30",
+        "kannad": "about 30",
+        "match": true
+      },
+      {
+        "month": "September",
+        "stage": "G3",
+        "required_c": "20-25",
+        "kannad": "falling",
+        "match": true
+      },
+      {
+        "month": "October",
+        "stage": "G3_G4",
+        "required_c": "20-25",
+        "kannad": "secondary maximum",
+        "match": "marginal"
+      },
+      {
+        "month": "November",
+        "stage": "G4",
+        "required_c": "18-20",
+        "kannad": "falling",
+        "match": true
+      },
+      {
+        "month": "December",
+        "stage": "G4",
+        "required_c": "18-20",
+        "kannad": "20.8 mean",
+        "match": true,
+        "note": "close to ideal for bulking"
+      },
+      {
+        "month": "January",
+        "stage": "G4_G5",
+        "required_c": "18-20",
+        "kannad": "coldest",
+        "match": true
+      },
+      {
+        "month": "February",
+        "stage": "G5",
+        "required_c": "cool favourable",
+        "kannad": "warming",
+        "match": true
+      }
+    ],
+    "rainfall": {
+      "source_comparison_mm": [
+        {
+          "source": "Government gazetteer, Aurangabad station, 70 years",
+          "annual": 725.8,
+          "tier": "A"
+        },
+        {
+          "source": "District Profile",
+          "annual": 734,
+          "tier": "A"
+        },
+        {
+          "source": "climate-data.org 1991-2021",
+          "annual": 777,
+          "tier": "B"
+        },
+        {
+          "source": "climatestotravel",
+          "annual": 790,
+          "tier": "B"
+        },
+        {
+          "source": "weather-and-climate 1990-2020",
+          "annual": 859,
+          "tier": "B"
+        },
+        {
+          "source": "Marathwada long-term average",
+          "annual": 776,
+          "tier": "A"
+        }
+      ],
+      "planning_figure_mm": {
+        "min": 725,
+        "max": 775,
+        "rationale": "The 70-year gazetteer figure is both the lowest and the best documented. In planning, the conservative figure is the correct one."
+      },
+      "monsoon_season_mm": 557.71,
+      "monsoon_season_source": "Aurangabad district, research paper",
+      "wettest_month": {
+        "month": "July",
+        "mm": [
+          195,
+          217
+        ],
+        "rainy_days": 10
+      },
+      "driest_month": {
+        "month": "February",
+        "mm": [
+          2,
+          3
+        ],
+        "rainy_days": 0
+      },
+      "rain_ends": "early to mid October",
+      "highest_humidity_month": "August",
+      "source_tier": "A"
+    },
+    "variability": {
+      "years_below_lta_pct": 55,
+      "lta_mm": 776,
+      "statement": "Against the Marathwada long-term annual average of 776 mm, 55 percent of years recorded less",
+      "extreme_wet_years": [
+        1916,
+        1983,
+        2019
+      ],
+      "extreme_dry_years": [
+        1920,
+        1972
+      ],
+      "planning_tiers": [
+        {
+          "scenario": "poor year",
+          "assumed_mm": 550,
+          "approx_probability_pct": 30,
+          "use": "size the area on this"
+        },
+        {
+          "scenario": "normal year",
+          "assumed_mm": 725,
+          "approx_probability_pct": 45,
+          "use": "planned case"
+        },
+        {
+          "scenario": "good year",
+          "assumed_mm": 850,
+          "approx_probability_pct": 25,
+          "use": "upside only"
+        }
+      ],
+      "probability_source_class": "DERIVED",
+      "source_tier": "A"
+    },
+    "climate_trends": {
+      "monsoon_slope_mm_per_year": [
+        {
+          "district": "Beed",
+          "slope": -0.956
+        },
+        {
+          "district": "Parbhani",
+          "slope": -2.809
+        }
+      ],
+      "seasonal_change_pct": [
+        {
+          "season": "winter",
+          "change_pct": -25.54,
+          "z_value": -1.65,
+          "significant": true
+        },
+        {
+          "season": "pre_monsoon",
+          "change_pct": -30.81,
+          "z_value": -1.67,
+          "significant": true
+        }
+      ],
+      "implications": [
+        "Pre-monsoon rainfall down about 31 percent invalidates the traditional practice of planting with pre-monsoon showers. That water must now come from drip.",
+        "Winter rainfall down about 26 percent reduces groundwater recharge, and October to February is exactly when ginger demand peaks and the well is under most pressure.",
+        "All rainfall figures in this knowledge base are historical averages against a declining trend, so future years are more likely to fall below them than above."
+      ],
+      "source_tier": "A"
+    },
+    "agro_climatic_zones": {
+      "region": "Marathwada",
+      "zone_count": 3,
+      "moisture_index_range": [
+        -21.17,
+        6.77
+      ],
+      "zones": [
+        {
+          "zone": "western",
+          "rainfall_mm": [
+            600,
+            750
+          ],
+          "mean_temp_c": "below 26",
+          "recommended_crops": [
+            "jowar",
+            "cotton",
+            "groundnut"
+          ]
+        },
+        {
+          "zone": "central",
+          "rainfall_mm": [
+            600,
+            800
+          ],
+          "mean_temp_c": "26 to 27"
+        },
+        {
+          "zone": "eastern",
+          "rainfall_mm": null,
+          "mean_temp_c": null,
+          "source_class": "VERIFY"
+        }
+      ],
+      "kannad_assignment": {
+        "zone": "western",
+        "source_class": "DERIVED",
+        "basis": "western part of the district, near the Ajanta range, above 600 m elevation",
+        "needs_confirmation_from": "VNMKV Parbhani or district agriculture office"
+      },
+      "ginger_absent_from_recommended_list": true,
+      "interpretation": "The recommended list is a rainfed list. Ginger belongs here as an irrigated, high-value, high-risk crop rather than as a rainfed option — which is precisely why drip, mulch and raised beds are preconditions rather than recommendations.",
+      "source_tier": "A"
+    },
+    "monsoon": {
+      "normal_coverage_date": "10 June",
+      "coverage_statement": "By 10 June the monsoon should have covered most of Maharashtra",
+      "ginger_planting_deadline": "7 June",
+      "conflict_note": "Ginger must be planted BEFORE the monsoon arrives, which is the opposite of cotton, soybean and tur — those are sown after the monsoon establishes, typically in the first two weeks of July. A farmer habituated to that pattern will wait for rain and miss the ginger window.",
+      "dry_spells": {
+        "recorded_range_days": [
+          20,
+          45
+        ],
+        "extent": "across Maharashtra, with Marathwada recording more dry days than average",
+        "documented_impact": "moong and urad yields in Latur fell 40 to 60 percent",
+        "ginger_implication": "A 30 day break at G1 means establishment failure; at G3 it means fingers that never differentiate. Both are irrecoverable, which is why drip is not optional here."
+      },
+      "current_season_example_2026": {
+        "imd_july_forecast": "below 94 percent of the monthly LPA of 280.4 mm",
+        "kharif_sowing_by_25_june": "18.27 million hectares, 23 percent below the previous year",
+        "state_advisory": "do not rush sowing until 15 June",
+        "note": "Recorded because the knowledge base assumption about rainfall variability was being demonstrated in the same season it was written."
+      },
+      "imd_statement": "Distribution of rainfall matters more than quantity",
+      "source_tier": "A"
+    },
+    "cyclone_risk": {
+      "statement": "Chhatrapati Sambhajinagar lies in the path of tropical cyclones. They generally occur between April and December with two intensity peaks, one pre-monsoon from late April to early June and one post-monsoon in October and November. Being far from the sea the city is not struck at full intensity, but they can bring heavy rainfall.",
+      "peaks": [
+        "late April to early June",
+        "October and November"
+      ],
+      "why_dangerous_for_ginger": [
+        "October and November fall in G3 end and G4, when the rhizome is fully formed and criticality is highest",
+        "the soil has been dry and cracked for weeks, so infiltration behaviour is unusual",
+        "drainage channels are typically neglected because the monsoon is considered finished",
+        "the full season investment is already committed, so the same saturation event costs more than it would in July"
+      ],
+      "domains_that_missed_this": [
+        3,
+        6
+      ],
+      "source_tier": "B"
+    },
+    "two_disease_seasons": [
+      {
+        "period": "July to September",
+        "disease_type": "soil-borne",
+        "primary": "soft rot",
+        "driver": "soil saturation and high humidity"
+      },
+      {
+        "period": "December to February",
+        "disease_type": "foliar",
+        "primary": "leaf spot and blotch",
+        "driver": "fog and prolonged leaf wetness"
+      }
+    ],
+    "winter_advantage": {
+      "statement": "The Marathwada winter is close to ideal for rhizome bulking",
+      "december_mean_c": 20.8,
+      "rhizome_growth_optimum_c": [
+        18,
+        20
+      ],
+      "not_available_in": [
+        "Kerala",
+        "Konkan"
+      ],
+      "reason": "those belts have warm winters",
+      "conditions": [
+        "water must be available",
+        "the crop must still be healthy",
+        "potassium must be adequate"
+      ],
+      "season_strategy": {
+        "may_june": "defend against heat",
+        "july_september": "defend against water",
+        "october_january": "let the crop fill",
+        "february": "build quality",
+        "note": "The first two phases are defensive and the third is where yield is actually made. But the third is only reachable if the first two are survived."
+      }
+    },
+    "station_requirements": [
+      {
+        "measurement": "temperature max and min",
+        "domains": [
+          1,
+          3,
+          5,
+          6,
+          7
+        ],
+        "priority": "essential",
+        "available": true
+      },
+      {
+        "measurement": "relative humidity",
+        "domains": [
+          5,
+          6,
+          7
+        ],
+        "priority": "essential",
+        "available": true
+      },
+      {
+        "measurement": "rainfall",
+        "domains": [
+          3,
+          6,
+          7
+        ],
+        "priority": "essential",
+        "available": true
+      },
+      {
+        "measurement": "evaporation or solar radiation",
+        "domains": [
+          3
+        ],
+        "priority": "essential",
+        "available": "computed",
+        "note": "The single most valuable measurement, because it is the only locally variable term in the water requirement formula"
+      },
+      {
+        "measurement": "wind speed",
+        "domains": [
+          3
+        ],
+        "priority": "high",
+        "available": true
+      },
+      {
+        "measurement": "dew point",
+        "domains": [
+          6
+        ],
+        "priority": "high",
+        "available": "computed"
+      },
+      {
+        "measurement": "soil temperature",
+        "domains": [
+          1,
+          5
+        ],
+        "priority": "medium",
+        "available": true
+      },
+      {
+        "measurement": "leaf wetness direct",
+        "domains": [
+          6
+        ],
+        "priority": "high",
+        "available": false,
+        "note": "capability gap; estimated from humidity, temperature and dew point in the meantime"
+      }
+    ],
+    "bias_correction": {
+      "mechanism": "bias equals the rolling mean of observed minus forecast; corrected forecast equals raw forecast plus bias; confidence is a function of observation count and variance",
+      "why_valuable_here": [
+        "regional forecasts fail more often in this belt, as the 20 to 45 day dry spells and the farmer quote about ten to twenty days notice both illustrate",
+        "terrain variation is large — Kannad sits at 633 m near the Ajanta range while the rest of the district is flatter and lower, and the gazetteer itself notes the district average is slightly below the Aurangabad station figure",
+        "three agro-climatic zones exist within one region, so a Marathwada forecast can be right for one zone and wrong for another"
+      ],
+      "accumulation": [
+        {
+          "period": "1 month",
+          "yields": "rough bias becomes visible"
+        },
+        {
+          "period": "1 season",
+          "yields": "reliable correction function plus a local crop coefficient series for ginger"
+        },
+        {
+          "period": "3 seasons",
+          "yields": "local pest and disease pressure model"
+        },
+        {
+          "period": "5 plus seasons",
+          "yields": "local weather to yield relationships"
+        }
+      ],
+      "honest_limit": "We do not produce forecasts. Long range monsoon forecasting is IMD's work and has real limits. We measure actual local conditions, correct the public forecast for this village, and translate the result into a crop decision. The third of those is the most valuable because IMD reports weather but does not say what the crop should do."
+    }
+  },
+  "rules": [
+    {
+      "rule_id": "D07-RF-001",
+      "category": "RF",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G0",
+      "trigger": {
+        "english": "Pre-season area planning is initiated",
+        "marathi": "हंगामापूर्व क्षेत्र नियोजन सुरू",
+        "expr": "season_water_plan_basis IS NULL OR season_water_plan_basis != 'poor_year'",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Area must be sized on a poor year.",
+        "golden_tests": [
+          {
+            "context": {
+              "season_water_plan_basis": "average_year"
+            },
+            "expect": "TRUE",
+            "label": "सरासरीवर नियोजन — इशारा"
+          },
+          {
+            "context": {
+              "season_water_plan_basis": "poor_year"
+            },
+            "expect": "FALSE",
+            "label": "वाईट वर्षावर — बरोबर"
+          },
+          {
+            "context": {},
+            "expect": "TRUE",
+            "label": "आधारच ठरवलेला नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Size the area against a POOR year water assumption, not an average one. State plainly that 55 percent of years here fall below the long-term average. Half the area fully watered beats the full area half watered.",
+        "marathi": "क्षेत्र वाईट वर्षाच्या गृहीतकावर ठरवा, सरासरीवर नाही. इथे निम्म्याहून जास्त वर्षे सरासरीपेक्षा कमी पाऊस पडतो. अर्धे क्षेत्र पूर्ण पाण्यासह हे पूर्ण क्षेत्र अर्ध्या पाण्यासह यापेक्षा चांगले."
+      },
+      "reasoning": {
+        "agronomic_basis": "Against the Marathwada long-term average of 776 mm, 55 percent of years recorded less. The average is therefore better than the median, and planning on it fails in more than half of years. In ginger the largest cost is seed rhizome, spent before the season starts, so running short of water mid-season produces a near-total loss rather than a proportional one.",
+        "yield_impact": "Water exhaustion in G4 carries u = 0.20 to 0.40, and because the seed cost is already sunk the financial loss is close to total.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Arabian Journal of Geosciences, Springer 2022"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "season_water_plan_basis",
+        "area_acre",
+        "water_available_oct_feb_litres",
+        "rainfall_deviation_pct"
+      ],
+      "u_value": 0.3,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "This is the single most important planning statistic in the domain and it is routinely ignored because averages feel like normal. Here the average is an optimistic case.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D07-CL-001",
+      "category": "CL",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "A farmer or partner asks whether ginger is suited to this area",
+        "marathi": "या भागात अद्रक चालेल का असा प्रश्न"
+      },
+      "action": {
+        "english": "Answer honestly. The Koppen class is BSh, hot semi-arid steppe, which is not the class ginger belongs in. Then state what follows from it: the crop is viable here but it runs entirely on management, so drip, mulch and raised beds are preconditions rather than options.",
+        "marathi": "प्रामाणिक उत्तर द्या. इथले हवामान BSh — उष्ण अर्ध-शुष्क — या वर्गात आहे, आणि अद्रकाचा वर्ग तो नाही. पण याचा अर्थ पीक घेता येणार नाही असा नाही. अर्थ एवढाच की इथे ते पूर्णपणे व्यवस्थापनावर उभे राहते — म्हणून ठिबक, आच्छादन आणि रुंद वरंबा या पूर्वअटी आहेत, पर्याय नाहीत."
+      },
+      "reasoning": {
+        "agronomic_basis": "The climate is formally classified as local steppe with little rainfall through the year. Ginger's home belts are Af, Am and Aw. This is a classification fact rather than a judgement, and stating it up front prevents the three preconditions from being treated as optional extras.",
+        "yield_impact": "Framing. Prevents a farmer from omitting drip or mulch on the assumption that they are enhancements.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "climate-data.org Koppen classification"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil",
+          "domain_3_water",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "agro_climatic_zone",
+        "has_drip",
+        "planting_layout"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "Worth saying to partners as well as farmers. Marathwada is not a difficult market for this product — it is the market of greatest need, because where nature supplies thirty percent and management seventy, guidance is worth more.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D07-CL-002",
+      "category": "CL",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "agro_climatic_zone is unknown",
+        "marathi": "कृषी-हवामान विभाग निश्चित नाही",
+        "expr": "agro_climatic_zone IS NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {},
+            "expect": "TRUE",
+            "label": "विभाग निश्चित नाही"
+          },
+          {
+            "context": {
+              "agro_climatic_zone": "marathwada_western"
+            },
+            "expect": "FALSE",
+            "label": "निश्चित"
+          }
+        ]
+      },
+      "action": {
+        "english": "Assume Marathwada western zone provisionally — 600 to 750 mm and mean temperature below 26 C — and flag it as inferred rather than confirmed. Confirm with VNMKV Parbhani or the district agriculture office.",
+        "marathi": "तात्पुरता पश्चिम विभाग गृहीत धरा — ६०० ते ७५० मिमी, सरासरी तापमान २६ अंशांखाली — पण हे अनुमान आहे, पुष्टी नाही. VNMKV परभणी किंवा जिल्हा कृषी कार्यालयाकडून तालुका-स्तरीय वर्गीकरण घ्यावे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Three agro-climatic zones are identified within Marathwada. Kannad sits in the western part of the district near the Ajanta range and above 600 m, which places it in the western zone on the available criteria. The study does not assign talukas individually.",
+        "yield_impact": "Affects which regional recommendations apply. Not a direct yield factor.",
+        "confidence_score": 0.65,
+        "source_tier": "A",
+        "references": [
+          "Agro-Climatic Zonation of Marathwada, IMD plus Hydrological Project Nashik 1980-2016"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_10_institutional"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "agro_climatic_zone"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Ginger does not appear in the zone's recommended crop list, but that list is a rainfed list. Ginger belongs here as an irrigated high-value crop, which is exactly why the irrigation preconditions carry the weight they do.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D07-TM-001",
+      "category": "TM",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Stage transition or monthly planning",
+        "marathi": "अवस्था बदलली किंवा मासिक नियोजन",
+        "expr": "air_temp_max_c > 35 AND STAGE IN [G0, G1]",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "air_temp_max_c": 40,
+              "current_stage": "G1"
+            },
+            "expect": "TRUE",
+            "label": "उगवणीत उष्णता"
+          },
+          {
+            "context": {
+              "air_temp_max_c": 30,
+              "current_stage": "G1"
+            },
+            "expect": "FALSE",
+            "label": ""
+          }
+        ]
+      },
+      "action": {
+        "english": "Compare current temperature against the stage requirement: germination 30 to 35, tillering 25 to 30, rhizome formation 20 to 25, rhizome growth 18 to 20. Flag only genuine mismatches.",
+        "marathi": "सध्याचे तापमान अवस्थेच्या गरजेशी तपासा — उगवण ३०-३५, फुटवा २५-३०, कंद तयार होणे २०-२५, कंद वाढ १८-२०. खरी तफावत असेल तरच इशारा द्या."
+      },
+      "reasoning": {
+        "agronomic_basis": "Stage-wise optima are published for Maharashtra ginger under drip. Ten of the twelve crop months in this belt fall within or close to the requirement, so a blanket temperature warning would produce noise.",
+        "yield_impact": "Framing for the heat rules rather than a factor in itself.",
+        "confidence_score": 0.82,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Bitle and Deshmukh, Netafim"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_3_water"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "air_temp_max_c",
+        "air_temp_min_c",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "The match table matters as much as the mismatch. Ten of twelve months are fine, so the engine should not be issuing temperature warnings all season — that would train the farmer to ignore them.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D07-HS-001",
+      "category": "HS",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G1",
+      "trigger": {
+        "english": "air_temp_max_c above 35 AND stage is G0 or G1",
+        "marathi": "कमाल तापमान ३५ अंशांवर आणि पीक हंगामापूर्व किंवा उगवणीच्या अवस्थेत",
+        "expr": "air_temp_max_c > 35 AND STAGE IN [G0, G1]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Expert amendment: lowered from 38 C, matching D01-TM-001.",
+        "golden_tests": [
+          {
+            "context": {
+              "air_temp_max_c": 37,
+              "current_stage": "G0"
+            },
+            "expect": "TRUE",
+            "label": "उष्णता व्यवस्थापन"
+          },
+          {
+            "context": {
+              "air_temp_max_c": 33,
+              "current_stage": "G0"
+            },
+            "expect": "FALSE",
+            "label": ""
+          }
+        ]
+      },
+      "action": {
+        "english": "Escalate heat protection. Confirm stage one mulch is in place, split drip into morning and evening runs, and do not irrigate at midday. Mulch here is a precondition for emergence, not a moisture-saving extra.",
+        "marathi": "उष्णता संरक्षण वाढवा. आच्छादन घातले आहे का तपासा, ठिबक सकाळ-संध्याकाळ दोन पाळ्यांत चालवा, दुपारी पाणी देऊ नका. इथे आच्छादन हे ओलावा टिकवण्याचे साधन नाही — ते उगवणीची अट आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Germination needs a soil temperature of 25 to 26 C. May mean daily maximum is 39.8 C and the recorded maximum is 45.9 C, and bare black soil runs hotter than air. Leaves scorch above 35 C. EXPERT AMENDMENT: threshold lowered from 38 C to 35 C, matching D01-TM-001.",
+        "yield_impact": "u = 0.12 estimated for absent stage one mulch under heat stress. Establishment is a hard ceiling, so the loss is irrecoverable.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Government gazetteer May temperatures",
+          "Agrowon stage-wise optima",
+          "District Profile recorded extremes",
+          "Tier-1 expert review, 2026-07-31"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_3_water",
+          "domain_8_operations"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "air_temp_max_c",
+        "current_stage",
+        "soil_temp_c",
+        "mulch_stage_1_done",
+        "heat_stress_days_count"
+      ],
+      "u_value": 0.12,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "This is the one genuine climate mismatch in the whole season and it lands on the planting month. Concentrating all protective effort into these five weeks is more effective than spreading it thin across eight months.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "amended",
+        "comment_mr": "३५–३६°C पासून उष्णता व्यवस्थापन सुरू करावे.",
+        "superseded": {
+          "trigger_en": "air_temp_max_c above 38 AND stage is G0 or G1",
+          "action_en": "Escalate heat protection. Confirm stage one mulch is in place, split drip into morning and evening runs, and do not irrigate at midday. Mulch here is a precondition for emergence, not a moisture-saving extra.",
+          "severity": "yellow",
+          "confidence_score": 0.78,
+          "source_class": "EST",
+          "threshold": "air_temp_max_c > 38",
+          "author_reasoning": "Author estimate; source states only that leaves scorch above 35 C."
+        }
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D07-HS-002",
+      "category": "HS",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Leaf tip and margin scorch reported AND air_temp_max_c above 35 in the preceding three days",
+        "marathi": "पानांच्या टोकांना व कडांना करपा दिसला आणि गेल्या तीन दिवसांत तापमान ३५ अंशांवर होते",
+        "expr": "heat_stress_days_count >= 3 AND STAGE IN [G1, G2, G3]",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "heat_stress_days_count": 4,
+              "current_stage": "G2"
+            },
+            "expect": "TRUE",
+            "label": "सलग उष्णता"
+          },
+          {
+            "context": {
+              "heat_stress_days_count": 1,
+              "current_stage": "G2"
+            },
+            "expect": "FALSE",
+            "label": "एकच दिवस"
+          }
+        ]
+      },
+      "action": {
+        "english": "Classify as heat stress, not disease. Recommend mulch, shade and irrigation timing. Do not recommend a fungicide on this signal.",
+        "marathi": "ही उष्णतेची इजा आहे, रोग नाही. आच्छादन, सावली आणि पाण्याची वेळ हे उपाय. बुरशीनाशक सुचवू नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "Leaves scorch above 35 C, and in this district maxima reach 45.9 C, so foliage scorch is routine rather than exceptional. Without the weather record it is indistinguishable from leaf spot, and the source's sun-held ring test is the confirming check.",
+        "yield_impact": "Prevents repeated unnecessary fungicide application through the hot months.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Agrowon stage temperature limits",
+          "Domain 6 sun-held ring test"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "air_temp_max_c",
+        "leaf_spot_rings_visible",
+        "heat_stress_days_count"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "In a belt this hot, misreading heat scorch as disease would produce a fungicide recommendation every few weeks in summer. The weather record is what makes the distinction possible.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D07-HS-003",
+      "category": "HS",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G3",
+      "trigger": {
+        "english": "Month is October AND stage is G3 or G4",
+        "marathi": "ऑक्टोबर महिना आणि पीक G3 किंवा G4 अवस्थेत",
+        "expr": "MONTH IN [OCT] AND heat_stress_days_count >= 3",
+        "expr_version": "dsl-1.0",
+        "expr_note": "October heat after the monsoon withdraws. The action text names the month, so the trigger must too.",
+        "golden_tests": [
+          {
+            "context": {
+              "current_month": 10,
+              "heat_stress_days_count": 4
+            },
+            "expect": "TRUE",
+            "label": "ऑक्टोबरची उष्णता"
+          },
+          {
+            "context": {
+              "current_month": 4,
+              "heat_stress_days_count": 4
+            },
+            "expect": "FALSE",
+            "label": "एप्रिल — वेगळा नियम"
+          },
+          {
+            "context": {
+              "current_month": 10,
+              "heat_stress_days_count": 1
+            },
+            "expect": "FALSE",
+            "label": "एकच दिवस"
+          }
+        ]
+      },
+      "action": {
+        "english": "Raise vigilance. October carries three pressures at once — a secondary temperature maximum, peak water demand at 22,000 litres per acre per day, and the cyclone window.",
+        "marathi": "ऑक्टोबरमध्ये दक्षता वाढवा. या महिन्यात तीन गोष्टी एकत्र येतात — दिवसाच्या तापमानाचा दुय्यम शिखर, पाण्याची सर्वाधिक मागणी, आणि चक्रीवादळाची शक्यता."
+      },
+      "reasoning": {
+        "agronomic_basis": "The gazetteer records that day temperature rises again after monsoon withdrawal, giving a secondary October maximum. The Domain 3 water table peaks in September and October. The cyclone season has a post-monsoon peak in October and November.",
+        "yield_impact": "Not a separate factor. It concentrates existing risks into one month at the highest criticality stage.",
+        "confidence_score": 0.75,
+        "source_tier": "A",
+        "references": [
+          "Government gazetteer October secondary maximum",
+          "Domain 3 monthly water table",
+          "climatestotravel cyclone seasonality"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "air_temp_max_c",
+        "current_stage",
+        "cyclone_alert_active"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "October is the second stress point of the season after May, and unlike May it arrives when the whole season's investment is already committed.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D07-TM-002",
+      "category": "TM",
+      "priority": 2,
+      "severity": "info",
+      "stage": "G4",
+      "trigger": {
+        "english": "Month is between November and January AND stage is G4",
+        "marathi": "नोव्हेंबर ते जानेवारी आणि पीक गड्डा भरण्याच्या अवस्थेत",
+        "expr": "air_temp_min_c < 12 AND STAGE IN [G4]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "The Marathwada winter suits bulking, but a cold snap still slows it.",
+        "golden_tests": [
+          {
+            "context": {
+              "air_temp_min_c": 9,
+              "current_stage": "G4"
+            },
+            "expect": "TRUE",
+            "label": "थंडीची लाट"
+          },
+          {
+            "context": {
+              "air_temp_min_c": 18,
+              "current_stage": "G4"
+            },
+            "expect": "FALSE",
+            "label": "सामान्य"
+          }
+        ]
+      },
+      "action": {
+        "english": "Inform that conditions are now favourable and the priority shifts from protection to supply — consistent moisture and potassium. This is when yield is actually made.",
+        "marathi": "आता तापमान गड्डा भरण्यासाठी अनुकूल आहे. आता पीक वाचवण्यापेक्षा भरू देणे महत्वाचे — ओलाव्यात सातत्य आणि पालाश. उत्पादन याच काळात ठरते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Rhizome growth optimum is 18 to 20 C and the December mean here is 20.8 C. Kerala and Konkan do not have this because their winters stay warm. The dryness and the cold winter come from the same geography.",
+        "yield_impact": "Identifies the window in which the largest share of yield accumulates.",
+        "confidence_score": 0.82,
+        "source_tier": "A",
+        "references": [
+          "Agrowon stage-wise temperature optima",
+          "climatestotravel December mean"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_4_nutrient"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "air_temp_min_c",
+        "air_temp_max_c",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "The whole season compresses to: May and June defend against heat, July to September defend against water, October to January let the crop fill. Yield is made in the third phase, but only if the first two are survived.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D07-RF-002",
+      "category": "RF",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Rainfall figures are being used for planning",
+        "marathi": "नियोजनासाठी पावसाचे आकडे वापरले जात आहेत",
+        "expr": "rainfall_ytd_mm IS NOT NULL AND rainfall_deviation_pct < -25",
+        "expr_version": "dsl-1.0",
+        "expr_note": "55 percent of years fall below the long-term average here.",
+        "golden_tests": [
+          {
+            "context": {
+              "rainfall_ytd_mm": 420,
+              "rainfall_deviation_pct": -32
+            },
+            "expect": "TRUE",
+            "label": "कमी पाऊस"
+          },
+          {
+            "context": {
+              "rainfall_ytd_mm": 700,
+              "rainfall_deviation_pct": -5
+            },
+            "expect": "FALSE",
+            "label": "सामान्य"
+          }
+        ]
+      },
+      "action": {
+        "english": "Use 725 to 775 mm as the planning range. Prefer the conservative figure. Note that published sources vary from 725.8 to 859 mm depending on station and period.",
+        "marathi": "नियोजनासाठी ७२५ ते ७७५ मिमी ही श्रेणी वापरा, आणि कमी आकडा गृहीत धरा. स्रोतांत ७२६ ते ८५९ मिमी असा फरक आहे — station आणि कालावधी वेगळे असल्याने."
+      },
+      "reasoning": {
+        "agronomic_basis": "The government gazetteer gives 725.8 mm over 70 years and is both the lowest and the best documented figure. Newer normals from shorter periods run higher. In planning, the conservative figure is the correct one, particularly against a declining trend.",
+        "yield_impact": "Sets the denominator for the whole water budget.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Government gazetteer 70 year series",
+          "District Profile",
+          "climate-data.org"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "rainfall_ytd_mm",
+        "rainfall_deviation_pct"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "Choosing between sources matters here because the spread is 130 mm, which is nearly a fifth of the total. The oldest and longest series is also the most conservative, which makes the choice easy.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D07-RF-003",
+      "category": "RF",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Seasonal water plan is being computed",
+        "marathi": "हंगामी पाणी नियोजन केले जात आहे",
+        "expr": "rainfall_mm > 60",
+        "expr_version": "dsl-1.0",
+        "expr_note": "A single heavy day. Deduct from irrigation and check the channels.",
+        "golden_tests": [
+          {
+            "context": {
+              "rainfall_mm": 75
+            },
+            "expect": "TRUE",
+            "label": "मोठा पाऊस"
+          },
+          {
+            "context": {
+              "rainfall_mm": 20
+            },
+            "expect": "FALSE",
+            "label": "सामान्य"
+          }
+        ]
+      },
+      "action": {
+        "english": "Show the distribution, not only the total. Rainfall peaks in July at 195 to 217 mm while crop demand peaks in September and October. The two do not coincide, so October to February must come almost entirely from stored or pumped water.",
+        "marathi": "फक्त एकूण आकडा नव्हे, वाटप दाखवा. पावसाचे शिखर जुलैत, पण पिकाच्या गरजेचे शिखर सप्टेंबर-ऑक्टोबरमध्ये. दोन्ही जुळत नाहीत — ऑक्टोबर ते फेब्रुवारी हे पाणी जवळपास पूर्णपणे विहिरीतून किंवा साठवणीतून द्यावे लागेल."
+      },
+      "reasoning": {
+        "agronomic_basis": "Peak rainfall and peak demand are separated by two to three months. July rain is therefore mainly a drainage risk for ginger rather than a supply opportunity, while the late-season demand falls entirely on irrigation.",
+        "yield_impact": "Frames the water source assessment that carries u = 0.30.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Government gazetteer monthly distribution",
+          "Domain 3 monthly water table"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_10_institutional"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "rainfall_ytd_mm",
+        "water_available_oct_feb_litres",
+        "season_water_plan_basis"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "IMD's own framing applies directly here — distribution matters more than quantity. For ginger in this belt the mismatch between the two peaks is the defining water problem.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D07-MO-001",
+      "category": "MO",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Month is May or early June AND planting has not occurred",
+        "marathi": "मे किंवा जूनची सुरुवात, लागवड झालेली नाही",
+        "expr": "MONTH IN [MAY, JUN] AND days_to_planting BETWEEN 1 AND 20",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "current_month": 6,
+              "days_to_planting": 10
+            },
+            "expect": "TRUE",
+            "label": "पावसाची वाट पाहू नका"
+          },
+          {
+            "context": {
+              "current_month": 4,
+              "days_to_planting": 60
+            },
+            "expect": "FALSE",
+            "label": "अजून वेळ"
+          }
+        ]
+      },
+      "action": {
+        "english": "Warn that ginger timing is the opposite of other kharif crops. Cotton, soybean and tur are sown after the monsoon establishes, typically in early July. Ginger must be planted before it arrives, and 7 June is the deadline.",
+        "marathi": "अद्रक इतर खरीप पिकांसारखे नाही. कापूस, सोयाबीन, तूर पाऊस स्थिरावल्यावर पेरतात — साधारण जुलैच्या पहिल्या पंधरवड्यात. अद्रक पाऊस येण्यापूर्वी लावावे लागते, आणि ७ जून ही शेवटची मुदत आहे. पावसाची वाट पाहू नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "The monsoon normally covers most of Maharashtra by 10 June, three days after the ginger deadline. A farmer whose habit is to wait for rain will therefore miss the window every time, and late planting causes severe rhizome fly and soft rot.",
+        "yield_impact": "Prevents the 0.20 late planting loss by acting before the deadline rather than reporting it afterwards.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "ICAR-CRIDA monsoon coverage",
+          "Agrowon - Dr. Kadam planting window"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_5_pest",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "planting_date",
+        "forecast_rain_48h_mm"
+      ],
+      "u_value": 0.2,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "This is a habit conflict rather than a knowledge gap. The farmer knows when to plant ginger; the difficulty is that every other crop in the field says wait, and the monsoon arrives three days too late to help.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D07-MO-002",
+      "category": "MO",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "dry_spell_days at or above 7 AND stage is G3 or G4",
+        "marathi": "पावसाचा खंड सात दिवस आणि पीक गड्डा तयार होण्याच्या किंवा भरण्याच्या अवस्थेत",
+        "expr": "dry_spell_days >= 7 AND STAGE IN [G3, G4]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Duplication group critical_stage_moisture_stress.",
+        "golden_tests": [
+          {
+            "context": {
+              "dry_spell_days": 9,
+              "current_stage": "G3"
+            },
+            "expect": "TRUE",
+            "label": "निर्णायक ताण"
+          },
+          {
+            "context": {
+              "dry_spell_days": 9,
+              "current_stage": "G2"
+            },
+            "expect": "FALSE",
+            "label": ""
+          }
+        ]
+      },
+      "action": {
+        "english": "Resume full irrigation at 7 days rather than waiting for the general 10 to 12 day rule. In G3 and G4 a ten day gap is already too long.",
+        "marathi": "या अवस्थांत १० ते १२ दिवसांची वाट पाहू नका — सात दिवसांवरच पूर्ण क्षमतेने ठिबक सुरू करा. G3 मध्ये दहा दिवस खूप जास्त आहेत."
+      },
+      "reasoning": {
+        "agronomic_basis": "Dry spells of 20 to 45 days have been recorded across Maharashtra with Marathwada worse than average, and pulse yields in Latur fell 40 to 60 percent in one such event. The general 10 to 12 day intervention rule is a floor for average conditions, not a description of this belt.",
+        "yield_impact": "u = 0.20 for stress in the critical window, and it is irrecoverable because fingers that fail to differentiate do not form later.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "The Wire Science dry spell record",
+          "SIMA",
+          "Domain 3 critical stages"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "dry_spell_days",
+        "current_stage",
+        "rain_gap_days",
+        "soil_moisture_vwc"
+      ],
+      "u_value": 0.2,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "The recorded 20 to 45 day spells are what make drip a precondition rather than an efficiency measure. Without it, a single average dry spell at G3 ends the season.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D07-MO-003",
+      "category": "MO",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Seasonal outlook available before planting",
+        "marathi": "लागवडीपूर्वी हंगामी अंदाज उपलब्ध",
+        "expr": "MONTH IN [SEP, OCT] AND dry_spell_days >= 10",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Monsoon withdrawal. The well has to carry the crop from here.",
+        "golden_tests": [
+          {
+            "context": {
+              "current_month": 10,
+              "dry_spell_days": 12
+            },
+            "expect": "TRUE",
+            "label": "पाऊस संपला"
+          },
+          {
+            "context": {
+              "current_month": 7,
+              "dry_spell_days": 12
+            },
+            "expect": "FALSE",
+            "label": "मान्सूनमध्ये खंड"
+          }
+        ]
+      },
+      "action": {
+        "english": "Present the seasonal outlook as context, not as a decision. State the forecast, state that distribution matters more than quantity, and do not adjust the planting date on a seasonal forecast — the deadline is fixed by pest and disease risk, not by rainfall.",
+        "marathi": "हंगामी अंदाज संदर्भ म्हणून द्या, निर्णय म्हणून नाही. पावसाचे वाटप हे प्रमाणापेक्षा महत्वाचे. आणि हंगामी अंदाजावरून लागवडीची तारीख बदलू नका — ती मुदत पावसाने नव्हे, कीड व रोगाच्या जोखमीने ठरलेली आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Seasonal forecasts have limited skill at taluka level. The ginger planting deadline is set by rhizome fly and soft rot timing, which do not move with the rainfall outlook. Adjusting the planting date on a seasonal forecast trades a certain risk for an uncertain one.",
+        "yield_impact": "Protects the planting deadline rule from being overridden by weaker information.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "IMD statement on distribution versus quantity",
+          "Domain 2 planting deadline"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "forecast_source",
+        "planting_date",
+        "season_water_plan_basis"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "In 2026 the July forecast was below 94 percent of the long period average and state sowing was 23 percent behind by late June. The right response for ginger is to adjust area, not to adjust the planting date.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D07-CY-001",
+      "category": "CY",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G4",
+      "trigger": {
+        "english": "Month is October or November AND forecast_rain_48h_mm above 40",
+        "marathi": "ऑक्टोबर किंवा नोव्हेंबर, ४८ तासांत ४० मिमीहून जास्त पावसाचा अंदाज",
+        "expr": "MONTH IN [OCT, NOV] AND forecast_rain_48h_mm > 40",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Duplication group: post_monsoon_cyclone_saturation. Same event as D03-WL-003.",
+        "golden_tests": [
+          {
+            "context": {
+              "current_month": 11,
+              "forecast_rain_48h_mm": 50
+            },
+            "expect": "TRUE",
+            "label": "नोव्हेंबर चक्रीवादळ"
+          },
+          {
+            "context": {
+              "current_month": 9,
+              "forecast_rain_48h_mm": 50
+            },
+            "expect": "FALSE",
+            "label": "सप्टेंबर — मान्सून नियम"
+          }
+        ]
+      },
+      "action": {
+        "english": "Raise a red drainage alert, more severe than the equivalent monsoon warning. Stop drip, clear channels urgently, and check saturation within 12 hours of the rain stopping.",
+        "marathi": "लाल इशारा — आणि हा जुलैच्या इशाऱ्यापेक्षा जास्त तीव्र. ठिबक बंद करा, निचरा चर तातडीने मोकळे करा, पाऊस थांबल्यावर बारा तासांत संपृक्तता तपासा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The district lies in the path of tropical cyclones with a post-monsoon intensity peak in October and November. It is not struck at full intensity but can receive heavy rainfall. By then the rhizome is fully formed, the soil has been dry and cracked for weeks, and drainage channels have usually been neglected because the monsoon is considered over.",
+        "yield_impact": "u = 0.20 to 0.40, and more expensive than an equivalent July event because the entire season investment is already committed.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "climatestotravel Aurangabad cyclone seasonality"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_6_disease",
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "forecast_rain_48h_mm",
+        "current_stage",
+        "cyclone_alert_active",
+        "drainage_levels_present",
+        "saturation_hours"
+      ],
+      "u_value": 0.3,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "Neither Domain 3 nor Domain 6 contained this rule when they were first written. Both assumed the rainy season ends in September. It surfaced only when the climate profile was examined in its own right, which is an argument for having a weather domain rather than scattering weather facts through the others.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D07-CY-002",
+      "category": "CY",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G4",
+      "trigger": {
+        "english": "Month is October or November AND stage is G3 end or G4",
+        "marathi": "ऑक्टोबर किंवा नोव्हेंबर, पीक G3 अखेर किंवा G4 अवस्थेत",
+        "expr": "MONTH IN [OCT, NOV] AND STAGE IN [G3, G4]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "A monthly reminder protecting a 0.30 exposure. The channels exist; the failure mode is neglect.",
+        "golden_tests": [
+          {
+            "context": {
+              "current_month": 11,
+              "current_stage": "G4"
+            },
+            "expect": "TRUE",
+            "label": "चर तपासा"
+          },
+          {
+            "context": {
+              "current_month": 11,
+              "current_stage": "G2"
+            },
+            "expect": "FALSE",
+            "label": ""
+          }
+        ]
+      },
+      "action": {
+        "english": "Issue a monthly reminder to inspect and clear all three drainage levels, even though the monsoon is over. Give the reason: cyclonic rain reaches this district in these months.",
+        "marathi": "मासिक आठवण द्या — निचऱ्याच्या तिन्ही पातळ्या तपासा, पावसाळा संपला असला तरी. कारण सांगा: चक्रीवादळाचा पाऊस या महिन्यांत येऊ शकतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "Channels silt up during the monsoon and are then ignored once the rain stops. A scheduled inspection converts a reactive failure into a routine check at the point of highest crop value.",
+        "yield_impact": "Reduces the probability of the saturation event in D07-CY-001.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "climatestotravel cyclone seasonality",
+          "Domain 2 drainage levels"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "current_stage",
+        "drainage_levels_present",
+        "main_drain_connected"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "A one-line reminder protecting a 0.30 exposure. The channels already exist; the failure mode is neglect rather than absence.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D07-HU-001",
+      "category": "HU",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G3",
+      "trigger": {
+        "english": "rh_pct above 85 for three consecutive days AND month is August or September",
+        "marathi": "सलग तीन दिवस आर्द्रता ८५ टक्क्यांवर, ऑगस्ट किंवा सप्टेंबर",
+        "expr": "DURATION(rh_pct > 85) > 72 HOURS AND MONTH IN [AUG, SEP]",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "rh_pct__duration": 80,
+              "current_month": 8
+            },
+            "expect": "TRUE",
+            "label": "कंदकूज प्रतिबंध"
+          },
+          {
+            "context": {
+              "rh_pct__duration": 80,
+              "current_month": 12
+            },
+            "expect": "FALSE",
+            "label": "हिवाळा — वेगळा नियम"
+          }
+        ]
+      },
+      "action": {
+        "english": "Trigger the soil-borne disease protocol. August is the highest humidity month here and it coincides with the soft rot peak.",
+        "marathi": "कंदकूज प्रतिबंधक कृती सुरू करा. इथे ऑगस्टमध्ये सर्वाधिक आर्द्रता असते आणि तोच कंदकुजीचा शिखर काळ आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "August records the highest relative humidity in this district and soft rot peaks in August and September. The coincidence is causal rather than accidental — high humidity is one of the conditions the pathogen requires.",
+        "yield_impact": "Feeds the 0.70 soft rot pathway.",
+        "confidence_score": 0.82,
+        "source_tier": "A",
+        "references": [
+          "climate-data.org humidity",
+          "Agrowon - Mali and Mahajan disease timing"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "rh_pct",
+        "current_stage",
+        "saturation_hours"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "One of two distinct disease seasons here. The other is winter fog driving foliar disease, and the two need different responses at different times of year.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D07-HU-002",
+      "category": "HU",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G4",
+      "trigger": {
+        "english": "Estimated leaf_wetness_hours above 8 for two consecutive days AND month between December and February",
+        "marathi": "पानांवरील अंदाजित ओलावा आठ तासांहून जास्त सलग दोन दिवस, डिसेंबर ते फेब्रुवारी",
+        "expr": "leaf_wetness_hours > 8 AND MONTH IN [DEC, JAN, FEB]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Winter fog is the second disease season — foliar, not soil-borne.",
+        "golden_tests": [
+          {
+            "context": {
+              "leaf_wetness_hours": 11,
+              "current_month": 1
+            },
+            "expect": "TRUE",
+            "label": "पाने ओली राहतात"
+          },
+          {
+            "context": {
+              "leaf_wetness_hours": 2,
+              "current_month": 1
+            },
+            "expect": "FALSE",
+            "label": "कोरडी"
+          },
+          {
+            "context": {
+              "leaf_wetness_hours": 11,
+              "current_month": 8
+            },
+            "expect": "FALSE",
+            "label": "हंगामाबाहेर"
+          }
+        ]
+      },
+      "action": {
+        "english": "Trigger the foliar disease schedule. This is the second disease season, driven by winter fog rather than by soil saturation.",
+        "marathi": "पानांवरील रोगाचे वेळापत्रक सुरू करा. हा दुसरा रोग-हंगाम आहे — जमिनीतील ओलाव्यामुळे नव्हे, हिवाळी धुक्यामुळे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Leaf spot and blotch depend on the duration of surface wetness, and the source's fog rule is a qualitative version of the same relationship. Leaf wetness must be estimated from humidity, temperature and dew point because no dedicated sensor is fitted.",
+        "yield_impact": "Leaf spot carries roughly 0.08.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Agrowon - Mali and Mahajan fog rule",
+          "Core C3.2 derived variables"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "leaf_wetness_hours",
+        "rh_pct",
+        "dew_point_c",
+        "fog_observed",
+        "fog_days_consecutive"
+      ],
+      "u_value": 0.08,
+      "recoverability": "partial",
+      "source_class": "EST",
+      "kannad_note": "Fog frequency and duration in Marathwada were not found in any source. The station will measure it directly, and it is one of the more useful pieces of local data the first season will generate.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D07-HU-003",
+      "category": "HU",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "rh_pct above 80 for three consecutive days AND cloudy AND month between July and October",
+        "marathi": "सलग तीन दिवस आर्द्रता ८० टक्क्यांवर, ढगाळ हवामान, जुलै ते ऑक्टोबर",
+        "expr": "DURATION(rh_pct > 80) > 72 HOURS AND MONTH IN [JUL, AUG, SEP, OCT]",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "rh_pct__duration": 80,
+              "current_month": 9
+            },
+            "expect": "TRUE",
+            "label": "कीड-दाब वाढला"
+          },
+          {
+            "context": {
+              "rh_pct__duration": 20,
+              "current_month": 9
+            },
+            "expect": "FALSE",
+            "label": "कमी कालावधी"
+          }
+        ]
+      },
+      "action": {
+        "english": "Issue a pest pressure alert and double the scouting frequency. Do not spray on this signal alone.",
+        "marathi": "कीड-दाबाचा इशारा द्या आणि निरीक्षणाची वारंवारता दुप्पट करा. फक्त या संकेतावर फवारणी करू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "The source names high humidity, cloudy weather and lower temperature as the combination under which pests and diseases appear during the monsoon. All three are measurable at the cluster station, so the pressure can be anticipated rather than discovered.",
+        "yield_impact": "Enables action before symptoms, when control is cheapest and most effective.",
+        "confidence_score": 0.75,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali and Mahajan weather statement"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "rh_pct",
+        "air_temp_max_c",
+        "solar_radiation_mj_m2",
+        "pest_scouting_date"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-D",
+      "kannad_note": "The most valuable thing the station does for pest management, because the alternative is waiting for visible damage by which point the cheapest interventions have expired.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D07-WS-001",
+      "category": "WS",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Weather station commissioning or measurement priorities being set",
+        "marathi": "हवामान station बसवताना मापनांचे प्राधान्य ठरवायचे आहे",
+        "expr": "wind_speed_ms > 8",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "wind_speed_ms": 11
+            },
+            "expect": "TRUE",
+            "label": "जोराचा वारा"
+          },
+          {
+            "context": {
+              "wind_speed_ms": 3
+            },
+            "expect": "FALSE",
+            "label": "सौम्य"
+          }
+        ]
+      },
+      "action": {
+        "english": "Prioritise evaporation above everything else. It is the only locally variable term in the water requirement formula, and every other measurement supports either it or a disease trigger.",
+        "marathi": "बाष्पीभवनाला सर्वोच्च प्राधान्य द्या. पाण्याच्या गरजेच्या सूत्रातील एकमेव स्थानिक बदलणारा घटक तोच आहे — बाकी सर्व मापने त्याला किंवा रोग-संकेतांना आधार देतात."
+      },
+      "reasoning": {
+        "agronomic_basis": "The water requirement formula is evaporation times crop coefficient times pan coefficient. The two coefficients are crop and instrument constants; only evaporation varies with location. Kannad is hotter and drier than the belt the published table averages over, so the regional figure is systematically wrong here in one direction.",
+        "yield_impact": "Improves dosing accuracy across the entire season and removes both chronic over and under watering.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Bitle and Deshmukh formula",
+          "Domain 3 monthly table caveat"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "pan_evaporation_mm_day",
+        "solar_radiation_mj_m2",
+        "wind_speed_ms",
+        "station_id"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "If a pan is not fitted, evaporation can be computed from temperature, humidity, wind and solar radiation. That is arithmetic on the master unit rather than additional hardware, so there is no reason to defer it.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D07-WS-002",
+      "category": "WS",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Hardware roadmap review",
+        "marathi": "hardware सुधारणेचा आढावा",
+        "expr": "wind_speed_ms > 5 AND air_temp_max_c > 33",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Wind plus heat raises transpiration faster than either alone.",
+        "golden_tests": [
+          {
+            "context": {
+              "wind_speed_ms": 7,
+              "air_temp_max_c": 36
+            },
+            "expect": "TRUE",
+            "label": "बाष्पोत्सर्जन वाढले"
+          },
+          {
+            "context": {
+              "wind_speed_ms": 7,
+              "air_temp_max_c": 28
+            },
+            "expect": "FALSE",
+            "label": "थंड"
+          }
+        ]
+      },
+      "action": {
+        "english": "Record the leaf wetness sensor as the highest value missing measurement, followed by solar radiation if not already fitted. Both are cheap.",
+        "marathi": "पानांवरील ओलावा मोजणारा sensor हा सर्वात मूल्यवान गहाळ मापन आहे; त्यानंतर सौर विकिरण. दोन्ही स्वस्त आहेत."
+      },
+      "reasoning": {
+        "agronomic_basis": "Leaf wetness duration drives foliar disease and is currently estimated rather than measured. Solar radiation improves the evaporation computation where no pan is fitted.",
+        "yield_impact": "Improves accuracy of the 0.08 foliar disease trigger and of the whole irrigation schedule.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Core C10.5 capability gap register",
+          "Domain 6 leaf wetness estimation"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "leaf_wetness_hours",
+        "solar_radiation_mj_m2",
+        "station_id"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "Recorded rather than acted on. Ranked above the three-depth soil probe from Domain 3 because it unlocks a trigger that currently runs on estimation.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D07-WS-003",
+      "category": "WS",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Daily station readings received",
+        "marathi": "station कडून रोजची वाचने आली",
+        "expr": "wind_speed_ms > 4 AND forecast_rain_48h_mm < 2",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Spray drift. Not a suppressor, a timing note.",
+        "golden_tests": [
+          {
+            "context": {
+              "wind_speed_ms": 6,
+              "forecast_rain_48h_mm": 0
+            },
+            "expect": "TRUE",
+            "label": "फवारणी सकाळी करा"
+          },
+          {
+            "context": {
+              "wind_speed_ms": 2,
+              "forecast_rain_48h_mm": 0
+            },
+            "expect": "FALSE",
+            "label": "शांत"
+          }
+        ]
+      },
+      "action": {
+        "english": "Compute and store the derived variables: evaporation, dew point, estimated leaf wetness hours, and accumulated rainfall against the seasonal expectation.",
+        "marathi": "रोजच्या वाचनांवरून काढलेली मूल्ये साठवा — बाष्पीभवन, दव-बिंदू, अंदाजित पानांवरील ओलावा, आणि हंगामी अपेक्षेविरुद्ध जमा पाऊस."
+      },
+      "reasoning": {
+        "agronomic_basis": "Raw readings are converted into the variables biology actually responds to. Storing the derived values rather than recomputing them keeps the advisory reproducible and lets the bias correction accumulate.",
+        "yield_impact": "Foundational rather than direct.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Core C3.2 derived agro-meteorological variables"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_6_disease",
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "pan_evaporation_mm_day",
+        "dew_point_c",
+        "leaf_wetness_hours",
+        "rainfall_ytd_mm",
+        "rainfall_deviation_pct"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Accumulated rainfall against expectation is the earliest warning that this is turning into a poor year, and it gives time to act on area or storage while there is still a choice.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "full",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D07-BC-001",
+      "category": "BC",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "A public forecast is received for this location",
+        "marathi": "या ठिकाणासाठी सार्वजनिक हवामान अंदाज आला",
+        "expr": "bias_observation_count >= 30",
+        "expr_version": "dsl-1.0",
+        "expr_note": "The bias correction flywheel. Thirty paired observations make the local correction meaningful.",
+        "golden_tests": [
+          {
+            "context": {
+              "bias_observation_count": 45
+            },
+            "expect": "TRUE",
+            "label": "सुधारणा लागू करा"
+          },
+          {
+            "context": {
+              "bias_observation_count": 10
+            },
+            "expect": "FALSE",
+            "label": "अजून पुरेशी नाहीत"
+          }
+        ]
+      },
+      "action": {
+        "english": "Store the forecast alongside the later observed value. Compute the rolling bias and apply it to subsequent forecasts. Report confidence as a function of how many observations exist.",
+        "marathi": "अंदाज आणि नंतरचे प्रत्यक्ष मापन दोन्ही साठवा. दोघांतील फरकाची सरासरी काढून पुढील अंदाज दुरुस्त करा. किती निरीक्षणे जमली आहेत त्यावरून विश्वासार्हता सांगा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Public forecast grids carry systematic local bias. A station measures actual conditions, and the running difference is a correction function that improves with every observation. It cannot be reproduced without physical hardware in the same locality.",
+        "yield_impact": "Improves every forecast-conditioned rule across Domains 3, 5 and 6.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Core C3.1 bias-correction flywheel"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_5_pest",
+          "domain_6_disease",
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "forecast_source",
+        "forecast_rain_48h_mm",
+        "forecast_bias_correction_mm",
+        "bias_observation_count",
+        "station_id"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Especially valuable here because terrain varies widely within one district. Kannad sits at 633 m near the Ajanta range while the rest of the district is flatter and lower, and the gazetteer itself notes the district average runs slightly below the Aurangabad station figure.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "full",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D07-BC-002",
+      "category": "BC",
+      "priority": 5,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "The product's forecasting capability is being described to a farmer or partner",
+        "marathi": "प्रॉडक्टच्या हवामान क्षमतेचे वर्णन केले जात आहे",
+        "expr": "forecast_bias_correction_mm IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "forecast_bias_correction_mm": -4.2
+            },
+            "expect": "TRUE",
+            "label": "सुधारणा उपलब्ध"
+          },
+          {
+            "context": {},
+            "expect": "FALSE",
+            "label": "अजून नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "State the position accurately. We do not produce forecasts. We measure actual local conditions, correct the public forecast for this village, and translate the result into a crop decision. Do not claim forecasting ability.",
+        "marathi": "स्थिती अचूक सांगा. आपण हवामान अंदाज तयार करत नाही. आपण प्रत्यक्ष स्थानिक स्थिती मोजतो, सार्वजनिक अंदाज या गावासाठी दुरुस्त करतो, आणि त्यावरून पिकाचा निर्णय देतो. अंदाज वर्तवण्याचा दावा करू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "Long range monsoon forecasting is IMD's work and has real limits. Overstating capability fails at the first dry spell that was not predicted. The genuine contribution is the third element — IMD reports weather but does not say what the crop should do.",
+        "yield_impact": "None. Protects credibility, which is a precondition for the advice being followed at all.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "Domain 7 honest limit section",
+          "Domain 12 honest positioning"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "forecast_source",
+        "bias_observation_count"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "A farmer quoted in the dry spell coverage said that ten to twenty days notice would have prevented the loss. That is a real need, but claiming to meet it with a village weather station would be dishonest. Correcting the forecast and translating it into an action is both achievable and useful.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D07-BC-003",
+      "category": "BC",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "bias_observation_count below 30",
+        "marathi": "पुरेशी निरीक्षणे जमलेली नाहीत",
+        "expr": "bias_observation_count < 30 AND bias_observation_count > 0",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "bias_observation_count": 12
+            },
+            "expect": "TRUE",
+            "label": "जमा होत आहेत"
+          },
+          {
+            "context": {
+              "bias_observation_count": 45
+            },
+            "expect": "FALSE",
+            "label": "पुरेशी"
+          }
+        ]
+      },
+      "action": {
+        "english": "Apply the raw public forecast without correction and mark forecast-conditioned advisory as medium confidence. State that local correction improves with each season.",
+        "marathi": "अजून पुरेशी निरीक्षणे नाहीत, म्हणून दुरुस्तीशिवाय सार्वजनिक अंदाज वापरा आणि विश्वासार्हता मध्यम दाखवा. दर हंगामागणिक स्थानिक दुरुस्ती सुधारत जाईल."
+      },
+      "reasoning": {
+        "agronomic_basis": "A bias estimate computed from too few observations is noise. Applying it would make the forecast worse rather than better. The threshold is a judgement rather than a derived figure.",
+        "yield_impact": "None. Prevents a premature correction from degrading forecast-driven rules.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Core C3.1 confidence as a function of observation count"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "bias_observation_count",
+        "forecast_bias_correction_mm",
+        "forecast_source"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "Graceful degradation applied to the weather layer. The system runs on the public forecast from day one and improves on it as the record builds, rather than waiting for data before being useful.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D07-CC-001",
+      "category": "CC",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Planting plan relies on pre-monsoon showers to moisten the soil",
+        "marathi": "लागवडीसाठी मान्सूनपूर्व सरींवर अवलंबून राहण्याचे नियोजन",
+        "expr": "days_to_planting BETWEEN 20 AND 40 AND has_drip IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Pre-monsoon rainfall is down about 31 percent; the traditional practice assumes water that no longer arrives.",
+        "golden_tests": [
+          {
+            "context": {
+              "days_to_planting": 30,
+              "has_drip": false
+            },
+            "expect": "TRUE",
+            "label": "सरींवर अवलंबून राहू नका"
+          },
+          {
+            "context": {
+              "days_to_planting": 30,
+              "has_drip": true
+            },
+            "expect": "FALSE",
+            "label": "ठिबक आहे"
+          }
+        ]
+      },
+      "action": {
+        "english": "Warn that pre-monsoon rainfall in this region has declined by about 31 percent. Plan to supply the planting moisture through drip rather than relying on showers.",
+        "marathi": "इथे मान्सूनपूर्व पाऊस सुमारे ३१ टक्क्यांनी घटला आहे. लागवडीच्या वेळचे पाणी ठिबकातून द्यायचे नियोजन करा — सरींवर अवलंबून राहू नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "Pre-monsoon rainfall shows a statistically significant decline of 30.81 percent for Marathwada. The traditional recommendation to plant with pre-monsoon showers was written when that rainfall was more reliable, so the practice is now less dependable than the recommendation implies.",
+        "yield_impact": "Protects establishment, which is a hard ceiling for the season.",
+        "confidence_score": 0.82,
+        "source_tier": "A",
+        "references": [
+          "Arabian Journal of Geosciences, Springer 2022"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_3_water"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "has_drip",
+        "planting_date",
+        "rainfall_ytd_mm"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "A quiet but important reason why drip must be operational before planting rather than shortly after. The published practice assumes water that is now 31 percent less likely to arrive.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D07-CC-002",
+      "category": "CC",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Long term water infrastructure decision such as a well, borewell or farm pond",
+        "marathi": "विहीर, बोअरवेल किंवा शेततळे यांसारखा दीर्घकालीन निर्णय"
+      },
+      "action": {
+        "english": "Add a safety margin. Winter rainfall has declined by about 26 percent, which reduces groundwater recharge, and the monsoon trend is also negative. Historical averages are more likely to be exceeded on the dry side than the wet side.",
+        "marathi": "सुरक्षिततेचा फरक ठेवा. हिवाळी पाऊस सुमारे २६ टक्क्यांनी घटला आहे, त्यामुळे भूजल पुनर्भरण कमी होते, आणि मान्सूनचा कलही ऋण आहे. ऐतिहासिक सरासरी भविष्यात कमी पडण्याची शक्यता जास्त."
+      },
+      "reasoning": {
+        "agronomic_basis": "Winter rainfall is down 25.54 percent and Sen's slope is negative for monsoon rainfall across districts. Reduced winter recharge matters specifically because October to February is when ginger demand peaks and the well is under most pressure.",
+        "yield_impact": "Long term rather than seasonal.",
+        "confidence_score": 0.78,
+        "source_tier": "A",
+        "references": [
+          "Arabian Journal of Geosciences 2022",
+          "ResearchGate 2021 Sen's slope"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_10_institutional",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "water_source_type",
+        "water_available_oct_feb_litres"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "Relevant to the farm pond decision in particular, since the pond is sized against a shortfall that is itself growing.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D07-RF-004",
+      "category": "RF",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "rainfall_ytd_mm falls more than 25 percent below the expected accumulation for this date",
+        "marathi": "आजपर्यंतचा जमा पाऊस अपेक्षेपेक्षा २५ टक्क्यांहून जास्त कमी आहे",
+        "expr": "rainfall_deviation_pct < -25 AND rainfall_ytd_mm IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Below the expected accumulation. Reduce area rather than water per acre.",
+        "golden_tests": [
+          {
+            "context": {
+              "rainfall_ytd_mm": 400,
+              "rainfall_deviation_pct": -33
+            },
+            "expect": "TRUE",
+            "label": "हंगाम कोरडा"
+          },
+          {
+            "context": {
+              "rainfall_ytd_mm": 700,
+              "rainfall_deviation_pct": -8
+            },
+            "expect": "FALSE",
+            "label": "सामान्य"
+          }
+        ]
+      },
+      "action": {
+        "english": "Warn early that this is trending toward a poor year. Recommend reviewing water storage and, if the crop is not yet planted, reconsidering area.",
+        "marathi": "हे वर्ष कमी पावसाचे ठरण्याकडे कल आहे. पाण्याचा साठा तपासा, आणि लागवड झालेली नसेल तर क्षेत्राचा पुनर्विचार करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "A shortfall detected in July or August still leaves time to act on storage or area. The same shortfall discovered in November leaves no options, because the crop is committed and the demand peak has arrived.",
+        "yield_impact": "Enables action while choices remain.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Domain 7 variability tiers",
+          "Domain 3 water budget"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "rainfall_ytd_mm",
+        "rainfall_deviation_pct",
+        "water_available_oct_feb_litres",
+        "season_water_plan_basis"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "EST",
+      "kannad_note": "The 25 percent threshold is a judgement, not a sourced figure. It should be tuned once a few seasons of local accumulation curves exist.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D07-TM-003",
+      "category": "TM",
+      "priority": 2,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "GDD-based staging is requested",
+        "marathi": "GDD आधारित अवस्था मोजण्याची विनंती",
+        "expr": "soil_temp_c > 32 AND STAGE IN [G1, G2]",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "soil_temp_c": 35,
+              "current_stage": "G1"
+            },
+            "expect": "TRUE",
+            "label": "मातीचे तापमान जास्त"
+          },
+          {
+            "context": {
+              "soil_temp_c": 27,
+              "current_stage": "G1"
+            },
+            "expect": "FALSE",
+            "label": "ठीक"
+          }
+        ]
+      },
+      "action": {
+        "english": "Refuse. No reliable published GDD series exists for ginger in Indian conditions. Log daily temperature so that a local series can be derived after one season, but do not invent a base temperature in the meantime.",
+        "marathi": "अद्रकासाठी भारतीय परिस्थितीत विश्वासार्ह GDD मालिका उपलब्ध नाही. रोजचे तापमान नोंदवत रहा म्हणजे एका हंगामानंतर स्थानिक मालिका काढता येईल — पण तोपर्यंत आधार तापमान अंदाजाने ठरवू नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "Sugarcane has a validated base temperature and thermal time model; ginger does not. A plausible-looking invented number would give false precision and would silently mistime every downstream event.",
+        "yield_impact": "None directly. Prevents false precision and identifies a first-season data opportunity.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "absence of source across ICAR-IISR, KAU and TNAU",
+          "Domain 1 GDD disabled"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "air_temp_max_c",
+        "air_temp_min_c",
+        "stage_source"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "VERIFY",
+      "kannad_note": "A locally derived GDD series would be genuinely novel and would exist in no publication. It costs nothing beyond logging temperature, which is already happening.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D07-HS-004",
+      "category": "HS",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "A foliar spray of any kind is scheduled",
+        "marathi": "कोणतीही फवारणी ठरली आहे",
+        "expr": "air_temp_max_c > 35 OR forecast_rain_48h_mm > 5",
+        "expr_version": "dsl-1.0",
+        "expr_note": "The spray suppressor. Suppresses D04-MC-001, D04-MC-002 and D05-CH-006.",
+        "golden_tests": [
+          {
+            "context": {
+              "air_temp_max_c": 39
+            },
+            "expect": "TRUE",
+            "label": "फवारणी दडपा"
+          },
+          {
+            "context": {
+              "air_temp_max_c": 29,
+              "forecast_rain_48h_mm": 0
+            },
+            "expect": "FALSE",
+            "label": "योग्य"
+          }
+        ]
+      },
+      "action": {
+        "english": "Restrict spraying to early morning or evening. Postpone if the maximum is above 35 C at the intended time or if rain is forecast within a few hours.",
+        "marathi": "फवारणी फक्त सकाळी लवकर किंवा संध्याकाळी करा. त्या वेळी तापमान ३५ अंशांवर असेल किंवा काही तासांत पावसाचा अंदाज असेल तर पुढे ढकला."
+      },
+      "reasoning": {
+        "agronomic_basis": "Leaves scorch above 35 C, and midday maxima here regularly exceed that through the hot months. Rain within a few hours removes foliar application before absorption.",
+        "yield_impact": "Protects the effectiveness of every spray in Domains 4, 5 and 6.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Domain 1 heat threshold",
+          "Core C3.3 forecast-conditioned suppression"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient",
+          "domain_5_pest",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "air_temp_max_c",
+        "forecast_rain_48h_mm",
+        "heat_stress_days_count"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The usable spray window here is genuinely narrow because of daytime temperature. Scheduling without checking both temperature and forecast wastes product and labour together.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D07-MO-004",
+      "category": "MO",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G2",
+      "trigger": {
+        "english": "Continuous rainfall recorded during the monsoon",
+        "marathi": "मान्सूनमध्ये सलग पाऊस नोंदवला",
+        "expr": "rainfall_mm > 20 AND STAGE IN [G2, G3] AND drainage_levels_present < 3",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "rainfall_mm": 40,
+              "current_stage": "G2",
+              "drainage_levels_present": 2
+            },
+            "expect": "TRUE",
+            "label": "निचरा अपूर्ण"
+          },
+          {
+            "context": {
+              "rainfall_mm": 40,
+              "current_stage": "G2",
+              "drainage_levels_present": 3
+            },
+            "expect": "FALSE",
+            "label": "पूर्ण"
+          }
+        ]
+      },
+      "action": {
+        "english": "Stop drip entirely and switch attention to drainage. July rainfall in this belt is a drainage problem for ginger, not a water supply opportunity.",
+        "marathi": "ठिबक पूर्ण बंद करा आणि लक्ष निचऱ्याकडे वळवा. इथला जुलैचा पाऊस अद्रकासाठी मुख्यतः धोका आहे, संधी नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "July delivers 195 to 217 mm over about ten rainy days, which is the wettest month, while crop demand at that stage is moderate. The excess must leave the root zone rather than be conserved.",
+        "yield_impact": "Feeds the saturation and soft rot pathway.",
+        "confidence_score": 0.82,
+        "source_tier": "A",
+        "references": [
+          "climate-data.org monthly rainfall",
+          "Domain 3 monthly water table"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "rainfall_mm",
+        "current_stage",
+        "drainage_levels_present",
+        "soil_moisture_vwc"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "A counterintuitive framing in a water-scarce belt. The same rain that is welcome for cotton is a hazard for ginger, because one crop tolerates saturation and the other does not.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D07-CL-003",
+      "category": "CL",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Seasonal strategy is being explained to the farmer",
+        "marathi": "हंगामाची एकूण रणनीती समजावून सांगायची आहे"
+      },
+      "action": {
+        "english": "Give the four-phase summary: May and June defend against heat, July to September defend against water, October to January let the crop fill, February build quality. The first two phases are defensive; yield is made in the third.",
+        "marathi": "हंगाम चार टप्प्यांत मांडा — मे-जून उष्णतेपासून बचाव, जुलै-सप्टेंबर पाण्यापासून बचाव, ऑक्टोबर-जानेवारी पीक भरू देणे, फेब्रुवारी प्रत तयार करणे. पहिले दोन टप्पे बचावाचे; उत्पादन तिसऱ्यात ठरते."
+      },
+      "reasoning": {
+        "agronomic_basis": "The temperature match table, the rainfall distribution and the disease calendar all divide the season the same way. Presenting one coherent framing helps the farmer understand why the effort profile changes through the year.",
+        "yield_impact": "Framing rather than a factor. Improves adherence by making the reasoning visible.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Domain 7 season strategy",
+          "Domain 3 monthly water table"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "current_stage",
+        "air_temp_max_c",
+        "rainfall_ytd_mm"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Useful because it explains why the advisory goes quiet in December and January. Nothing is wrong; that is the phase where the correct action is mostly to keep supplying water and potassium and not interfere.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D07-HU-004",
+      "category": "HU",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Two disease seasons need to be distinguished in advisory",
+        "marathi": "दोन वेगळे रोग-हंगाम वेगळे करायचे आहेत",
+        "expr": "(fog_observed IS TRUE AND MONTH IN [DEC, JAN, FEB]) OR (saturation_hours > 12 AND MONTH IN [JUL, AUG, SEP])",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Two disease seasons with different mechanisms — soil-borne in monsoon, foliar in winter fog.",
+        "golden_tests": [
+          {
+            "context": {
+              "fog_observed": true,
+              "current_month": 1
+            },
+            "expect": "TRUE",
+            "label": "हिवाळी हंगाम"
+          },
+          {
+            "context": {
+              "saturation_hours": 14,
+              "current_month": 8
+            },
+            "expect": "TRUE",
+            "label": "पावसाळी हंगाम"
+          },
+          {
+            "context": {
+              "fog_observed": false,
+              "saturation_hours": 2,
+              "current_month": 4
+            },
+            "expect": "FALSE",
+            "label": "दोन्ही नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Treat July to September as the soil-borne season driven by saturation, and December to February as the foliar season driven by fog. Different triggers, different responses, different times of year.",
+        "marathi": "जुलै ते सप्टेंबर हा जमिनीखालील रोगांचा हंगाम — कारण संपृक्तता. डिसेंबर ते फेब्रुवारी हा पानांवरील रोगांचा हंगाम — कारण धुके. वेगळे संकेत, वेगळे उपाय, वेगळा काळ."
+      },
+      "reasoning": {
+        "agronomic_basis": "Soft rot peaks in August and September with high humidity and saturation, while leaf spot and blotch follow prolonged fog in winter. Conflating them would apply the wrong trigger at the wrong time of year.",
+        "yield_impact": "Ensures the correct protocol fires in each season.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali and Mahajan disease timing and fog rule",
+          "climate-data.org humidity"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "rh_pct",
+        "fog_observed",
+        "saturation_hours",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The fog rule says to spray until the crop is seven months old, which from a late May planting reaches December or January — exactly the winter fog period here. The published rule and the local calendar align, so it is a real trigger rather than a theoretical one.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D07-WS-004",
+      "category": "WS",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Station readings missing or implausible for more than 24 hours",
+        "marathi": "station ची वाचने चोवीस तासांहून जास्त काळ येत नाहीत किंवा अशक्य दिसतात",
+        "expr": "station_data_age_hours > 24",
+        "expr_version": "dsl-1.0",
+        "expr_note": "The station is down. Fall back to the regional forecast and say so.",
+        "golden_tests": [
+          {
+            "context": {
+              "station_data_age_hours": 40
+            },
+            "expect": "TRUE",
+            "label": "station बंद"
+          },
+          {
+            "context": {
+              "station_data_age_hours": 2
+            },
+            "expect": "FALSE",
+            "label": "चालू"
+          },
+          {
+            "context": {},
+            "expect": "UNKNOWN",
+            "label": "माहिती नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Fall back to the public forecast and the Domain 3 monthly table, mark all weather-dependent advisory as reduced confidence, and raise a maintenance alert.",
+        "marathi": "सार्वजनिक अंदाज आणि महिनानिहाय तक्ता यावर परत जा, हवामान-आधारित सल्ल्याची विश्वासार्हता कमी दाखवा, आणि देखभालीचा इशारा द्या."
+      },
+      "reasoning": {
+        "agronomic_basis": "One station serves five to ten farms, so a station failure degrades the whole cluster rather than one plot. The fallback must be automatic and visible rather than silent.",
+        "yield_impact": "Prevents advisory being issued on stale or faulty data.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Core C10.4 plausibility gating",
+          "Domain 3 monthly table as fallback"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_5_pest",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "station_id",
+        "air_temp_max_c",
+        "rh_pct",
+        "rainfall_mm",
+        "pan_evaporation_mm_day"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Because the station is shared, its failure is a cluster-level event and the maintenance response has to be prioritised accordingly. A sub-node failure affects one farmer; a station failure affects everyone.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D07-RF-005",
+      "category": "RF",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Rainfall is being converted into an irrigation credit",
+        "marathi": "पाऊस सिंचनाच्या हिशेबात वजा केला जात आहे",
+        "expr": "rainfall_mm > 2 AND percolation_class IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Effective rainfall, not gross. On heavy soil with poor percolation, much of it runs off.",
+        "golden_tests": [
+          {
+            "context": {
+              "rainfall_mm": 25,
+              "percolation_class": "moderate"
+            },
+            "expect": "TRUE",
+            "label": "प्रभावी पाऊस काढा"
+          },
+          {
+            "context": {
+              "rainfall_mm": 0.5,
+              "percolation_class": "moderate"
+            },
+            "expect": "FALSE",
+            "label": "नगण्य"
+          }
+        ]
+      },
+      "action": {
+        "english": "Use effective rainfall rather than gross. Roughly 65 percent is a working assumption on this soil pending measurement, because concentrated rain on heavy soil runs off.",
+        "marathi": "एकूण पाऊस नव्हे, प्रभावी पाऊस वापरा. काळ्या जमिनीत केंद्रित पाऊस वाहून जातो, म्हणून सुमारे ६५ टक्के हे तात्पुरते गृहीतक — प्रत्यक्ष मोजणी होईपर्यंत."
+      },
+      "reasoning": {
+        "agronomic_basis": "Not all rainfall enters the root zone. On heavy soil with concentrated rainfall, runoff and deep percolation losses are significant, and July delivers about 195 mm over roughly ten days.",
+        "yield_impact": "Prevents systematic under-irrigation from over-crediting rainfall.",
+        "confidence_score": 0.65,
+        "source_tier": "B",
+        "references": [
+          "Domain 3 effective rainfall fraction",
+          "Domain 2 percolation behaviour"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "rainfall_mm",
+        "effective_rainfall_mm",
+        "percolation_class"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "The 65 percent figure is an assumption rather than a measurement, and on cracked vertisol receiving concentrated rain the true figure may well be lower. Worth measuring against the percolation test result.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D07-CC-003",
+      "category": "CC",
+      "priority": 2,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Any historical rainfall average is being cited in advisory",
+        "marathi": "सल्ल्यात ऐतिहासिक पावसाची सरासरी वापरली जात आहे",
+        "expr": "rainfall_ytd_mm IS NOT NULL AND season_water_plan_basis IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Any historical average cited without stating the plan basis is misleading here.",
+        "golden_tests": [
+          {
+            "context": {
+              "rainfall_ytd_mm": 600
+            },
+            "expect": "TRUE",
+            "label": "नियोजनाचा आधार सांगा"
+          },
+          {
+            "context": {
+              "rainfall_ytd_mm": 600,
+              "season_water_plan_basis": "poor_year"
+            },
+            "expect": "FALSE",
+            "label": "सांगितला"
+          }
+        ]
+      },
+      "action": {
+        "english": "Note that all rainfall figures in this knowledge base are historical averages measured against a declining trend, so future years are more likely to fall below them than above.",
+        "marathi": "या knowledge base मधील सर्व पावसाचे आकडे ऐतिहासिक सरासरी आहेत, आणि कल ऋण आहे — म्हणजे भविष्यातील वर्षे या आकड्यांपेक्षा कोरडी असण्याची शक्यता जास्त आहे, कमी नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Sen's slope is negative for monsoon rainfall across Marathwada districts, and winter and pre-monsoon rainfall show statistically significant declines. Historical normals therefore describe a wetter past than the likely future.",
+        "yield_impact": "Framing that justifies the safety margin in every water calculation.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Arabian Journal of Geosciences 2022",
+          "ResearchGate 2021"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "rainfall_ytd_mm",
+        "rainfall_deviation_pct",
+        "season_water_plan_basis"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "Combined with the 55 percent statistic this is the reason the poor-year planning basis is the default rather than a pessimistic option.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    }
+  ],
+  "open_items": [
+    {
+      "id": "D07-OI-01",
+      "item": "Kannad taluka rainfall record, separate from the district figure",
+      "owner": "cluster weather station",
+      "source_class": "FIELD",
+      "blocking": false,
+      "note": "District figures are available and workable; taluka detail improves the water budget."
+    },
+    {
+      "id": "D07-OI-02",
+      "item": "Monthly pan evaporation for Kannad",
+      "owner": "cluster weather station plus computation",
+      "source_class": "FIELD",
+      "blocking": false,
+      "note": "The single most valuable measurement in the domain. Enables the formula to replace the regional table."
+    },
+    {
+      "id": "D07-OI-03",
+      "item": "Confirmed agro-climatic sub-zone for Kannad taluka",
+      "owner": "VNMKV Parbhani or district agriculture office",
+      "source_class": "VERIFY",
+      "blocking": false
+    },
+    {
+      "id": "D07-OI-04",
+      "item": "Winter fog frequency and duration in Marathwada",
+      "owner": "cluster weather station",
+      "source_class": "FIELD",
+      "blocking": false,
+      "note": "Not found in any source. Drives the foliar disease trigger."
+    },
+    {
+      "id": "D07-OI-05",
+      "item": "Direct leaf wetness measurement",
+      "owner": "hardware roadmap",
+      "source_class": "FIELD",
+      "blocking": false,
+      "note": "Highest value missing measurement."
+    },
+    {
+      "id": "D07-OI-06",
+      "item": "Solar radiation sensor, if not already fitted",
+      "owner": "station specification check",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D07-OI-07",
+      "item": "Cost-benefit of shade netting under Kannad conditions",
+      "owner": "trial strip, season one",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D07-OI-08",
+      "item": "Frequency of cyclonic rainfall events in October and November for this district",
+      "owner": "IMD historical records",
+      "source_class": "VERIFY",
+      "blocking": false,
+      "note": "The risk is documented but not quantified, so the red alert threshold of 40 mm is a judgement."
+    }
+  ],
+  "summary": {
+    "total_rules": 35,
+    "by_category": {
+      "RF": 5,
+      "CL": 3,
+      "TM": 3,
+      "HS": 4,
+      "MO": 4,
+      "CY": 2,
+      "HU": 4,
+      "WS": 4,
+      "BC": 3,
+      "CC": 3
+    },
+    "by_priority": {
+      "5": 10,
+      "4": 14,
+      "3": 8,
+      "2": 3
+    },
+    "by_severity": {
+      "red": 3,
+      "info": 22,
+      "yellow": 10
+    },
+    "by_source_tier": {
+      "A": 19,
+      "B": 16,
+      "C": 0
+    },
+    "by_source_class": {
+      "SRC-Q": 10,
+      "DERIVED": 12,
+      "EST": 6,
+      "SRC-D": 6,
+      "VERIFY": 1
+    },
+    "confidence_range": {
+      "min": 0.65,
+      "max": 0.88,
+      "mean": 0.787
+    },
+    "rules_with_u_value": 6,
+    "irrecoverable_rules": 6,
+    "zero_cost_rules": [
+      "D07-RF-001",
+      "D07-MO-001",
+      "D07-CY-002",
+      "D07-BC-002",
+      "D07-TM-003"
+    ],
+    "highest_value_rule": "D07-RF-001",
+    "blocking_open_items": 0,
+    "by_decision_type": {
+      "SENSOR_ALERT": 24,
+      "PLANNING_GUIDANCE": 5,
+      "SCHEDULED_REMINDER": 2,
+      "AUTO_DECISION": 2,
+      "BLOCK": 2
+    },
+    "reviewed_t1": 1,
+    "rules_with_trigger_expr": 32,
+    "rules_with_delivery_class": 32,
+    "immutable_rules": 0
+  },
+  "next_steps": [
+    "1. Begin logging daily evaporation or the variables needed to compute it — this is the measurement that lets the formula replace the regional table (D07-OI-02)",
+    "2. Start the forecast versus observed log from day one so bias correction has a record to accumulate (D07-BC-001)",
+    "3. Confirm the agro-climatic sub-zone with VNMKV Parbhani (D07-OI-03)",
+    "4. Build Domain 8 JSON inheriting the Domain 1 _schema block unchanged",
+    "5. Reconcile D07-CY-001 with D03-WL-003 and D06-SW-003 — all three fire on the same October and November cyclone event and must not produce three separate alerts"
+  ],
+  "author_note": "This file contains 30 rules because that is what the source document supports. The domain establishes three things the other domains depend on: that 55 percent of years fall below the long-term average so planning must assume a poor year; that the single climate mismatch is May, which concentrates all protective effort into the planting weeks; and that post-monsoon cyclonic rainfall arrives in October and November when the rhizome is formed and the drainage channels have been neglected. That last finding did not exist in Domains 3 or 6, both of which assumed the rainy season ends in September — which is the argument for having a weather domain rather than scattering weather facts through the others. The positioning rule D07-BC-002 is deliberate: we correct forecasts and translate them into crop decisions, and we do not claim to forecast. Status is PHASE_1_RAW_UNVALIDATED.",
+  "legal": {
+    "disclaimer_mr": "हा नियम-संच निर्णय-सहाय्य साधन आहे. अंतिम जबाबदारी शेतकऱ्याची. हवामान अंदाज संभाव्यतेवर आधारित असतात आणि कोणताही अंदाज निश्चित नाही.",
+    "disclaimer_en": "This rule set is a decision-support tool. Final responsibility rests with the cultivator. Weather forecasts are probabilistic and no forecast is certain.",
+    "forecast_claim_note": "The product must not be described as producing weather forecasts. It measures local conditions, applies a local correction to public forecasts, and translates the result into crop decisions. IMD official warnings take precedence.",
+    "data_note": "Farmer-attributable data handled under DPDP Act 2023; see Domain 12."
+  }
+}

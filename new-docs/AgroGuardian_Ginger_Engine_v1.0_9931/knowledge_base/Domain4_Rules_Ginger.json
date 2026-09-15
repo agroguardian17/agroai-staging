@@ -1,0 +1,2855 @@
+{
+  "_schema": {
+    "schema_version": "2.0",
+    "inherits_from": "Domain1_Rules_Ginger_v2.json",
+    "inheritance_note": "The full _schema block is defined in Domain 1 and is NOT repeated here. Units (per acre), stage codes G0-G5, source tiers A/B/C, source classes, priority scale, recoverability, severity and confidence bounds are inherited unchanged. Domain 2 and Domain 3 additions are also assumed present. Only Domain 4 additions are declared below.",
+    "additions": {
+      "rule_categories_domain_4": {
+        "NU": "nutrient uptake and budgeting",
+        "NP": "NPK dose setting",
+        "NS": "nitrogen scheduling",
+        "PP": "phosphorus placement and fixation",
+        "PK": "potassium scheduling",
+        "SN": "secondary nutrients",
+        "MC": "micronutrients",
+        "OR": "organic inputs",
+        "BI": "biofertilisers",
+        "FG": "fertigation operation",
+        "DG": "deficiency diagnosis",
+        "SB": "sensor binding"
+      },
+      "new_farm_brain_fields": {
+        "n_target_kg_per_acre": "number",
+        "p_target_kg_per_acre": "number",
+        "k_target_kg_per_acre": "number",
+        "n_applied_kg_per_acre": "number",
+        "p_applied_kg_per_acre": "number",
+        "k_applied_kg_per_acre": "number",
+        "n_split_1_date": "date",
+        "n_split_2_date": "date",
+        "k_late_split_1_date": "date",
+        "k_late_split_2_date": "date",
+        "k_source": "enum:[MOP, SOP, mixed]",
+        "limiting_nutrient": "enum:[N, P, K, S, Zn, Fe, B, Mg, none]",
+        "micronutrient_spray_1_done": "boolean",
+        "micronutrient_spray_2_done": "boolean",
+        "micronutrient_basal_done": "boolean",
+        "neem_cake_basal_kg_per_acre": "number",
+        "neem_cake_earthing_kg_per_acre": "number",
+        "azospirillum_psb_done": "boolean",
+        "last_fungicide_date": "date",
+        "fertigation_active": "boolean",
+        "fertigation_last_ec_response": "number",
+        "ec_baseline": "number",
+        "ec_current": "number",
+        "ec_trend_pct": "number",
+        "soil_s_ppm": "number",
+        "soil_mg_ppm": "number",
+        "soil_ca_ppm": "number",
+        "leaf_yellowing_pattern": "enum:[uniform_old, interveinal_new, interveinal_old, small_new_leaves, margin_scorch, with_soft_stem, sudden_green_wilt, none]"
+      },
+      "constants": {
+        "kg_per_ha_to_kg_per_acre": 0.4047,
+        "mop_k2o_pct": 60,
+        "sop_k2o_pct": 50,
+        "ssp_s_pct": 11,
+        "ssp_ca_pct": 20
+      },
+      "decision_types": {
+        "AUTO_DECISION": {
+          "mr": "AI कधी व किती हे स्वतः ठरवतो",
+          "en": "engine computes the quantity or timing itself"
+        },
+        "SENSOR_ALERT": {
+          "mr": "sensor वर आधारित इशारा, कृती माणसाची",
+          "en": "sensor-triggered; the action is human work"
+        },
+        "SCHEDULED_REMINDER": {
+          "mr": "वेळापत्रकानुसार आठवण",
+          "en": "calendar or stage driven reminder"
+        },
+        "DIAGNOSTIC": {
+          "mr": "AI विचारतो, शेतकरी सांगतो",
+          "en": "engine asks, farmer answers, engine branches"
+        },
+        "DATA_CAPTURE": {
+          "mr": "नोंद किंवा मोजमाप मागतो",
+          "en": "engine requests a record or measurement"
+        },
+        "HUMAN_DECISION": {
+          "mr": "AI गणित दाखवतो, निर्णय माणसाचा",
+          "en": "engine presents arithmetic; person decides"
+        },
+        "BLOCK": {
+          "mr": "AI नाकारतो किंवा अडवतो",
+          "en": "engine refuses or blocks"
+        },
+        "PLANNING_GUIDANCE": {
+          "mr": "हंगामापूर्व निवड — शेतकरी ठरवतो",
+          "en": "pre-season choice the farmer makes"
+        },
+        "POLICY": {
+          "mr": "प्रॉडक्ट धोरण, शेतकऱ्यापर्यंत जात नाही",
+          "en": "product policy; never reaches a farmer"
+        }
+      },
+      "automation_levels": {
+        "full": "engine decides and acts without asking",
+        "assisted": "engine decides when, the person does the work or supplies the observation",
+        "advisory": "engine shows the arithmetic, the person chooses",
+        "refusal": "engine prevents an action",
+        "none": "internal policy, not farmer facing"
+      },
+      "trigger_dsl": {
+        "version": "dsl-1.0",
+        "logic": "three-valued: TRUE / FALSE / UNKNOWN",
+        "unknown_rule": "A rule whose trigger evaluates UNKNOWN must NOT fire and must NOT be treated as FALSE. Report reduced confidence and name the missing field (Domain 12 D12-COLD-001).",
+        "operators": [
+          "> >= < <= == !=",
+          "AND OR NOT",
+          "IN [..]",
+          "BETWEEN a AND b",
+          "IS NULL / IS NOT NULL / IS TRUE / IS FALSE",
+          "DURATION(field > x) > n HOURS",
+          "WITHIN(date_field, n DAYS)",
+          "MONTH IN [..]",
+          "STAGE IN [..]"
+        ],
+        "note": "Fields resolve against kb_farm_brain_fields. An undeclared name is a parse error, never a silent false."
+      },
+      "notification_policy": {
+        "version": "notify-1.0",
+        "why": "The season simulation issued 998 messages across 301 days before this existed. A trigger expresses a condition and a condition stays true; the advice is an event and must be delivered once.",
+        "classes": {
+          "ONCE_UNTIL_RESOLVED": "Standing precondition. Once, then a 7/21/45/90 day ladder with rising severity.",
+          "EVENT": "Transient physical event. Rising edge only; re-armed after it clears.",
+          "WINDOW": "Dated operation. Advance warning, the day, then 3 overdue reminders.",
+          "SILENT_GUARD": "Prevention rule. No message unless the prohibited action is attempted."
+        },
+        "result": "998 messages became 43 in the normal season, with no critical stage left silent for more than 15 days."
+      },
+      "override_policy": {
+        "version": "override-1.0",
+        "why": "The Tier-1 review worked but was offline. An agronomist looking at a live plot in August cannot edit JSON and wait for a deploy; by then the window has closed.",
+        "kinds": [
+          "THRESHOLD",
+          "DELIVERY",
+          "SEVERITY",
+          "DISABLE",
+          "PARAMETER"
+        ],
+        "scopes": [
+          "plot",
+          "cluster",
+          "global"
+        ],
+        "scope_precedence": "narrowest wins — plot over cluster over global",
+        "default_expiry_days": 240,
+        "max_expiry_days": 400,
+        "expiry_rationale": "A permanent change belongs in the knowledge base, not in the override table.",
+        "immutable_count": 16,
+        "immutable_rationale": "Some rules exist because getting them wrong causes harm no agronomic judgement outweighs. The API refuses them by code path, and a database trigger refuses them again if the application layer is bypassed.",
+        "audit": "Refused attempts are recorded, not discarded. An attempt to override an immutable rule is a governance signal."
+      }
+    }
+  },
+  "metadata": {
+    "domain": 4,
+    "domain_name": "Nutrient & Fertilizer Management",
+    "domain_name_mr": "अन्नद्रव्य आणि खत व्यवस्थापन",
+    "crop": "ginger",
+    "crop_mr": "आले",
+    "region": "Kannad, Chhatrapati Sambhajinagar, Marathwada",
+    "source_document": "AgroGuardian_Ginger_Domain4_Nutrient_Fertilizer_RAW.docx",
+    "version": "1.0",
+    "status": "PHASE_1_RAW_UNVALIDATED",
+    "agronomist_validated": false,
+    "validation_note": "Dose figures are the Maharashtra institutional recommendation converted to per acre. They must be adjusted against an actual soil test, which does not yet exist for this plot. Micronutrient rules depend on free lime, zinc and iron values that are not in a standard soil report and must be requested separately.",
+    "total_rules": 34,
+    "rule_count_note": "30 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count.",
+    "review_by": null,
+    "review_note": "Nutrition science is stable. Fertiliser product availability and prices change annually but those belong to Domain 13.",
+    "purpose": "Nutrient dosing, scheduling and diagnosis for ginger on calcareous Marathwada vertisol. Three findings drive the domain: potassium outranks nitrogen in actual uptake, micronutrients must be sprayed rather than soil-applied here, and neem cake is the only input in the crop with independently documented dual benefit.",
+    "key_innovations": [
+      "Potassium uptake exceeds nitrogen uptake in measured data — 145 against 122 kg per hectare — which inverts the common assumption that nitrogen is the main fertiliser. And potassium leaves the field in the rhizome, so it must be replaced every season.",
+      "Foliar micronutrient application outperformed soil application by 12.5 percent in a controlled trial. On calcareous soil where zinc and iron are locked up, this is not an enhancement but the primary delivery route.",
+      "Neem cake is documented separately as raising yield and reducing rhizome rot, and it carries no CIB&RC restriction. Where chemical options are legally constrained, this is the input the engine can recommend without qualification.",
+      "The NPK RS485 probe on the sub-node does not measure NPK. It infers from electrical conductivity, which on calcareous saline soil is dominated by calcium carbonate. Its correct uses are trend, fertigation verification and salt accumulation — not dosing.",
+      "The late potassium splits at 110 and 140 DAP are the most commonly skipped operation in the schedule, because by then the crop looks healthy. That is exactly when the rhizome is filling."
+    ],
+    "central_finding": {
+      "statement": "Potassium, not nitrogen, is the governing nutrient in ginger.",
+      "measured_uptake_kg_per_ha": {
+        "N": 122.42,
+        "P": 42.18,
+        "K": 145.23
+      },
+      "measured_uptake_kg_per_acre": {
+        "N": 49.5,
+        "P": 17.1,
+        "K": 58.8
+      },
+      "uptake_order_macro": [
+        "N",
+        "K",
+        "Ca",
+        "Mg",
+        "S",
+        "P"
+      ],
+      "uptake_order_micro": [
+        "Fe",
+        "Mn",
+        "Zn",
+        "B",
+        "Cu"
+      ],
+      "removal_note": "Rhizomes remove mainly nitrogen and potassium; phosphorus and magnesium less; calcium least. Nitrogen largely stays in foliage and returns to the field, while potassium leaves with the harvested rhizome.",
+      "implication": "Potassium is the nutrient most removed from the field each season and the one most commonly under-replaced. The Maharashtra schedule already corrects for this with two extra late splits, but those are the splits most often skipped."
+    },
+    "primary_sources": [
+      "Agrowon - Ale Lagvad Tantradnyan, Dr. Jitendra Kadam, Halad Sanshodhan Yojana, Kasbe Digraj (TIER A) - doses and split schedule",
+      "Agrowon - Ale pikasathi thibak sinchanane pani, khat vyavasthapan; Bitle & Deshmukh, Netafim (TIER A) - fertigation schedule, basal dose, soil targets",
+      "Nutrition of Zingiberaceae Crops, ResearchGate compilation (TIER A) - Roy et al 1992, IISR 2002, Srinivasan et al 2004, Sarma et al 2001",
+      "SciELO - Improving growth, yield and quality of ginger through irrigation and nutrient management, Inceptisol India (TIER A) - measured uptake figures",
+      "IntechOpen - Sustainable Ginger Production through Integrated Nutrient Management 2022 (TIER A)",
+      "Impact of mineral fertilizers on mineral nutrients in ginger rhizome, PubMed PMC8381012 (TIER A)",
+      "International Journal of Advanced Biochemistry Research 2025 - NPK levels in ginger cv. IISR Mahima (TIER A)",
+      "AgriFarming, BigHaat, ICL Growing Solutions, Vikaspedia (TIER B)"
+    ],
+    "review_log": {
+      "tier_1_review_date": "2026-07-31",
+      "rules_reviewed": 4,
+      "rules_total": 34,
+      "note": "Rule-level status is authoritative. Domain status stays PHASE_1_RAW_UNVALIDATED until T3 and T4 are also reviewed and one season of field data exists."
+    }
+  },
+  "reference_data": {
+    "measured_uptake": {
+      "kg_per_acre": {
+        "N": 49.5,
+        "P": 17.1,
+        "K": 58.8
+      },
+      "source_note": "122.42, 42.18 and 145.23 kg/ha respectively",
+      "source_tier": "A",
+      "caveat": "Uptake varies considerably with soil type, climate, available nutrients and variety. These figures give a sense of proportion; they are not a dose."
+    },
+    "dose_comparison_kg_per_acre": [
+      {
+        "source": "Kerala",
+        "N": 28,
+        "P": 20,
+        "K": 20,
+        "fym_t_per_acre": 12,
+        "tier": "B"
+      },
+      {
+        "source": "Karnataka",
+        "N": 40,
+        "P": 20,
+        "K": 20,
+        "fym_t_per_acre": 10,
+        "tier": "B"
+      },
+      {
+        "source": "semi_arid_india_max_uptake",
+        "N": 30,
+        "P": 20,
+        "K": 20,
+        "fym_t_per_acre": 10,
+        "tier": "A",
+        "note": "highest uptake recorded at this dose in semi-arid conditions"
+      },
+      {
+        "source": "maharashtra_official",
+        "N": 48,
+        "P": 30,
+        "K": 61,
+        "fym_t_per_acre": 15,
+        "tier": "A",
+        "note": "120:75:150 kg/ha including two late K splits"
+      },
+      {
+        "source": "iisr_mahima_trial",
+        "N": 51,
+        "P": 20,
+        "K": 40,
+        "tier": "A",
+        "note": "125:50:100 kg/ha found most effective for cv. IISR Mahima"
+      },
+      {
+        "source": "research_with_micro",
+        "N": 40,
+        "P": 30,
+        "K": 30,
+        "B": 1.2,
+        "Zn": 2.4,
+        "Fe": 2.4,
+        "tier": "A"
+      }
+    ],
+    "recommended_starting_point_kg_per_acre": {
+      "N": {
+        "min": 40,
+        "max": 48
+      },
+      "P": {
+        "min": 20,
+        "max": 30
+      },
+      "K": {
+        "min": 40,
+        "max": 60
+      },
+      "rationale": "Kannad is semi-arid, where the highest uptake was recorded at a lower nitrogen dose. Keep nitrogen toward the lower end and potassium toward the upper end. The Mahima-specific trial points the same way — less phosphorus, more potassium — and that also suits calcareous soil where phosphorus is fixed.",
+      "source_class": "DERIVED",
+      "adjust_against": "soil test"
+    },
+    "maharashtra_schedule": {
+      "basal": {
+        "P_kg_per_acre": 30,
+        "K_kg_per_acre": 30,
+        "fym_t_per_acre": 15,
+        "timing": "at land preparation"
+      },
+      "splits": [
+        {
+          "n": 1,
+          "dap_approx": 60,
+          "nutrients": {
+            "N_kg_per_acre": 24
+          },
+          "note": "about one month after emergence completes"
+        },
+        {
+          "n": 2,
+          "dap_approx": 80,
+          "nutrients": {
+            "N_kg_per_acre": 24
+          },
+          "with": "neem or karanj cake 600-800 kg/acre",
+          "note": "at earthing up; LAST nitrogen of the season"
+        },
+        {
+          "n": 3,
+          "dap_approx": 110,
+          "nutrients": {
+            "K_kg_per_acre": 15
+          },
+          "note": "potassium only"
+        },
+        {
+          "n": 4,
+          "dap_approx": 140,
+          "nutrients": {
+            "K_kg_per_acre": 15
+          },
+          "note": "potassium only"
+        }
+      ],
+      "total_kg_per_acre": {
+        "N": 48,
+        "P": 30,
+        "K": 60
+      },
+      "source_note": "120:75:75 plus 37.5 x 2 kg/ha",
+      "source_tier": "A",
+      "logic_note": "No nitrogen after about 80 DAP. Flowering at 150 to 210 DAP marks the shift from foliage to rhizome growth, and nitrogen must already be finished before that."
+    },
+    "fertigation_schedule_per_acre": {
+      "basal_at_land_prep": {
+        "fym_t": {
+          "min": 12,
+          "max": 15
+        },
+        "ssp_kg": 300,
+        "dap_kg": 75,
+        "magnesium_sulphate_kg": 25,
+        "micronutrient_mix_kg": 20,
+        "neem_cake_kg": 300
+      },
+      "windows": [
+        {
+          "dap": "30-60",
+          "items": [
+            {
+              "product": "urea",
+              "kg_per_day": 1.25,
+              "total_kg": 37.5
+            },
+            {
+              "product": "12:61:00",
+              "kg_per_day": 1.25,
+              "total_kg": 37.5
+            },
+            {
+              "product": "white MOP",
+              "kg_per_day": 0.75,
+              "total_kg": 22.5
+            }
+          ]
+        },
+        {
+          "dap": "61-100",
+          "items": [
+            {
+              "product": "ammonium sulphate",
+              "kg_per_day": 2.0,
+              "total_kg": 80
+            },
+            {
+              "product": "12:61:00",
+              "kg_per_day": 1.0,
+              "total_kg": 40
+            },
+            {
+              "product": "white MOP",
+              "kg_per_day": 1.25,
+              "total_kg": 50
+            }
+          ]
+        },
+        {
+          "dap": "101-140",
+          "items": [
+            {
+              "product": "urea",
+              "kg_per_day": 1.5,
+              "total_kg": 60
+            },
+            {
+              "product": "white MOP",
+              "kg_per_day": 1.5,
+              "total_kg": 60
+            },
+            {
+              "product": "phosphoric acid",
+              "kg_per_day": 0.75,
+              "total_kg": 30
+            }
+          ]
+        },
+        {
+          "dap": "141-200",
+          "items": [
+            {
+              "product": "urea",
+              "kg_per_day": 1.0,
+              "total_kg": 60
+            },
+            {
+              "product": "white MOP",
+              "kg_per_day": 1.25,
+              "total_kg": 75
+            }
+          ]
+        }
+      ],
+      "weekly_additions": [
+        {
+          "product": "magnesium sulphate",
+          "kg_per_acre_per_week": 2.4,
+          "from_dap": 30
+        },
+        {
+          "product": "calcium nitrate",
+          "kg_per_acre_per_week": 4.0,
+          "from_dap": 130
+        }
+      ],
+      "at_earthing_75_dap": {
+        "dap_kg": 50,
+        "ammonium_sulphate_kg": 50,
+        "sop_kg": 50,
+        "micronutrient_kg": 10,
+        "neem_cake_kg": 200
+      },
+      "source_tier": "A",
+      "scaling_caveat": "Total MOP across this schedule is about 207 kg per acre, roughly 125 kg K2O, which is about double the Maharashtra official figure. The fertigation schedule targets a higher yield than our revised ceiling of 90 to 110 quintal per acre. It must be scaled down in proportion to the actual yield target rather than used as printed."
+    },
+    "micronutrients": {
+      "zinc_deficiency_prevalence_india_pct": 49,
+      "prevalence_source": "Srinivasan et al 2004, analysis of soil and plant samples across India",
+      "foliar_vs_soil_trial": {
+        "foliar_zn_0_25pct_twice": "16.2 kg per 3 sq m bed",
+        "soil_application": "14.4 kg per 3 sq m bed",
+        "advantage_pct": 12.5,
+        "source": "IISR 2002",
+        "note": "Trial was on normal soil. On calcareous soil the gap should be larger, because soil-applied zinc is fixed."
+      },
+      "best_recorded_mix": {
+        "Zn_pct": 0.3,
+        "Fe_pct": 0.2,
+        "B_pct": 0.2,
+        "grams_per_litre": {
+          "ZnSO4": 3,
+          "FeSO4": 2,
+          "B": 2
+        },
+        "timing_dap": [
+          45,
+          75
+        ],
+        "source": "Roy et al 1992"
+      },
+      "alternate_timing_dap": [
+        60,
+        90
+      ],
+      "timing_conflict_note": "Two sources give 45 and 75, or 60 and 90. Both say twice. Practical window 45-60 and 75-90 DAP.",
+      "basal_zinc": {
+        "zn_kg_per_acre": 2.4,
+        "zinc_sulphate_kg_per_acre": 12,
+        "source_note": "6 kg Zn/ha, 30 kg ZnSO4/ha, where soil is deficient"
+      },
+      "combined_formula_kg_per_acre": {
+        "N": 40,
+        "P": 30,
+        "K": 30,
+        "B": 1.2,
+        "Zn": 2.4,
+        "Fe": 2.4,
+        "source_note": "100:75:75:3:6:6 kg/ha; improved rhizome nutrient content and soil enzyme activity"
+      },
+      "source_tier": "A"
+    },
+    "neem_cake": {
+      "documented_effects": [
+        {
+          "effect": "yield increase and reduced rhizome rot incidence",
+          "dose_kg_per_acre": 800,
+          "with": "NPK 30:20:20 per acre",
+          "source": "Sarma et al 2001, Kerala"
+        },
+        {
+          "effect": "highest available nitrogen when combined with half the nitrogen dose as urea",
+          "dose_kg_per_acre": 800,
+          "source": "IISR Annual Report 2002"
+        },
+        {
+          "effect": "nematode suppression",
+          "dose_kg_per_acre": 800,
+          "source": "extension guidance"
+        }
+      ],
+      "recommended_programme_kg_per_acre": {
+        "basal": {
+          "min": 300,
+          "max": 400
+        },
+        "at_earthing": {
+          "min": 300,
+          "max": 400
+        },
+        "total": {
+          "min": 600,
+          "max": 800
+        }
+      },
+      "regulatory_status": "no CIB&RC restriction; no pre-harvest interval",
+      "source_tier": "A",
+      "note": "The only input in this crop with independently documented benefit across nutrition, disease and pest. Where chemical options are legally constrained for a minor crop, this is what the engine can recommend without qualification."
+    },
+    "biofertilisers": {
+      "seed_treatment": {
+        "azospirillum_g_per_litre": 25,
+        "psb_g_per_litre": 25,
+        "dip_minutes": [
+          10,
+          15
+        ],
+        "coverage": "10 litres treats 100-120 kg seed rhizome"
+      },
+      "trichoderma_kg_per_acre": 2,
+      "trichoderma_carrier": "mixed into FYM at planting",
+      "sequence": [
+        "chemical treatment",
+        "shade dry 3-6 hours",
+        "biological treatment",
+        "planting"
+      ],
+      "sequence_reason": "Fungicide kills Trichoderma and other biologicals. The chemical step must be completed and dried before the biological step.",
+      "psb_note": "Phosphate solubilising bacteria release fixed phosphorus, which is directly relevant on calcareous soil where applied P binds with calcium.",
+      "source_tier": "A"
+    },
+    "soil_targets": {
+      "ph": {
+        "min": 5.5,
+        "max": 7.5,
+        "ideal_min": 6.0,
+        "ideal_max": 7.0
+      },
+      "organic_carbon_pct_min": 1.0,
+      "kannad_expected_oc_pct": {
+        "min": 0.3,
+        "max": 0.5
+      },
+      "oc_note": "Reaching 1 percent is a three to four season programme in this soil, not a single-season correction.",
+      "source_tier": "A"
+    },
+    "deficiency_diagnosis": [
+      {
+        "symptom": "uniform pale yellow, stunted",
+        "leaf_age": "old_lower",
+        "cause": "nitrogen",
+        "pattern_code": "uniform_old",
+        "action": "nitrogen split"
+      },
+      {
+        "symptom": "interveinal yellow, veins stay green",
+        "leaf_age": "new_upper",
+        "cause": "iron",
+        "pattern_code": "interveinal_new",
+        "action": "foliar Fe"
+      },
+      {
+        "symptom": "small leaves, shortened internodes",
+        "leaf_age": "new",
+        "cause": "zinc",
+        "pattern_code": "small_new_leaves",
+        "action": "foliar Zn"
+      },
+      {
+        "symptom": "leaf margins scorched",
+        "leaf_age": "old",
+        "cause": "potassium",
+        "pattern_code": "margin_scorch",
+        "action": "potassium split"
+      },
+      {
+        "symptom": "growing point dies, brittle leaves",
+        "leaf_age": "new",
+        "cause": "boron",
+        "pattern_code": "small_new_leaves",
+        "action": "foliar B"
+      },
+      {
+        "symptom": "interveinal yellow",
+        "leaf_age": "old",
+        "cause": "magnesium",
+        "pattern_code": "interveinal_old",
+        "action": "magnesium sulphate"
+      },
+      {
+        "symptom": "yellow plus soft stem plus foul smell",
+        "leaf_age": "any",
+        "cause": "soft_rot",
+        "pattern_code": "with_soft_stem",
+        "action": "escalate to Domain 6"
+      },
+      {
+        "symptom": "wilts while still green",
+        "leaf_age": "lower first",
+        "cause": "bacterial_wilt",
+        "pattern_code": "sudden_green_wilt",
+        "action": "escalate to Domain 6"
+      },
+      {
+        "symptom": "leaf tips scorched",
+        "leaf_age": "exposed",
+        "cause": "heat_above_35C",
+        "pattern_code": "margin_scorch",
+        "action": "mulch, shade, irrigation timing"
+      }
+    ],
+    "npk_probe_limitation": {
+      "device": "7-in-1 NPK RS485 probe on sub-node",
+      "what_it_actually_measures": "electrical conductivity, from which NPK is inferred by an internal formula",
+      "why_unreliable_here": "EC is the sum of all dissolved salts including calcium, magnesium, sodium, chloride and sulphate. On calcareous alkaline soil the calcium carbonate contribution is large, so the inferred NPK is particularly unreliable in this belt.",
+      "valid_uses": [
+        "trend over time",
+        "fertigation delivery verification",
+        "salt accumulation alert",
+        "pH trend"
+      ],
+      "invalid_uses": [
+        "setting fertiliser doses",
+        "replacing a soil test",
+        "diagnosing a specific deficiency"
+      ],
+      "principle": "not the absolute value, the change"
+    }
+  },
+  "rules": [
+    {
+      "rule_id": "D04-NU-001",
+      "category": "NU",
+      "priority": 5,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Nutrient planning initiated",
+        "marathi": "अन्नद्रव्य नियोजन सुरू"
+      },
+      "action": {
+        "english": "Set potassium, not nitrogen, as the governing nutrient. Measured uptake is about 59 kg K per acre against 49 kg N and 17 kg P.",
+        "marathi": "पालाश हेच अद्रकाचे प्रमुख अन्नद्रव्य आहे, नत्र नाही. प्रत्यक्ष उचल एकरी सुमारे ५९ किलो पालाश, ४९ किलो नत्र आणि १७ किलो स्फुरद अशी मोजली गेली आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Potassium uptake exceeds nitrogen uptake in measured data, and potassium leaves the field inside the harvested rhizome while most nitrogen remains in foliage that returns to the soil. So potassium is both the largest uptake and the largest net export.",
+        "yield_impact": "Sets the priority order for the whole domain. Under-replacement of potassium is the most common and most correctable nutritional error in this crop.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "SciELO Inceptisol uptake study",
+          "IntechOpen INM chapter"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "limiting_nutrient",
+        "k_target_kg_per_acre",
+        "n_target_kg_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "This inverts the habitual assumption that nitrogen is the main fertiliser. Nitrogen shows its effect visibly in green foliage; potassium shows its effect underground where nobody looks until harvest.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-NP-001",
+      "category": "NP",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Dose setting AND soil_test_available is false",
+        "marathi": "खत मात्रा ठरवायची आहे पण माती परीक्षण उपलब्ध नाही"
+      },
+      "action": {
+        "english": "Use the safe starting range: 40 to 48 kg N, 20 to 30 kg P, 40 to 60 kg K per acre. Keep nitrogen at the lower end and potassium at the upper end. Mark confidence MEDIUM and tell the user a soil test would sharpen this.",
+        "marathi": "सुरक्षित प्रारंभ श्रेणी वापरा — एकरी नत्र ४० ते ४८ किलो, स्फुरद २० ते ३० किलो, पालाश ४० ते ६० किलो. नत्र खालच्या टोकाला, पालाश वरच्या टोकाला ठेवा. माती परीक्षण केल्यास मात्रा अचूक करता येईल."
+      },
+      "reasoning": {
+        "agronomic_basis": "State recommendations range from 28 to 51 kg N per acre. The highest uptake in semi-arid conditions was recorded at a lower nitrogen dose, and Kannad is semi-arid. The Mahima-specific trial also points to less phosphorus and more potassium, which suits calcareous soil where phosphorus is fixed.",
+        "yield_impact": "Both extremes are documented as harmful — deficiency limits yield, and indiscriminate use degrades soil physical, chemical and biological condition and reduces yield significantly.",
+        "confidence_score": 0.78,
+        "source_tier": "A",
+        "references": [
+          "IntechOpen INM chapter",
+          "Int. J. Adv. Biochem. Res. 2025 Mahima trial",
+          "Agrowon - Dr. Kadam"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield",
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "soil_test_available",
+        "n_target_kg_per_acre",
+        "p_target_kg_per_acre",
+        "k_target_kg_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The engine gives fertiliser advice from day one rather than refusing until a soil test exists. It says the advice is generic and says why, which is different from pretending to precision it does not have.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-NP-002",
+      "category": "NP",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G0",
+      "trigger": {
+        "english": "yield_target_quintal_per_acre exceeds 130 OR doses being scaled to an unsupported target",
+        "marathi": "उत्पादन लक्ष्य क्षमतेपेक्षा जास्त धरून मात्रा काढल्या जात आहेत",
+        "expr": "yield_target_quintal_per_acre > ceiling_quintal_per_acre",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Amended in spirit by D01-YD-002 — compare against computed ceiling.",
+        "golden_tests": [
+          {
+            "context": {
+              "yield_target_quintal_per_acre": 150,
+              "ceiling_quintal_per_acre": 113
+            },
+            "expect": "TRUE",
+            "label": "लक्ष्य मर्यादेपेक्षा जास्त"
+          },
+          {
+            "context": {
+              "yield_target_quintal_per_acre": 100,
+              "ceiling_quintal_per_acre": 113
+            },
+            "expect": "FALSE",
+            "label": "मर्यादेत"
+          },
+          {
+            "context": {
+              "yield_target_quintal_per_acre": 150
+            },
+            "expect": "UNKNOWN",
+            "label": "मर्यादा काढलेली नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Do NOT scale fertiliser doses to the inflated target. Recompute against the validated ceiling range of 90 to 110 quintal per acre.",
+        "marathi": "फुगवलेल्या उत्पादन लक्ष्यावर खत मात्रा काढू नका. मात्रा उत्पादनाच्या प्रमाणात मोजल्या जातात, म्हणून चुकीचे लक्ष्य म्हणजे सर्वच मात्रा चुकीच्या."
+      },
+      "reasoning": {
+        "agronomic_basis": "Nutrient requirement is computed as removal per tonne times expected yield. If expected yield is wrong, every dose is wrong in the same proportion.",
+        "yield_impact": "Over-application wastes money and damages soil. Under-application from a wrong target limits yield. Both follow from the same error.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Domain 1 yield ceiling",
+          "Core C1.1 nutrient budgeting"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle"
+        ]
+      },
+      "farm_brain_schema": [
+        "yield_target_quintal_per_acre",
+        "n_target_kg_per_acre",
+        "k_target_kg_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This is the practical consequence of the yield target correction in Domain 1. It is also why the published fertigation schedule cannot be used as printed — it targets a higher yield than is achievable here.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "चुकीच्या उत्पादन लक्ष्यावर खत मात्रा काढू नये."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-NS-001",
+      "category": "NS",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G2",
+      "trigger": {
+        "english": "dap approximately 60 AND n_split_1_date is empty",
+        "marathi": "सुमारे ६० दिवस झाले, नत्राचा पहिला हप्ता बाकी",
+        "expr": "dap BETWEEN 57 AND 64 AND n_split_1_date IS NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 60
+            },
+            "expect": "TRUE",
+            "label": "नत्राचा पहिला हप्ता"
+          },
+          {
+            "context": {
+              "dap": 60,
+              "n_split_1_date": "done"
+            },
+            "expect": "FALSE",
+            "label": "दिला"
+          }
+        ]
+      },
+      "action": {
+        "english": "Apply the first nitrogen split, about 24 kg N per acre — half the season total.",
+        "marathi": "नत्राचा पहिला हप्ता द्या — एकरी सुमारे २४ किलो नत्र, म्हणजे हंगामाच्या निम्मा."
+      },
+      "reasoning": {
+        "agronomic_basis": "First split falls about one month after emergence completes, when tillering is active and the crop can use nitrogen for shoot growth.",
+        "yield_impact": "u = 0.10 estimated for a missed nitrogen split, partially recoverable if caught early.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle"
+        ]
+      },
+      "farm_brain_schema": [
+        "dap",
+        "n_split_1_date",
+        "n_applied_kg_per_acre"
+      ],
+      "u_value": 0.1,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "Under fertigation this becomes a daily trickle from 30 DAP rather than a single application, but the seasonal total and the cut-off still apply.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-NS-002",
+      "category": "NS",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G3",
+      "trigger": {
+        "english": "Earthing up scheduled at about 80 DAP",
+        "marathi": "सुमारे ८० दिवस, उटाळणीची वेळ",
+        "expr": "dap BETWEEN 78 AND 88 AND n_split_2_date IS NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 82
+            },
+            "expect": "TRUE",
+            "label": "शेवटचा नत्र हप्ता"
+          },
+          {
+            "context": {
+              "dap": 82,
+              "n_split_2_date": "done"
+            },
+            "expect": "FALSE",
+            "label": "दिला"
+          }
+        ]
+      },
+      "action": {
+        "english": "Apply the second and FINAL nitrogen split, about 24 kg N per acre, together with 600 to 800 kg per acre of neem or karanj cake. Bundle with earthing up and mulch stage two so all are done in one field visit.",
+        "marathi": "नत्राचा दुसरा आणि शेवटचा हप्ता द्या — एकरी सुमारे २४ किलो नत्र, सोबत करंज किंवा निंबोळी पेंड ६०० ते ८०० किलो. उटाळणी आणि आच्छादनाचा दुसरा टप्पा याच फेरीत करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "This is the last nitrogen of the season. Combining it with earthing up incorporates it into the soil at the same time as the operation that stimulates new root formation, and neem cake applied with urea produced the highest available nitrogen in a documented trial.",
+        "yield_impact": "Carries both the nitrogen split value and, through bundling, protects the 0.125 earthing up value.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam",
+          "IISR Annual Report 2002 neem cake plus urea"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest",
+          "domain_6_disease",
+          "domain_8_operations",
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_8_operations"
+        ]
+      },
+      "farm_brain_schema": [
+        "dap",
+        "n_split_2_date",
+        "earthing_up_date",
+        "neem_cake_earthing_kg_per_acre",
+        "mulch_stage_2_done"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "This single field visit carries six actions from five domains and is the most important operational day of the season. Labour must be arranged from about 60 DAP because August is also when cotton and soybean intercultivation competes for the same workers.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-NS-003",
+      "category": "NS",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "dap greater than 80 AND nitrogen application proposed",
+        "marathi": "८० दिवसांनंतर नत्र देण्याचा प्रस्ताव",
+        "expr": "dap > 80 AND n_applied_kg_per_acre IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "No nitrogen after 80 DAP.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 95,
+              "n_applied_kg_per_acre": 10
+            },
+            "expect": "TRUE",
+            "label": "९५ दिवसांनी नत्र — नाकारा"
+          },
+          {
+            "context": {
+              "dap": 60,
+              "n_applied_kg_per_acre": 24
+            },
+            "expect": "FALSE",
+            "label": "६० दिवस — चालेल"
+          }
+        ]
+      },
+      "action": {
+        "english": "REFUSE further nitrogen. Excess nitrogen after this point produces foliage at the expense of the rhizome and delays maturity.",
+        "marathi": "आता नत्र देऊ नका. या टप्प्यानंतर जास्त नत्र दिल्यास पाला वाढतो, गड्डा नाही, आणि पक्वता लांबते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Excessive nitrogen leads to excessive foliage growth at the expense of rhizome development. Flowering at 150 to 210 DAP marks the physiological shift from shoot to rhizome growth, and nitrogen must be finished well before it.",
+        "yield_impact": "u = 0.08 for late nitrogen, and it is irrecoverable because the partitioning window has passed.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "AgriFarming - excessive nitrogen",
+          "Agrowon - Dr. Kadam schedule",
+          "Domain 1 flowering partition shift"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle"
+        ]
+      },
+      "farm_brain_schema": [
+        "dap",
+        "n_applied_kg_per_acre",
+        "flowering_observed"
+      ],
+      "u_value": 0.08,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "The temptation to apply nitrogen late is strongest when the crop looks pale. But pale foliage after 80 DAP in this belt is more often iron or zinc lock-up than nitrogen shortage, and urea does nothing for that.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-PP-001",
+      "category": "PP",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Phosphorus application scheduled",
+        "marathi": "स्फुरद द्यायची वेळ"
+      },
+      "action": {
+        "english": "Apply the full phosphorus dose as basal at land preparation. Phosphorus is immobile and is needed early for root development.",
+        "marathi": "स्फुरदाची संपूर्ण मात्रा जमीन तयार करतानाच द्या. स्फुरद जमिनीत हलत नाही आणि तो सुरुवातीच्या मूळ विकासासाठी लागतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "All state recommendations agree on full basal phosphorus. It does not move in soil, so top-dressing later does not reach the root zone.",
+        "yield_impact": "Part of the overall nutrition schedule; not separately quantified.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam",
+          "Kerala and Karnataka packages"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "p_target_kg_per_acre",
+        "p_applied_kg_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Basal placement is also covered in Domain 2 as part of land preparation. Repeated here because the dose belongs to the nutrition schedule.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-PP-002",
+      "category": "PP",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "soil_free_lime_pct elevated OR soil_ph greater than 7.5",
+        "marathi": "मातीत चुनखडी आहे किंवा सामू ७.५ पेक्षा जास्त"
+      },
+      "action": {
+        "english": "Band the phosphorus with organic matter rather than broadcasting. Use PSB in the seed treatment. Do NOT increase the phosphorus dose to compensate for fixation.",
+        "marathi": "स्फुरद पसरून न देता पट्ट्यात, सेंद्रिय पदार्थासोबत द्या. बीजप्रक्रियेत PSB वापरा. चुनखडीमुळे स्फुरद स्थिर होतो म्हणून मात्रा वाढवू नये — वाढवलेलाही तेवढ्याच प्रमाणात स्थिर होतो. उत्तर मात्रा नाही, पद्धत आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "In calcareous soil applied phosphorus binds with calcium into unavailable calcium phosphate. Banding reduces soil contact and so reduces fixation; organic acids from decomposing matter keep more of it available; phosphate solubilising bacteria release part of the fixed pool.",
+        "yield_impact": "Prevents wasted input rather than adding yield. Also explains why the Mahima-specific trial uses lower phosphorus than the general schedule.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 2 fixation mechanism",
+          "Int. J. Adv. Biochem. Res. 2025",
+          "Agrowon fertigation phosphoric acid"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "soil_free_lime_pct",
+        "soil_ph",
+        "p_target_kg_per_acre",
+        "azospirillum_psb_done"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Phosphoric acid through drip has a second benefit here — it is acidic, so it lowers pH locally at the emitter and also keeps the lines clear of scale in hard alkaline water.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-PK-001",
+      "category": "PK",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G4",
+      "trigger": {
+        "english": "dap approximately 110 AND k_late_split_1_date is empty AND has_drip is false",
+        "marathi": "सुमारे ११० दिवस, पालाशाचा पहिला वाढीव हप्ता बाकी",
+        "expr": "dap BETWEEN 108 AND 115 AND k_late_split_1_date IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "The most commonly skipped operation in the schedule, because by 110 DAP the crop looks healthy.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 110
+            },
+            "expect": "TRUE",
+            "label": "११० दिवस, पालाश बाकी"
+          },
+          {
+            "context": {
+              "dap": 110,
+              "k_late_split_1_date": "done"
+            },
+            "expect": "FALSE",
+            "label": "दिला आहे"
+          },
+          {
+            "context": {
+              "dap": 100
+            },
+            "expect": "FALSE",
+            "label": "अजून वेळ आहे"
+          }
+        ]
+      },
+      "action": {
+        "english": "Apply about 15 kg K per acre. Explain clearly why: the crop looks healthy now, but the rhizome is filling right now and it fills on potassium.",
+        "marathi": "पालाशाचा हप्ता द्या — एकरी सुमारे १५ किलो. पीक चांगले दिसत असले तरी गड्डा नेमका आत्ता भरतो आहे, आणि तो पालाशावर भरतो. हा हप्ता वगळू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "The Maharashtra schedule adds two potassium splits after nitrogen has finished, bringing the season total to about 60 kg per acre which closely matches the measured uptake of about 59 kg. Without these splits the schedule under-supplies the nutrient the crop removes most.",
+        "yield_impact": "u = 0.12 estimated for skipping the late potassium splits.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam",
+          "SciELO uptake study"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest",
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "dap",
+        "k_late_split_1_date",
+        "k_applied_kg_per_acre",
+        "has_drip"
+      ],
+      "u_value": 0.12,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "This is the most commonly skipped operation in the entire schedule, and the reason is psychological rather than agronomic. By 110 DAP the crop is green and vigorous and the fertiliser work feels finished.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-PK-002",
+      "category": "PK",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G4",
+      "trigger": {
+        "english": "dap approximately 140 AND k_late_split_2_date is empty AND has_drip is false",
+        "marathi": "सुमारे १४० दिवस, पालाशाचा दुसरा वाढीव हप्ता बाकी",
+        "expr": "dap BETWEEN 138 AND 145 AND k_late_split_2_date IS NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 140
+            },
+            "expect": "TRUE",
+            "label": "१४० दिवस, दुसरा हप्ता बाकी"
+          },
+          {
+            "context": {
+              "dap": 140,
+              "k_late_split_2_date": "done"
+            },
+            "expect": "FALSE",
+            "label": "दिला आहे"
+          }
+        ]
+      },
+      "action": {
+        "english": "Apply the second late potassium split, about 15 kg K per acre.",
+        "marathi": "पालाशाचा दुसरा वाढीव हप्ता द्या — एकरी सुमारे १५ किलो."
+      },
+      "reasoning": {
+        "agronomic_basis": "Rhizome bulking continues to harvest. Source notes that the rhizome keeps developing even after foliage growth has slowed, so nutrition cannot stop when the leaves do.",
+        "yield_impact": "Part of the 0.12 late potassium value.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam",
+          "IntechOpen growth phases"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest",
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "dap",
+        "k_late_split_2_date",
+        "k_applied_kg_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Common error: stopping fertiliser once the leaves start yellowing. The rhizome is still filling at that point.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-PK-003",
+      "category": "PK",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G4",
+      "trigger": {
+        "english": "Late potassium application AND (soil_ec elevated OR target_product is dry_ginger)",
+        "marathi": "उशिराचा पालाश हप्ता आणि EC जास्त आहे किंवा सुंठ हा मार्ग आहे",
+        "expr": "dap > 150 AND k_late_split_2_date IS NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 160
+            },
+            "expect": "TRUE",
+            "label": "पालाश राहिला"
+          },
+          {
+            "context": {
+              "dap": 160,
+              "k_late_split_2_date": "done"
+            },
+            "expect": "FALSE",
+            "label": "दिला"
+          }
+        ]
+      },
+      "action": {
+        "english": "Consider sulphate of potash instead of muriate for the late splits. It is chloride free and supplies sulphur.",
+        "marathi": "उशिराचे पालाश हप्ते MOP ऐवजी SOP मधून देण्याचा विचार करा. SOP क्लोराईडमुक्त आहे आणि गंधकही देते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Drip concentrates salts at the wetting front and there is no leaching rain in this period, so chloride from MOP accumulates. SOP avoids that and supplies sulphur, which is commonly deficient in black soil. The published fertigation schedule itself switches to SOP for the earthing-up application, which suggests the distinction is deliberate.",
+        "yield_impact": "Affects quality and soil condition rather than yield weight.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Agrowon fertigation schedule SOP at earthing",
+          "Core C1.4 salt accumulation"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "k_source",
+        "soil_ec",
+        "ec_trend_pct",
+        "target_product"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "Cost difference between MOP and SOP is real, so this is presented as a consideration rather than a requirement. Where the soil test shows elevated EC it moves closer to a requirement.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "WINDOW"
+    },
+    {
+      "rule_id": "D04-MC-001",
+      "category": "MC",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G2",
+      "trigger": {
+        "english": "dap between 45 and 60 AND micronutrient_spray_1_done is false",
+        "marathi": "४५ ते ६० दिवस, सूक्ष्म अन्नद्रव्यांची पहिली फवारणी बाकी",
+        "expr": "dap BETWEEN 45 AND 60 AND micronutrient_spray_1_done IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Suppressed by D04-MC-004 above 35 C or before rain. Zinc deficiency averages 49 percent of Indian soils.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 50,
+              "micronutrient_spray_1_done": false
+            },
+            "expect": "TRUE",
+            "label": "फवारणी करा"
+          },
+          {
+            "context": {
+              "dap": 50,
+              "micronutrient_spray_1_done": true
+            },
+            "expect": "FALSE",
+            "label": "झाली"
+          }
+        ]
+      },
+      "action": {
+        "english": "Apply the first foliar micronutrient spray: zinc sulphate 3 g, ferrous sulphate 2 g and boron 2 g per litre. Spray early morning or evening, with a spreader.",
+        "marathi": "सूक्ष्म अन्नद्रव्यांची पहिली फवारणी करा — प्रति लिटर झिंक सल्फेट ३ ग्रॅम, फेरस सल्फेट २ ग्रॅम, बोरॉन २ ग्रॅम. सकाळी लवकर किंवा संध्याकाळी, चिकटद्रव्यासह फवारा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The combination of zinc 0.3 percent, iron 0.2 percent and boron 0.2 percent sprayed twice gave the highest yield in a documented trial. Foliar delivery bypasses soil chemistry, which matters where free lime locks up zinc and iron.",
+        "yield_impact": "u = 0.11, derived from the trial in which foliar zinc gave 16.2 kg per 3 square metre bed against 14.4 for soil application.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Roy et al 1992",
+          "IISR 2002",
+          "Vikaspedia timing"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "dap",
+        "micronutrient_spray_1_done",
+        "soil_zn_ppm",
+        "soil_fe_ppm",
+        "soil_free_lime_pct"
+      ],
+      "u_value": 0.11,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "Zinc deficiency averages 49 percent across Indian soil and plant samples. Calcareous alkaline soil raises that probability further, so in this belt the spray is preventing an expected loss rather than chasing a marginal gain.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-MC-002",
+      "category": "MC",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G3",
+      "trigger": {
+        "english": "dap between 75 and 90 AND micronutrient_spray_2_done is false",
+        "marathi": "७५ ते ९० दिवस, सूक्ष्म अन्नद्रव्यांची दुसरी फवारणी बाकी",
+        "expr": "dap BETWEEN 75 AND 90 AND micronutrient_spray_2_done IS FALSE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 85,
+              "micronutrient_spray_2_done": false
+            },
+            "expect": "TRUE",
+            "label": "दुसरी फवारणी"
+          },
+          {
+            "context": {
+              "dap": 85,
+              "micronutrient_spray_2_done": true
+            },
+            "expect": "FALSE",
+            "label": "झाली"
+          }
+        ]
+      },
+      "action": {
+        "english": "Apply the second foliar micronutrient spray with the same mixture.",
+        "marathi": "सूक्ष्म अन्नद्रव्यांची दुसरी फवारणी त्याच मिश्रणाने करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Both source pairs specify two sprays. The second falls just before rhizome initiation, when demand rises and the canopy is large enough to absorb well.",
+        "yield_impact": "Completes the 0.11 micronutrient value.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Roy et al 1992",
+          "Vikaspedia"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "dap",
+        "micronutrient_spray_2_done"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "Can be bundled with the earthing-up visit at 75 DAP if the timings align, reducing one field trip.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "WINDOW",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-MC-003",
+      "category": "MC",
+      "priority": 4,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "soil_zn_ppm below sufficiency",
+        "marathi": "माती परीक्षणात जस्त कमी आहे"
+      },
+      "action": {
+        "english": "Apply basal zinc sulphate at about 12 kg per acre in addition to, not instead of, the foliar sprays.",
+        "marathi": "जमिनीतून झिंक सल्फेट एकरी सुमारे १२ किलो द्या — पण हे फवारणीच्या ऐवजी नव्हे, त्याच्या जोडीला."
+      },
+      "reasoning": {
+        "agronomic_basis": "Basal zinc at 6 kg Zn per hectare gives good response where soil is deficient, but on calcareous soil a substantial fraction is fixed. Soil application builds the base; foliar delivers the crop's requirement.",
+        "yield_impact": "Supports the foliar programme rather than replacing it.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Nutrition of Zingiberaceae Crops - basal zinc",
+          "PubMed PMC8381012 combined NPK plus micro formula"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "soil_zn_ppm",
+        "micronutrient_basal_done"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Order of priority matters here and is the reverse of the usual practice. Foliar is the main route in this belt; soil application is the supporting one.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-MC-004",
+      "category": "MC",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Micronutrient spray scheduled AND air_temp_max_c above 35 OR rain forecast within 6 hours",
+        "marathi": "फवारणी ठरली आहे पण तापमान ३५ अंशांवर आहे किंवा सहा तासांत पावसाचा अंदाज आहे",
+        "expr": "air_temp_max_c > 35 OR forecast_rain_48h_mm > 5",
+        "expr_version": "dsl-1.0",
+        "expr_note": "The suppressor. Leaves scorch above 35 C and rain washes foliar application off.",
+        "golden_tests": [
+          {
+            "context": {
+              "air_temp_max_c": 39,
+              "forecast_rain_48h_mm": 0
+            },
+            "expect": "TRUE",
+            "label": "उष्णता — थांबा"
+          },
+          {
+            "context": {
+              "air_temp_max_c": 30,
+              "forecast_rain_48h_mm": 12
+            },
+            "expect": "TRUE",
+            "label": "पाऊस — थांबा"
+          },
+          {
+            "context": {
+              "air_temp_max_c": 30,
+              "forecast_rain_48h_mm": 0
+            },
+            "expect": "FALSE",
+            "label": "फवारणी योग्य"
+          }
+        ]
+      },
+      "action": {
+        "english": "Postpone the spray. Spray early morning or evening only, and not before rain.",
+        "marathi": "फवारणी पुढे ढकला. दुपारच्या उन्हात फवारल्यास पाने करपतात, आणि पावसापूर्वी फवारल्यास औषध वाहून जाते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Ginger leaves scorch above 35 C and this district records maxima up to 45.9 C. Rain within a few hours washes off foliar application before absorption.",
+        "yield_impact": "Protects the 0.11 micronutrient value from being wasted at execution.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Domain 1 heat threshold",
+          "Core C3.3 forecast-conditioned suppression"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "air_temp_max_c",
+        "rainfall_mm",
+        "micronutrient_spray_1_done",
+        "micronutrient_spray_2_done"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "In a belt this hot the spray window is genuinely narrow. Scheduling it without checking the forecast wastes both product and labour.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-SN-001",
+      "category": "SN",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Basal application being planned",
+        "marathi": "पायाभूत मात्रा ठरवली जात आहे"
+      },
+      "action": {
+        "english": "Include magnesium sulphate about 25 kg per acre at basal, and continue about 2.4 kg per acre weekly through fertigation where drip is used.",
+        "marathi": "पायाभूत मात्रेत मॅग्नेशिअम सल्फेट एकरी सुमारे २५ किलो द्या, आणि ठिबक असल्यास आठवड्याला सुमारे २.४ किलो चालू ठेवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Calcium, magnesium and sulphur are all taken up in larger quantities than phosphorus, yet receive far less attention. SSP already supplies sulphur and calcium as a side benefit.",
+        "yield_impact": "Not separately quantified.",
+        "confidence_score": 0.75,
+        "source_tier": "A",
+        "references": [
+          "Agrowon fertigation basal",
+          "SciELO uptake order"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "soil_mg_ppm",
+        "soil_s_ppm",
+        "fertigation_active"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "Sulphur deficiency is common in black soil. Choosing SSP over DAP for part of the phosphorus supplies about 11 percent sulphur and 20 percent calcium as a by-product, which is why the published basal schedule uses 300 kg SSP.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-SN-002",
+      "category": "SN",
+      "priority": 2,
+      "severity": "info",
+      "stage": "G4",
+      "trigger": {
+        "english": "dap greater than 130 AND fertigation_active AND soil_free_lime_pct elevated",
+        "marathi": "१३० दिवसांनंतर, ठिबकातून खत सुरू, आणि मातीत चुनखडी आहे",
+        "expr": "soil_free_lime_pct > 10 AND micronutrient_spray_1_done IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Free lime locks up zinc and iron. Soil application does not reach the plant.",
+        "golden_tests": [
+          {
+            "context": {
+              "soil_free_lime_pct": 14,
+              "micronutrient_spray_1_done": false
+            },
+            "expect": "TRUE",
+            "label": "चुनखडी — फवारणीच"
+          },
+          {
+            "context": {
+              "soil_free_lime_pct": 4,
+              "micronutrient_spray_1_done": false
+            },
+            "expect": "FALSE",
+            "label": "कमी चुनखडी"
+          },
+          {
+            "context": {
+              "micronutrient_spray_1_done": false
+            },
+            "expect": "UNKNOWN",
+            "label": "माती परीक्षण नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Review whether weekly calcium nitrate is needed. Calcareous soil already supplies abundant calcium, and calcium nitrate also adds nitrogen, which is unwanted this late.",
+        "marathi": "चुनखडीयुक्त जमिनीत कॅल्शिअम आधीच भरपूर आहे. कॅल्शिअम नायट्रेटमधून नत्रही जाते, जे या टप्प्यावर नको. माती परीक्षणानुसार गरज तपासा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The published fertigation schedule adds calcium nitrate weekly from 130 DAP for skin hardening and storage quality. On calcareous soil the calcium is not limiting, and the nitrate fraction conflicts with the no-nitrogen-after-80-DAP rule.",
+        "yield_impact": "Avoids an unnecessary input and an unwanted late nitrogen source.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "Agrowon fertigation schedule",
+          "Domain 4 late nitrogen rule"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "dap",
+        "soil_ca_ppm",
+        "soil_free_lime_pct",
+        "fertigation_active"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "A clear example of why a published schedule cannot be applied unmodified. It was written for general soil; here one of its components is redundant and mildly counterproductive.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D04-OR-001",
+      "category": "OR",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Basal application being planned",
+        "marathi": "पायाभूत मात्रा ठरवली जात आहे"
+      },
+      "action": {
+        "english": "Include neem cake 300 to 400 kg per acre at basal, with a second 300 to 400 kg at earthing up. Rank it high in the recommendation list.",
+        "marathi": "पायाभूत मात्रेत निंबोळी पेंड एकरी ३०० ते ४०० किलो, आणि उटाळणीच्या वेळी आणखी ३०० ते ४०० किलो द्या."
+      },
+      "reasoning": {
+        "agronomic_basis": "Neem cake at 2 tonnes per hectare with NPK increased yield AND reduced rhizome rot incidence in Kerala trials. Separately it produced the highest available nitrogen when combined with half the urea dose. It also suppresses nematodes, which are a documented entry route for both soft rot and bacterial wilt.",
+        "yield_impact": "Acts across three domains simultaneously. Not separately quantified but supports several u-values.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Sarma et al 2001",
+          "IISR Annual Report 2002",
+          "extension nematode guidance"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_5_pest",
+          "domain_6_disease",
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "neem_cake_basal_kg_per_acre",
+        "neem_cake_earthing_kg_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "The only input in this crop with independently documented benefit for nutrition, disease and pests at once, and it carries no CIB&RC restriction or pre-harvest interval. Where chemical options are legally constrained for a minor crop, this is what the engine can recommend without hedging.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-OR-002",
+      "category": "OR",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "Nutrient planning AND organic sources available",
+        "marathi": "अन्नद्रव्य नियोजन, सेंद्रिय स्रोत उपलब्ध"
+      },
+      "action": {
+        "english": "Consider partial substitution of inorganic nitrogen with organic sources. A combination of neem cake, poultry manure and groundnut cake with inorganic nitrogen produced yields up to about 117 quintal per acre in trials.",
+        "marathi": "अकार्बनिक नत्राचा काही भाग सेंद्रिय स्रोतांतून बदलण्याचा विचार करा — निंबोळी पेंड, कोंबडीखत आणि भुईमूग पेंड यांच्या संयोजनात प्रयोगात जास्त उत्पादन नोंदवले गेले आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Integrated nutrient management combining organic and inorganic sources outperformed inorganic alone, reaching about 29 tonnes per hectare, which exceeds the best variety's rated genetic capacity of 23.2 tonnes per hectare.",
+        "yield_impact": "Directionally positive. The trial was in a different climate, so the magnitude should not be transferred.",
+        "confidence_score": 0.65,
+        "source_tier": "A",
+        "references": [
+          "Nutrition of Zingiberaceae Crops - INM combinations"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield",
+          "domain_13_economics"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "n_target_kg_per_acre",
+        "neem_cake_basal_kg_per_acre",
+        "soil_oc_pct"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-D",
+      "kannad_note": "Worth noting that INM exceeded rated genetic capacity in that trial. It is presented as a direction to test in a strip rather than as a planning figure, because the climate was different and a single trial is not a basis for a target.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-BI-001",
+      "category": "BI",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "Seed treatment being planned",
+        "marathi": "बेणे प्रक्रिया ठरवली जात आहे"
+      },
+      "action": {
+        "english": "After the chemical treatment and shade drying, dip seed in Azospirillum 25 g plus PSB 25 g per litre for 10 to 15 minutes. Ten litres treats 100 to 120 kg of seed.",
+        "marathi": "रासायनिक प्रक्रियेनंतर सावलीत सुकवून, ॲझोस्पिरिलम २५ ग्रॅम अधिक PSB २५ ग्रॅम प्रति लिटर या द्रावणात बेणे १० ते १५ मिनिटे बुडवा. १० लिटर द्रावणात १०० ते १२० किलो बेण्यास प्रक्रिया होते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Azospirillum fixes nitrogen and PSB releases fixed phosphorus. PSB is directly relevant on calcareous soil where applied phosphorus binds with calcium.",
+        "yield_impact": "Not separately quantified. Supports the phosphorus availability problem identified in Domain 2.",
+        "confidence_score": 0.8,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam seed treatment sequence"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "azospirillum_psb_done",
+        "soil_free_lime_pct"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Cost is trivial. About 800 kg of seed needs roughly 70 litres of solution, which is about 175 g of each culture.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-BI-002",
+      "category": "BI",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G0",
+      "trigger": {
+        "english": "Biological treatment proposed AND chemical treatment same day or seed not dried",
+        "marathi": "जैविक प्रक्रिया करायची आहे पण रासायनिक प्रक्रिया त्याच वेळी आहे किंवा बेणे सुकवलेले नाही"
+      },
+      "action": {
+        "english": "Enforce the sequence: chemical treatment, then shade dry 3 to 6 hours, then biological treatment, then plant. Never simultaneously.",
+        "marathi": "क्रम पाळा — आधी रासायनिक प्रक्रिया, मग सावलीत ३ ते ६ तास सुकवणे, मग जैविक प्रक्रिया, मग लागवड. एकाच वेळी करू नये."
+      },
+      "reasoning": {
+        "agronomic_basis": "Fungicide kills Trichoderma and other biological cultures. Applying them together makes the biological step useless and wastes the input.",
+        "yield_impact": "Protects the value of both the seed treatment and the Trichoderma application.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam sequence",
+          "Domain 2 Trichoderma rule"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "azospirillum_psb_done",
+        "trichoderma_kg_per_acre",
+        "last_fungicide_date"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "This mistake is easy to make on a busy planting day because both treatments involve dipping seed in a tank. The sequencing constraint has to be stated explicitly in the day's instruction list.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-FG-001",
+      "category": "FG",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Fertigation scheduled",
+        "marathi": "ठिबकातून खत द्यायचे आहे",
+        "expr": "has_drip IS TRUE AND fertigation_active IS FALSE AND dap BETWEEN 30 AND 150",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "has_drip": true,
+              "fertigation_active": false,
+              "dap": 60
+            },
+            "expect": "TRUE",
+            "label": "फर्टिगेशन सुरू करा"
+          },
+          {
+            "context": {
+              "has_drip": true,
+              "fertigation_active": true,
+              "dap": 60
+            },
+            "expect": "FALSE",
+            "label": "सुरू आहे"
+          }
+        ]
+      },
+      "action": {
+        "english": "Flush with plain water for 15 to 20 minutes before and after fertigation. Do not fertigate into saturated soil.",
+        "marathi": "फर्टिगेशनपूर्वी १५-२० मिनिटे साधे पाणी सोडा आणि नंतरही १५-२० मिनिटे — म्हणजे नळ्यांत खत राहणार नाही. संपृक्त जमिनीत फर्टिगेशन करू नये, खत वाहून जाते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Pre-flush fills the lines so distribution is even; post-flush prevents salt and algal build-up in emitters. Fertigating saturated soil leaches the nutrient below the shallow root zone.",
+        "yield_impact": "Protects delivery efficiency rather than adding yield.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "standard fertigation practice",
+          "Domain 3 saturation override"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water"
+        ],
+        "depends_on": [
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "fertigation_active",
+        "soil_moisture_vwc",
+        "vwc_saturation"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "EST",
+      "kannad_note": "Ginger roots sit in the top 20 cm, so leaching past the root zone happens faster here than in a deep-rooted crop.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D04-FG-002",
+      "category": "FG",
+      "priority": 4,
+      "severity": "red",
+      "stage": "G4",
+      "trigger": {
+        "english": "Calcium nitrate and phosphoric acid or a sulphate fertiliser scheduled on the same day",
+        "marathi": "कॅल्शिअम नायट्रेट आणि फॉस्फोरिक आम्ल किंवा सल्फेट खत एकाच दिवशी",
+        "expr": "fertigation_active IS TRUE AND dap BETWEEN 130 AND 140",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Calcium nitrate and phosphoric acid windows overlap here.",
+        "golden_tests": [
+          {
+            "context": {
+              "fertigation_active": true,
+              "dap": 135
+            },
+            "expect": "TRUE",
+            "label": "overlap खिडकी"
+          },
+          {
+            "context": {
+              "fertigation_active": true,
+              "dap": 120
+            },
+            "expect": "FALSE",
+            "label": "overlap नाही"
+          },
+          {
+            "context": {
+              "dap": 135
+            },
+            "expect": "UNKNOWN",
+            "label": "फर्टिगेशन चालू आहे का माहीत नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Separate them onto different days. Calcium with phosphate or sulphate precipitates and blocks emitters.",
+        "marathi": "कॅल्शिअम आणि स्फुरद किंवा सल्फेट खते एकाच वेळी देऊ नका — अवक्षेपण होते आणि तोट्या तुंबतात. वेगवेगळ्या दिवशी द्या."
+      },
+      "reasoning": {
+        "agronomic_basis": "Calcium phosphate and calcium sulphate are sparingly soluble and precipitate in the line. The published schedule runs calcium nitrate weekly from 130 DAP while phosphoric acid runs through the 101 to 140 DAP window, so the conflict is real in that overlap.",
+        "yield_impact": "Prevents equipment damage and interrupted delivery.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "fertigation chemistry",
+          "Agrowon schedule overlap",
+          "Core C7.2 dependency ordering"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "fertigation_active",
+        "dap"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "The source does not flag this conflict, but reading the two schedules together shows the overlap. The engine should sequence these automatically rather than expecting the operator to notice.",
+      "decision_type": "SCHEDULED_REMINDER",
+      "automation": "assisted",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "Calcium आणि Phosphate/Sulphate एकत्र देऊ नयेत."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-FG-003",
+      "category": "FG",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Published fertigation schedule about to be applied as printed",
+        "marathi": "प्रकाशित फर्टिगेशन वेळापत्रक जसेच्या तसे वापरले जात आहे"
+      },
+      "action": {
+        "english": "Scale it down in proportion to the actual yield target. Total MOP in the printed schedule is about 207 kg per acre, roughly double the Maharashtra official potassium figure.",
+        "marathi": "हे वेळापत्रक जसेच्या तसे वापरू नका. त्यातील एकूण MOP एकरी सुमारे २०७ किलो आहे — म्हणजे अधिकृत शिफारशीच्या जवळपास दुप्पट. आपल्या उत्पादन लक्ष्याच्या प्रमाणात कमी करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Fertigation splits nutrients into small frequent doses which raises efficiency, but the printed totals target a higher yield than the validated ceiling for this belt. Nutrient requirement scales with expected yield.",
+        "yield_impact": "Prevents systematic over-application and unnecessary cost.",
+        "confidence_score": 0.75,
+        "source_tier": "A",
+        "references": [
+          "Agrowon fertigation schedule",
+          "Domain 1 yield ceiling",
+          "Agrowon - Dr. Kadam official dose"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle"
+        ]
+      },
+      "farm_brain_schema": [
+        "fertigation_active",
+        "yield_target_quintal_per_acre",
+        "k_target_kg_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This is the direct downstream consequence of the yield target correction. The schedule comes from an irrigation equipment supplier whose stated yield gain is 35 to 40 percent, which is higher than the independently sourced figure used for planning.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-DG-001",
+      "category": "DG",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "Leaf yellowing reported",
+        "marathi": "पाने पिवळी पडली",
+        "expr": "leaf_yellowing_pattern IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "leaf_yellowing_pattern": "margin_scorch"
+            },
+            "expect": "TRUE",
+            "label": "निदान क्रम चालवा"
+          },
+          {
+            "context": {},
+            "expect": "FALSE",
+            "label": "नोंद नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Run the diagnosis sequence before recommending any input. Step 1: is the soil at the root wet? Step 2: dig one sample plant. Step 3: which leaves are yellow, old or new? Step 4: check the last three days for temperatures above 35 C. Never recommend urea on the yellowing signal alone.",
+        "marathi": "पिवळी पाने दिसल्यावर पहिली कृती खत नाही — निदान आहे. १) मुळाजवळची माती ओली आहे का. २) एक नमुना रोप उकरून पहा. ३) कोणती पाने पिवळी — जुनी की नवी. ४) गेल्या तीन दिवसांत ३५ अंशांवर तापमान गेले का."
+      },
+      "reasoning": {
+        "agronomic_basis": "At least six causes produce similar yellowing and the treatments differ. Nitrogen applied to waterlogged soil worsens the condition. Nitrogen applied to lime-induced iron lock-up achieves nothing except foliage growth at the rhizome's expense.",
+        "yield_impact": "Prevents wasted input and, more importantly, prevents a missed rot diagnosis worth up to 0.70.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Dr. Kadam",
+          "Agrowon - Mali & Mahajan",
+          "ICL Growing Solutions"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_9_harvest"
+        ],
+        "depends_on": [
+          "domain_2_soil",
+          "domain_6_disease"
+        ]
+      },
+      "farm_brain_schema": [
+        "leaf_yellowing_pattern",
+        "soil_moisture_vwc",
+        "air_temp_max_c",
+        "dap",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "The single most frequently triggered diagnostic in this belt, because calcareous yellowing here is expected rather than exceptional.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "पिवळेपणाचे निदान प्रथम."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-DG-002",
+      "category": "DG",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "leaf_yellowing_pattern is interveinal_new",
+        "marathi": "नव्या पानांत शिरांमधील पिवळेपणा, शिरा हिरव्या"
+      },
+      "action": {
+        "english": "Diagnose as iron or zinc lock-up, not nitrogen deficiency. Recommend foliar micronutrient spray. Do NOT apply urea.",
+        "marathi": "हे लोह किंवा जस्ताच्या अनुपलब्धतेचे लक्षण आहे, नत्राच्या कमतरतेचे नाही. सूक्ष्म अन्नद्रव्यांची फवारणी करा. युरिया देऊ नका — त्याने काहीही होणार नाही, फक्त खर्च वाढेल आणि पाला माजेल."
+      },
+      "reasoning": {
+        "agronomic_basis": "Iron and zinc are immobile in the plant, so deficiency appears in new growth first. Nitrogen is mobile and is withdrawn from old leaves first, so nitrogen deficiency appears in old growth. Leaf age is therefore a reliable discriminator.",
+        "yield_impact": "Directs the 0.11 micronutrient correction to the right cause and prevents an ineffective nitrogen application.",
+        "confidence_score": 0.88,
+        "source_tier": "A",
+        "references": [
+          "Domain 4 diagnosis table",
+          "Krishi Jagran calcareous yellowing in turmeric"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_2_soil"
+        ]
+      },
+      "farm_brain_schema": [
+        "leaf_yellowing_pattern",
+        "soil_free_lime_pct",
+        "soil_zn_ppm",
+        "soil_fe_ppm",
+        "micronutrient_spray_1_done"
+      ],
+      "u_value": 0.11,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "One line of guidance — old leaves means nitrogen, new leaves means micronutrients — saves fertiliser cost every season in this belt.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-DG-003",
+      "category": "DG",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "leaf_yellowing_pattern is with_soft_stem or sudden_green_wilt",
+        "marathi": "पिवळेपणासोबत खोड मऊ किंवा हिरवीच असताना कोमेजणे",
+        "expr": "leaf_yellowing_pattern IN [with_soft_stem, sudden_green_wilt]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Stop nutrient advisory and hand over to Domain 6.",
+        "golden_tests": [
+          {
+            "context": {
+              "leaf_yellowing_pattern": "with_soft_stem"
+            },
+            "expect": "TRUE",
+            "label": "कूज — खत थांबवा"
+          },
+          {
+            "context": {
+              "leaf_yellowing_pattern": "sudden_green_wilt"
+            },
+            "expect": "TRUE",
+            "label": "मर रोग — खत थांबवा"
+          },
+          {
+            "context": {
+              "leaf_yellowing_pattern": "uniform_old"
+            },
+            "expect": "FALSE",
+            "label": "नत्र कमतरता — खत चालेल"
+          }
+        ]
+      },
+      "action": {
+        "english": "STOP nutrient advisory and escalate to Domain 6 disease diagnosis immediately. Do not recommend any fertiliser.",
+        "marathi": "खत सल्ला थांबवा आणि तात्काळ रोग निदानाकडे वळा. कोणतेही खत देऊ नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "Soft stem with foul smell indicates soft rot; wilting while still green indicates bacterial wilt. Both are disease events, and fertiliser applied at that point is money spent while the crop is being lost.",
+        "yield_impact": "Redirects to the 0.50 to 0.90 loss pathway where the real decision lies.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Mali & Mahajan",
+          "Domain 6 differential diagnosis"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "leaf_yellowing_pattern",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "The nutrient engine must know when to hand over. Continuing to give fertiliser advice while a rot outbreak is underway is worse than giving no advice.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-DG-004",
+      "category": "DG",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "leaf_yellowing_pattern is margin_scorch AND air_temp_max_c below 35 in the last three days",
+        "marathi": "पानांच्या कडा करपल्या आहेत पण गेल्या तीन दिवसांत तापमान ३५ अंशांखाली होते",
+        "expr": "leaf_yellowing_pattern == 'margin_scorch' AND air_temp_max_c > 35",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "leaf_yellowing_pattern": "margin_scorch",
+              "air_temp_max_c": 38
+            },
+            "expect": "TRUE",
+            "label": "उष्णतेची इजा"
+          },
+          {
+            "context": {
+              "leaf_yellowing_pattern": "margin_scorch",
+              "air_temp_max_c": 29
+            },
+            "expect": "FALSE",
+            "label": "दुसरे कारण"
+          }
+        ]
+      },
+      "action": {
+        "english": "Diagnose as potassium deficiency rather than heat scorch, and check whether the late potassium splits were applied.",
+        "marathi": "हे उष्णतेचे नव्हे तर पालाशाच्या कमतरतेचे लक्षण असू शकते. उशिराचे पालाश हप्ते दिले होते का ते तपासा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Both potassium deficiency and heat stress scorch leaf margins. The weather record separates them, which is a discriminator available only where temperature is logged.",
+        "yield_impact": "Directs attention to the 0.12 late potassium value.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Domain 4 diagnosis table",
+          "Domain 1 heat threshold"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "leaf_yellowing_pattern",
+        "air_temp_max_c",
+        "k_late_split_1_date",
+        "k_late_split_2_date"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "In this belt heat scorch is the more common cause, so the weather check should come first. But if temperatures have been moderate the potassium explanation becomes likely, and it is actionable.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D04-SB-001",
+      "category": "SB",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "NPK probe reading used to set a fertiliser dose",
+        "marathi": "NPK probe च्या वाचनावरून खत मात्रा ठरवली जात आहे",
+        "expr": "ec_current IS NOT NULL AND soil_test_available IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Refuse to set doses from the probe.",
+        "golden_tests": [
+          {
+            "context": {
+              "ec_current": 0.45,
+              "soil_test_available": false
+            },
+            "expect": "TRUE",
+            "label": "probe वापरून मात्रा — नाकारा"
+          },
+          {
+            "context": {
+              "ec_current": 0.45,
+              "soil_test_available": true
+            },
+            "expect": "FALSE",
+            "label": "माती परीक्षण आहे"
+          }
+        ]
+      },
+      "action": {
+        "english": "REFUSE. The probe infers NPK from electrical conductivity and cannot set doses. Use it for trend, fertigation verification and salt accumulation only. Doses come from the soil test.",
+        "marathi": "NPK probe प्रत्यक्षात NPK मोजत नाही — तो EC मोजून NPK अंदाजतो. त्यावरून खत मात्रा ठरवू नये. त्याचा वापर कल पाहण्यासाठी, फर्टिगेशन पोहोचले का तपासण्यासाठी, आणि क्षार साचण्याच्या इशाऱ्यासाठी. मात्रा माती परीक्षणावरून."
+      },
+      "reasoning": {
+        "agronomic_basis": "EC is the sum of all dissolved salts. On calcareous alkaline soil the calcium carbonate contribution is large, so the inferred NPK is especially unreliable in this belt. The device measures a real quantity but not the one printed on its label.",
+        "yield_impact": "Prevents systematic dosing error across the whole season.",
+        "confidence_score": 0.85,
+        "source_tier": "B",
+        "references": [
+          "sensor physics",
+          "Domain 4 probe limitation section"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "ec_current",
+        "soil_test_available",
+        "n_target_kg_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "Stating this plainly matters commercially as well as technically. A product that claims NPK sensing and is then tested against a laboratory result will lose credibility. A product that says the probe tracks trend and verifies delivery will not.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "review": {
+        "tier": "T1",
+        "reviewer": "agronomist_panel",
+        "date": "2026-07-31",
+        "outcome": "accepted",
+        "comment_mr": "स्वस्त NPK Probe वरून खत मात्रा ठरवू नये."
+      },
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-SB-002",
+      "category": "SB",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Fertigation completed AND no EC rise detected within 2 to 4 hours",
+        "marathi": "फर्टिगेशन झाले पण दोन ते चार तासांत EC मध्ये वाढ दिसली नाही",
+        "expr": "fertigation_active IS TRUE AND fertigation_last_ec_response IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "The one genuinely useful thing the NPK probe does. A fertigation failure otherwise goes unnoticed for weeks.",
+        "golden_tests": [
+          {
+            "context": {
+              "fertigation_active": true
+            },
+            "expect": "TRUE",
+            "label": "खत पोहोचले का तपासा"
+          },
+          {
+            "context": {
+              "fertigation_active": true,
+              "fertigation_last_ec_response": 0.12
+            },
+            "expect": "FALSE",
+            "label": "पोहोचले"
+          }
+        ]
+      },
+      "action": {
+        "english": "Alert that the fertiliser may not have reached the root zone. Check emitters, venturi and tank.",
+        "marathi": "खत मुळांपर्यंत पोहोचले का तपासा — तोट्या तुंबल्या असतील, venturi बंद असेल, किंवा टाकी रिकामी असेल."
+      },
+      "reasoning": {
+        "agronomic_basis": "EC responds immediately to a salt pulse regardless of which nutrient it is. That makes it a reliable delivery check even though it is an unreliable NPK estimate.",
+        "yield_impact": "A fertigation failure otherwise goes unnoticed for weeks while the crop slowly falls behind and the cause is never identified.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "Domain 4 probe valid uses"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "fertigation_active",
+        "fertigation_last_ec_response",
+        "ec_current",
+        "ec_baseline"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "DERIVED",
+      "kannad_note": "This is the most genuinely useful thing the NPK probe does. It turns a device that cannot do what its label claims into a device that solves a real and otherwise invisible problem.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-SB-003",
+      "category": "SB",
+      "priority": 3,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "ec_trend_pct rising steadily across the season AND rainfall low",
+        "marathi": "हंगामभर EC सतत वाढत आहे आणि पाऊस कमी",
+        "expr": "ec_trend_pct > 20 AND rainfall_mm < 2",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Drip concentrates salts and low rainfall means no leaching event to reset it.",
+        "golden_tests": [
+          {
+            "context": {
+              "ec_trend_pct": 28,
+              "rainfall_mm": 0
+            },
+            "expect": "TRUE",
+            "label": "क्षार साचताहेत"
+          },
+          {
+            "context": {
+              "ec_trend_pct": 28,
+              "rainfall_mm": 15
+            },
+            "expect": "FALSE",
+            "label": "पाऊस — लीचिंग"
+          }
+        ]
+      },
+      "action": {
+        "english": "Warn of salt accumulation. Consider a leaching irrigation and switching late potassium from MOP to SOP.",
+        "marathi": "क्षार साचत आहेत. लीचिंग सिंचनाचा विचार करा आणि उशिराचे पालाश MOP ऐवजी SOP मधून द्या."
+      },
+      "reasoning": {
+        "agronomic_basis": "Drip concentrates salts at the wetting front perimeter. In low rainfall conditions there is no leaching event to reset it, so EC climbs across the season and across years.",
+        "yield_impact": "Long-term soil degradation rather than single-season yield.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Core C1.4",
+          "Domain 4 probe valid uses"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil",
+          "domain_3_water"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "ec_trend_pct",
+        "ec_baseline",
+        "ec_current",
+        "rainfall_mm",
+        "k_source"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "Relevant here because rainfall is low and drip is mandatory, which is exactly the combination that causes salt build-up. Over several seasons this can turn a workable soil into a marginal one.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "EVENT",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-NU-002",
+      "category": "NU",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "dap greater than 180",
+        "marathi": "१८० दिवसांहून जास्त",
+        "expr": "dap > 180 AND k_late_split_2_date IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Do not stop potassium because foliage growth slowed. The rhizome develops until harvest.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 190,
+              "k_late_split_2_date": "done"
+            },
+            "expect": "TRUE",
+            "label": "आधार चालू ठेवा"
+          },
+          {
+            "context": {
+              "dap": 150,
+              "k_late_split_2_date": "done"
+            },
+            "expect": "FALSE",
+            "label": "अजून लवकर"
+          }
+        ]
+      },
+      "action": {
+        "english": "Do not stop potassium and micronutrient support simply because foliage growth has slowed. The rhizome continues to develop until harvest.",
+        "marathi": "पानांची वाढ मंदावली म्हणून खत थांबवू नका. गड्डा काढणीपर्यंत वाढतच राहतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "Documented growth phases are active growth 90 to 120 DAP, sluggish vegetative growth 120 to 180, and senescence after 180 during which the rhizome continues to develop until harvest.",
+        "yield_impact": "Protects the final bulking period, which contributes the largest share of weight.",
+        "confidence_score": 0.78,
+        "source_tier": "A",
+        "references": [
+          "IntechOpen INM chapter growth phases"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest",
+          "domain_11_yield"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "dap",
+        "current_stage",
+        "k_applied_kg_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-D",
+      "kannad_note": "This is also the period when water withdrawal begins, so the two schedules run in opposite directions and must not be confused. Water tapers; potassium does not.",
+      "decision_type": "BLOCK",
+      "automation": "refusal",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "SILENT_GUARD",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-NP-003",
+      "category": "NP",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "variety is mahima AND dose being set",
+        "marathi": "महिमा जात निवडली आहे आणि मात्रा ठरवली जात आहे"
+      },
+      "action": {
+        "english": "Consider the variety-specific trial figure of about 51 kg N, 20 kg P and 40 kg K per acre, which was found most effective for this cultivar.",
+        "marathi": "महिमा जातीसाठी प्रयोगात एकरी सुमारे ५१ किलो नत्र, २० किलो स्फुरद आणि ४० किलो पालाश ही मात्रा सर्वाधिक प्रभावी आढळली — म्हणजे स्फुरद कमी, पालाश जास्त."
+      },
+      "reasoning": {
+        "agronomic_basis": "A 2025 trial on cv. IISR Mahima found 125:50:100 kg per hectare most effective for both vegetative growth and yield. The direction — less phosphorus, more potassium — also suits calcareous soil where phosphorus is fixed.",
+        "yield_impact": "Directionally supported by a variety-matched trial, which is rare.",
+        "confidence_score": 0.72,
+        "source_tier": "A",
+        "references": [
+          "International Journal of Advanced Biochemistry Research 2025"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_1_lifecycle"
+        ]
+      },
+      "farm_brain_schema": [
+        "variety",
+        "n_target_kg_per_acre",
+        "p_target_kg_per_acre",
+        "k_target_kg_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "full",
+      "source_class": "SRC-Q",
+      "kannad_note": "Worth noting because the recommended variety and the trial variety coincide. The trial was conducted elsewhere, so it is offered as a direction rather than as a local recommendation.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    },
+    {
+      "rule_id": "D04-OR-003",
+      "category": "OR",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "soil_oc_pct below 1.0",
+        "marathi": "सेंद्रिय कर्ब एक टक्क्यापेक्षा कमी"
+      },
+      "action": {
+        "english": "Set the expectation that raising organic carbon is a three to four season programme. FYM, neem cake and mulch all contribute, and none of them will show the target in one season.",
+        "marathi": "सेंद्रिय कर्ब एका हंगामात वाढत नाही. शेणखत, निंबोळी पेंड आणि आच्छादन यांतून तो तीन-चार हंगामांत वाढतो. ही तूट भरून काढणे दीर्घकालीन काम आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Target is above 1 percent; black soil in this region typically runs 0.3 to 0.5 percent. Organic carbon governs water holding, microbial activity and micronutrient availability, all of which matter more in calcareous heavy soil.",
+        "yield_impact": "Indirect and cumulative.",
+        "confidence_score": 0.75,
+        "source_tier": "A",
+        "references": [
+          "Agrowon - Bitle & Deshmukh soil targets",
+          "Domain 2"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "soil_oc_pct",
+        "fym_t_per_acre",
+        "neem_cake_basal_kg_per_acre"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "Setting the expectation honestly matters. A farmer told to reach 1 percent this season concludes the advice failed. Told it is a four-season programme, the same inputs are seen to be working.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
+    }
+  ],
+  "open_items": [
+    {
+      "id": "D04-OI-01",
+      "item": "Plot soil test with free lime, zinc, iron, sulphur and magnesium requested separately",
+      "owner": "soil testing laboratory / KVK",
+      "source_class": "FIELD",
+      "blocking": true,
+      "note": "Micronutrient rules and phosphorus placement both depend on it. Shared with D02-OI-01."
+    },
+    {
+      "id": "D04-OI-02",
+      "item": "Marathwada-specific NPK recommendation for ginger",
+      "owner": "VNMKV Parbhani, College of Horticulture",
+      "source_class": "VERIFY",
+      "blocking": false
+    },
+    {
+      "id": "D04-OI-03",
+      "item": "Whether calcium nitrate is actually needed on calcareous soil",
+      "owner": "soil test plus first season observation",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D04-OI-04",
+      "item": "MOP versus SOP effect on EC over the season",
+      "owner": "own measurement across seasons",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D04-OI-05",
+      "item": "Rate of organic carbon improvement under this input programme",
+      "owner": "annual soil test, three to four seasons",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D04-OI-06",
+      "item": "EC baseline for this plot so trend detection has a reference",
+      "owner": "sub-node, first month of readings",
+      "source_class": "FIELD",
+      "blocking": false
+    },
+    {
+      "id": "D04-OI-07",
+      "item": "Kannad-specific dose validation for cv. Mahima",
+      "owner": "trial strip, first season",
+      "source_class": "FIELD",
+      "blocking": false
+    }
+  ],
+  "summary": {
+    "total_rules": 34,
+    "by_category": {
+      "NU": 2,
+      "NP": 3,
+      "NS": 3,
+      "PP": 2,
+      "PK": 3,
+      "MC": 4,
+      "SN": 2,
+      "OR": 3,
+      "BI": 2,
+      "FG": 3,
+      "DG": 4,
+      "SB": 3
+    },
+    "by_priority": {
+      "5": 15,
+      "4": 10,
+      "3": 8,
+      "2": 1
+    },
+    "by_severity": {
+      "info": 10,
+      "yellow": 17,
+      "red": 7
+    },
+    "by_source_tier": {
+      "A": 24,
+      "B": 10,
+      "C": 0
+    },
+    "by_source_class": {
+      "SRC-Q": 15,
+      "DERIVED": 10,
+      "SRC-D": 6,
+      "EST": 3
+    },
+    "confidence_range": {
+      "min": 0.65,
+      "max": 0.9,
+      "mean": 0.804
+    },
+    "rules_with_u_value": 5,
+    "irrecoverable_rules": 11,
+    "zero_cost_rules": [
+      "D04-DG-001",
+      "D04-DG-002",
+      "D04-NS-003",
+      "D04-BI-002",
+      "D04-SB-001"
+    ],
+    "highest_value_rule": "D04-MC-001",
+    "blocking_open_items": 1,
+    "by_decision_type": {
+      "PLANNING_GUIDANCE": 13,
+      "BLOCK": 5,
+      "SCHEDULED_REMINDER": 8,
+      "SENSOR_ALERT": 7,
+      "DIAGNOSTIC": 1
+    },
+    "reviewed_t1": 4,
+    "rules_with_trigger_expr": 20,
+    "rules_with_delivery_class": 20,
+    "immutable_rules": 0
+  },
+  "next_steps": [
+    "1. Get the plot soil test with free lime, zinc and iron requested separately (D04-OI-01, shared with Domain 2)",
+    "2. Establish an EC baseline in the first month so trend detection has a reference (D04-OI-06)",
+    "3. Build Domain 5 JSON inheriting the Domain 1 _schema block unchanged",
+    "4. Cross-validate D04-NS-002 earthing-up bundle against Domain 8 operations rules",
+    "5. Scale the published fertigation schedule to the validated yield ceiling before any use"
+  ],
+  "author_note": "This file contains 30 rules because that is what the source document supports. The domain rests on three findings: potassium outranks nitrogen in measured uptake and leaves the field with the harvest; foliar micronutrient delivery beat soil application by 12.5 percent in trial and should beat it by more on calcareous soil; and neem cake is the only input with independently documented benefit across nutrition, disease and pests. The NPK probe limitation is stated plainly because overstating it would fail the first technical review. Status is PHASE_1_RAW_UNVALIDATED and must remain so until a plot soil test exists.",
+  "legal": {
+    "disclaimer_mr": "हा नियम-संच निर्णय-सहाय्य साधन आहे. अंतिम जबाबदारी शेतकऱ्याची. खत मात्रा माती परीक्षण अहवालानुसार समायोजित कराव्यात.",
+    "disclaimer_en": "This rule set is a decision-support tool. Final responsibility rests with the cultivator. Fertiliser rates must be adjusted against an actual soil test report.",
+    "sensor_claim_note": "The 7-in-1 NPK RS485 probe infers NPK from electrical conductivity. Product material must not claim direct NPK measurement.",
+    "data_note": "Farmer-attributable data handled under DPDP Act 2023; see Domain 12."
+  }
+}
