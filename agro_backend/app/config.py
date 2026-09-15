@@ -121,6 +121,14 @@ class Settings(BaseSettings):
     FORECAST_DAYS: int = 7
     FORECAST_SOURCE_API: str = "open-meteo"
 
+    # ---- Learning writer (advisory feedback loop) ---------------------------
+    # Nightly sweep that turns farmer_actions (which reference an advisory) into
+    # ai_learning_log rows. Off in tests/CI.
+    LEARNING_JOB_ENABLED: bool = True
+    LEARNING_JOB_HOUR: int = 4
+    LEARNING_JOB_MINUTE: int = 0
+    LEARNING_BATCH_LIMIT: int = 500
+
     # ---- Advisory subscriber (Round 13) -------------------------------------
     # Master switch for the alert->advisory subscriber (LISTEN agro_events ->
     # compose_advisory -> ai_suggestions). Off in tests/CI so no background
