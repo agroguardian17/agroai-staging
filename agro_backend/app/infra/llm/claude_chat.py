@@ -65,8 +65,13 @@ class ClaudeChatModel:
         except anthropic.APIConnectionError as exc:
             raise ChatModelError(f"claude connection: {exc}", transient=True) from exc
         except anthropic.RateLimitError as exc:
-            # Rate-limited; treat as transient (retry after backoff).
-            raise ChatModelError(f"claude rate_limited: {exc}", transient=True) from exc
+            # Rate-limited; transient. Surface Retry-After (seconds) when present
+            # so the advisory retry policy can honour it verbatim.
+            raise ChatModelError(
+                f"claude rate_limited: {exc}",
+                transient=True,
+                retry_after_seconds=_retry_after_seconds(exc),
+            ) from exc
         except anthropic.APIStatusError as exc:
             # 4xx (content policy, invalid args). Permanent for this prompt.
             transient = 500 <= getattr(exc, "status_code", 500) < 600
@@ -107,6 +112,28 @@ def _extract_text(msg: object) -> str:
         if t == "text":
             parts.append(str(getattr(block, "text", "")))
     return "\n".join(parts).strip()
+
+
+def _retry_after_seconds(exc: object) -> float | None:
+    """Parse the numeric ``Retry-After`` (seconds) from a rate-limit error.
+
+    Anthropic sends seconds. A missing or non-numeric value (e.g. an HTTP-date)
+    returns None, so the caller falls back to exponential backoff.
+    """
+    response = getattr(exc, "response", None)
+    headers = getattr(response, "headers", None)
+    if headers is None:
+        return None
+    try:
+        raw = headers.get("retry-after")
+    except Exception:
+        return None
+    if raw is None:
+        return None
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
 
 
 # Verify the adapter satisfies the Protocol (helps catch shape drift).

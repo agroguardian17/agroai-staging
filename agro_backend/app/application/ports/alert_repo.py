@@ -116,6 +116,50 @@ class AlertRepo(Protocol):
         """
         ...
 
+    # --- Round 13 advisory-subscriber state machine -----------------------
+
+    async def claim_for_advisory(self, alert_id: int, now: datetime) -> int | None:
+        """Atomically move a ``pending`` (and due) alert to ``in_flight``.
+
+        Returns the alert's ``advisory_attempts`` when the claim succeeds (so
+        the caller can compute backoff on a later transient failure), or
+        ``None`` when the row is not claimable (already handled, in flight, or
+        not yet due). Implemented as one conditional ``UPDATE ... RETURNING``,
+        so two workers racing the same alert never both proceed.
+        """
+        ...
+
+    async def set_advisory_outcome(
+        self,
+        alert_id: int,
+        *,
+        status: str,
+        attempts: int | None = None,
+        next_retry_at: datetime | None = None,
+        last_error: str | None = None,
+    ) -> None:
+        """Record the outcome of an in-flight advisory attempt.
+
+        ``status`` is one of ``composed`` / ``skipped`` / ``failed_transient``
+        / ``failed_permanent`` (terminal) or ``pending`` (transient retry).
+        Only the provided fields are written.
+        """
+        ...
+
+    async def list_due_advisory_alerts(self, now: datetime, limit: int = 100) -> list[int]:
+        """Alert ids in ``pending`` whose retry time (if any) has arrived.
+
+        Powers the subscriber's reconciliation sweep, which recovers alerts
+        whose ``alert.created`` NOTIFY was lost while no listener was connected.
+        """
+        ...
+
+    async def revert_stale_in_flight(self, cutoff: datetime, now: datetime) -> int:
+        """Reaper: return ``in_flight`` rows claimed before ``cutoff`` to
+        ``pending`` (``attempts`` unchanged) for crash recovery. Returns count.
+        """
+        ...
+
     async def list_for_tenant(
         self,
         tenant_id: uuid.UUID,

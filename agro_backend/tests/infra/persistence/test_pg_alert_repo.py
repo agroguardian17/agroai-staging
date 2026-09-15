@@ -251,3 +251,113 @@ async def test_resolve_marks_row_resolved(
         ).one()
     assert row.resolved is True
     assert row.resolution_note == "battery replaced"
+
+
+# ===========================================================================
+# Round 13 advisory state machine
+# ===========================================================================
+async def test_claim_for_advisory_is_atomic_and_single_winner(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    seed: tuple[uuid.UUID, uuid.UUID, str, str],
+    sync_engine: Engine,
+) -> None:
+    farmer_id, farm_id, _, device_id = seed
+    repo = PgAlertRepo(sessionmaker)
+    aid = await repo.create(_make_candidate(farmer_id, farm_id, device_id))
+    now = datetime.now(UTC)
+
+    first = await repo.claim_for_advisory(aid, now)
+    assert first == 0  # fresh alert, zero prior attempts
+
+    # A second claim of the same (now in_flight) alert loses.
+    second = await repo.claim_for_advisory(aid, now)
+    assert second is None
+
+    with sync_engine.begin() as conn:
+        row = conn.execute(
+            text(
+                "SELECT advisory_status, advisory_claimed_at FROM alerts_notifications "
+                "WHERE alert_id = :id"
+            ),
+            {"id": aid},
+        ).one()
+    assert row.advisory_status == "in_flight"
+    assert row.advisory_claimed_at is not None
+
+
+async def test_set_advisory_outcome_writes_fields(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    seed: tuple[uuid.UUID, uuid.UUID, str, str],
+    sync_engine: Engine,
+) -> None:
+    farmer_id, farm_id, _, device_id = seed
+    repo = PgAlertRepo(sessionmaker)
+    aid = await repo.create(_make_candidate(farmer_id, farm_id, device_id))
+    await repo.claim_for_advisory(aid, datetime.now(UTC))
+    await repo.set_advisory_outcome(aid, status="composed", attempts=0)
+
+    with sync_engine.begin() as conn:
+        row = conn.execute(
+            text(
+                "SELECT advisory_status, advisory_next_retry_at, advisory_last_error "
+                "FROM alerts_notifications WHERE alert_id = :id"
+            ),
+            {"id": aid},
+        ).one()
+    assert row.advisory_status == "composed"
+    assert row.advisory_next_retry_at is None
+    assert row.advisory_last_error is None
+
+
+async def test_list_due_advisory_alerts_respects_state_and_retry_time(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    seed: tuple[uuid.UUID, uuid.UUID, str, str],
+) -> None:
+    farmer_id, farm_id, _, device_id = seed
+    repo = PgAlertRepo(sessionmaker)
+    aid = await repo.create(_make_candidate(farmer_id, farm_id, device_id))
+    now = datetime.now(UTC)
+
+    # Fresh 'pending' with no next_retry_at is due.
+    assert aid in await repo.list_due_advisory_alerts(now)
+
+    # Claiming it (→ in_flight) removes it from the due set.
+    await repo.claim_for_advisory(aid, now)
+    assert aid not in await repo.list_due_advisory_alerts(now)
+
+    # Back to pending but with a future retry time → not yet due.
+    await repo.set_advisory_outcome(
+        aid, status="pending", attempts=1, next_retry_at=now + timedelta(hours=1)
+    )
+    assert aid not in await repo.list_due_advisory_alerts(now)
+    # ...but due once that time passes.
+    assert aid in await repo.list_due_advisory_alerts(now + timedelta(hours=2))
+
+
+async def test_revert_stale_in_flight_reaps_only_old_claims(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    seed: tuple[uuid.UUID, uuid.UUID, str, str],
+    sync_engine: Engine,
+) -> None:
+    farmer_id, farm_id, _, device_id = seed
+    repo = PgAlertRepo(sessionmaker)
+    aid = await repo.create(_make_candidate(farmer_id, farm_id, device_id))
+    now = datetime.now(UTC)
+    await repo.claim_for_advisory(aid, now)
+
+    # A cutoff before the claim leaves it alone.
+    assert await repo.revert_stale_in_flight(now - timedelta(minutes=1), now) == 0
+
+    # A cutoff after the claim reaps it back to pending.
+    reverted = await repo.revert_stale_in_flight(now + timedelta(minutes=1), now)
+    assert reverted == 1
+    with sync_engine.begin() as conn:
+        row = conn.execute(
+            text(
+                "SELECT advisory_status, advisory_last_error FROM alerts_notifications "
+                "WHERE alert_id = :id"
+            ),
+            {"id": aid},
+        ).one()
+    assert row.advisory_status == "pending"
+    assert row.advisory_last_error == "stale_revert"

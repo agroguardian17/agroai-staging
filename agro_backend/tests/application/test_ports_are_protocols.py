@@ -141,6 +141,26 @@ class _FakeAlertRepo:
     ) -> list:
         return []
 
+    async def claim_for_advisory(self, alert_id: int, now: datetime) -> int | None:
+        return None
+
+    async def set_advisory_outcome(
+        self,
+        alert_id: int,
+        *,
+        status: str,
+        attempts: int | None = None,
+        next_retry_at: datetime | None = None,
+        last_error: str | None = None,
+    ) -> None:
+        return None
+
+    async def list_due_advisory_alerts(self, now: datetime, limit: int = 100) -> list[int]:
+        return []
+
+    async def revert_stale_in_flight(self, cutoff: datetime, now: datetime) -> int:
+        return 0
+
 
 class _FakeEventBus:
     async def publish(self, event_name: str, payload: dict[str, Any]) -> None:

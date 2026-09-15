@@ -219,5 +219,88 @@ class PgAlertRepo:
             rows = res.all()
         return [_row_to_plot_alert(row) for row in rows]
 
+    # --- Round 13 advisory-subscriber state machine -----------------------
+
+    async def claim_for_advisory(self, alert_id: int, now: datetime) -> int | None:
+        stmt = text(
+            """
+            UPDATE alerts_notifications
+            SET advisory_status = 'in_flight',
+                advisory_claimed_at = :now
+            WHERE alert_id = :aid
+              AND advisory_status = 'pending'
+              AND (advisory_next_retry_at IS NULL OR advisory_next_retry_at <= :now)
+            RETURNING advisory_attempts
+            """
+        )
+        async with self._sm() as session:
+            res = await session.execute(stmt, {"aid": alert_id, "now": now})
+            row = res.first()
+            await session.commit()
+        if row is None:
+            return None
+        return int(cast(Any, row).advisory_attempts)
+
+    async def set_advisory_outcome(
+        self,
+        alert_id: int,
+        *,
+        status: str,
+        attempts: int | None = None,
+        next_retry_at: datetime | None = None,
+        last_error: str | None = None,
+    ) -> None:
+        sets = [
+            "advisory_status = :status",
+            "advisory_next_retry_at = :nra",
+            "advisory_last_error = :err",
+        ]
+        params: dict[str, Any] = {
+            "aid": alert_id,
+            "status": status,
+            "nra": next_retry_at,
+            "err": last_error,
+        }
+        if attempts is not None:
+            sets.append("advisory_attempts = :attempts")
+            params["attempts"] = attempts
+        stmt = text(f"UPDATE alerts_notifications SET {', '.join(sets)} WHERE alert_id = :aid")
+        async with self._sm() as session:
+            await session.execute(stmt, params)
+            await session.commit()
+
+    async def list_due_advisory_alerts(self, now: datetime, limit: int = 100) -> list[int]:
+        stmt = text(
+            """
+            SELECT alert_id
+            FROM alerts_notifications
+            WHERE advisory_status = 'pending'
+              AND (advisory_next_retry_at IS NULL OR advisory_next_retry_at <= :now)
+            ORDER BY triggered_at ASC
+            LIMIT :limit
+            """
+        )
+        async with self._sm() as session:
+            res = await session.execute(stmt, {"now": now, "limit": limit})
+            rows = res.all()
+        return [int(cast(Any, r).alert_id) for r in rows]
+
+    async def revert_stale_in_flight(self, cutoff: datetime, now: datetime) -> int:
+        stmt = text(
+            """
+            UPDATE alerts_notifications
+            SET advisory_status = 'pending',
+                advisory_next_retry_at = :now,
+                advisory_last_error = 'stale_revert'
+            WHERE advisory_status = 'in_flight'
+              AND advisory_claimed_at IS NOT NULL
+              AND advisory_claimed_at < :cutoff
+            """
+        )
+        async with self._sm() as session:
+            res = await session.execute(stmt, {"cutoff": cutoff, "now": now})
+            await session.commit()
+        return int(cast(Any, res).rowcount or 0)
+
 
 __all__ = ["PgAlertRepo"]

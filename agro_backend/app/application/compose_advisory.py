@@ -43,7 +43,10 @@ class ComposeAdvisoryDeps:
     reading_repo: ReadingRepo
     ai_suggestion_repo: AiSuggestionRepo
     chat_model: ChatModel
-    chat_model_name: str = "claude-sonnet-4-5"
+    # Model id is injected by the caller (the advisory-subscriber job wires it
+    # from settings.ANTHROPIC_MODEL_SONNET) — never hardcoded here (.cursorrules
+    # #21). A future ModelRole enum resolves this same string.
+    chat_model_name: str
     max_tokens: int = 600
 
 
