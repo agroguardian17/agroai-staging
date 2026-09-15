@@ -20,16 +20,21 @@ async def test_health_returns_200_with_contract(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_ready_returns_200_with_check_list(client: AsyncClient) -> None:
+async def test_ready_reports_real_dependency_checks(client: AsyncClient) -> None:
+    # /ready now performs real probes: 200 when every dependency is reachable,
+    # 503 when any is not. In most test/CI environments the broker/chroma are
+    # not running, so 503 is expected — the contract we assert is the shape and
+    # that `ready` agrees with the status code.
     response = await client.get("/api/v1/ready")
-    assert response.status_code == 200
+    assert response.status_code in (200, 503)
 
     body = response.json()
     assert "ready" in body
-    assert "checks" in body
     assert isinstance(body["checks"], list)
     expected_components = {"postgres", "mosquitto", "chroma"}
     assert {c["name"] for c in body["checks"]} == expected_components
+    assert body["ready"] is (response.status_code == 200)
+    assert body["ready"] == all(c["ok"] for c in body["checks"])
 
 
 @pytest.mark.asyncio

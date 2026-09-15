@@ -1,26 +1,35 @@
 """Liveness and readiness endpoints.
 
-``/health`` is a cheap liveness check used by Lightsail/UptimeRobot/Caddy.
-``/ready`` proves we can talk to Postgres + MQTT + ChromaDB - it's the gate
-Coolify uses to decide whether a new container is ready to receive traffic.
+``/health`` is a cheap liveness check used by Lightsail/UptimeRobot/Caddy and by
+the container healthcheck — it only proves the FastAPI process is up.
 
-Phase 0 ships a minimal readiness probe that imports lazily so a missing
-service doesn't crash the import-time discovery. Phase 1+ plug actual
-DB connection checks here.
+``/ready`` proves we can actually talk to Postgres + MQTT + ChromaDB. It returns
+``200`` when every dependency is reachable and ``503`` when any is not, so an
+orchestrator / load balancer can gate traffic on it. Each probe is defensive
+(wrapped + short timeout) so a down dependency yields ``ok=false`` fast instead
+of hanging the request.
 """
 
 from __future__ import annotations
 
+import asyncio
+import socket
 from typing import Literal
 
 import structlog
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 from pydantic import BaseModel, Field
+from sqlalchemy import text
 
 from app.config import get_settings
+from app.infra.http.deps import SessionmakerDep
 
 log = structlog.get_logger(__name__)
 router = APIRouter()
+
+# Per-probe budgets. Kept short so /ready never hangs when a dependency is down.
+_DB_TIMEOUT_S = 2.0
+_TCP_TIMEOUT_S = 1.5
 
 
 class HealthResponse(BaseModel):
@@ -45,7 +54,7 @@ class ReadinessResponse(BaseModel):
     "/health",
     response_model=HealthResponse,
     summary="Liveness probe",
-    description="Returns 200 if the FastAPI process is up. Used by Caddy and UptimeRobot.",
+    description="Returns 200 if the FastAPI process is up. Used by Caddy, UptimeRobot, and the container healthcheck.",
 )
 async def health() -> HealthResponse:
     settings = get_settings()
@@ -56,22 +65,43 @@ async def health() -> HealthResponse:
     )
 
 
+async def _check_postgres(sessionmaker: SessionmakerDep) -> ReadinessCheck:
+    try:
+        async with sessionmaker() as session:
+            await asyncio.wait_for(session.execute(text("SELECT 1")), timeout=_DB_TIMEOUT_S)
+        return ReadinessCheck(name="postgres", ok=True)
+    except Exception as exc:  # readiness probe must never raise
+        return ReadinessCheck(name="postgres", ok=False, detail=type(exc).__name__)
+
+
+def _tcp_reachable(host: str, port: int) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=_TCP_TIMEOUT_S):
+            return True
+    except OSError:
+        return False
+
+
+async def _check_tcp(name: str, host: str, port: int) -> ReadinessCheck:
+    ok = await asyncio.to_thread(_tcp_reachable, host, port)
+    return ReadinessCheck(name=name, ok=ok, detail=None if ok else f"{host}:{port} unreachable")
+
+
 @router.get(
     "/ready",
     response_model=ReadinessResponse,
     summary="Readiness probe",
-    description="Checks downstream dependencies (Postgres, MQTT, ChromaDB) are reachable.",
-    status_code=status.HTTP_200_OK,
+    description="Checks Postgres (SELECT 1), MQTT, and ChromaDB are reachable; 503 if any is not.",
 )
-async def ready() -> ReadinessResponse:
-    """Readiness probe.
-
-    Phase 0: returns ok=True for every dependency without hitting it. Phase 1+
-    plugs actual ping queries (SELECT 1, mosquitto_sub, chroma /api/v1/heartbeat).
-    """
+async def ready(sessionmaker: SessionmakerDep, response: Response) -> ReadinessResponse:
+    settings = get_settings()
     checks = [
-        ReadinessCheck(name="postgres", ok=True, detail="phase-0 stub"),
-        ReadinessCheck(name="mosquitto", ok=True, detail="phase-0 stub"),
-        ReadinessCheck(name="chroma", ok=True, detail="phase-0 stub"),
+        await _check_postgres(sessionmaker),
+        await _check_tcp("mosquitto", settings.MQTT_BROKER_HOST, settings.MQTT_BROKER_PORT),
+        await _check_tcp("chroma", settings.CHROMA_HOST, settings.CHROMA_PORT),
     ]
-    return ReadinessResponse(ready=all(c.ok for c in checks), checks=checks)
+    is_ready = all(c.ok for c in checks)
+    if not is_ready:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        log.warning("readiness.not_ready", failed=[c.name for c in checks if not c.ok])
+    return ReadinessResponse(ready=is_ready, checks=checks)
