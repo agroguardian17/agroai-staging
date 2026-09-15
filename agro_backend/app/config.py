@@ -111,6 +111,16 @@ class Settings(BaseSettings):
     GINGER_JOB_HOUR: int = 6
     GINGER_JOB_MINUTE: int = 30
 
+    # ---- Weather forecast job (Round 18) ------------------------------------
+    # Nightly per-farm forecast fetch -> weather_forecasts. Runs before the
+    # ginger job so the day's advisories see a fresh forecast. Shares the
+    # ginger timezone.
+    FORECAST_JOB_ENABLED: bool = True
+    FORECAST_JOB_HOUR: int = 3
+    FORECAST_JOB_MINUTE: int = 0
+    FORECAST_DAYS: int = 7
+    FORECAST_SOURCE_API: str = "open-meteo"
+
     # ---- Advisory subscriber (Round 13) -------------------------------------
     # Master switch for the alert->advisory subscriber (LISTEN agro_events ->
     # compose_advisory -> ai_suggestions). Off in tests/CI so no background

@@ -43,6 +43,10 @@ from app.jobs.delivery_subscriber import (
     build_and_start_delivery_subscriber,
     stop_delivery_subscriber,
 )
+from app.jobs.forecast_scheduler import (
+    build_and_start_forecast_scheduler,
+    stop_forecast_scheduler,
+)
 from app.jobs.ginger_scheduler import build_and_start_scheduler, stop_scheduler
 from app.jobs.ingest_startup import build_and_start_ingest, stop_ingest
 from app.lib import metrics
@@ -56,6 +60,7 @@ if TYPE_CHECKING:
     from app.infra.mqtt.broker import IngestBroker
     from app.jobs.advisory_subscriber import AdvisorySubscriberHandle
     from app.jobs.delivery_subscriber import DeliverySubscriberHandle
+    from app.jobs.forecast_scheduler import ForecastSchedulerHandle
 
 log = structlog.get_logger(__name__)
 
@@ -83,13 +88,17 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     scheduler: AsyncIOScheduler | None = None
     advisory: AdvisorySubscriberHandle | None = None
     delivery: DeliverySubscriberHandle | None = None
+    forecast: ForecastSchedulerHandle | None = None
     try:
         broker = await build_and_start_ingest(settings)
         scheduler = await build_and_start_scheduler(settings)
         advisory = await build_and_start_advisory_subscriber(settings)
         delivery = await build_and_start_delivery_subscriber(settings)
+        forecast = await build_and_start_forecast_scheduler(settings)
         yield
     finally:
+        if forecast is not None:
+            await stop_forecast_scheduler(forecast)
         if delivery is not None:
             await stop_delivery_subscriber(delivery)
         if advisory is not None:
