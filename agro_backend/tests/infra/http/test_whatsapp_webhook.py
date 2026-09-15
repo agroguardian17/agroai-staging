@@ -16,7 +16,7 @@ from app.application.ports.farmer_repo import FarmerIdentity
 from app.application.ports.wa_inbound_repo import WaInboundMessage
 from app.config import get_settings
 from app.infra.http.deps import get_farmer_repo
-from app.infra.http.webhooks import get_wa_inbound_repo
+from app.infra.http.webhooks import get_farmer_action_repo, get_wa_inbound_repo
 from app.main import create_app
 
 VERIFY_TOKEN = "verify-me-123"
@@ -46,6 +46,14 @@ class _FakeInboundRepo:
         return True
 
 
+class _FakeActionRepo:
+    async def latest_advisory_for_farmer(self, farmer_id: Any, *, within_days: int) -> None:
+        return None
+
+    async def record(self, action: Any) -> int:
+        return 1
+
+
 def _app(*, app_secret: str = ""):
     app = create_app()
     base = get_settings()
@@ -59,6 +67,7 @@ def _app(*, app_secret: str = ""):
     app.dependency_overrides[get_settings] = lambda: test_settings
     app.dependency_overrides[get_farmer_repo] = lambda: _FakeFarmerRepo()
     app.dependency_overrides[get_wa_inbound_repo] = lambda: inbound
+    app.dependency_overrides[get_farmer_action_repo] = lambda: _FakeActionRepo()
     return app, inbound
 
 

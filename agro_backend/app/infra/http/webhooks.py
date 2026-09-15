@@ -23,8 +23,10 @@ from fastapi import APIRouter, Depends, Request, Response, status
 
 from app.application import handle_whatsapp_webhook
 from app.application.handle_whatsapp_webhook import HandleWebhookDeps
+from app.application.ports.farmer_action_repo import FarmerActionRepo
 from app.application.ports.wa_inbound_repo import WaInboundRepo
 from app.infra.http.deps import SessionmakerDep, SettingsDep, get_farmer_repo
+from app.infra.persistence.pg_farmer_action_repo import PgFarmerActionRepo
 from app.infra.persistence.pg_wa_inbound_repo import PgWaInboundRepo
 
 log = structlog.get_logger(__name__)
@@ -34,6 +36,10 @@ router = APIRouter(prefix="/webhooks/whatsapp", tags=["webhooks"])
 
 def get_wa_inbound_repo(sm: SessionmakerDep) -> WaInboundRepo:
     return PgWaInboundRepo(sm)
+
+
+def get_farmer_action_repo(sm: SessionmakerDep) -> FarmerActionRepo:
+    return PgFarmerActionRepo(sm)
 
 
 @router.get("", include_in_schema=False)
@@ -63,6 +69,7 @@ async def receive(
     settings: SettingsDep,
     farmer_repo: Annotated[Any, Depends(get_farmer_repo)],
     wa_inbound_repo: Annotated[Any, Depends(get_wa_inbound_repo)],
+    farmer_action_repo: Annotated[Any, Depends(get_farmer_action_repo)],
 ) -> Response:
     raw = await request.body()
     app_secret = settings.META_WHATSAPP_APP_SECRET.get_secret_value()
@@ -82,7 +89,11 @@ async def receive(
     try:
         result = await handle_whatsapp_webhook.execute(
             payload=payload,
-            deps=HandleWebhookDeps(farmer_repo=farmer_repo, wa_inbound_repo=wa_inbound_repo),
+            deps=HandleWebhookDeps(
+                farmer_repo=farmer_repo,
+                wa_inbound_repo=wa_inbound_repo,
+                farmer_action_repo=farmer_action_repo,
+            ),
         )
     except Exception:
         # Never fail the webhook — Meta would retry indefinitely.
@@ -95,6 +106,7 @@ async def receive(
             recorded=result.recorded,
             duplicates=result.duplicates,
             unknown_sender=result.unknown_sender,
+            actions_recorded=result.actions_recorded,
         )
     for st in result.statuses:
         level = log.warning if st.status == "failed" else log.info

@@ -21,8 +21,11 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
+from app.application import record_action_from_reply
+from app.application.ports.farmer_action_repo import FarmerActionRepo
 from app.application.ports.farmer_repo import FarmerRepo
 from app.application.ports.wa_inbound_repo import WaInboundMessage, WaInboundRepo
+from app.application.record_action_from_reply import RecordActionDeps
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +46,7 @@ class ParsedStatus:
 class HandleWebhookDeps:
     farmer_repo: FarmerRepo
     wa_inbound_repo: WaInboundRepo
+    farmer_action_repo: FarmerActionRepo
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +54,7 @@ class HandleWebhookResult:
     recorded: int
     duplicates: int
     unknown_sender: int
+    actions_recorded: int
     statuses: list[ParsedStatus]
 
 
@@ -112,7 +117,8 @@ async def execute(
 ) -> HandleWebhookResult:
     """Record inbound farmer messages; parse (don't persist) status receipts."""
     now = now or datetime.now(UTC)
-    recorded = duplicates = unknown = 0
+    recorded = duplicates = unknown = actions = 0
+    action_deps = RecordActionDeps(farmer_action_repo=deps.farmer_action_repo)
 
     for item in parse_inbound(payload):
         farmer = await deps.farmer_repo.find_by_phone(item.phone_e164)
@@ -131,15 +137,23 @@ async def execute(
                 received_at=now,
             )
         )
-        if wrote:
-            recorded += 1
-        else:
+        if not wrote:
             duplicates += 1
+            continue
+        recorded += 1
+        # A new reply from a known farmer — try to capture it as a farmer_action
+        # against their most recent advisory. Never let this fail the webhook.
+        action_id = await record_action_from_reply.execute(
+            farmer_id=farmer.farmer_id, reply_text=item.body, deps=action_deps, now=now
+        )
+        if action_id is not None:
+            actions += 1
 
     return HandleWebhookResult(
         recorded=recorded,
         duplicates=duplicates,
         unknown_sender=unknown,
+        actions_recorded=actions,
         statuses=parse_statuses(payload),
     )
 
