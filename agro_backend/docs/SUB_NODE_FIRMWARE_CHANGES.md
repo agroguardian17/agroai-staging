@@ -1,5 +1,13 @@
 # Sub Node firmware — required changes before field deploy
 
+> **⚠️ Historical (superseded by FINAL v2.1 firmware, 2026-09-13).** The
+> production sketch `firmware/sub_node/sub_node.ino` reads its node id from a
+> compile-time `#define NODE_ID` in `sub_node_config.h` — there is **no**
+> `eeprom_provisioner` sketch and no EEPROM node-id flow. "Change 1" below (EEPROM
+> provisioning) was **not** the path taken; Changes 2–3 (SOIL calibration, EC
+> units) are handled server-side via `device_calibration` (Round 16). Kept as a
+> record of the original proposal; the applied firmware is v2.1 FINAL.
+
 > **Audience:** the teammate maintaining the ATmega328P Sub Node sketch (`Final Code_6023.docx` as of 2026-08-03).
 > **Purpose:** three edits are needed for the backend to accept the readings the Sub Node is already producing. All three are small — total added flash roughly 400 bytes; SRAM is untouched.
 > **After these changes:** flash one binary per Sub Node (or one binary flashed with the correct EEPROM node ID) and every reading lands in Postgres.

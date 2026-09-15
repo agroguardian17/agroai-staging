@@ -7,6 +7,8 @@
 >
 > **How to read it.** Front-to-back once. Then use the table of contents to jump back when a specific piece confuses you.
 
+> **⚠️ Freshness (2026-09-15).** This overview was last written comprehensively around migration `0009` / Round G. The pilot has since shipped Round 16 (raw-payload calibration), Rounds 17 / 17.5 (`weather_station_readings` + `main_node_readings`), and Round 13 (advisory subscriber) — **migration head is now `0014`**. Where this document disagrees with `SKILL_agroguardian.md` or `DATA_INVENTORY.md`, **those win**. Facts corrected in this pass: LoRa carries **CSV** (not binary), APN is **Airtel `airtelgprs.com`** (not BSNL), OTP hashing is **salted SHA-256** (not bcrypt), **~613 tests**, **60 logical tables**. Firmware v2.1 is FINAL and reads its node id from `sub_node_config.h` (there is **no** `eeprom_provisioner` sketch).
+
 
 ---
 
@@ -182,7 +184,7 @@ The hardware is separate from this repo but the backend has to accept whatever i
 - **No WiFi, no BLE.** The only wireless radio is LoRa. This matters for firmware updates — see §12 of [CODEBASE_GUIDE](CODEBASE_GUIDE.md) and the OTA discussion below.
 - **LoRa module:** AiThinker RA-02 (Semtech SX1278 chip) at 433 MHz.
 - **Sensors today:** DS18B20 (OneWire temperature), capacitive soil moisture. Coming: RS485 NPK Modbus RTU, battery voltage divider.
-- **Constraints:** 32 KB flash / 2 KB SRAM / 1 KB EEPROM. Every byte matters. This is why LoRa frames are binary, never JSON.
+- **Constraints:** 32 KB flash / 2 KB SRAM / 1 KB EEPROM. Every byte matters. This is why the Sub Node sends a compact **CSV** frame over LoRa (never JSON) — see `HARDWARE_WIRE_CONTRACT.md` §4.3.
 
 
 ### Main Node
@@ -201,7 +203,7 @@ The hardware is separate from this repo but the backend has to accept whatever i
 ### LoRa packet policy
 
 
-**Binary only, never JSON over LoRa.** SX1278 payload size caps out around 255 bytes and airtime is expensive. The packet contains: `node_id`, packet counter, battery voltage, battery percent, temperature, soil moisture, N, P, K, flags, CRC. Exact byte widths are still being finalized — see the outstanding "LoRa Packet Protocol v1.0" doc.
+**Compact CSV over LoRa, never JSON.** SX1278 payload caps out around 255 bytes and airtime is expensive, so the Sub Node sends one `KEY=value,...` CSV line (`NODE,SEQ,WIN,UP,SOIL,BAT,PRESS,FLOW,FTOT,DST,NOK,NT,NM,EC,PH,N,P,K[,FLT],FW`) — human-readable on the serial monitor and cheap to parse. Authoritative format: `HARDWARE_WIRE_CONTRACT.md` §4.3.
 
 
 **JSON only happens on the Main Node → Cloud hop**, over MQTT, over 4G. The Main Node's job is to translate the LoRa binary format into the JSON schema documented in [HARDWARE_WIRE_CONTRACT](HARDWARE_WIRE_CONTRACT.md).
@@ -210,7 +212,7 @@ The hardware is separate from this repo but the backend has to accept whatever i
 ### SIM card
 
 
-BSNL for the pilot, APN `bsnlnet`. Firmware must accept APN change at runtime (Airtel, Jio, BSNL) so we do not have to recompile every time we swap SIMs.
+**Airtel** for the pilot, APN `airtelgprs.com` (set in `firmware/main_node/include/pilot_config.h::MODEM_APN`). Swap the APN there per deploy for a different carrier.
 
 
 ### Power
@@ -441,7 +443,7 @@ Annotated tree of everything under `agro_backend/`:
 ```
 agro_backend/
 ├─ alembic/                        Database migration engine
-│  └─ versions/                    11 hand-written migrations (0001–0011)
+│  └─ versions/                    14 hand-written migrations (0001–0014)
 │                                  0010 loads the ginger knowledge base
 │                                  0011 adds water_pressure_bar
 │
@@ -548,7 +550,7 @@ For a byte-level view of every tracked file, see [FILE_REFERENCE](FILE_REFERENCE
 ---
 
 
-## 10. The database — 58 tables grouped by purpose
+## 10. The database — 60 logical tables grouped by purpose
 
 
 The schema is dense because the roadmap plans for a much bigger system than the pilot needs today. **35 core tables** are grouped into logical clusters, each cluster a file under `app/infra/persistence/models/`. **23 additional `kb_*` and runtime tables** come from the ginger engine's compiled knowledge base (migration 0010) — those are documented in `ginger/generated/agroguardian_ginger_kb.sql` and covered in [GINGER_ENGINE_CHANGES](GINGER_ENGINE_CHANGES.md) §4 rather than repeated below.
@@ -788,7 +790,7 @@ sequenceDiagram
 **Concrete details:**
 
 
-- **OTP hashing** — never store the code itself. Uses a **salted hash** (bcrypt via `passlib`). Two identical OTP requests produce different rows because of the per-row salt.
+- **OTP hashing** — never store the code itself. Uses a **salted SHA-256** (`sha256$<salt>$<hex>`, stdlib `hashlib`/`hmac` in `app/domain/auth.py`) — not bcrypt/passlib. Acceptable for a short-TTL 6-digit code backed by attempt-count lockout; the per-row salt means two identical OTP requests store different hashes.
 - **Access token** — HS256 JWT, 15-minute TTL, contains subject (farmer UUID) + tenant + issued-at. Signed with `AUTH_JWT_SECRET`.
 - **Refresh token** — cryptographically random 32-byte secret, SHA-256 hashed and stored in `auth_sessions.refresh_token_hash`. 30-day TTL. Rotates on every use: the old row is deleted and a new one is inserted in the same transaction as the new access token.
 - **Logout** — POST `/api/v1/auth/logout` deletes the current refresh session. Query param `everywhere=true` calls `AuthSessionRepo.revoke_all_for_farmer` to invalidate every device.
@@ -948,7 +950,7 @@ Everything else has a sensible default or is optional.
 ## 17. Testing — why the tests are shaped this way
 
 
-**~470 tests, 1 skipped.** Test files mirror the source tree.
+**~613 tests, 1 skipped.** Test files mirror the source tree.
 
 
 ```

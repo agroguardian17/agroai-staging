@@ -45,7 +45,7 @@ The following paths are implemented and wired into the running app:
 | Reading quality | Range, stuck, MAD outlier, and cross-sensor gates |
 | Alert rules | Seven pilot rules with cooldown suppression and Marathi templates |
 | Read API | Plots, recent readings, plot alerts, AI suggestions, tenant alert queue, resolve |
-| Persistence | SQLAlchemy async repositories plus Alembic migrations through revision `0009` |
+| Persistence | SQLAlchemy async repositories plus Alembic migrations through revision `0014` |
 | Dashboard | Streamlit pages over the HTTP API; it does not access Postgres directly |
 | Deployment | Development and production Docker Compose files, Caddy, Mosquitto, Prometheus, Grafana |
 
@@ -405,10 +405,10 @@ These are important facts for contributors:
 2. MQTT only supports telemetry payloads. The other topic kinds named in the roadmap are intentionally rejected.
 3. `ProcessReading` evaluates rules inline after persistence. The code comments identify an eventual event-subscriber design as a future option.
 4. Alert rows are created, queried, and resolved, but the outbound WhatsApp/FCM dispatch worker is not wired into the application lifespan.
-5. AI adapters, satellite/weather dependencies, object storage settings, billing settings, and OTA settings exist mainly as future-phase seams; they are not all connected to user-facing routes. In particular, `alert.created` is published to PostgreSQL `NOTIFY`, but no live subscriber invokes `compose_advisory`.
+5. Satellite/weather dependencies, object storage, billing, and OTA settings exist mainly as future-phase seams; they are not all connected to user-facing routes. **Update (Round 13):** `alert.created` (NOTIFY `agro_events`) IS now consumed by the advisory subscriber (`app/jobs/advisory_subscriber.py` → `dispatch_advisory` → `compose_advisory` → `ai_suggestions`); only the outbound WhatsApp dispatch of that advisory remains (Round 14).
 6. The hardware contract must be reconciled with the current enums in `app/domain/sensor.py` before firmware integration. The code currently accepts `transmission_type` values `esp_now`, `lora`, `rs485`, and `wifi`, and `cadence_mode` values `normal`, `rapid`, `low_power`, `storm`, and `maintenance`.
 7. `app/deps.py` still contains the original settings-only dependency surface; the active repository/auth dependencies live in `app/infra/http/deps.py`.
-8. `app/infra/persistence/models/core.py` contains legacy `otp_codes`/`refresh_tokens` models while the active use cases use the `otp_challenges`/`auth_sessions` schema from migration `0009`. Treat the latter as the active auth persistence path.
+8. `app/infra/persistence/models/core.py` contains legacy `otp_codes`/`refresh_tokens` models alongside the active `otp_challenges`/`auth_sessions` models (both added in the 2026-09 audit, so `create_all` now matches the migrated schema). The active auth persistence path is `otp_challenges`/`auth_sessions` (migration `0009`).
 9. `GET /plots/{plot_id}` and its nested reading/alert/suggestion routes currently verify that a farmer's token belongs to the plot tenant, while `GET /plots` uses the farmer-specific repository query. If multiple farmers share a tenant, tighten the detail-route ownership check to the farmer before exposing this API beyond the pilot.
 
 10. The repository tracks `deploy/mosquitto/passwd` and `deploy/mosquitto/acl`. Even though the password file contains hashes, both are operational security material. Move them out of Git history and into deployment-only secret storage before onboarding real devices.
@@ -445,7 +445,7 @@ when the Windows-generated tree was copied to the VPS:
 
 ## What is live in the current pilot
 
-The proven staging flow is: Postgres migrations through `0009`, deterministic
+The proven staging flow is: Postgres migrations through `0014`, deterministic
 pilot rows, an authenticated Main Node MQTT credential, public TLS on Caddy
 port `8883`, private Mosquitto port `1883`, FastAPI ingest, idempotent reading
 storage, and optional rule evaluation controlled by `CALIBRATION_MODE`. The

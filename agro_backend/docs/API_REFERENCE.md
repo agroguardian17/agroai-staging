@@ -4,6 +4,8 @@ Base URL in development: `http://localhost:8000`.
 
 The API prefix is `/api/v1`. JSON error bodies generally use a `detail` object with an `error` key. Production disables the interactive docs routes, but the same API routes remain available behind Caddy.
 
+> **⚠️ Freshness (2026-09-15).** This reference predates the Round 17.5 Main-Node routes (documented below) and the Round 13 advisory subscriber. `/ready` also now performs **real** dependency probes (200 when Postgres/MQTT/Chroma are reachable, 503 otherwise) rather than the phase-0 stub described earlier. `SKILL_agroguardian.md` §13 is the authoritative endpoint list.
+
 ## Authentication
 
 Protected routes require:
@@ -222,6 +224,22 @@ A newly resolved alert returns:
 ```json
 {"alert_id": 42, "resolved": true}
 ```
+
+## Main Node routes (Round 17.5)
+
+All require an access token. Keyed on `main_node_id` (e.g. `AGR-MN-0001`), not plot.
+
+### `GET /api/v1/main_nodes/{id}/heartbeat`
+Latest v2-master heartbeat row for the Main Node (`sub_node_online`, `sub_node_silence_ms`, `time_source`, BME280/INA219 block, `firmware_version`). `404` if unknown.
+
+### `GET /api/v1/main_nodes/{id}/heartbeat/history?limit=N`
+Newest-first heartbeat history. `limit` 1–N.
+
+### `GET /api/v1/main_nodes/{id}/weather/latest`
+Latest `weather_station_readings` row for the Main Node (air temp/humidity/pressure, wind, rain, station battery).
+
+### `GET /api/v1/main_nodes/{id}/weather/history?limit=N`
+Newest-first weather-station history.
 
 ## Example curl flow in development
 
