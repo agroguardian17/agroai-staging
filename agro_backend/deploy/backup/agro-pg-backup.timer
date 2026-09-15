@@ -1,0 +1,14 @@
+[Unit]
+Description=Run the AgroGuardian Postgres backup nightly
+Documentation=file:///home/ubuntu/agri-AI-live/agro_backend/deploy/backup/README.md
+
+[Timer]
+# 02:30 UTC daily (08:00 IST — off-peak for the Aurangabad pilot).
+OnCalendar=*-*-* 02:30:00 UTC
+# If the box was off at the scheduled time, run at next boot.
+Persistent=true
+RandomizedDelaySec=300
+Unit=agro-pg-backup.service
+
+[Install]
+WantedBy=timers.target
