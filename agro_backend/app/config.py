@@ -150,6 +150,10 @@ class Settings(BaseSettings):
     META_WHATSAPP_BUSINESS_ACCOUNT_ID: str = ""
     META_WHATSAPP_TOKEN: SecretStr = SecretStr("")
     META_WHATSAPP_VERIFY_TOKEN: SecretStr = SecretStr("")
+    # App secret for verifying the X-Hub-Signature-256 on inbound webhooks
+    # (Round 14 PR B). When empty (dev/staging without a WABA) signature
+    # verification is skipped; when set it is enforced.
+    META_WHATSAPP_APP_SECRET: SecretStr = SecretStr("")
     META_WHATSAPP_OTP_TEMPLATE_NAME: str = "agroguardian_otp_v1"
     META_WHATSAPP_ADVISORY_TEMPLATE_NAME: str = "agroguardian_advisory_v1"
     META_WHATSAPP_GRAPH_VERSION: str = "v20.0"
