@@ -384,3 +384,57 @@ Migration number **0013** is claimed for `main_node_readings` because it
 ships now; Round 13 (advisory subscriber) will use 0014 when it lands.
 The number reflects delivery order, not phase name — the roadmap phases
 and Alembic revisions have always been independent numbering axes.
+
+---
+
+## 14. 2026-09-15 audit — schema decisions (Round 13 + reversibility)
+
+### 14.1 Migration 0014 (`advisory_status`) — Round 13 advisory subscriber
+
+Adds `advisory_status` (+`advisory_attempts`, `advisory_next_retry_at`,
+`advisory_claimed_at`, `advisory_last_error`) to `alerts_notifications`, driving
+the advisory-subscriber state machine. This is a **distinct axis** from the
+existing `dispatch_status` (0002): `advisory_status` tracks *compose* state
+(alert → Marathi advisory), `dispatch_status` tracks *WhatsApp send* state.
+Additive (`ADD COLUMN IF NOT EXISTS`) + a partial index on pending rows;
+reversible.
+
+### 14.2 0008 downgrade — cluster-shared roles (finding F-029, FIXED)
+
+`authenticated_role` / `service_role` are **cluster-global** (shared by every
+database in the Postgres instance), but 0008 is a per-database migration.
+`DROP OWNED BY` only clears the *current* database, so `DROP ROLE` in the
+original downgrade failed with `DependentObjectsStillExist` whenever the cluster
+hosted more than one migrated database (a dev box with several test DBs). The
+downgrade now `DROP OWNED BY`s (clearing this DB so a re-upgrade re-grants
+cleanly) and then attempts `DROP ROLE` inside an exception handler that tolerates
+`dependent_objects_still_exist` — the role is retained (and re-used) when another
+database still references it, and dropped fully in a clean single-DB cluster
+(e.g. CI's fresh service). This restores `alembic downgrade base` and the CI
+`test_migration_roundtrip` (`AGRO_RUN_DESTRUCTIVE=1`).
+
+### 14.3 `main_node_id` vs `master_node_id` (finding F-003 — document-and-close)
+
+`weather_station_readings.master_node_id` is the **only** place the Main Node is
+keyed as `master_node_id`; everywhere else (device_registry, `main_node_readings`,
+firmware, `NODE_MAP`, the Round 17.5 API) it is `main_node_id`. Both identify the
+same physical device (`AGR-MN-0001`); "master" is legacy weather-station
+terminology. **Decision: not renamed.** Renaming a column on a table that already
+holds staging data is churn/risk for a cosmetic gain; the split is documented
+here and in `DATA_INVENTORY.md` §3.13 instead. `broker._persist_weather` maps
+`main_node_id → master_node_id` at the boundary. Revisit only if the column is
+touched for another reason.
+
+### 14.4 Foreign-key `ON DELETE` policy (finding F-009 — document-and-close)
+
+Most FKs carry no explicit `ON DELETE` clause, i.e. Postgres default
+**`NO ACTION`** (a parent row cannot be deleted while children reference it).
+**This is the intended, safe posture for the pilot:** we never hard-delete
+farmers/farms/devices — lifecycle is handled by status columns
+(`account_status`, `plot_status`, `device_status`, `season_status`) and
+soft-deactivation, so a blocked hard-delete is a feature, not a bug. The two
+deliberate exceptions use `ON DELETE CASCADE` where the child is pure telemetry
+owned by the device (`main_node_readings`, and the calibration path). **Decision:
+keep `NO ACTION` as the default; do not retrofit 103 FKs.** If a hard-delete
+workflow is ever introduced, add targeted `ON DELETE` clauses in that round with
+tests.
