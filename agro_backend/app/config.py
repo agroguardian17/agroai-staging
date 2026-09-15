@@ -111,6 +111,17 @@ class Settings(BaseSettings):
     GINGER_JOB_HOUR: int = 6
     GINGER_JOB_MINUTE: int = 30
 
+    # ---- Advisory subscriber (Round 13) -------------------------------------
+    # Master switch for the alert->advisory subscriber (LISTEN agro_events ->
+    # compose_advisory -> ai_suggestions). Off in tests/CI so no background
+    # LISTEN task or reconciliation loop starts.
+    ADVISORY_SUBSCRIBER_ENABLED: bool = True
+    # An in_flight advisory older than this (seconds) is treated as a crashed
+    # worker and reverted to pending by the reaper.
+    ADVISORY_STALE_SECONDS: int = 300
+    # How often the reconciliation sweep runs (recovers lost NOTIFYs + reaps).
+    ADVISORY_RECONCILE_SECONDS: int = 60
+
     # ---- ChromaDB -----------------------------------------------------------
     CHROMA_HOST: str = "localhost"
     CHROMA_PORT: int = 8001

@@ -59,6 +59,19 @@ class AlertNotification(Base):
     dispatch_status: Mapped[str] = mapped_column(
         String, nullable=False, server_default=text("'pending'")
     )
+    # Round 13 (0014): advisory-subscriber compose state machine (distinct axis
+    # from dispatch_status, which is the WhatsApp send state).
+    advisory_status: Mapped[str] = mapped_column(
+        String, nullable=False, server_default=text("'pending'")
+    )
+    advisory_attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
+    advisory_next_retry_at: Mapped[datetime.datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+    advisory_claimed_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True))
+    advisory_last_error: Mapped[str | None] = mapped_column(Text)
 
 
 class NotificationDispatchLog(Base):

@@ -57,9 +57,19 @@ class ChatModelError(Exception):
     from permanent (4xx, content_policy) so the use case can act.
     """
 
-    def __init__(self, message: str, *, transient: bool = False) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        transient: bool = False,
+        retry_after_seconds: float | None = None,
+    ) -> None:
         super().__init__(message)
         self.transient = transient
+        # Populated from a 429 ``Retry-After`` header when the provider sends
+        # one; the advisory retry policy uses it verbatim in place of the
+        # exponential backoff.
+        self.retry_after_seconds = retry_after_seconds
 
 
 @runtime_checkable

@@ -224,6 +224,7 @@ def _deps(
         reading_repo=_StubReadingRepo([_reading()] if readings is _DEPS_UNSET else readings),
         ai_suggestion_repo=suggestion_repo,
         chat_model=chat,
+        chat_model_name="claude-sonnet-4-5",
     )
     return deps, chat, suggestion_repo
 
@@ -290,6 +291,7 @@ async def test_compose_skips_when_alert_not_found() -> None:
         reading_repo=deps.reading_repo,
         ai_suggestion_repo=deps.ai_suggestion_repo,
         chat_model=deps.chat_model,
+        chat_model_name="claude-sonnet-4-5",
     )
     out = await execute(alert_id=999, deps=deps_no_alert, now=NOW)
     assert out.suggestion is None

@@ -34,6 +34,10 @@ from app.infra.http import health
 from app.infra.http import main_nodes as main_node_routes
 from app.infra.http import plots as plot_routes
 from app.infra.http.deps import shutdown_engine
+from app.jobs.advisory_subscriber import (
+    build_and_start_advisory_subscriber,
+    stop_advisory_subscriber,
+)
 from app.jobs.ginger_scheduler import build_and_start_scheduler, stop_scheduler
 from app.jobs.ingest_startup import build_and_start_ingest, stop_ingest
 from app.lib import metrics
@@ -45,6 +49,7 @@ if TYPE_CHECKING:
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
     from app.infra.mqtt.broker import IngestBroker
+    from app.jobs.advisory_subscriber import AdvisorySubscriberHandle
 
 log = structlog.get_logger(__name__)
 
@@ -70,11 +75,15 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     )
     broker: IngestBroker | None = None
     scheduler: AsyncIOScheduler | None = None
+    advisory: AdvisorySubscriberHandle | None = None
     try:
         broker = await build_and_start_ingest(settings)
         scheduler = await build_and_start_scheduler(settings)
+        advisory = await build_and_start_advisory_subscriber(settings)
         yield
     finally:
+        if advisory is not None:
+            await stop_advisory_subscriber(advisory)
         if scheduler is not None:
             await stop_scheduler(scheduler)
         if broker is not None:

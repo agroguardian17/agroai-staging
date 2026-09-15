@@ -168,8 +168,19 @@ ginger_engine_errors_total = Counter(
 )
 
 
+# ----- Advisory subscriber (Round 13) ------------------------------------
+advisory_composed_total = Counter(
+    "agro_advisory_composed_total",
+    "Advisory dispatch outcomes, labeled by outcome (composed/skipped/"
+    "failed_transient/failed_permanent/transient_retry/already_handled).",
+    ["outcome"],
+    registry=REGISTRY,
+)
+
+
 __all__ = [
     "REGISTRY",
+    "advisory_composed_total",
     "alerts_cooldown_suppressed_total",
     "alerts_created_total",
     "auth_otp_total",
