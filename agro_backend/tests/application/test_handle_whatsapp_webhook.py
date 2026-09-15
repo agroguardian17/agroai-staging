@@ -100,9 +100,21 @@ class _FakeInboundRepo:
         return not self._duplicate
 
 
+class _FakeActionRepo:
+    """No recent advisory -> the webhook records no farmer_action."""
+
+    async def latest_advisory_for_farmer(self, farmer_id: Any, *, within_days: int) -> None:
+        return None
+
+    async def record(self, action: Any) -> int:
+        return 1
+
+
 def _deps(farmer_repo: Any, inbound_repo: Any) -> HandleWebhookDeps:
     return HandleWebhookDeps(
-        farmer_repo=cast(Any, farmer_repo), wa_inbound_repo=cast(Any, inbound_repo)
+        farmer_repo=cast(Any, farmer_repo),
+        wa_inbound_repo=cast(Any, inbound_repo),
+        farmer_action_repo=cast(Any, _FakeActionRepo()),
     )
 
 
