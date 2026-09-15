@@ -31,6 +31,16 @@ class OtpTransport(StrEnum):
     SMS = "sms"  # only after Phase 13 wires MSG91 adapter
 
 
+class ModelRole(StrEnum):
+    """Semantic LLM role, resolved to a concrete model id via
+    :meth:`Settings.model_id_for`. Callers pick a role, not a model string, so
+    the model choice lives in config (``.cursorrules #21``).
+    """
+
+    PRIMARY = "primary"  # advisory composition / chat — Sonnet
+    TRIAGE = "triage"  # cheap classification / triage — Haiku
+
+
 class Settings(BaseSettings):
     """Single source of truth for runtime configuration.
 
@@ -258,6 +268,13 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------------
     # Convenience accessors
     # ------------------------------------------------------------------------
+    def model_id_for(self, role: ModelRole) -> str:
+        """Resolve a semantic model role to the configured Anthropic model id."""
+        return {
+            ModelRole.PRIMARY: self.ANTHROPIC_MODEL_SONNET,
+            ModelRole.TRIAGE: self.ANTHROPIC_MODEL_HAIKU,
+        }[role]
+
     @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.CORS_ALLOWED_ORIGINS.split(",") if o.strip()]
@@ -305,4 +322,4 @@ def _assert_production_safe(s: Settings) -> None:
         )
 
 
-__all__ = ["AppEnv", "OtpTransport", "Settings", "get_settings"]
+__all__ = ["AppEnv", "ModelRole", "OtpTransport", "Settings", "get_settings"]

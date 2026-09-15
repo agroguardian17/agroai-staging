@@ -39,8 +39,9 @@ Strict rules:
     docker buildx build --platform linux/amd64,linux/arm64.
 21. LLM model ids are resolved from settings (ANTHROPIC_MODEL_SONNET /
     ANTHROPIC_MODEL_HAIKU) and injected into use cases by the composition layer
-    (jobs/DI) — never hardcoded inside a use case. A ModelRole enum
-    (PRIMARY=Sonnet, TRIAGE=Haiku) over these settings is planned, not yet built.
+    (jobs/DI) — never hardcoded inside a use case. The composition layer picks a
+    ModelRole (PRIMARY=Sonnet, TRIAGE=Haiku) and resolves it via
+    settings.model_id_for(role); use cases receive the resolved model id string.
 22. Razorpay SDK is NOT a pilot dependency. subscriptions_billing exists
     but is empty. Pilot tenant uses tier='pilot_internal'.
 23. SMS adapter exists as a Protocol only. Pilot uses WhatsApp for both
