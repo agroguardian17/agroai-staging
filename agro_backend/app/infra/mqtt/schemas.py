@@ -40,7 +40,7 @@ from app.domain.device_calibration import (
     calibrate_npk_ph,
     calibrate_npk_temp_c,
     calibrate_pressure_bar,
-    calibrate_soil_moisture_pct,
+    capacitive_adc_to_vwc,
     npk_ec_ms_cm,
 )
 from app.domain.sensor import CadenceMode, Reading, TransmissionType
@@ -509,12 +509,14 @@ class TelemetryInRaw(BaseModel):
             signal_rssi_dbm=self.master_readings.lora_rssi_dbm,
             # Battery
             battery_voltage_v=calibrate_battery_v(rr.battery_adc, calibration),
-            # Soil moisture — capacitive probe reading only. NPK probe's
-            # own moisture reading is carried separately in soil_moisture_2
-            # so the Farm Brain gets both signals.
-            soil_moisture_1_pct=calibrate_soil_moisture_pct(rr.soil_adc, calibration),
+            # Soil moisture — capacitive probe via the Sep-2026 piecewise
+            # calibration (device-independent; the probe's physical curve).
+            # The NPK probe's own moisture is carried separately in
+            # soil_moisture_2 as a diagnostic only — the rules use the
+            # capacitive average, never the NPK moisture.
+            soil_moisture_1_pct=capacitive_adc_to_vwc(rr.soil_adc),
             soil_moisture_2_pct=npk_moist_pct,
-            soil_moisture_avg_pct=calibrate_soil_moisture_pct(rr.soil_adc, calibration),
+            soil_moisture_avg_pct=capacitive_adc_to_vwc(rr.soil_adc),
             # Soil temperature — DS18B20 for the primary rootzone probe,
             # NPK register for rootzone reference.
             soil_temp_c=soil_temp_c,

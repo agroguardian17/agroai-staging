@@ -125,6 +125,7 @@ class WeatherStationReading(Base):
     humidity_pct: Mapped[float | None] = mapped_column(Double)
     dew_point_c: Mapped[float | None] = mapped_column(Double)
     atmospheric_pressure_hpa: Mapped[float | None] = mapped_column(Double)
+    altitude_m: Mapped[float | None] = mapped_column(Double)
     wind_speed_kmh: Mapped[float | None] = mapped_column(Double)
     wind_speed_max_gust_kmh: Mapped[float | None] = mapped_column(Double)
     wind_direction_degrees: Mapped[float | None] = mapped_column(Double)

@@ -56,6 +56,13 @@ from app.application.ports.weather_station_reading_repo import (
 from app.application.process_reading import ProcessReadingDeps
 from app.application.process_reading import execute as process_execute
 from app.domain.main_node_reading import MainNodeReading
+from app.domain.weather_calibration import (
+    altitude_m_from_pressure_pa,
+    rain_mm_from_pulses,
+    wind_direction_from_adc,
+    wind_gust_kmh_from_pulses,
+    wind_speed_kmh_from_pulses,
+)
 from app.domain.weather_station_reading import WeatherStationReading
 from app.infra.mqtt.schemas import (
     MasterReadings,
@@ -250,6 +257,13 @@ class IngestBroker:
     ) -> None:
         if self._weather_station_reading_repo is None:
             return
+        # Wind vane: an open/disconnected vane floats near ADC 0, far from every
+        # real anchor — treat 0 as "no reading" rather than reporting a spurious
+        # direction.
+        wind_deg: Decimal | None = None
+        wind_cardinal: str | None = None
+        if master.wind_dir_adc > 0:
+            wind_deg, wind_cardinal = wind_direction_from_adc(master.wind_dir_adc)
         weather = WeatherStationReading(
             tenant_id=tenant_id,  # type: ignore[arg-type]
             farm_id=farm_id,  # type: ignore[arg-type]
@@ -263,6 +277,17 @@ class IngestBroker:
                 if master.bme280_pressure_pa is not None
                 else None
             ),
+            # Barometric altitude derived from the raw pascal pressure.
+            altitude_m=altitude_m_from_pressure_pa(master.bme280_pressure_pa),
+            # Wind + rain — calibrated on the backend from the Main Node's raw
+            # pulse/ADC counts (app.domain.weather_calibration). The per-window
+            # rainfall lands in rain_mm_current_hour; the daily rollup job fills
+            # the rolling rain/gust aggregates.
+            wind_speed_kmh=wind_speed_kmh_from_pulses(master.wind_pulses_window),
+            wind_speed_max_gust_kmh=wind_gust_kmh_from_pulses(master.wind_gust_pulses_max),
+            wind_direction_degrees=wind_deg,
+            wind_direction_cardinal=wind_cardinal,
+            rain_mm_current_hour=rain_mm_from_pulses(master.rain_pulses_window),
             weather_station_battery_v=master.ina219_bus_v,
         )
         weather = _normalize_clock_skew(weather)  # type: ignore[assignment]
