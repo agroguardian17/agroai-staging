@@ -80,15 +80,27 @@ def _topic(tenant_id: str, farm_id: str, node_id: str) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--moisture", type=float, default=8.0, help="soil_moisture_avg_pct (default 8.0 → LOW_WATER)")
-    p.add_argument("--battery", type=float, default=3.90, help="battery_voltage_v (default 3.90, above low threshold)")
+    p.add_argument(
+        "--moisture",
+        type=float,
+        default=8.0,
+        help="soil_moisture_avg_pct (default 8.0 → LOW_WATER)",
+    )
+    p.add_argument(
+        "--battery",
+        type=float,
+        default=3.90,
+        help="battery_voltage_v (default 3.90, above low threshold)",
+    )
     p.add_argument("--tenant-id", default=DEFAULT_TENANT)
     p.add_argument("--farmer-id", default=DEFAULT_FARMER)
     p.add_argument("--farm-id", default=DEFAULT_FARM)
     p.add_argument("--plot-id", default=DEFAULT_PLOT)
     p.add_argument("--node-id", default=DEFAULT_NODE)
     p.add_argument("--broker-host", default=os.environ.get("MQTT_BROKER_HOST", "mosquitto"))
-    p.add_argument("--broker-port", type=int, default=int(os.environ.get("MQTT_BROKER_PORT", "1883")))
+    p.add_argument(
+        "--broker-port", type=int, default=int(os.environ.get("MQTT_BROKER_PORT", "1883"))
+    )
     p.add_argument("--broker-user", default=os.environ.get("MQTT_BROKER_USER", "service"))
     p.add_argument("--broker-pass", default=os.environ.get("MQTT_BROKER_PASSWORD", ""))
     args = p.parse_args(sys.argv[1:] if argv is None else argv)
