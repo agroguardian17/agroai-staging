@@ -49,6 +49,8 @@ class WeatherStationReading:
     air_temp_c: Decimal | None = None
     humidity_pct: Decimal | None = None
     atmospheric_pressure_hpa: Decimal | None = None
+    # Barometric altitude derived on the backend from BME280 pressure.
+    altitude_m: Decimal | None = None
     # Filled by the daily rollup job (Round 18), not by the ingest boundary.
     air_temp_min_c: Decimal | None = None
     air_temp_max_c: Decimal | None = None

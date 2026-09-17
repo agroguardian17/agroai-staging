@@ -70,7 +70,7 @@ def _raw_payload(**overrides: Any) -> dict[str, Any]:
         "received_at_master": "2026-08-26T10:45:03+00:00",
         "transmission_type": "lora",
         "raw_readings": {
-            "soil_adc": 550,  # midpoint between dry=750, wet=350 → 50%
+            "soil_adc": 550,  # capacitive raw → piecewise VWC (device-independent)
             "battery_adc": 780,
             "pressure_adc": 340,
             "flow_pulses_window": 12,
@@ -146,12 +146,14 @@ def test_parse_inbound_non_object_payload_raises_value_error() -> None:
 # ---------- to_domain calibration ----------
 
 
-def test_to_domain_applies_soil_moisture_calibration() -> None:
-    model = TelemetryInRaw.model_validate(_raw_payload())
-    reading = model.to_domain(_cal())
-    # ADC=550 with DRY=750 WET=350 → midpoint → 50%
-    assert reading.soil_moisture_avg_pct == Decimal("50")
-    assert reading.soil_moisture_1_pct == Decimal("50")
+def test_to_domain_applies_piecewise_soil_moisture_calibration() -> None:
+    # Soil moisture uses the Sep-2026 piecewise curve (device-independent), not
+    # the per-device DRY/WET linear map. ADC 459 is an exact anchor → 33.2 % VWC.
+    payload = _raw_payload()
+    payload["raw_readings"]["soil_adc"] = 459
+    reading = TelemetryInRaw.model_validate(payload).to_domain(_cal())
+    assert reading.soil_moisture_avg_pct == Decimal("33.2")
+    assert reading.soil_moisture_1_pct == Decimal("33.2")
 
 
 def test_to_domain_carries_calibration_version_in_sensor_health() -> None:

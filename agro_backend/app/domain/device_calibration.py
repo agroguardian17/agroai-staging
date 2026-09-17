@@ -29,6 +29,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from itertools import pairwise
 
 # ---------------------------------------------------------------------------
 # Type aliases for clarity at call sites.
@@ -86,19 +87,64 @@ class DeviceCalibration:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Capacitive soil-moisture probe — piecewise-linear ADC → VWC% calibration.
+#
+# Anchors from the firmware team's field calibration (Kuldip, Sep 2026):
+# black cotton soil (vertisol), 160 cm3 container, capacitive probe. Ordered
+# ADC-descending (dry → wet): a capacitive probe reads HIGH ADC when dry and
+# LOW ADC when saturated. The curve is a fixed property of the probe model +
+# soil type (not per-unit drift), so it lives here as a module constant rather
+# than in the per-device ``device_calibration`` row. The endpoints are the
+# probe's real physical range for this soil: 4.0 % VWC air-dry, 50.0 % VWC at
+# natural saturation.
+# ---------------------------------------------------------------------------
+_SOIL_VWC_ANCHORS: tuple[tuple[int, Decimal], ...] = (
+    (1019, Decimal("4.0")),  # air-dry baseline
+    (844, Decimal("7.6")),
+    (678, Decimal("11.3")),
+    (540, Decimal("22.2")),
+    (459, Decimal("33.2")),  # ~field-capacity zone (FC ≈ 35 % near ADC 449)
+    (340, Decimal("50.0")),  # natural saturation
+)
+
+
+def capacitive_adc_to_vwc(adc: int) -> Decimal:
+    """Convert a capacitive soil-moisture ADC count to volumetric water content %.
+
+    Piecewise-linear over the field-measured anchors in ``_SOIL_VWC_ANCHORS``,
+    clamped to the dry (4.0 %) and saturated (50.0 %) endpoints. This is the
+    Sep-2026 corrected calibration for the pilot's capacitive probe in black
+    cotton soil — it supersedes the old 2-point linear map, which assumed a
+    0-100 % range the probe does not actually span.
+
+    Total (never raises): an out-of-range or glitched ADC reads at a boundary,
+    never as a rule-firing pathology.
+    """
+    hi_adc, hi_vwc = _SOIL_VWC_ANCHORS[0]  # driest anchor (1019, 4.0)
+    lo_adc, lo_vwc = _SOIL_VWC_ANCHORS[-1]  # wettest anchor (340, 50.0)
+    if adc >= hi_adc:
+        return hi_vwc
+    if adc <= lo_adc:
+        return lo_vwc
+    for (a_hi, v_hi), (a_lo, v_lo) in pairwise(_SOIL_VWC_ANCHORS):
+        if a_lo <= adc <= a_hi:
+            # Interpolate within [a_lo, a_hi] (ADC) → [v_hi, v_lo] (VWC).
+            frac = (Decimal(a_hi) - Decimal(adc)) / (Decimal(a_hi) - Decimal(a_lo))
+            return v_hi + frac * (v_lo - v_hi)
+    return lo_vwc  # unreachable given the clamps; satisfies the type-checker
+
+
 def calibrate_soil_moisture_pct(raw_adc: int, cal: DeviceCalibration) -> Decimal:
-    """Convert soil-moisture ADC to volumetric water content %.
+    """Legacy 2-point linear ADC → VWC% map (DRY_ADC=0 %, WET_ADC=100 %).
 
-    Linear map between DRY_ADC (0 % VWC) and WET_ADC (100 % VWC), clamped
-    [0, 100]. Capacitive probes read HIGH ADC in dry soil and LOW ADC in
-    wet soil (DRY_ADC > WET_ADC on a well-behaved probe); the formula is
-    written so it also works if the calibration row has WET > DRY (e.g. a
-    resistive probe with inverted polarity) — the sign of the span picks
-    the right end.
+    Retained for probes/soils that follow a straight-line response and for
+    back-compat with historical rows. **The pilot's capacitive probe uses
+    :func:`capacitive_adc_to_vwc` instead** — its response is piecewise, not
+    linear, and it spans 4-50 % VWC rather than 0-100 %.
 
-    ``pct = (DRY - raw) / (DRY - WET) * 100``
-
-    If DRY == WET (uncalibrated row) we return 0 rather than raising.
+    ``pct = (DRY - raw) / (DRY - WET) * 100``, clamped [0, 100]. If DRY == WET
+    (uncalibrated row) returns 0 rather than raising.
     """
     dry = Decimal(cal.soil_dry_adc)
     wet = Decimal(cal.soil_wet_adc)
@@ -220,5 +266,6 @@ __all__ = [
     "calibrate_npk_temp_c",
     "calibrate_pressure_bar",
     "calibrate_soil_moisture_pct",
+    "capacitive_adc_to_vwc",
     "npk_ec_ms_cm",
 ]

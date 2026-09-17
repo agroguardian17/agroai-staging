@@ -15,6 +15,7 @@ from app.domain.device_calibration import (
     calibrate_npk_temp_c,
     calibrate_pressure_bar,
     calibrate_soil_moisture_pct,
+    capacitive_adc_to_vwc,
     npk_ec_ms_cm,
 )
 
@@ -224,3 +225,36 @@ def test_calibration_dataclass_is_frozen() -> None:
     cal = _cal()
     with pytest.raises(Exception):  # noqa: B017 — FrozenInstanceError or similar
         cal.soil_dry_adc = 999  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# Capacitive piecewise soil-moisture calibration (Sep-2026 field curve).
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize(
+    ("adc", "expected"),
+    [
+        (1019, Decimal("4.0")),  # air-dry anchor
+        (844, Decimal("7.6")),
+        (678, Decimal("11.3")),
+        (540, Decimal("22.2")),
+        (459, Decimal("33.2")),  # field-capacity zone anchor
+        (340, Decimal("50.0")),  # saturation anchor
+    ],
+)
+def test_capacitive_adc_to_vwc_hits_anchors(adc: int, expected: Decimal) -> None:
+    assert capacitive_adc_to_vwc(adc) == expected
+
+
+def test_capacitive_adc_to_vwc_clamps_out_of_range() -> None:
+    assert capacitive_adc_to_vwc(1500) == Decimal("4.0")  # drier than dry
+    assert capacitive_adc_to_vwc(1019) == Decimal("4.0")  # exactly dry
+    assert capacitive_adc_to_vwc(0) == Decimal("50.0")  # wetter than wet
+    assert capacitive_adc_to_vwc(340) == Decimal("50.0")  # exactly saturated
+
+
+def test_capacitive_adc_to_vwc_interpolates_within_segment() -> None:
+    # Segment 540 (22.2 %) → 459 (33.2 %); a value between anchors is strictly
+    # between their VWCs and monotonic (lower ADC = wetter = higher VWC).
+    hi = capacitive_adc_to_vwc(500)
+    lo = capacitive_adc_to_vwc(520)
+    assert Decimal("22.2") < lo < hi < Decimal("33.2")
