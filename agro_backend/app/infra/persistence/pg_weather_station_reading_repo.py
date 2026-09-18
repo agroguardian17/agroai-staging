@@ -179,5 +179,16 @@ class PgWeatherStationReadingRepo:
         rows = await self.latest_for_node(master_node_id, limit=1)
         return rows[0] if rows else None
 
+    async def most_recent_for_farm(self, farm_id: Any) -> WeatherStationReading | None:
+        stmt = text(
+            f"SELECT {_SELECT_COLUMNS} FROM weather_station_readings "
+            "WHERE farm_id = :farm_id "
+            "ORDER BY recorded_at DESC LIMIT 1"
+        )
+        async with self._sm() as session:
+            res = await session.execute(stmt, {"farm_id": farm_id})
+            row = res.first()
+        return _row_to_reading(row) if row is not None else None
+
 
 __all__ = ["PgWeatherStationReadingRepo"]

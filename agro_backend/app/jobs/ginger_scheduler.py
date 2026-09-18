@@ -24,6 +24,7 @@ from app.infra.persistence.pg_crop_season_repo import PgCropSeasonRepo
 from app.infra.persistence.pg_farmer_repo import PgFarmerRepo
 from app.infra.persistence.pg_plot_repo import PgPlotRepo
 from app.infra.persistence.pg_reading_repo import PgReadingRepo
+from app.infra.persistence.pg_weather_station_reading_repo import PgWeatherStationReadingRepo
 from app.jobs.ginger_daily import GingerDailyDeps, run_daily
 
 if TYPE_CHECKING:
@@ -49,6 +50,7 @@ async def build_and_start_scheduler(settings: Settings) -> AsyncIOScheduler | No
         ai_suggestion_repo=PgAiSuggestionRepo(sessionmaker),
         farmer_repo=PgFarmerRepo(sessionmaker),
         sync_dsn=settings.DATABASE_URL_SYNC,
+        weather_station_reading_repo=PgWeatherStationReadingRepo(sessionmaker),
     )
 
     scheduler = AsyncIOScheduler(timezone=settings.GINGER_JOB_TIMEZONE)

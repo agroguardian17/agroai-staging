@@ -48,7 +48,10 @@ from typing import TYPE_CHECKING, Any
 from app.application.ports.crop_season_repo import CropSeasonRepo, CropSeasonView
 from app.application.ports.plot_repo import PlotRepo
 from app.application.ports.reading_repo import ReadingRepo
+from app.application.ports.weather_station_reading_repo import WeatherStationReadingRepo
 from app.domain.sensor import Reading
+from app.domain.vpd import vpd_kpa
+from app.domain.weather_station_reading import WeatherStationReading
 
 if TYPE_CHECKING:
     # Kept to declare unused ports if future rounds add extra data sources.
@@ -78,6 +81,10 @@ class FarmBrainDeps:
     reading_repo: ReadingRepo
     plot_repo: PlotRepo
     crop_season_repo: CropSeasonRepo
+    # Optional weather source. When present, the builder fills the cluster
+    # weather-station fields (air temperature, humidity) and the derived
+    # ``vpd_kpa`` used by the Domain 7 VPD rules. None keeps weather UNKNOWN.
+    weather_station_reading_repo: WeatherStationReadingRepo | None = None
     # The full ``kb_farm_brain_fields`` set. Injected so tests can pin a
     # subset; the daily job reads it from the database at startup.
     declared_fields: frozenset[str] = field(default_factory=frozenset)
@@ -129,6 +136,15 @@ async def build_farm_brain(
     # ---- Crop season (stage + DAP + synthetic dates) -------------------
     season = await deps.crop_season_repo.find_active_for_plot(plot_id)
     _populate_from_season(state, season, today)
+
+    # ---- Weather station (air temp + humidity + derived VPD) -----------
+    # Weather is farm-level; resolve it from the active season's farm. The
+    # cluster station's temperature and humidity feed the Domain 7 VPD rules
+    # via the computed ``vpd_kpa``.
+    if deps.weather_station_reading_repo is not None and season is not None:
+        weather = await deps.weather_station_reading_repo.most_recent_for_farm(season.farm_id)
+        if weather is not None:
+            _populate_from_weather(state, weather)
 
     # ---- Synthetic ------------------------------------------------------
     state["current_month"] = today.month
@@ -197,6 +213,23 @@ def _populate_from_season(
         state["days_to_planting"] = (season.sowing_date - today).days
     if season.expected_harvest_date:
         state["days_to_harvest"] = (season.expected_harvest_date - today).days
+
+
+def _populate_from_weather(state: dict[str, Any], w: WeatherStationReading) -> None:
+    """Fill cluster weather-station fields and the derived VPD.
+
+    ``rh_pct`` is the KB's name for relative humidity (aliased from the
+    reading's ``humidity_pct``). ``vpd_kpa`` is computed from the daytime max
+    temperature and humidity via the Tetens equation; it is what the Domain 7
+    VPD rules read. ``vpd_night_mean_kpa`` needs nighttime hourly aggregates we
+    do not yet store, so it stays UNKNOWN (tracked as a follow-up).
+    """
+    _set(state, "air_temp_max_c", w.air_temp_max_c)
+    _set(state, "air_temp_min_c", w.air_temp_min_c)
+    _set(state, "rh_pct", w.humidity_pct)
+    _set(state, "humidity_pct", w.humidity_pct)
+    _set(state, "dew_point_c", w.dew_point_c)
+    _set(state, "vpd_kpa", vpd_kpa(w.air_temp_max_c, w.humidity_pct))
 
 
 def _set(state: dict[str, Any], key: str, value: object) -> None:

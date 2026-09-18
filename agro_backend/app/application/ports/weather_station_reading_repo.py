@@ -10,6 +10,7 @@ Query methods are added incrementally as the ops dashboard needs them.
 
 from __future__ import annotations
 
+import uuid
 from typing import Protocol, runtime_checkable
 
 from app.domain.weather_station_reading import WeatherStationReading
@@ -36,6 +37,18 @@ class WeatherStationReadingRepo(Protocol):
         master_node_id: str,
     ) -> WeatherStationReading | None:
         """Convenience: the single latest weather row, or ``None`` if never seen."""
+        ...
+
+    async def most_recent_for_farm(
+        self,
+        farm_id: uuid.UUID,
+    ) -> WeatherStationReading | None:
+        """The single latest weather row for a farm, or ``None`` if never seen.
+
+        Weather is farm-level (one cluster station per farm), so the ginger
+        farm-brain builder resolves it by ``farm_id`` rather than by master
+        node id.
+        """
         ...
 
 

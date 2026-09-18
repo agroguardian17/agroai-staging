@@ -22,6 +22,7 @@ from app.application.build_farm_brain import (
 )
 from app.application.ports.crop_season_repo import CropSeasonView
 from app.domain.sensor import Reading, TransmissionType
+from app.domain.weather_station_reading import WeatherStationReading
 
 _TENANT = uuid.UUID("11111111-1111-1111-1111-111111111111")
 _FARMER = uuid.UUID("aaaaaaaa-1111-1111-1111-111111111111")
@@ -133,6 +134,39 @@ class _FakeSeasonRepo:
         return [self._s] if self._s else []
 
 
+def _sample_weather() -> WeatherStationReading:
+    return WeatherStationReading(
+        tenant_id=_TENANT,
+        master_node_id="AGR-MN-0001",
+        farm_id=_FARM,
+        recorded_at=datetime(2026, 8, 3, 14, 0, tzinfo=UTC),
+        humidity_pct=Decimal("55"),
+        air_temp_max_c=Decimal("32"),
+        air_temp_min_c=Decimal("21"),
+        dew_point_c=Decimal("18"),
+    )
+
+
+class _FakeWeatherRepo:
+    def __init__(self, weather: WeatherStationReading | None) -> None:
+        self._w = weather
+        self.asked_for: uuid.UUID | None = None
+
+    async def most_recent_for_farm(self, farm_id):
+        self.asked_for = farm_id
+        return self._w
+
+    # unused by the builder but required by the Protocol
+    async def save(self, reading):  # pragma: no cover
+        return 1
+
+    async def latest_for_node(self, master_node_id, limit):  # pragma: no cover
+        return []
+
+    async def most_recent(self, master_node_id):  # pragma: no cover
+        return None
+
+
 @pytest.mark.asyncio
 async def test_every_declared_field_is_a_dict_key() -> None:
     """The engine's DSL parser rejects unknown fields; every declared field
@@ -194,6 +228,45 @@ async def test_missing_reading_yields_unknowns() -> None:
     assert state.state["battery_voltage_v"] is None
     # DAP comes from season, still populated
     assert state.state["dap"] == 63
+
+
+@pytest.mark.asyncio
+async def test_fills_weather_and_computes_vpd() -> None:
+    """When a weather repo is present, air temp/humidity and derived VPD fill."""
+    declared = frozenset({"air_temp_max_c", "air_temp_min_c", "rh_pct", "dew_point_c", "vpd_kpa"})
+    wrepo = _FakeWeatherRepo(_sample_weather())
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(_sample_reading()),
+        plot_repo=_FakePlotRepo(),
+        crop_season_repo=_FakeSeasonRepo(_sample_season()),
+        weather_station_reading_repo=wrepo,
+        declared_fields=declared,
+    )
+    state = await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)
+    assert wrepo.asked_for == _FARM  # resolved via the active season's farm
+    assert state.state["air_temp_max_c"] == Decimal("32")
+    assert state.state["rh_pct"] == Decimal("55")  # aliased from humidity_pct
+    assert state.state["dew_point_c"] == Decimal("18")
+    # vpd at 32 C / 55% RH ~ 2.14 kPa (above the 2.0 spray ceiling)
+    assert state.state["vpd_kpa"] is not None
+    assert Decimal("2.0") < state.state["vpd_kpa"] < Decimal("2.3")
+
+
+@pytest.mark.asyncio
+async def test_no_weather_repo_leaves_vpd_unknown() -> None:
+    """Without a weather repo, weather + VPD fields stay None (UNKNOWN)."""
+    declared = frozenset({"air_temp_max_c", "rh_pct", "vpd_kpa", "dap"})
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(_sample_reading()),
+        plot_repo=_FakePlotRepo(),
+        crop_season_repo=_FakeSeasonRepo(_sample_season()),
+        declared_fields=declared,
+    )
+    state = await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)
+    assert state.state["air_temp_max_c"] is None
+    assert state.state["rh_pct"] is None
+    assert state.state["vpd_kpa"] is None
+    assert state.state["dap"] == 63  # unaffected
 
 
 def test_synthetic_fields_constant() -> None:
