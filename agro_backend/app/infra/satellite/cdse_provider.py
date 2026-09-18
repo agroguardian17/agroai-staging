@@ -33,6 +33,10 @@ from app.application.ports.satellite_provider import (
 log = structlog.get_logger(__name__)
 
 _CRS_4326 = "http://www.opengis.net/def/crs/EPSG/0/4326"
+# resx/resy are in the bounds-CRS units (degrees for EPSG:4326). ~10 m at the
+# pilot's latitude is ~9e-5 degrees; this samples the plot at Sentinel
+# resolution instead of collapsing it to a single coarse pixel.
+_RES_DEG = 0.00009
 
 # Sentinel-2 L2A: NDVI, NDRE, NDMI, EVI, SAVI, NBR over cloud-masked pixels.
 # Output "data" carries the six indices (B0..B5). The "dataMask" output sets
@@ -194,8 +198,8 @@ class CdseSentinelHubProvider:
                 "timeRange": {"from": _iso(date_from), "to": _iso(date_to)},
                 "aggregationInterval": {"of": "P5D"},
                 "evalscript": evalscript,
-                "resx": 10,
-                "resy": 10,
+                "resx": _RES_DEG,
+                "resy": _RES_DEG,
             },
             "calculations": {"default": {}},
         }
