@@ -16,31 +16,34 @@ _GEOM = {
     "coordinates": [[[75.2, 20.1], [75.21, 20.1], [75.21, 20.11], [75.2, 20.1]]],
 }
 
+# Real Statistical API shape: no separate dataMask output; each band's stats
+# carry sampleCount/noDataCount, and cloudy pixels come back as "NaN" strings.
+def _stat(mean, sample=10, nodata=0, std=0.0):
+    return {"stats": {"mean": mean, "stDev": std, "sampleCount": sample, "noDataCount": nodata}}
+
+
 _OPTICAL_RESP = {
     "data": [
         {
+            # clear scene, 2 of 10 pixels masked → 80% valid
             "interval": {"from": "2026-07-01T00:00:00Z", "to": "2026-07-06T00:00:00Z"},
             "outputs": {
                 "data": {
                     "bands": {
-                        "B0": {"stats": {"mean": 0.55, "stDev": 0.05}},
-                        "B1": {"stats": {"mean": 0.30}},
-                        "B2": {"stats": {"mean": 0.40}},
-                        "B3": {"stats": {"mean": 1.20}},
-                        "B4": {"stats": {"mean": 0.50}},
-                        "B5": {"stats": {"mean": 0.20}},
+                        "B0": _stat(0.55, nodata=2, std=0.05),
+                        "B1": _stat(0.30, nodata=2),
+                        "B2": _stat(0.40, nodata=2),
+                        "B3": _stat(1.20, nodata=2),
+                        "B4": _stat(0.50, nodata=2),
+                        "B5": _stat(0.20, nodata=2),
                     }
-                },
-                "dataMask": {"bands": {"B0": {"stats": {"mean": 0.90}}}},
+                }
             },
         },
-        # fully-clouded interval → skipped
+        # fully-clouded interval → all NaN, noDataCount == sampleCount → skipped
         {
             "interval": {"from": "2026-07-06T00:00:00Z", "to": "2026-07-11T00:00:00Z"},
-            "outputs": {
-                "data": {"bands": {"B0": {"stats": {"mean": 0.0}}}},
-                "dataMask": {"bands": {"B0": {"stats": {"mean": 0.0}}}},
-            },
+            "outputs": {"data": {"bands": {"B0": _stat("NaN", sample=10, nodata=10)}}},
         },
     ]
 }
@@ -49,12 +52,7 @@ _SAR_RESP = {
     "data": [
         {
             "interval": {"from": "2026-07-02T00:00:00Z", "to": "2026-07-07T00:00:00Z"},
-            "outputs": {
-                "data": {
-                    "bands": {"B0": {"stats": {"mean": -9.5}}, "B1": {"stats": {"mean": -15.2}}}
-                },
-                "dataMask": {"bands": {"B0": {"stats": {"mean": 1.0}}}},
-            },
+            "outputs": {"data": {"bands": {"B0": _stat(-9.5), "B1": _stat(-15.2)}}},
         }
     ]
 }
@@ -84,14 +82,14 @@ async def test_optical_parses_indices_and_valid_pixels() -> None:
     obs = await provider.optical(
         geometry=_GEOM, date_from=datetime.date(2026, 7, 1), date_to=datetime.date(2026, 7, 20)
     )
-    assert len(obs) == 1  # the 0%-valid interval is dropped
+    assert len(obs) == 1  # the all-NaN interval is dropped
     o = obs[0]
     assert o.image_date == datetime.date(2026, 7, 1)
     assert o.ndvi_mean == 0.55
     assert o.ndvi_std == 0.05
     assert o.ndre_mean == 0.30
-    assert o.valid_pixel_pct == 90.0
-    assert o.cloud_cover_pct == 10.0
+    assert o.valid_pixel_pct == 80.0  # (10 - 2) / 10
+    assert o.cloud_cover_pct == 20.0
 
 
 @pytest.mark.asyncio
