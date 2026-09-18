@@ -54,6 +54,41 @@ _SQL_PATH = (
 _VPD_FARM_BRAIN_FIELDS = ("vpd_kpa", "vpd_night_mean_kpa", "spray_scheduled_today")
 
 
+# The D14/VPD rules use recoverability='same_season', a class the 0010 CHECK
+# (none/partial/full) omits. Widen it before loading the delta. The DO block
+# discovers the existing CHECK by name (it is an inline, auto-named constraint)
+# so the swap works regardless of the exact generated name.
+_WIDEN_RECOVERABILITY_CHECK = """
+DO $$
+DECLARE cname text;
+BEGIN
+    SELECT conname INTO cname FROM pg_constraint
+     WHERE conrelid = 'kb_rules'::regclass AND contype = 'c'
+       AND pg_get_constraintdef(oid) ILIKE '%recoverability%';
+    IF cname IS NOT NULL THEN
+        EXECUTE format('ALTER TABLE kb_rules DROP CONSTRAINT %I', cname);
+    END IF;
+    ALTER TABLE kb_rules ADD CONSTRAINT kb_rules_recoverability_check
+        CHECK (recoverability IN ('none', 'partial', 'full', 'same_season'));
+END $$;
+"""
+
+_NARROW_RECOVERABILITY_CHECK = """
+DO $$
+DECLARE cname text;
+BEGIN
+    SELECT conname INTO cname FROM pg_constraint
+     WHERE conrelid = 'kb_rules'::regclass AND contype = 'c'
+       AND pg_get_constraintdef(oid) ILIKE '%recoverability%';
+    IF cname IS NOT NULL THEN
+        EXECUTE format('ALTER TABLE kb_rules DROP CONSTRAINT %I', cname);
+    END IF;
+    ALTER TABLE kb_rules ADD CONSTRAINT kb_rules_recoverability_check
+        CHECK (recoverability IN ('none', 'partial', 'full'));
+END $$;
+"""
+
+
 def upgrade() -> None:
     """Load the Domain 14 + VPD knowledge-base delta."""
     if not _SQL_PATH.exists():
@@ -62,6 +97,9 @@ def upgrade() -> None:
             "Ensure agro_backend/ginger/generated/agroguardian_ginger_kb_d14.sql "
             "is present."
         )
+    # Schema prep: admit the 'same_season' recoverability class the delta uses.
+    # (The delta itself adds the 'ALL' meta-stage row before its kb_rules INSERTs.)
+    op.execute(_WIDEN_RECOVERABILITY_CHECK)
     sql = _SQL_PATH.read_text(encoding="utf-8")
     op.execute(sql)
 
@@ -94,3 +132,7 @@ def downgrade() -> None:
     op.execute("DELETE FROM kb_domains WHERE domain_id = 14")
     # Restore the D07 counter to its pre-VPD value.
     op.execute("UPDATE kb_domains SET total_rules = 35 WHERE domain_id = 7 AND total_rules = 38")
+    # Remove the 'ALL' meta-stage the delta added (no rule references it now).
+    op.execute("DELETE FROM kb_stages WHERE stage_code = 'ALL'")
+    # Restore the narrower recoverability CHECK (no 'same_season' rows remain).
+    op.execute(_NARROW_RECOVERABILITY_CHECK)
