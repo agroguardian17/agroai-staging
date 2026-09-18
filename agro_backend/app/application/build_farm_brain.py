@@ -43,12 +43,28 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from app.application.ports.crop_season_repo import CropSeasonRepo, CropSeasonView
 from app.application.ports.plot_repo import PlotRepo
 from app.application.ports.reading_repo import ReadingRepo
+from app.application.ports.satellite_reading_repo import (
+    SOURCE_OPTICAL,
+    SOURCE_SAR,
+    SatelliteReadingRepo,
+    SatelliteScene,
+)
 from app.application.ports.weather_station_reading_repo import WeatherStationReadingRepo
+from app.domain.plot import Plot
+from app.domain.satellite_metrics import (
+    acre_to_hectare,
+    advisory_confidence_from_freshness,
+    baseline_gap,
+    index_delta,
+    ndvi_regional_baseline,
+    sar_rvi,
+)
 from app.domain.sensor import Reading
 from app.domain.vpd import vpd_kpa
 from app.domain.weather_station_reading import WeatherStationReading
@@ -85,6 +101,11 @@ class FarmBrainDeps:
     # weather-station fields (air temperature, humidity) and the derived
     # ``vpd_kpa`` used by the Domain 7 VPD rules. None keeps weather UNKNOWN.
     weather_station_reading_repo: WeatherStationReadingRepo | None = None
+    # Optional satellite source. When present (and the plot has a boundary),
+    # the builder fills the Domain 14 optical/SAR index fields, deltas,
+    # freshness/confidence, baseline gap and plot polygon. None keeps them
+    # UNKNOWN so every D14 rule reports UNKNOWN (never fires).
+    satellite_reading_repo: SatelliteReadingRepo | None = None
     # The full ``kb_farm_brain_fields`` set. Injected so tests can pin a
     # subset; the daily job reads it from the database at startup.
     declared_fields: frozenset[str] = field(default_factory=frozenset)
@@ -145,6 +166,16 @@ async def build_farm_brain(
         weather = await deps.weather_station_reading_repo.most_recent_for_farm(season.farm_id)
         if weather is not None:
             _populate_from_weather(state, weather)
+
+    # ---- Satellite (Domain 14 optical + SAR indices) -------------------
+    # Reads the recent scenes per source, plus the plot boundary for the
+    # polygon/area gates. Computes deltas, freshness, confidence and the
+    # baseline gap from the pure satellite-metrics helpers.
+    if deps.satellite_reading_repo is not None:
+        optical = await deps.satellite_reading_repo.recent(plot_id, SOURCE_OPTICAL, limit=6)
+        sar = await deps.satellite_reading_repo.recent(plot_id, SOURCE_SAR, limit=6)
+        plot = await deps.plot_repo.find(plot_id)
+        _populate_from_satellite(state, optical, sar, plot, today)
 
     # ---- Synthetic ------------------------------------------------------
     state["current_month"] = today.month
@@ -230,6 +261,102 @@ def _populate_from_weather(state: dict[str, Any], w: WeatherStationReading) -> N
     _set(state, "humidity_pct", w.humidity_pct)
     _set(state, "dew_point_c", w.dew_point_c)
     _set(state, "vpd_kpa", vpd_kpa(w.air_temp_max_c, w.humidity_pct))
+
+
+def _geojson_polygon_to_wkt(geojson: Any) -> str | None:
+    """Convert a GeoJSON Polygon dict to a WKT string (pure, no shapely).
+
+    D14-PL-001 only cares that ``plot_polygon_wkt`` is non-null when a boundary
+    exists; the fetch adapter reads the raw GeoJSON separately. Returns ``None``
+    for anything that is not a well-formed Polygon.
+    """
+    if not isinstance(geojson, dict) or geojson.get("type") != "Polygon":
+        return None
+    coords = geojson.get("coordinates")
+    if not isinstance(coords, list) or not coords:
+        return None
+    rings: list[str] = []
+    for ring in coords:
+        pts = ", ".join(
+            f"{pt[0]} {pt[1]}" for pt in ring if isinstance(pt, list | tuple) and len(pt) >= 2
+        )
+        if pts:
+            rings.append(f"({pts})")
+    return f"POLYGON({', '.join(rings)})" if rings else None
+
+
+def _scene_before(
+    scenes: list[SatelliteScene], latest_date: date, min_days: int
+) -> SatelliteScene | None:
+    """Most-recent scene at least ``min_days`` older than ``latest_date``.
+
+    ``scenes`` is most-recent-first; used to pick the comparison scene for a
+    day-over-day delta (scenes arrive ~5 days apart, so this approximates the
+    rule's 10-day / 5-day windows).
+    """
+    for s in scenes:
+        if (latest_date - s.image_date).days >= min_days:
+            return s
+    return None
+
+
+def _populate_from_satellite(
+    state: dict[str, Any],
+    optical: list[SatelliteScene],
+    sar: list[SatelliteScene],
+    plot: Plot | None,
+    today: date,
+) -> None:
+    """Fill the Domain 14 optical/SAR fields, deltas, freshness and baseline gap."""
+    # Plot boundary gates (D14-PL-001 blocks all D14 output without these).
+    if plot is not None:
+        _set(state, "plot_polygon_wkt", _geojson_polygon_to_wkt(plot.gps_boundary_geojson))
+        _set(state, "plot_area_ha", acre_to_hectare(plot.area_acre))
+
+    if optical:
+        o = optical[0]
+        _set(state, "sat_source", o.satellite_source)
+        _set(state, "ndvi_mean", o.ndvi_mean)
+        _set(state, "ndvi_std", o.ndvi_std)
+        _set(state, "ndre_mean", o.ndre_mean)
+        _set(state, "ndmi_mean", o.ndmi_mean)
+        _set(state, "evi_mean", o.evi_mean)
+        _set(state, "savi_mean", o.savi_mean)
+        _set(state, "nbr_mean", o.nbr_value)
+        _set(state, "plot_cloud_pct", o.cloud_cover_pct)
+        _set(state, "scene_valid_pixel_pct", o.valid_pixel_pct)
+        _set(state, "sat_pipeline_version", o.pipeline_version)
+        fresh = (today - o.image_date).days
+        _set(state, "ndvi_freshness_days", fresh)
+        _set(state, "optical_gap_days", fresh)
+        _set(state, "sat_advisory_confidence", advisory_confidence_from_freshness(fresh))
+        prev10 = _scene_before(optical, o.image_date, 7)
+        if prev10 is not None:
+            _set(state, "ndvi_delta_10d", index_delta(o.ndvi_mean, prev10.ndvi_mean))
+            _set(state, "ndmi_delta_10d", index_delta(o.ndmi_mean, prev10.ndmi_mean))
+            _set(state, "nbr_delta_10d", index_delta(o.nbr_value, prev10.nbr_value))
+        prev5 = _scene_before(optical, o.image_date, 3)
+        if prev5 is not None:
+            d = index_delta(o.ndre_mean, prev5.ndre_mean)
+            days = (o.image_date - prev5.image_date).days or 1
+            if d is not None:
+                _set(state, "ndre_slope_5d", d / Decimal(days))
+        dap = state.get("dap")
+        base = ndvi_regional_baseline(dap) if isinstance(dap, int) else None
+        _set(state, "plot_ndvi_baseline_regional", base)
+        _set(state, "plot_ndvi_gap_regional", baseline_gap(o.ndvi_mean, base))
+
+    if sar:
+        s = sar[0]
+        _set(state, "sar_vv_db", s.sar_vv_db)
+        _set(state, "sar_vh_db", s.sar_vh_db)
+        rvi = s.sar_rvi if s.sar_rvi is not None else sar_rvi(s.sar_vv_db, s.sar_vh_db)
+        _set(state, "sar_rvi", rvi)
+        _set(state, "sar_coherence", s.sar_coherence)
+        _set(state, "sar_gap_days", (today - s.image_date).days)
+        prev_sar = _scene_before(sar, s.image_date, 1)
+        if prev_sar is not None:
+            _set(state, "sar_vv_delta_db", index_delta(s.sar_vv_db, prev_sar.sar_vv_db))
 
 
 def _set(state: dict[str, Any], key: str, value: object) -> None:

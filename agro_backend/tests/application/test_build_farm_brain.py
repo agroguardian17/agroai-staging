@@ -110,8 +110,11 @@ class _FakeReadingRepo:
 
 
 class _FakePlotRepo:
-    async def find(self, plot_id):  # pragma: no cover — not read today
-        return None
+    def __init__(self, plot=None) -> None:
+        self._plot = plot
+
+    async def find(self, plot_id):
+        return self._plot
 
     async def for_farmer(self, farmer_id):  # pragma: no cover
         return []
@@ -228,6 +231,134 @@ async def test_missing_reading_yields_unknowns() -> None:
     assert state.state["battery_voltage_v"] is None
     # DAP comes from season, still populated
     assert state.state["dap"] == 63
+
+
+def _sample_plot():
+    from app.domain.plot import Plot
+
+    return Plot(
+        plot_id="PLOT_PILOT_001",
+        tenant_id=_TENANT,
+        farm_id=_FARM,
+        plot_number=1,
+        area_acre=Decimal("1.0"),
+        gps_lat=20.10,
+        gps_lng=75.20,
+        irrigation_valve_id="V1",
+        data_tier="full",
+        plot_status="active",
+        gps_boundary_geojson={
+            "type": "Polygon",
+            "coordinates": [[[75.20, 20.10], [75.21, 20.10], [75.21, 20.11], [75.20, 20.10]]],
+        },
+    )
+
+
+class _FakeSatelliteRepo:
+    def __init__(self, optical, sar) -> None:
+        self._optical = optical
+        self._sar = sar
+
+    async def recent(self, plot_id, satellite_source, limit):
+        from app.application.ports.satellite_reading_repo import SOURCE_OPTICAL
+
+        return self._optical if satellite_source == SOURCE_OPTICAL else self._sar
+
+    async def save(self, **kwargs):  # pragma: no cover
+        return None
+
+
+@pytest.mark.asyncio
+async def test_fills_satellite_indices_deltas_and_polygon() -> None:
+    from datetime import timedelta
+
+    from app.application.ports.satellite_reading_repo import (
+        SOURCE_OPTICAL,
+        SOURCE_SAR,
+        SatelliteScene,
+    )
+
+    today = date(2026, 8, 3)  # dap = 63 for the sample season
+    opt_latest = SatelliteScene(
+        image_date=today - timedelta(days=3),
+        satellite_source=SOURCE_OPTICAL,
+        ndvi_mean=Decimal("0.50"),
+        ndmi_mean=Decimal("0.40"),
+        nbr_value=Decimal("0.30"),
+        ndre_mean=Decimal("0.35"),
+        valid_pixel_pct=Decimal("72"),
+        cloud_cover_pct=Decimal("8"),
+        pipeline_version="cdse-1.0",
+    )
+    opt_prev = SatelliteScene(
+        image_date=today - timedelta(days=13),
+        satellite_source=SOURCE_OPTICAL,
+        ndvi_mean=Decimal("0.62"),
+        ndmi_mean=Decimal("0.50"),
+        nbr_value=Decimal("0.35"),
+        ndre_mean=Decimal("0.40"),
+    )
+    sar_latest = SatelliteScene(
+        image_date=today - timedelta(days=4),
+        satellite_source=SOURCE_SAR,
+        sar_vv_db=Decimal("-9"),
+        sar_vh_db=Decimal("-15"),
+    )
+    declared = frozenset(
+        {
+            "dap",
+            "ndvi_mean",
+            "scene_valid_pixel_pct",
+            "ndvi_freshness_days",
+            "sat_advisory_confidence",
+            "ndvi_delta_10d",
+            "plot_ndvi_baseline_regional",
+            "plot_ndvi_gap_regional",
+            "plot_polygon_wkt",
+            "plot_area_ha",
+            "sar_vv_db",
+            "sar_rvi",
+            "sar_gap_days",
+        }
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(_sample_reading()),
+        plot_repo=_FakePlotRepo(_sample_plot()),
+        crop_season_repo=_FakeSeasonRepo(_sample_season()),
+        satellite_reading_repo=_FakeSatelliteRepo([opt_latest, opt_prev], [sar_latest]),
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    assert state["ndvi_mean"] == Decimal("0.50")
+    assert state["scene_valid_pixel_pct"] == Decimal("72")
+    assert state["ndvi_freshness_days"] == 3
+    assert state["sat_advisory_confidence"] == Decimal("1")  # fresh scene
+    assert state["ndvi_delta_10d"] == Decimal("-0.12")  # 0.50 - 0.62
+    assert state["plot_ndvi_baseline_regional"] is not None  # DAP 63 -> ~0.45
+    assert state["plot_ndvi_gap_regional"] is not None
+    assert state["plot_polygon_wkt"] is not None and state["plot_polygon_wkt"].startswith("POLYGON")
+    assert state["plot_area_ha"] == Decimal("0.4047")
+    assert state["sar_vv_db"] == Decimal("-9")
+    assert state["sar_rvi"] is not None  # computed from VV/VH
+    assert state["sar_gap_days"] == 4
+
+
+@pytest.mark.asyncio
+async def test_no_satellite_repo_leaves_d14_unknown() -> None:
+    declared = frozenset({"ndvi_mean", "plot_polygon_wkt", "sat_advisory_confidence", "dap"})
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(_sample_reading()),
+        plot_repo=_FakePlotRepo(),
+        crop_season_repo=_FakeSeasonRepo(_sample_season()),
+        declared_fields=declared,
+    )
+    state = (
+        await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)
+    ).state
+    assert state["ndvi_mean"] is None
+    assert state["plot_polygon_wkt"] is None
+    assert state["sat_advisory_confidence"] is None
+    assert state["dap"] == 63
 
 
 @pytest.mark.asyncio
