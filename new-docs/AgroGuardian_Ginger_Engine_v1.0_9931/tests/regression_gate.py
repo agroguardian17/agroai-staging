@@ -104,9 +104,17 @@ def coverage():
     from triggers_wave1 import TRIGGERS as W1
     from triggers_wave2 import TRIGGERS_W2 as W2
     from triggers_wave3 import TRIGGERS_W3 as W3
+    try:
+        from triggers_wave4_vpd import TRIGGERS_W4 as W4
+    except ImportError:
+        W4 = {}
+    try:
+        from triggers_wave5_d14 import TRIGGERS_W5 as W5
+    except ImportError:
+        W5 = {}
     from notification_policy import DELIVERY
-    T = {**W1, **W2, **W3}
-    files = ['Domain1_Rules_Ginger_v2.json'] + [f'Domain{i}_Rules_Ginger.json' for i in range(2, 14)]
+    T = {**W1, **W2, **W3, **W4, **W5}
+    files = ['Domain1_Rules_Ginger_v2.json'] + [f'Domain{i}_Rules_Ginger.json' for i in range(2, 15)]
     rules = {}
     for fn in files:
         d = json.loads(Path(fn).read_text(encoding='utf-8'))

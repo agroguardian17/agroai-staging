@@ -48,7 +48,7 @@ from notification_policy import (ONCE_UNTIL_RESOLVED, EVENT, WINDOW, SILENT_GUAR
 
 class JsonSource:
     FILES = ['Domain1_Rules_Ginger_v2.json'] + \
-            [f'Domain{i}_Rules_Ginger.json' for i in range(2, 14)]
+            [f'Domain{i}_Rules_Ginger.json' for i in range(2, 15)]
 
     def __init__(self, root='.'):
         self.root = Path(root)

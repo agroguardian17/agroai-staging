@@ -23,7 +23,15 @@ data = JsonSource().load()
 from triggers_wave1 import TRIGGERS as W1
 from triggers_wave2 import TRIGGERS_W2 as W2
 from triggers_wave3 import TRIGGERS_W3 as W3
-T = {**W1, **W2, **W3}
+try:
+    from triggers_wave4_vpd import TRIGGERS_W4 as W4
+except ImportError:
+    W4 = {}
+try:
+    from triggers_wave5_d14 import TRIGGERS_W5 as W5
+except ImportError:
+    W5 = {}
+T = {**W1, **W2, **W3, **W4, **W5}
 mismatch = [k for k, v in T.items() if data['triggers'].get(k) != v['expr']]
 check("trigger expressions जुळतात", not mismatch, f"{len(mismatch)}: {mismatch[:5]}")
 check("संख्या जुळते", len(T) == len(data['triggers']),
