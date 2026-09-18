@@ -15,9 +15,10 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Protocol, runtime_checkable
 
-# Canonical satellite_source values.
-SOURCE_OPTICAL = "sentinel-2"
-SOURCE_SAR = "sentinel-1"
+# Canonical satellite_source values. These must match the satellite_data
+# CHECK constraint from migration 0001 (no hyphen): 'sentinel2'/'sentinel1'/…
+SOURCE_OPTICAL = "sentinel2"
+SOURCE_SAR = "sentinel1"
 
 
 @dataclass(frozen=True, slots=True)

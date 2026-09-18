@@ -294,11 +294,14 @@ def _parse_optical(item: dict[str, Any]) -> OpticalObservation | None:
     valid = _valid_fraction(item)
     if valid is not None and valid <= 0:
         return None  # fully clouded / empty interval
+    ndvi = _mean(data, "B0")
+    if ndvi is None:
+        return None  # no usable optical data in this interval — do not store
     valid_pct = None if valid is None else round(valid * 100, 2)
     cloud_pct = None if valid is None else round((1 - valid) * 100, 2)
     return OpticalObservation(
         image_date=d,
-        ndvi_mean=_mean(data, "B0"),
+        ndvi_mean=ndvi,
         ndvi_std=_std(data, "B0"),
         ndre_mean=_mean(data, "B1"),
         ndmi_mean=_mean(data, "B2"),
@@ -318,7 +321,11 @@ def _parse_sar(item: dict[str, Any]) -> SarObservation | None:
     valid = _valid_fraction(item)
     if valid is not None and valid <= 0:
         return None
-    return SarObservation(image_date=d, sar_vv_db=_mean(data, "B0"), sar_vh_db=_mean(data, "B1"))
+    vv = _mean(data, "B0")
+    vh = _mean(data, "B1")
+    if vv is None and vh is None:
+        return None  # no usable SAR data in this interval — do not store
+    return SarObservation(image_date=d, sar_vv_db=vv, sar_vh_db=vh)
 
 
 __all__ = ["CdseSentinelHubProvider", "CdseSettings"]

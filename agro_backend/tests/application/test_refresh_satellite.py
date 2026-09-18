@@ -110,8 +110,8 @@ async def test_fetches_and_saves_for_plot_with_polygon() -> None:
     assert res.skipped_no_polygon == 0
     assert res.optical_scenes == 1
     assert res.sar_scenes == 1
-    assert ("PLOT_PILOT_001", "sentinel-2") in repo.saved
-    assert ("PLOT_PILOT_001", "sentinel-1") in repo.saved
+    assert ("PLOT_PILOT_001", "sentinel2") in repo.saved
+    assert ("PLOT_PILOT_001", "sentinel1") in repo.saved
 
 
 @pytest.mark.asyncio
