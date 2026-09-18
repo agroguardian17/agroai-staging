@@ -53,6 +53,10 @@ from app.jobs.learning_scheduler import (
     build_and_start_learning_scheduler,
     stop_learning_scheduler,
 )
+from app.jobs.satellite_scheduler import (
+    build_and_start_satellite_scheduler,
+    stop_satellite_scheduler,
+)
 from app.lib import metrics
 from app.lib.logging import configure_logging
 
@@ -65,6 +69,7 @@ if TYPE_CHECKING:
     from app.jobs.advisory_subscriber import AdvisorySubscriberHandle
     from app.jobs.delivery_subscriber import DeliverySubscriberHandle
     from app.jobs.forecast_scheduler import ForecastSchedulerHandle
+    from app.jobs.satellite_scheduler import SatelliteSchedulerHandle
 
 log = structlog.get_logger(__name__)
 
@@ -93,6 +98,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     advisory: AdvisorySubscriberHandle | None = None
     delivery: DeliverySubscriberHandle | None = None
     forecast: ForecastSchedulerHandle | None = None
+    satellite: SatelliteSchedulerHandle | None = None
     learning: AsyncIOScheduler | None = None
     try:
         broker = await build_and_start_ingest(settings)
@@ -100,11 +106,14 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         advisory = await build_and_start_advisory_subscriber(settings)
         delivery = await build_and_start_delivery_subscriber(settings)
         forecast = await build_and_start_forecast_scheduler(settings)
+        satellite = await build_and_start_satellite_scheduler(settings)
         learning = await build_and_start_learning_scheduler(settings)
         yield
     finally:
         if learning is not None:
             await stop_learning_scheduler(learning)
+        if satellite is not None:
+            await stop_satellite_scheduler(satellite)
         if forecast is not None:
             await stop_forecast_scheduler(forecast)
         if delivery is not None:
