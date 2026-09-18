@@ -197,6 +197,13 @@ class Settings(BaseSettings):
     COPERNICUS_TOKEN_URL: str = (
         "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
     )
+    # Satellite fetch job (Domain 14). Off by default — enable once a CDSE
+    # OAuth client is provisioned and pilot plots have boundary polygons.
+    SATELLITE_JOB_ENABLED: bool = False
+    SATELLITE_JOB_HOUR: int = 2
+    SATELLITE_JOB_MINUTE: int = 30
+    SATELLITE_LOOKBACK_DAYS: int = 20
+    SATELLITE_PIPELINE_VERSION: str = "cdse-sh-1.0"
     NASA_EARTHDATA_USERNAME: str = ""
     NASA_EARTHDATA_PASSWORD: SecretStr = SecretStr("")
 
