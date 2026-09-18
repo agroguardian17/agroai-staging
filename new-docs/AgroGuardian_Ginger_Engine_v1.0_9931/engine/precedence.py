@@ -247,6 +247,36 @@ PRECEDENCE = [
  Relation('D02-ST-002', 'SEQUENCES', 'D02-DR-001',
    'The percolation test must be run before the drainage verdict is issued.',
    'निचऱ्याचा निर्णय देण्यापूर्वी खड्डा चाचणी झाली पाहिजे.'),
+
+ # --- D07-VP (VPD retrofit, Step 1) additions ----------------------------
+ Relation('D07-VP-002', 'BUNDLES', 'D07-HS-004',
+   'Both guards fire on the same scheduled foliar spray event. One field visit, one message: list temperature or rain, VPD, and the next recommended window together.',
+   'दोन्ही नियम एकाच फवारणी घटनेवर लागू होतात. एकाच शेतफेरीत एकच संदेश द्या — तापमान/पाऊस, VPD, आणि पुढील शिफारशीत वेळ एकत्र सांगा.'),
+
+ # --- D14 (Satellite & Remote Sensing) additions -------------------------
+ # BUNDLES — D14 confidence-tag rules ride on top of D03 scheduled-irrigation
+ # rather than emitting a separate farmer message. RAW MASTER §10.2.
+ Relation('D14-NM-003', 'BUNDLES', 'D03-SC-001',
+   'NM-003 supplies a canopy-moisture confirmation tag to the active D03 scheduled-irrigation rule rather than emitting a separate farmer message. §10.2 case C.',
+   'NM-003 सक्रिय D03 नियोजित सिंचन नियमाला canopy-moisture पुष्टी tag पुरवते — शेतकऱ्याला वेगळा संदेश नाही.'),
+
+ Relation('D14-LT-003', 'BUNDLES', 'D03-SC-001',
+   'LT-003 supplies a thermal confirmation tag to the active D03 irrigation rule. Same BUNDLES pattern as NM-003.',
+   'LT-003 सक्रिय D03 सिंचन नियमाला थर्मल पुष्टी tag जोडते. NM-003 सारखाच BUNDLES पॅटर्न.'),
+
+ Relation('D14-FU-002', 'BUNDLES', 'D03-SC-001',
+   'FU-002 supplies an early-action-window leading-indicator tag to the active D03 irrigation rule. Sub-node calls; satellite canopy has not yet been punished — acting now avoids the punishment. §10.2 case B.',
+   'FU-002 सक्रिय D03 सिंचन नियमाला early-action-window leading indicator tag जोडते. §10.2 case B.'),
+
+ # SEQUENCES — D14 anomaly triggers stage D06 differential branches for the
+ # returning scout report. Both fire in order; satellite opens, D06 closes.
+ Relation('D14-NV-004', 'SEQUENCES', 'D06-DX-001',
+   'A sharp satellite NDVI drop triggers an urgent scout AND stages the D06 differential-diagnosis branch for the returning scout report. Both fire in order.',
+   'उपग्रह-दिसणारी झपाट्याने NDVI घसरण urgent scout चालवते आणि scout अहवाल परत आल्यावर D06 differential branch तयार ठेवते. दोन्ही क्रमाने चालतात.'),
+
+ Relation('D14-SR-002', 'SEQUENCES', 'D06-SW-003',
+   'SAR-detected standing water after heavy rain triggers URGENT drainage advisory AND stages D06 post-monsoon saturation branch. SR-002 acts immediately; D06-SW-003 handles downstream rot-risk.',
+   'SAR-वरून पाणी साचणे URGENT निचरा सल्ला चालवते आणि D06 post-monsoon saturation branch ला क्रमाने तयार करते.'),
 ]
 
 

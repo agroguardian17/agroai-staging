@@ -80,6 +80,18 @@ IMMUTABLE = {
     'D08-GR-003': 'Naming a commercial brand creates a conflict the platform cannot carry.',
     # profit guarantees
     'D13-AD-002': 'The engine does not guarantee profit or forecast prices.',
+
+    # --- D14 (Satellite & Remote Sensing) additions -------------------------
+    # prohibited customer claims — RAW MASTER §16.1, §5
+    'D14-POS-001': 'The underground rhizome is invisible to every current satellite. Claiming otherwise mis-sells the platform and hides the D06 blind spot.',
+    'D14-POS-002': 'Canopy senescence signals a stage window, not maturity precision. Harvest timing is a D09 rule.',
+    'D14-POS-003': 'Yield prediction is prohibited to customers under D12. Satellite-derived estimates carry the same prohibition.',
+    'D14-POS-004': 'Plant count from 10 m Sentinel-2 pixels is not physically possible.',
+    'D14-POS-005': 'Cloud is a real problem; SAR reduces but does not eliminate the gap. Honesty required.',
+    'D14-POS-006': 'Sub-node sensors are the authority on root-zone moisture and EC. Satellite provides context, never replacement. Cardinal principle §1.4.',
+    'D14-POS-007': 'Satellite revisit is 5-20 days depending on cloud. Freshness varies and must be shown.',
+    # DPDP display guard
+    'D14-DP-001': 'Displaying a plot-level satellite derivative outside the plot owner without consent is a DPDP Act 2023 violation. Aggregate first.',
 }
 
 OVERRIDE_KINDS = ('THRESHOLD', 'DELIVERY', 'SEVERITY', 'DISABLE', 'PARAMETER')
@@ -291,7 +303,7 @@ class OverrideStore:
 
 def load_rules():
     from pathlib import Path
-    files = ['Domain1_Rules_Ginger_v2.json'] + [f'Domain{i}_Rules_Ginger.json' for i in range(2, 14)]
+    files = ['Domain1_Rules_Ginger_v2.json'] + [f'Domain{i}_Rules_Ginger.json' for i in range(2, 15)]
     rules = {}
     for fn in files:
         d = json.loads(Path(fn).read_text(encoding='utf-8'))
