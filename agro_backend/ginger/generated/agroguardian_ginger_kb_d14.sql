@@ -2,6 +2,16 @@
 -- Extracted from kb_ginger_d14_v1.0.sql; data-only, idempotent.
 -- Tables/indexes/trigger already exist (migration 0010).
 
+-- 'ALL' meta-stage. Every D14/VPD rule carries stage_code='ALL' (applies in
+-- any growth stage), but the delivered full build omitted this kb_stages row,
+-- so kb_rules.stage_code -> kb_stages(stage_code) would FK-fail. Add it here
+-- (ahead of the rules) so the rules load. Its metadata is a full-season
+-- catch-all; no rule keys off this row's fields (stage gating is in the DSL
+-- trigger_expr, not this column).
+INSERT INTO kb_stages (stage_code, name_en, name_mr, dap_start, dap_end, criticality, critical_irrigation, recoverable) VALUES
+ ('ALL', 'all_stages', 'सर्व अवस्था', -60, 240, 'medium', FALSE, 'none')
+ON CONFLICT (stage_code) DO NOTHING;
+
 INSERT INTO kb_domains (domain_id,name_en,name_mr,crop,source_document,version,status,agronomist_validated,total_rules,review_by,purpose,central_finding,author_note) VALUES
  (14, 'Satellite & Remote Sensing Intelligence', 'उपग्रह व दूरसंवेदन बुद्धिमत्ता', 'ginger', NULL, 'draft-1.0', 'PHASE_1_RAW_UNVALIDATED', FALSE, 47, NULL, NULL, NULL, NULL)
 ON CONFLICT (domain_id) DO NOTHING;
