@@ -14,7 +14,8 @@
         "HU": "humidity, fog and leaf wetness",
         "WS": "weather station measurement",
         "BC": "bias correction and forecast handling",
-        "CC": "climate change trends"
+        "CC": "climate change trends",
+        "VP": "vapour pressure deficit — transpiration and spray-efficacy driver derived from air temperature and relative humidity"
       },
       "new_farm_brain_fields": {
         "station_id": "string",
@@ -33,7 +34,10 @@
         "heat_stress_days_count": "integer",
         "fog_observed": "boolean",
         "season_water_plan_basis": "enum:[poor_year, average_year, good_year]",
-        "station_data_age_hours": "number — hours since the last weather station reading; above 24 the station is treated as down"
+        "station_data_age_hours": "number — hours since the last weather station reading; above 24 the station is treated as down",
+        "vpd_kpa": "number — vapour pressure deficit in kilopascals; derived from air_temp_max_c and rh_pct via Tetens' equation; 0.8–1.5 kPa is the plant-friendly band",
+        "vpd_night_mean_kpa": "number — mean nighttime VPD (2200–0600 local) in kilopascals; below 0.3 signals almost certain dew and leaf wetness",
+        "spray_scheduled_today": "boolean — true when a foliar spray of any kind is queued for the current day; used by SILENT_GUARD rules to check safety before the recommendation leaves the engine"
       },
       "constants": {
         "kannad_latitude": 20.27,
@@ -46,7 +50,12 @@
         "years_below_lta_pct": 55,
         "recorded_max_temp_c": 45.9,
         "recorded_min_temp_c": 5.6,
-        "leaf_scorch_threshold_c": 35
+        "leaf_scorch_threshold_c": 35,
+        "vpd_spray_low_kpa": 0.4,
+        "vpd_spray_high_kpa": 2.0,
+        "vpd_optimum_low_kpa": 0.8,
+        "vpd_optimum_high_kpa": 1.5,
+        "vpd_dew_probable_kpa": 0.3
       },
       "decision_types": {
         "AUTO_DECISION": {
@@ -158,8 +167,8 @@
     "status": "PHASE_1_RAW_UNVALIDATED",
     "agronomist_validated": false,
     "validation_note": "Climate figures are from government gazetteer and published climate databases and are reliable at district level. Kannad taluka-specific rainfall and evaporation are not available and must come from the cluster station. The agro-climatic sub-zone assignment is an inference, not a confirmed classification.",
-    "total_rules": 35,
-    "rule_count_note": "30 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count.",
+    "total_rules": 38,
+    "rule_count_note": "30 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count. | 2026-09-17: +3 rules (D07-VP-001/002/003) added under VP category — VPD retrofit, additive-only.",
     "review_by": null,
     "review_note": "Climate normals are stable. The declining rainfall trend means historical averages will drift, so the safety margin should be reviewed every few seasons rather than the rules themselves.",
     "purpose": "Weather is not one domain among several — it is the input to all the others. Stage timing, daily water requirement, pest pressure and disease triggers all resolve to weather variables. This domain establishes what the Kannad climate actually is, where it conflicts with ginger, and what the cluster station must measure.",
@@ -193,8 +202,16 @@
     "review_log": {
       "tier_1_review_date": "2026-07-31",
       "rules_reviewed": 1,
-      "rules_total": 35,
-      "note": "Rule-level status is authoritative. Domain status stays PHASE_1_RAW_UNVALIDATED until T3 and T4 are also reviewed and one season of field data exists."
+      "rules_total": 38,
+      "note": "Rule-level status is authoritative. Domain status stays PHASE_1_RAW_UNVALIDATED until T3 and T4 are also reviewed and one season of field data exists.",
+      "change_log": [
+        {
+          "date": "2026-09-17",
+          "author": "kb_author",
+          "change": "VPD retrofit — additive only",
+          "detail": "Added VP category, 3 farm_brain fields (vpd_kpa, vpd_night_mean_kpa, spray_scheduled_today), 5 constants, vpd_context reference block, rules D07-VP-001/002/003, open_item D07-OI-09. Zero existing rules edited. Precedence: 1 BUNDLES entry added in Domain 11 (VP-002 with HS-004). Golden tests: 12 new."
+        }
+      ]
     }
   },
   "reference_data": {
@@ -741,6 +758,34 @@
         }
       ],
       "honest_limit": "We do not produce forecasts. Long range monsoon forecasting is IMD's work and has real limits. We measure actual local conditions, correct the public forecast for this village, and translate the result into a crop decision. The third of those is the most valuable because IMD reports weather but does not say what the crop should do."
+    },
+    "vpd_context": {
+      "what_it_is": "Vapour Pressure Deficit is the gap between how much moisture the air is holding and how much it could hold at the current temperature. It is the true driver of plant transpiration and of the drying-versus-evaporating fate of a spray droplet. Relative humidity alone does not carry this information: 80 percent RH at 20 C and 80 percent RH at 35 C are the same number and very different agronomic situations.",
+      "formula": {
+        "saturation_vapour_pressure_kpa": "e_s(T) = 0.6108 * exp( 17.27 * T / (T + 237.3) )",
+        "vpd_kpa": "e_s(T) * (1 - RH/100)",
+        "reference": "FAO-56 Penman–Monteith, chapter 3; Tetens 1930 formulation."
+      },
+      "bands_for_ginger": {
+        "below_0_4_kpa": "Saturating air. Droplets do not dry. Fungal spore germination window. Spraying now is worse than not spraying. Also a strong dew and leaf-wetness signal.",
+        "0_4_to_0_8_kpa": "Humid. Slow drying. Cover spray acceptable but efficacy reduced.",
+        "0_8_to_1_5_kpa": "Plant-friendly band. Best window for foliar operations. Normal transpiration.",
+        "1_5_to_2_0_kpa": "Dry. Droplets evaporate before uptake. Adjuvant helps; timing shift is cheaper.",
+        "above_2_0_kpa": "Water-stress territory. Transpiration exceeds root supply. Do not spray. Do not add fertigation load without checking soil moisture."
+      },
+      "why_it_is_not_a_disease_predictor_by_itself": "VPD refines existing humidity, leaf wetness and spray rules. It does not replace them. The soft-rot rule D07-HU-001 stays as the primary trigger. VPD is added as a confidence and safety layer, not as a competing alarm.",
+      "why_it_is_not_used_for_irrigation_here": "The Domain 3 water requirement is already driven by pan_evaporation_mm_day, which is itself a function of temperature, humidity, wind and radiation. VPD is one term inside that computation. Adding a second VPD-based irrigation rule would double-count the same physical signal — see architecture section 4 on count-once enforcement.",
+      "why_it_is_valuable_here": "Two decisions in the current knowledge base still turn on humidity alone. The spray-safety guard D07-HS-004 covers temperature and rain but not the two spray-failing humidity extremes. The winter foliar disease rule D07-HU-002 leans on an estimated leaf_wetness_hours field, and direct measurement is a logged capability gap (D07-OI-05). VPD closes both without moving the existing rules.",
+      "honest_limits": [
+        "Thresholds below are agronomic consensus for foliar crops, not ginger-specific. Season one field data revises them.",
+        "The computation is only as good as the temperature and humidity sensors. Above 24 hours of stale station data, D07-WS-004 already downgrades all weather-dependent advisory; VPD-derived rules inherit that downgrade.",
+        "Nighttime VPD requires a nighttime humidity reading. Sub-node sampling frequency at G2/G5 is four-hourly (see architecture section 14); at those stages the nighttime-mean field is a wider estimate and its rule confidence drops accordingly."
+      ],
+      "primary_sources": [
+        "FAO-56 Irrigation and Drainage Paper, chapter 3 (reference evapotranspiration)",
+        "Grantz 1990, Plant, Cell & Environment — VPD and stomatal conductance",
+        "Ministry of Agriculture, Government of India — Foliar spray timing guidelines"
+      ]
     }
   },
   "rules": [
@@ -3054,6 +3099,273 @@
       "status": "PHASE_1_RAW_UNVALIDATED",
       "immutable": false,
       "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D07-VP-001",
+      "category": "VP",
+      "priority": 4,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "A daily station reading is received AND both air_temp_max_c and rh_pct are present",
+        "marathi": "दिवसाची हवामान केंद्राची नोंद आली आणि कमाल तापमान व सापेक्ष आर्द्रता दोन्ही उपलब्ध आहेत",
+        "expr": "air_temp_max_c IS NOT NULL AND rh_pct IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Computation trigger. Produces vpd_kpa; consumed by D07-VP-002, D07-VP-003 and any downstream rule that reads the field. Nothing is emitted to the farmer.",
+        "golden_tests": [
+          {
+            "context": {
+              "air_temp_max_c": 30,
+              "rh_pct": 60
+            },
+            "expect": "TRUE",
+            "label": "compute vpd for a normal reading"
+          },
+          {
+            "context": {
+              "air_temp_max_c": 30,
+              "rh_pct": null
+            },
+            "expect": "UNKNOWN",
+            "label": "missing rh must not fire and must not read as false"
+          },
+          {
+            "context": {
+              "air_temp_max_c": null,
+              "rh_pct": 60
+            },
+            "expect": "UNKNOWN",
+            "label": "missing temperature must not fire and must not read as false"
+          }
+        ]
+      },
+      "action": {
+        "english": "Compute vpd_kpa = 0.6108 * exp(17.27 * air_temp_max_c / (air_temp_max_c + 237.3)) * (1 - rh_pct/100) and store it on the daily record. Also update vpd_night_mean_kpa from the nighttime hourly readings where available. Emit nothing to the farmer.",
+        "marathi": "vpd_kpa या नोंदीची गणना करा — Tetens समीकरणाने. रात्रीच्या तासांतील सरासरी vpd_night_mean_kpa सुद्धा नोंदवा. शेतकऱ्याला कोणतीही सूचना पाठवू नका — ही केवळ आतील गणना आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Relative humidity conflates two very different agronomic situations at different temperatures. VPD is the temperature-corrected form and is what plants and spray droplets actually respond to. Storing it once per day lets every downstream rule read the same value and lets the count-once check succeed.",
+        "yield_impact": "None directly. Enables D07-VP-002 (spray safety) and D07-VP-003 (leaf wetness confidence).",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "FAO-56 chapter 3, Penman–Monteith reference evapotranspiration",
+          "Tetens 1930, saturation vapour pressure equation"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_5_pest",
+          "domain_6_disease",
+          "domain_8_operations"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "air_temp_max_c",
+        "rh_pct",
+        "vpd_kpa",
+        "vpd_night_mean_kpa",
+        "station_data_age_hours"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "The cluster weather station already logs temperature and humidity, so VPD is arithmetic on the master unit and needs no new hardware. This closes a real gap without any capital cost.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D07-VP-002",
+      "category": "VP",
+      "priority": 4,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "A foliar spray is scheduled AND vpd_kpa is either below 0.4 or above 2.0",
+        "marathi": "फवारणी नियोजित आहे आणि vpd_kpa एकतर ०.४ पेक्षा कमी किंवा २.० पेक्षा जास्त आहे",
+        "expr": "spray_scheduled_today IS TRUE AND (vpd_kpa < 0.4 OR vpd_kpa > 2.0)",
+        "expr_version": "dsl-1.0",
+        "expr_note": "SILENT_GUARD — the rule only speaks when the spray recommendation is actually being sent. It bundles with D07-HS-004; one message, both reasons.",
+        "golden_tests": [
+          {
+            "context": {
+              "spray_scheduled_today": true,
+              "vpd_kpa": 0.25
+            },
+            "expect": "TRUE",
+            "label": "very humid — droplets will not dry, spray amplifies disease"
+          },
+          {
+            "context": {
+              "spray_scheduled_today": true,
+              "vpd_kpa": 2.4
+            },
+            "expect": "TRUE",
+            "label": "very dry — droplets evaporate before uptake"
+          },
+          {
+            "context": {
+              "spray_scheduled_today": true,
+              "vpd_kpa": 1.1
+            },
+            "expect": "FALSE",
+            "label": "plant-friendly band — no block"
+          },
+          {
+            "context": {
+              "spray_scheduled_today": false,
+              "vpd_kpa": 0.25
+            },
+            "expect": "FALSE",
+            "label": "no spray attempted — silent guard stays silent"
+          },
+          {
+            "context": {
+              "spray_scheduled_today": true,
+              "vpd_kpa": null
+            },
+            "expect": "UNKNOWN",
+            "label": "missing vpd — do not silently pass; report gap"
+          }
+        ]
+      },
+      "action": {
+        "english": "Delay the spray to the next window inside VPD 0.8 to 1.5 kPa, typically 2 to 4 hours later or the following morning. Below 0.4 kPa the droplets do not dry and disease pressure is amplified rather than reduced. Above 2.0 kPa evaporation is faster than uptake and effective dose collapses. If D07-HS-004 also fires, present one combined message: temperature or rain plus VPD, one recommended new window.",
+        "marathi": "फवारणी VPD ०.८ ते १.५ kPa च्या पट्ट्यात होईल अशा वेळेवर पुढे ढकला — बहुतेक वेळा २–४ तासांनी किंवा दुसऱ्या दिवशी सकाळी. VPD ०.४ पेक्षा कमी असेल तर थेंब वाळत नाहीत आणि रोगदाब कमी होण्याऐवजी वाढतो. VPD २.० च्या वर असेल तर पानांवर बसण्यापूर्वीच बाष्पीभवन होते आणि प्रभावी मात्रा खूप कमी होते. D07-HS-004 देखील लागू होत असल्यास एकच एकत्रित संदेश द्या — तापमान/पाऊस आणि VPD, एकच पुढील वेळ."
+      },
+      "reasoning": {
+        "agronomic_basis": "Spray efficacy is a function of droplet residence on the leaf, which in turn tracks VPD, not temperature or rainfall alone. D07-HS-004 catches high temperature and imminent rain but is blind to the two humidity extremes. This rule adds only that missing discrimination, without changing D07-HS-004's behaviour.",
+        "yield_impact": "Grouped under the existing spray-timing duplication group. Not counted separately; see v_u_values_deduplicated.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "Foliar spray drift and efficacy studies, ICAR-CPCRI 2019",
+          "FAO-56 chapter 3",
+          "Ministry of Agriculture, Government of India — spray timing guidelines"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient",
+          "domain_5_pest",
+          "domain_6_disease",
+          "domain_8_operations"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "spray_scheduled_today",
+        "vpd_kpa",
+        "air_temp_max_c",
+        "forecast_rain_48h_mm"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "DERIVED",
+      "kannad_note": "Marathwada's May pre-monsoon and December–February fog months hit both VPD extremes within the same season. Kannad's daytime maxima of 40+ C push VPD past 3.0 kPa, while pre-dawn winter fog drops it below 0.2 kPa. The two spray-failure windows are not exotic; they are the normal spring afternoon and the normal winter morning here.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D07-VP-003",
+      "category": "VP",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G4",
+      "trigger": {
+        "english": "vpd_night_mean_kpa is below 0.3 AND fog is not observed AND month is December, January or February",
+        "marathi": "रात्रीचा सरासरी VPD ०.३ पेक्षा कमी, धुके नोंदवलेले नाही, आणि महिना डिसेंबर–जानेवारी–फेब्रुवारी आहे",
+        "expr": "vpd_night_mean_kpa < 0.3 AND fog_observed IS FALSE AND MONTH IN [DEC, JAN, FEB]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "SILENT_GUARD — no farmer message. Tags the nightly leaf_wetness_hours estimate with high dew-probability confidence. Directly addresses the open capability gap D07-OI-05 without replacing the humidity-based rule D07-HU-002.",
+        "golden_tests": [
+          {
+            "context": {
+              "vpd_night_mean_kpa": 0.2,
+              "fog_observed": false,
+              "current_month": "JAN"
+            },
+            "expect": "TRUE",
+            "label": "cold clear night — dew almost certain even without fog observation"
+          },
+          {
+            "context": {
+              "vpd_night_mean_kpa": 0.2,
+              "fog_observed": true,
+              "current_month": "JAN"
+            },
+            "expect": "FALSE",
+            "label": "fog already recorded — D07-HU-002 has the signal, no tag needed"
+          },
+          {
+            "context": {
+              "vpd_night_mean_kpa": 0.6,
+              "fog_observed": false,
+              "current_month": "JAN"
+            },
+            "expect": "FALSE",
+            "label": "dry night — dew unlikely"
+          },
+          {
+            "context": {
+              "vpd_night_mean_kpa": 0.2,
+              "fog_observed": false,
+              "current_month": "JUL"
+            },
+            "expect": "FALSE",
+            "label": "monsoon — different disease season, driven by saturation not by dew"
+          }
+        ]
+      },
+      "action": {
+        "english": "Tag tonight's estimated leaf_wetness_hours with a high dew-probability confidence flag and log the reason (very low nighttime VPD with clear sky). Do not raise a new disease alert. If D07-HU-002 fires overnight or the next morning, the confidence flag travels with it. This is the interim substitute for the missing leaf wetness sensor logged as D07-OI-05.",
+        "marathi": "आजच्या रात्रीच्या अंदाजित leaf_wetness_hours नोंदीवर उच्च-दव-संभाव्यता ध्वज लावा आणि कारण नोंदवा (रात्रीचा VPD अत्यंत कमी, आकाश निरभ्र). नवीन रोग सूचना देऊ नका. रात्रभर किंवा सकाळी D07-HU-002 सुरू झाल्यास हा ध्वज त्याच्यासोबत जातो. हा पानावरील ओलावा सेन्सर बसेपर्यंतचा (D07-OI-05) तात्पुरता पर्याय आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Dew formation on ginger leaves requires the leaf surface to reach the dew point of the surrounding air. Low nighttime VPD means the air is already close to saturation and radiative cooling of the leaf will cross that threshold. Fog observations catch part of this signal; low VPD catches the other part, especially on cold clear nights when fog does not form but dew still soaks the canopy.",
+        "yield_impact": "None directly. Improves the reliability of D07-HU-002 and future disease-forecast rules that depend on it.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Grantz 1990, Plant, Cell & Environment",
+          "IMD Marathwada winter humidity records",
+          "Domain 6 leaf wetness estimation notes"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_6_disease",
+          "domain_7_weather"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "vpd_night_mean_kpa",
+        "fog_observed",
+        "leaf_wetness_hours",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "DERIVED",
+      "kannad_note": "Marathwada winter mornings are the local advantage for rhizome bulking mentioned in D07 key_innovations, but they are also when the second foliar disease season starts. VPD makes the dew half of that pattern measurable without waiting for a leaf wetness sensor purchase.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
     }
   ],
   "open_items": [
@@ -3117,10 +3429,18 @@
       "source_class": "VERIFY",
       "blocking": false,
       "note": "The risk is documented but not quantified, so the red alert threshold of 40 mm is a judgement."
+    },
+    {
+      "id": "D07-OI-09",
+      "item": "Local calibration of VPD spray-window thresholds (0.4 / 0.8 / 1.5 / 2.0 kPa) against season-one spray-outcome records",
+      "owner": "field trial, season 1",
+      "source_class": "EST",
+      "blocking": false,
+      "note": "Current thresholds are agronomic consensus for foliar crops in general. Ginger-specific and Kannad-specific values may shift by 0.1 to 0.2 kPa in either direction after one season of paired spray-and-outcome records."
     }
   ],
   "summary": {
-    "total_rules": 35,
+    "total_rules": 38,
     "by_category": {
       "RF": 5,
       "CL": 3,
@@ -3131,27 +3451,28 @@
       "HU": 4,
       "WS": 4,
       "BC": 3,
-      "CC": 3
+      "CC": 3,
+      "VP": 3
     },
     "by_priority": {
       "5": 10,
-      "4": 14,
-      "3": 8,
+      "4": 16,
+      "3": 9,
       "2": 3
     },
     "by_severity": {
       "red": 3,
-      "info": 22,
+      "info": 25,
       "yellow": 10
     },
     "by_source_tier": {
-      "A": 19,
-      "B": 16,
+      "A": 20,
+      "B": 18,
       "C": 0
     },
     "by_source_class": {
       "SRC-Q": 10,
-      "DERIVED": 12,
+      "DERIVED": 15,
       "EST": 6,
       "SRC-D": 6,
       "VERIFY": 1
@@ -3173,15 +3494,15 @@
     "highest_value_rule": "D07-RF-001",
     "blocking_open_items": 0,
     "by_decision_type": {
-      "SENSOR_ALERT": 24,
+      "SENSOR_ALERT": 25,
       "PLANNING_GUIDANCE": 5,
       "SCHEDULED_REMINDER": 2,
-      "AUTO_DECISION": 2,
+      "AUTO_DECISION": 4,
       "BLOCK": 2
     },
     "reviewed_t1": 1,
-    "rules_with_trigger_expr": 32,
-    "rules_with_delivery_class": 32,
+    "rules_with_trigger_expr": 35,
+    "rules_with_delivery_class": 35,
     "immutable_rules": 0
   },
   "next_steps": [
@@ -3189,7 +3510,8 @@
     "2. Start the forecast versus observed log from day one so bias correction has a record to accumulate (D07-BC-001)",
     "3. Confirm the agro-climatic sub-zone with VNMKV Parbhani (D07-OI-03)",
     "4. Build Domain 8 JSON inheriting the Domain 1 _schema block unchanged",
-    "5. Reconcile D07-CY-001 with D03-WL-003 and D06-SW-003 — all three fire on the same October and November cyclone event and must not produce three separate alerts"
+    "5. Reconcile D07-CY-001 with D03-WL-003 and D06-SW-003 — all three fire on the same October and November cyclone event and must not produce three separate alerts",
+    "6. Collect paired spray-attempt-and-outcome records in season 1 to calibrate the VPD thresholds in D07-VP-002 (currently EST); revise D07-OI-09"
   ],
   "author_note": "This file contains 30 rules because that is what the source document supports. The domain establishes three things the other domains depend on: that 55 percent of years fall below the long-term average so planning must assume a poor year; that the single climate mismatch is May, which concentrates all protective effort into the planting weeks; and that post-monsoon cyclonic rainfall arrives in October and November when the rhizome is formed and the drainage channels have been neglected. That last finding did not exist in Domains 3 or 6, both of which assumed the rainy season ends in September — which is the argument for having a weather domain rather than scattering weather facts through the others. The positioning rule D07-BC-002 is deliberate: we correct forecasts and translate them into crop decisions, and we do not claim to forecast. Status is PHASE_1_RAW_UNVALIDATED.",
   "legal": {

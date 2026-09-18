@@ -513,6 +513,48 @@
             "object": "D02-DR-001",
             "reason_en": "The percolation test must be run before the drainage verdict is issued.",
             "reason_mr": "निचऱ्याचा निर्णय देण्यापूर्वी खड्डा चाचणी झाली पाहिजे."
+          },
+          {
+            "subject": "D07-VP-002",
+            "relation": "BUNDLES",
+            "object": "D07-HS-004",
+            "reason_en": "Both guards fire on the same scheduled foliar spray event. One field visit, one message: list temperature or rain, VPD, and the next recommended window together.",
+            "reason_mr": "दोन्ही नियम एकाच फवारणी घटनेवर लागू होतात. एकाच शेतफेरीत एकच संदेश द्या — तापमान/पाऊस, VPD, आणि पुढील शिफारशीत वेळ एकत्र सांगा."
+          },
+          {
+            "subject": "D14-NM-003",
+            "relation": "BUNDLES",
+            "object": "D03-SC-001",
+            "reason_en": "NM-003 supplies a canopy-moisture confirmation tag to the active D03 scheduled-irrigation rule rather than emitting a separate farmer message. RAW MASTER §10.2 case C.",
+            "reason_mr": "NM-003 सक्रिय D03 नियोजित सिंचन नियमाला canopy-moisture पुष्टी tag पुरवते — शेतकऱ्याला वेगळा संदेश नाही. RAW MASTER §10.2 case C."
+          },
+          {
+            "subject": "D14-LT-003",
+            "relation": "BUNDLES",
+            "object": "D03-SC-001",
+            "reason_en": "LT-003 supplies a thermal confirmation tag to the active D03 irrigation rule. Same BUNDLES pattern as NM-003; both agree on the sub-node water story.",
+            "reason_mr": "LT-003 सक्रिय D03 सिंचन नियमाला थर्मल पुष्टी tag जोडते. NM-003 सारखाच BUNDLES पॅटर्न — दोन्ही सब-नोडच्या पाणी-कथेला दुजोरा देतात."
+          },
+          {
+            "subject": "D14-FU-002",
+            "relation": "BUNDLES",
+            "object": "D03-SC-001",
+            "reason_en": "FU-002 supplies an early-action-window leading-indicator tag to the active D03 irrigation rule. Sub-node says act; satellite canopy has not yet punished the plot — acting now avoids the punishment. RAW MASTER §10.2 case B.",
+            "reason_mr": "FU-002 सक्रिय D03 सिंचन नियमाला early-action-window leading indicator tag जोडते. सब-नोड कारवाई मागते; उपग्रह-पर्णसमूह अजून त्रास दाखवत नाही — आता कारवाई केल्यास पुढचा त्रास टळतो. §10.2 case B."
+          },
+          {
+            "subject": "D14-NV-004",
+            "relation": "SEQUENCES",
+            "object": "D06-DX-001",
+            "reason_en": "A sharp satellite NDVI drop triggers an urgent scout AND stages the D06 differential-diagnosis branch for the returning scout report. Both fire in order; the satellite alert opens the investigation, D06 closes it.",
+            "reason_mr": "उपग्रह-दिसणारी झपाट्याने NDVI घसरण urgent scout चालवते आणि scout अहवाल परत आल्यावर D06 differential-diagnosis branch तयार ठेवते. दोन्ही क्रमाने चालतात — उपग्रह तपासणी उघडतो, D06 ती बंद करतो."
+          },
+          {
+            "subject": "D14-SR-002",
+            "relation": "SEQUENCES",
+            "object": "D06-SW-003",
+            "reason_en": "SAR-detected standing water after heavy rain triggers URGENT drainage advisory AND stages D06's post-monsoon saturation branch. The SR-002 alert acts immediately; D06-SW-003 handles the downstream rot-risk assessment.",
+            "reason_mr": "SAR-वरून पाणी साचणे झपाट्याने URGENT निचरा सल्ला चालवते आणि D06 च्या post-monsoon saturation शाखेला क्रमाने तयार करते. SR-002 त्वरित कारवाई करते; D06-SW-003 पुढील कूज-जोखीम मूल्यांकन हाताळते."
           }
         ]
       },
@@ -598,6 +640,14 @@
       "News18 Marathi APMC 2026 (TIER B) - grading spread 2.7 times",
       "Directorate of Agriculture Maharashtra 2023 via AgriTimes (TIER A) - state average 13.2 t/ha, the validation reference",
       "Core Layer C9 (internal) - sub-additive method and prediction staging"
+    ],
+    "change_log": [
+      {
+        "date": "2026-09-17",
+        "author": "kb_author",
+        "change": "D14 satellite precedence entries",
+        "detail": "Added 5 precedence entries: 3 BUNDLES (D14 confidence tags → D03-SC-001), 2 SEQUENCES (D14 alerts → D06 branches). No SUPPRESSES/SUPERSEDES anywhere — satellite never silences an agronomic domain."
+      }
     ]
   },
   "reference_data": {
