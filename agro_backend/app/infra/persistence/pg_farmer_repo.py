@@ -8,7 +8,7 @@ from typing import Any, cast
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.application.ports.farmer_repo import FarmerIdentity
+from app.application.ports.farmer_repo import FarmerIdentity, FarmerLocation
 
 _SELECT_COLS = "farmer_id, tenant_id, phone_primary, full_name, language_preference, account_status"
 
@@ -49,6 +49,18 @@ class PgFarmerRepo:
             res = await session.execute(stmt, {"fid": farm_id})
             row = res.first()
         return None if row is None else cast(uuid.UUID, cast(Any, row).farmer_id)
+
+    async def find_location(self, farmer_id: uuid.UUID) -> FarmerLocation | None:
+        stmt = text(
+            "SELECT farmer_id, district, taluka FROM farmers WHERE farmer_id = :fid LIMIT 1"
+        )
+        async with self._sm() as session:
+            res = await session.execute(stmt, {"fid": farmer_id})
+            row = res.first()
+        if row is None:
+            return None
+        r: Any = row
+        return FarmerLocation(farmer_id=r.farmer_id, district=r.district, taluka=r.taluka)
 
 
 __all__ = ["PgFarmerRepo"]
