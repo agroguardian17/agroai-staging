@@ -69,6 +69,8 @@ COPY --chown=agro:agro scripts/dev/seed_pilot.py ./scripts/dev/seed_pilot.py
 # Keep the exact pilot-scope cleanup available for VPSes seeded before the
 # 2026-08-26 two-plot pilot cutover.
 COPY --chown=agro:agro scripts/dev/cleanup_stale_pilot_data.py ./scripts/dev/cleanup_stale_pilot_data.py
+# One-time loader for the pilot intake-sheet values (sources FI/FO/TECH/OPS/DEALER).
+COPY --chown=agro:agro scripts/dev/load_pilot_sheet.py ./scripts/dev/load_pilot_sheet.py
 COPY --chown=agro:agro pyproject.toml ./
 
 USER agro
