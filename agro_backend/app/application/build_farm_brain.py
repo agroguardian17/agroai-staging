@@ -47,6 +47,8 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from app.application.ports.crop_season_repo import CropSeasonRepo, CropSeasonView
+from app.application.ports.farm_repo import FarmFacts, FarmRepo
+from app.application.ports.farmer_repo import FarmerLocation, FarmerRepo
 from app.application.ports.plot_repo import PlotRepo
 from app.application.ports.reading_repo import ReadingRepo
 from app.application.ports.satellite_reading_repo import (
@@ -106,6 +108,11 @@ class FarmBrainDeps:
     # freshness/confidence, baseline gap and plot polygon. None keeps them
     # UNKNOWN so every D14 rule reports UNKNOWN (never fires).
     satellite_reading_repo: SatelliteReadingRepo | None = None
+    # Optional farm + farmer sources. When present the builder fills the
+    # plot/farm/farmer facts the KB reads (soil, water source, irrigation,
+    # district/taluka). None keeps them UNKNOWN.
+    farm_repo: FarmRepo | None = None
+    farmer_repo: FarmerRepo | None = None
     # The full ``kb_farm_brain_fields`` set. Injected so tests can pin a
     # subset; the daily job reads it from the database at startup.
     declared_fields: frozenset[str] = field(default_factory=frozenset)
@@ -154,9 +161,31 @@ async def build_farm_brain(
     if reading is not None:
         _populate_from_reading(state, reading)
 
+    # ---- Plot facts (area, id, soil override) --------------------------
+    # Fetched unconditionally (the satellite branch reuses this row).
+    plot = await deps.plot_repo.find(plot_id)
+    if plot is not None:
+        _populate_from_plot(state, plot)
+
     # ---- Crop season (stage + DAP + synthetic dates) -------------------
     season = await deps.crop_season_repo.find_active_for_plot(plot_id)
     _populate_from_season(state, season, today)
+
+    # ---- Farm facts (soil, water source, irrigation) ------------------
+    # Farm-level; resolve from the active season's farm.
+    if deps.farm_repo is not None and season is not None:
+        facts = await deps.farm_repo.find_facts(season.farm_id)
+        if facts is not None:
+            _populate_from_farm(state, facts)
+
+    # ---- Farmer location (district / taluka) --------------------------
+    if deps.farmer_repo is not None and season is not None:
+        owner = await deps.farmer_repo.owner_of_farm(season.farm_id)
+        if owner is not None:
+            _set(state, "farmer_id", str(owner))
+            loc = await deps.farmer_repo.find_location(owner)
+            if loc is not None:
+                _populate_from_farmer(state, loc)
 
     # ---- Weather station (air temp + humidity + derived VPD) -----------
     # Weather is farm-level; resolve it from the active season's farm. The
@@ -174,7 +203,6 @@ async def build_farm_brain(
     if deps.satellite_reading_repo is not None:
         optical = await deps.satellite_reading_repo.recent(plot_id, SOURCE_OPTICAL, limit=6)
         sar = await deps.satellite_reading_repo.recent(plot_id, SOURCE_SAR, limit=6)
-        plot = await deps.plot_repo.find(plot_id)
         _populate_from_satellite(state, optical, sar, plot, today)
 
     # ---- Synthetic ------------------------------------------------------
@@ -240,6 +268,14 @@ def _populate_from_season(
     _set(state, "crop_variety", season.crop_variety)
     _set(state, "sowing_date", season.sowing_date)
     _set(state, "expected_harvest_date", season.expected_harvest_date)
+    # KB-named counterparts (the engine reads these names, not the raw
+    # column names above): variety, planting_date, harvest_date, yields, cost.
+    _set(state, "variety", season.crop_variety)
+    _set(state, "planting_date", season.sowing_date)
+    _set(state, "harvest_date", season.actual_harvest_date)
+    _set(state, "seed_cost_per_kg", season.seed_cost_per_kg)
+    _set(state, "yield_target_quintal_per_acre", season.target_yield_qtl_per_acre)
+    _set(state, "yield_quintal_per_acre_actual", season.actual_yield_qtl_per_acre)
     if season.sowing_date:
         state["days_to_planting"] = (season.sowing_date - today).days
     if season.expected_harvest_date:
@@ -261,6 +297,46 @@ def _populate_from_weather(state: dict[str, Any], w: WeatherStationReading) -> N
     _set(state, "humidity_pct", w.humidity_pct)
     _set(state, "dew_point_c", w.dew_point_c)
     _set(state, "vpd_kpa", vpd_kpa(w.air_temp_max_c, w.humidity_pct))
+    # KB reads wind in m/s; the station stores km/h.
+    if w.wind_speed_kmh is not None:
+        _set(state, "wind_speed_ms", w.wind_speed_kmh / Decimal("3.6"))
+
+
+# DB ``farms.soil_type`` domain (black/red/sandy/loamy/mixed) → the KB's
+# ``soil_type`` enum (vertisol/loam/sandy_loam/laterite/other). Anything not
+# listed maps to ``other``. Agronomist to confirm red→laterite.
+_SOIL_TYPE_MAP = {
+    "black": "vertisol",
+    "loamy": "loam",
+    "sandy": "sandy_loam",
+    "red": "laterite",
+    "mixed": "other",
+}
+
+
+def _populate_from_plot(state: dict[str, Any], p: Plot) -> None:
+    """Fill plot-level facts the KB reads."""
+    _set(state, "area_acre", p.area_acre)
+    _set(state, "plot_id", p.plot_id)
+
+
+def _populate_from_farm(state: dict[str, Any], f: FarmFacts) -> None:
+    """Fill farm-level facts the KB reads (soil, water source, irrigation)."""
+    if f.soil_type is not None:
+        _set(state, "soil_type", _SOIL_TYPE_MAP.get(f.soil_type, "other"))
+    _set(state, "soil_depth_cm", f.soil_depth_cm)
+    _set(state, "water_source_type", f.water_source_primary)
+    _set(state, "dripper_lph", f.drip_emitter_lph)
+    if f.irrigation_type is not None:
+        _set(state, "has_drip", f.irrigation_type == "drip")
+    if isinstance(f.previous_crops_json, list):
+        _set(state, "previous_crops_3yr", f.previous_crops_json)
+
+
+def _populate_from_farmer(state: dict[str, Any], loc: FarmerLocation) -> None:
+    """Fill farmer administrative location (D10 scheme rules)."""
+    _set(state, "district", loc.district)
+    _set(state, "taluka", loc.taluka)
 
 
 def _geojson_polygon_to_wkt(geojson: Any) -> str | None:

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.application.ports.farm_repo import FarmLocation
+from app.application.ports.farm_repo import FarmFacts, FarmLocation
 
 
 class PgFarmRepo:
@@ -30,6 +31,27 @@ class PgFarmRepo:
                 )
             )
         return out
+
+    async def find_facts(self, farm_id: uuid.UUID) -> FarmFacts | None:
+        stmt = text(
+            "SELECT farm_id, soil_type, soil_depth_cm, water_source_primary, "
+            "irrigation_type, drip_emitter_lph, previous_crops_json "
+            "FROM farms WHERE farm_id = :farm_id"
+        )
+        async with self._sm() as session:
+            row = (await session.execute(stmt, {"farm_id": farm_id})).first()
+        if row is None:
+            return None
+        r: Any = row
+        return FarmFacts(
+            farm_id=r.farm_id,
+            soil_type=r.soil_type,
+            soil_depth_cm=r.soil_depth_cm,
+            water_source_primary=r.water_source_primary,
+            irrigation_type=r.irrigation_type,
+            drip_emitter_lph=r.drip_emitter_lph,
+            previous_crops_json=r.previous_crops_json,
+        )
 
 
 __all__ = ["PgFarmRepo"]

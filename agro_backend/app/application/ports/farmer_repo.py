@@ -27,6 +27,18 @@ class FarmerIdentity:
     account_status: str  # 'active' | 'inactive' | 'suspended'
 
 
+@dataclass(frozen=True, slots=True)
+class FarmerLocation:
+    """Administrative location a farmer sits in — read by the ginger KB
+    (D10 scheme/subsidy rules) via the farm-brain. Kept separate from
+    :class:`FarmerIdentity` so the auth path carries no extra address data.
+    """
+
+    farmer_id: uuid.UUID
+    district: str | None = None
+    taluka: str | None = None
+
+
 @runtime_checkable
 class FarmerRepo(Protocol):
     """Read-only farmer repo used by auth + read endpoints."""
@@ -43,5 +55,9 @@ class FarmerRepo(Protocol):
         """Return the farmer_id that owns this farm, or None if unknown."""
         ...
 
+    async def find_location(self, farmer_id: uuid.UUID) -> FarmerLocation | None:
+        """District/taluka for one farmer, or None if unknown."""
+        ...
 
-__all__ = ["FarmerIdentity", "FarmerRepo"]
+
+__all__ = ["FarmerIdentity", "FarmerLocation", "FarmerRepo"]

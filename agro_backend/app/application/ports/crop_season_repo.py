@@ -15,6 +15,7 @@ from __future__ import annotations
 import datetime
 import uuid
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Protocol, runtime_checkable
 
 
@@ -34,6 +35,12 @@ class CropSeasonView:
     expected_harvest_date: datetime.date
     current_growth_stage: str | None
     crop_age_days_today: int | None
+    # Extra season facts consumed by the ginger KB (Phase-1 field wiring).
+    # Nullable: back-fill / farmer-declared, absent on many rows.
+    actual_harvest_date: datetime.date | None = None
+    seed_cost_per_kg: Decimal | None = None
+    target_yield_qtl_per_acre: Decimal | None = None
+    actual_yield_qtl_per_acre: Decimal | None = None
 
 
 @runtime_checkable
