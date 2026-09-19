@@ -111,3 +111,31 @@ def healthy() -> tuple[bool, str]:
     except Exception as exc:  # pragma: no cover - surfaced in the UI
         return False, str(exc)[:200]
     return True, "connected"
+
+
+# ---------------------------------------------------------------------------
+# Write path — used ONLY by the Data Entry page.
+#
+# The engine above is hard read-only. The Data Entry page needs to persist the
+# pilot intake fields, so it uses this separate, write-capable engine. It is
+# deliberately NOT the default: every other page keeps the read-only guard.
+# ---------------------------------------------------------------------------
+
+
+@lru_cache(maxsize=1)
+def write_engine() -> Engine:
+    return create_engine(_url(), pool_pre_ping=True, pool_size=2, max_overflow=1)
+
+
+def fetch_row(sql: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    """One row as a dict (read via the write engine, so it sees uncommitted-free
+    fresh state and is never served from the 15 s read cache)."""
+    with write_engine().connect() as conn:
+        row = conn.execute(text(sql), params or {}).mappings().first()
+    return dict(row) if row is not None else None
+
+
+def execute_write(sql: str, params: dict[str, Any] | None = None) -> int:
+    """Run one parameterized write in its own transaction. Returns rowcount."""
+    with write_engine().begin() as conn:
+        return conn.execute(text(sql), params or {}).rowcount
