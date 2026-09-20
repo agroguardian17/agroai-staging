@@ -9,6 +9,8 @@ farm rather than aborting.
 from __future__ import annotations
 
 import datetime
+import math
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
 
@@ -28,6 +30,45 @@ _DAILY_VARS = (
     "et0_fao_evapotranspiration",
     "shortwave_radiation_sum",
 )
+_HOURLY_VARS = ("temperature_2m", "relative_humidity_2m")
+# Nighttime window (local hours) for VPD/fog aggregation.
+_NIGHT_HOURS = frozenset({22, 23, 0, 1, 2, 3, 4, 5})
+_FOG_RH_PCT = 98.0
+
+
+def _vpd_kpa(temp_c: float, rh_pct: float) -> float:
+    svp = 0.6108 * math.exp(17.27 * temp_c / (temp_c + 237.3))
+    return svp * (1.0 - rh_pct / 100.0)
+
+
+def _night_aggregates(hourly: dict[str, Any]) -> dict[datetime.date, tuple[float | None, bool]]:
+    """Per-date (mean nighttime VPD kPa, fog flag) from hourly temp + RH."""
+    times = hourly.get("time")
+    temps = hourly.get("temperature_2m")
+    rhs = hourly.get("relative_humidity_2m")
+    if not isinstance(times, list) or not isinstance(temps, list) or not isinstance(rhs, list):
+        return {}
+    vpds: dict[datetime.date, list[float]] = defaultdict(list)
+    fog: dict[datetime.date, bool] = defaultdict(bool)
+    for i, ts in enumerate(times):
+        try:
+            dt = datetime.datetime.fromisoformat(ts)
+        except (ValueError, TypeError):
+            continue
+        if dt.hour not in _NIGHT_HOURS:
+            continue
+        t = temps[i] if i < len(temps) else None
+        rh = rhs[i] if i < len(rhs) else None
+        if t is None or rh is None:
+            continue
+        # Hours 00-05 belong to that calendar date's night; 22-23 to the same date.
+        vpds[dt.date()].append(_vpd_kpa(float(t), float(rh)))
+        if float(rh) >= _FOG_RH_PCT:
+            fog[dt.date()] = True
+    out: dict[datetime.date, tuple[float | None, bool]] = {}
+    for d, vs in vpds.items():
+        out[d] = (round(sum(vs) / len(vs), 3) if vs else None, fog.get(d, False))
+    return out
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +93,7 @@ class OpenMeteoForecastProvider:
             "latitude": lat,
             "longitude": lng,
             "daily": ",".join(_DAILY_VARS),
+            "hourly": ",".join(_HOURLY_VARS),
             "timezone": "auto",
             "forecast_days": max(1, min(days, 16)),  # Open-Meteo caps at 16
             "past_days": max(0, min(past_days, 92)),  # Open-Meteo caps at 92
@@ -74,16 +116,20 @@ class OpenMeteoForecastProvider:
         if resp.status_code >= 400:
             raise ForecastError(f"http_{resp.status_code}: {resp.text[:200]}")
         try:
-            daily = resp.json()["daily"]
+            body = resp.json()
+            daily = body["daily"]
             dates = daily["time"]
         except Exception as exc:
             raise ForecastError(f"bad_shape: {exc}") from exc
 
+        night = _night_aggregates(body.get("hourly", {}) if isinstance(body, dict) else {})
         out: list[DailyForecast] = []
         for i, day in enumerate(dates):
+            d = datetime.date.fromisoformat(day)
+            vpd_night, fog = night.get(d, (None, None))
             out.append(
                 DailyForecast(
-                    forecast_for_date=datetime.date.fromisoformat(day),
+                    forecast_for_date=d,
                     temp_max_c=_f(_at(daily, "temperature_2m_max", i)),
                     temp_min_c=_f(_at(daily, "temperature_2m_min", i)),
                     rain_mm_expected=_f(_at(daily, "precipitation_sum", i)),
@@ -91,6 +137,8 @@ class OpenMeteoForecastProvider:
                     wind_speed_kmh=_f(_at(daily, "wind_speed_10m_max", i)),
                     et0_mm=_f(_at(daily, "et0_fao_evapotranspiration", i)),
                     solar_radiation_mj_m2=_f(_at(daily, "shortwave_radiation_sum", i)),
+                    vpd_night_mean_kpa=vpd_night,
+                    fog_observed=fog,
                 )
             )
         return out

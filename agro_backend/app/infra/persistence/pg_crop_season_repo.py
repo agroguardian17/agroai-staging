@@ -90,6 +90,7 @@ def _row_to_view(row: object) -> CropSeasonView:
         azospirillum_psb_done=r.azospirillum_psb_done,
         marigold_planted=r.marigold_planted,
         target_product=r.target_product,
+        k_source=r.k_source,
         affected_plants_removed=r.affected_plants_removed,
         bed_former_arranged=r.bed_former_arranged,
         bud_orientation_instructed=r.bud_orientation_instructed,

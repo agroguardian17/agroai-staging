@@ -37,6 +37,7 @@ class FarmerLocation:
     farmer_id: uuid.UUID
     district: str | None = None
     taluka: str | None = None
+    language_preference: str | None = None
 
 
 @runtime_checkable

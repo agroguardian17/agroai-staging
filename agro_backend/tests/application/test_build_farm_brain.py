@@ -1002,3 +1002,87 @@ async def test_derived_composite_and_zone_fields() -> None:
     assert state["agro_climatic_zone"] == "marathwada_central"
     assert state["stage_source"] == "calendar"
     assert state["rainfall_last_48h_mm"] == 5.0
+
+
+class _FakeConsentRepo:
+    def __init__(self, v=None):
+        self._v = v
+
+    async def for_farmer(self, farmer_id):
+        return self._v
+
+
+@pytest.mark.asyncio
+async def test_phase3_consent_language_model_and_forecast_extras() -> None:
+    from datetime import timedelta
+
+    from app.application.ports.farmer_consent_repo import FarmerConsentView
+    from app.application.ports.farmer_repo import FarmerLocation
+
+    today = date(2026, 8, 3)
+    season = CropSeasonView(
+        season_id=_SEASON,
+        tenant_id=_TENANT,
+        farm_id=_FARM,
+        plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger",
+        crop_name_marathi="आले",
+        crop_category="cash_crop",
+        crop_variety="Mahima",
+        sowing_date=today - timedelta(days=60),
+        expected_harvest_date=date(2027, 2, 1),
+        current_growth_stage="vegetative",
+        crop_age_days_today=60,
+        k_source="MOP",
+    )
+    consent = FarmerConsentView(
+        farmer_id=_FARMER, consent_advisory=True, sat_public_display_context="own_plot"
+    )
+    loc = FarmerLocation(
+        farmer_id=_FARMER, district="Beed", taluka="X", language_preference="marathi"
+    )
+    import dataclasses
+
+    rows = [
+        dataclasses.replace(
+            _fc(today, rain=2.0, et0=5.0, solar=20.0),
+            vpd_night_mean_kpa=0.25,
+            fog_observed=True,
+        )
+    ]
+    rows += [_fc(today - timedelta(days=k), rain=1.0) for k in range(1, 60)]
+    declared = frozenset(
+        {
+            "consent_advisory",
+            "sat_public_display_context",
+            "advisory_language",
+            "model_version",
+            "prediction_stage",
+            "k_source",
+            "rainfall_ytd_mm",
+            "vpd_night_mean_kpa",
+            "fog_observed",
+            "agro_climatic_zone",
+            "dap",
+        }
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(season),
+        farmer_repo=_FakeFarmerRepo(owner=_FARMER, location=loc),
+        farmer_consent_repo=_FakeConsentRepo(consent),
+        weather_forecast_repo=_FakeForecastRepo(rows),
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    assert state["consent_advisory"] is True
+    assert state["sat_public_display_context"] == "own_plot"
+    assert state["advisory_language"] == "mr"
+    assert state["model_version"] == "ginger-engine/v1.0"
+    assert state["prediction_stage"] == "g1_end"  # dap 60 < 90
+    assert state["k_source"] == "MOP"
+    assert state["agro_climatic_zone"] == "marathwada_central"  # Beed
+    assert state["vpd_night_mean_kpa"] == 0.25
+    assert state["fog_observed"] is True
+    assert state["rainfall_ytd_mm"] is not None and state["rainfall_ytd_mm"] > 0

@@ -136,6 +136,7 @@ _TABLES = {
     "season_economics": ("season_id", "Economics (D13)"),
     "season_operations": ("season_id", "Field operations (D03/D05/D06/D08)"),
     "farmer_schemes": ("farmer_id", "Govt schemes & subsidy (D10)"),
+    "farmer_consent": ("farmer_id", "Consent & data governance (DPDP)"),
 }
 
 
@@ -244,7 +245,32 @@ if submitted:
                     vals[col] = n
         if not vals:
             continue
-        params = {"tenant_id": tenant_id, keycol: keyval, **vals}
+        params = {
+            "tenant_id": tenant_id,
+            keycol: keyval,
+            **vals,
+            "farmer_consent": [
+                ["consent_advisory", "consent advisory", "bool", None],
+                ["consent_research", "consent research", "bool", None],
+                ["consent_date", "consent date", "text", None],
+                [
+                    "third_party_share_consent_given",
+                    "third party share consent given",
+                    "bool",
+                    None,
+                ],
+                ["data_retention_until", "data retention until", "text", None],
+                ["deletion_requested", "deletion requested", "bool", None],
+                ["cluster_anonymised", "cluster anonymised", "bool", None],
+                ["sat_attribution_shown", "sat attribution shown", "bool", None],
+                [
+                    "sat_public_display_context",
+                    "sat public display context",
+                    "select",
+                    ["own_plot", "cluster_aggregate", "third_party"],
+                ],
+            ],
+        }
         names = ["tenant_id", keycol, *vals.keys()]
 
         def _ph(n: str) -> str:

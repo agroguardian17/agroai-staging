@@ -29,11 +29,13 @@ class PgWeatherForecastRepo:
             INSERT INTO weather_forecasts (
                 fetched_at, tenant_id, farm_id, forecast_for_date, source_api,
                 temp_min_c, temp_max_c, rain_mm_expected,
-                rain_probability_pct, wind_speed_kmh, et0_mm, solar_radiation_mj_m2
+                rain_probability_pct, wind_speed_kmh, et0_mm, solar_radiation_mj_m2,
+                vpd_night_mean_kpa, fog_observed
             ) VALUES (
                 :fetched_at, :tenant_id, :farm_id, :forecast_for_date, :source_api,
                 :temp_min_c, :temp_max_c, :rain_mm_expected,
-                :rain_probability_pct, :wind_speed_kmh, :et0_mm, :solar_radiation_mj_m2
+                :rain_probability_pct, :wind_speed_kmh, :et0_mm, :solar_radiation_mj_m2,
+                :vpd_night_mean_kpa, :fog_observed
             )
             """
         )
@@ -51,6 +53,8 @@ class PgWeatherForecastRepo:
                 "wind_speed_kmh": r.wind_speed_kmh,
                 "et0_mm": r.et0_mm,
                 "solar_radiation_mj_m2": r.solar_radiation_mj_m2,
+                "vpd_night_mean_kpa": r.vpd_night_mean_kpa,
+                "fog_observed": r.fog_observed,
             }
             for r in rows
         ]
@@ -71,7 +75,8 @@ class PgWeatherForecastRepo:
             SELECT DISTINCT ON (forecast_for_date)
                    tenant_id, farm_id, fetched_at, forecast_for_date, source_api,
                    temp_min_c, temp_max_c, rain_mm_expected, rain_probability_pct,
-                   wind_speed_kmh, et0_mm, solar_radiation_mj_m2
+                   wind_speed_kmh, et0_mm, solar_radiation_mj_m2,
+                   vpd_night_mean_kpa, fog_observed
             FROM weather_forecasts
             WHERE farm_id = :farm_id
               AND forecast_for_date BETWEEN :date_from AND :date_to
@@ -101,6 +106,8 @@ class PgWeatherForecastRepo:
                     wind_speed_kmh=r.wind_speed_kmh,
                     et0_mm=r.et0_mm,
                     solar_radiation_mj_m2=r.solar_radiation_mj_m2,
+                    vpd_night_mean_kpa=r.vpd_night_mean_kpa,
+                    fog_observed=r.fog_observed,
                 )
             )
         return out

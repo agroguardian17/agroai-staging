@@ -1863,4 +1863,13 @@ FIELDS = [
         "widget": "bool",
         "help": "",
     },
+    {
+        "source": "AGRO",
+        "table": "crop_seasons",
+        "col": "k_source",
+        "label": "k source",
+        "widget": "select",
+        "help": "",
+        "options": ["MOP", "SOP", "mixed"],
+    },
 ]

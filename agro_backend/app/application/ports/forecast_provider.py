@@ -25,6 +25,10 @@ class DailyForecast:
     # Phase-3 weather additions: reference ET (pan-evap proxy) + daily shortwave.
     et0_mm: float | None = None
     solar_radiation_mj_m2: float | None = None
+    # From hourly RH+temp: mean nighttime (22:00-06:00) VPD, and a fog flag
+    # (nighttime RH at/above saturation) - both computed in the adapter.
+    vpd_night_mean_kpa: float | None = None
+    fog_observed: bool | None = None
 
 
 class ForecastError(Exception):
