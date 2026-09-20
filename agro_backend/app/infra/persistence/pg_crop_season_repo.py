@@ -15,7 +15,20 @@ _SELECT_COLS = (
     "sowing_date, expected_harvest_date, current_growth_stage, "
     "crop_age_days_today, "
     "actual_harvest_date, seed_cost_per_kg, "
-    "target_yield_qtl_per_acre, actual_yield_qtl_per_acre"
+    "target_yield_qtl_per_acre, actual_yield_qtl_per_acre, "
+    # Agronomy-plan columns (migration 0022).
+    "deep_ploughing_done, solarization_done, solarization_weeks, planting_layout, "
+    "bed_height_cm, bed_width_cm, furrow_width_cm, plants_per_acre, planting_depth_cm, "
+    "earthing_up_date, earthing_up_2_date, "
+    "mulch_stage_1_done, mulch_stage_2_done, mulch_stage_3_done, "
+    "n_target_kg_per_acre, p_target_kg_per_acre, k_target_kg_per_acre, "
+    "n_applied_kg_per_acre, p_applied_kg_per_acre, k_applied_kg_per_acre, "
+    "n_split_1_date, n_split_2_date, k_late_split_1_date, k_late_split_2_date, "
+    "fym_t_per_acre, fym_fully_decomposed, trichoderma_kg_per_acre, "
+    "neem_cake_basal_kg_per_acre, neem_cake_earthing_kg_per_acre, "
+    "micronutrient_basal_done, micronutrient_spray_1_done, micronutrient_spray_2_done, "
+    "hot_water_treatment_done, biofumigation_done, azospirillum_psb_done, "
+    "marigold_planted, target_product"
 )
 
 
@@ -38,6 +51,43 @@ def _row_to_view(row: object) -> CropSeasonView:
         seed_cost_per_kg=r.seed_cost_per_kg,
         target_yield_qtl_per_acre=r.target_yield_qtl_per_acre,
         actual_yield_qtl_per_acre=r.actual_yield_qtl_per_acre,
+        deep_ploughing_done=r.deep_ploughing_done,
+        solarization_done=r.solarization_done,
+        solarization_weeks=r.solarization_weeks,
+        planting_layout=r.planting_layout,
+        bed_height_cm=r.bed_height_cm,
+        bed_width_cm=r.bed_width_cm,
+        furrow_width_cm=r.furrow_width_cm,
+        plants_per_acre=r.plants_per_acre,
+        planting_depth_cm=r.planting_depth_cm,
+        earthing_up_date=r.earthing_up_date,
+        earthing_up_2_date=r.earthing_up_2_date,
+        mulch_stage_1_done=r.mulch_stage_1_done,
+        mulch_stage_2_done=r.mulch_stage_2_done,
+        mulch_stage_3_done=r.mulch_stage_3_done,
+        n_target_kg_per_acre=r.n_target_kg_per_acre,
+        p_target_kg_per_acre=r.p_target_kg_per_acre,
+        k_target_kg_per_acre=r.k_target_kg_per_acre,
+        n_applied_kg_per_acre=r.n_applied_kg_per_acre,
+        p_applied_kg_per_acre=r.p_applied_kg_per_acre,
+        k_applied_kg_per_acre=r.k_applied_kg_per_acre,
+        n_split_1_date=r.n_split_1_date,
+        n_split_2_date=r.n_split_2_date,
+        k_late_split_1_date=r.k_late_split_1_date,
+        k_late_split_2_date=r.k_late_split_2_date,
+        fym_t_per_acre=r.fym_t_per_acre,
+        fym_fully_decomposed=r.fym_fully_decomposed,
+        trichoderma_kg_per_acre=r.trichoderma_kg_per_acre,
+        neem_cake_basal_kg_per_acre=r.neem_cake_basal_kg_per_acre,
+        neem_cake_earthing_kg_per_acre=r.neem_cake_earthing_kg_per_acre,
+        micronutrient_basal_done=r.micronutrient_basal_done,
+        micronutrient_spray_1_done=r.micronutrient_spray_1_done,
+        micronutrient_spray_2_done=r.micronutrient_spray_2_done,
+        hot_water_treatment_done=r.hot_water_treatment_done,
+        biofumigation_done=r.biofumigation_done,
+        azospirillum_psb_done=r.azospirillum_psb_done,
+        marigold_planted=r.marigold_planted,
+        target_product=r.target_product,
     )
 
 

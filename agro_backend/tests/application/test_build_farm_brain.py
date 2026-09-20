@@ -614,3 +614,55 @@ async def test_soil_oc_falls_back_to_farm_when_no_lab() -> None:
     ).state
     assert state["soil_oc_pct"] == Decimal("0.55")  # farm fallback
     assert state["soil_test_available"] is None  # no lab test seen
+
+
+@pytest.mark.asyncio
+async def test_fills_season_agronomy_plan_fields() -> None:
+    """crop_seasons agronomy-plan columns (migration 0022) land under KB names."""
+    season = CropSeasonView(
+        season_id=_SEASON,
+        tenant_id=_TENANT,
+        farm_id=_FARM,
+        plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger",
+        crop_name_marathi="आले",
+        crop_category="cash_crop",
+        crop_variety="Mahima",
+        sowing_date=date(2026, 6, 1),
+        expected_harvest_date=date(2027, 2, 1),
+        current_growth_stage="vegetative",
+        crop_age_days_today=63,
+        earthing_up_date=date(2026, 8, 10),
+        mulch_stage_1_done=True,
+        n_target_kg_per_acre=Decimal("50"),
+        planting_layout="broad_ridge",
+        target_product="dry_ginger",
+        fym_t_per_acre=Decimal("6"),
+    )
+    declared = frozenset(
+        {
+            "earthing_up_date",
+            "mulch_stage_1_done",
+            "n_target_kg_per_acre",
+            "planting_layout",
+            "target_product",
+            "fym_t_per_acre",
+            "solarization_done",  # left unset -> stays None
+        }
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(season),
+        declared_fields=declared,
+    )
+    state = (
+        await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)
+    ).state
+    assert state["earthing_up_date"] == date(2026, 8, 10)
+    assert state["mulch_stage_1_done"] is True
+    assert state["n_target_kg_per_acre"] == Decimal("50")
+    assert state["planting_layout"] == "broad_ridge"
+    assert state["target_product"] == "dry_ginger"
+    assert state["fym_t_per_acre"] == Decimal("6")
+    assert state["solarization_done"] is None

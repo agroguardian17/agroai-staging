@@ -267,6 +267,49 @@ def _populate_from_reading(state: dict[str, Any], r: Reading) -> None:
     _set(state, "signal_rssi_dbm", r.signal_rssi_dbm)
 
 
+# crop_seasons agronomy-plan columns (migration 0022) whose KB field name is
+# identical to the CropSeasonView attribute name — copied by name in the mapper.
+_SEASON_PLAN_FIELDS: tuple[str, ...] = (
+    "deep_ploughing_done",
+    "solarization_done",
+    "solarization_weeks",
+    "planting_layout",
+    "bed_height_cm",
+    "bed_width_cm",
+    "furrow_width_cm",
+    "plants_per_acre",
+    "planting_depth_cm",
+    "earthing_up_date",
+    "earthing_up_2_date",
+    "mulch_stage_1_done",
+    "mulch_stage_2_done",
+    "mulch_stage_3_done",
+    "n_target_kg_per_acre",
+    "p_target_kg_per_acre",
+    "k_target_kg_per_acre",
+    "n_applied_kg_per_acre",
+    "p_applied_kg_per_acre",
+    "k_applied_kg_per_acre",
+    "n_split_1_date",
+    "n_split_2_date",
+    "k_late_split_1_date",
+    "k_late_split_2_date",
+    "fym_t_per_acre",
+    "fym_fully_decomposed",
+    "trichoderma_kg_per_acre",
+    "neem_cake_basal_kg_per_acre",
+    "neem_cake_earthing_kg_per_acre",
+    "micronutrient_basal_done",
+    "micronutrient_spray_1_done",
+    "micronutrient_spray_2_done",
+    "hot_water_treatment_done",
+    "biofumigation_done",
+    "azospirillum_psb_done",
+    "marigold_planted",
+    "target_product",
+)
+
+
 def _populate_from_season(
     state: dict[str, Any], season: CropSeasonView | None, today: date
 ) -> None:
@@ -289,6 +332,10 @@ def _populate_from_season(
     _set(state, "seed_cost_per_kg", season.seed_cost_per_kg)
     _set(state, "yield_target_quintal_per_acre", season.target_yield_qtl_per_acre)
     _set(state, "yield_quintal_per_acre_actual", season.actual_yield_qtl_per_acre)
+    # Agronomy-plan facts (migration 0022): the KB field name equals the
+    # CropSeasonView attribute name, so copy them by name.
+    for f in _SEASON_PLAN_FIELDS:
+        _set(state, f, getattr(season, f))
     if season.sowing_date:
         state["days_to_planting"] = (season.sowing_date - today).days
     if season.expected_harvest_date:
