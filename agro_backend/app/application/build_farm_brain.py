@@ -296,7 +296,7 @@ async def build_farm_brain(
                 _set(state, "plot_ndre_gap_regional", baseline_gap(o0.ndre_mean, peer.ndre_mean))
 
     # ---- Composite derivations (from fields filled above) --------------
-    _derive_composite(state)
+    _derive_composite(state, today)
 
     # ---- Synthetic ------------------------------------------------------
     state["current_month"] = today.month
@@ -566,6 +566,25 @@ def _rain_last_48h_mm(rows: list[ForecastRow], today: date) -> float | None:
     return round(sum(past), 2) if past else None
 
 
+# Cyclone proxy thresholds: an extreme wind + heavy rain day in the next 3 days.
+_CYCLONE_WIND_KMH = 60.0
+_CYCLONE_RAIN_MM = 50.0
+
+
+def _cyclone_alert(rows: list[ForecastRow], today: date) -> bool | None:
+    """Proxy cyclone/severe-weather flag from the forecast window (NOT an
+    official IMD warning): any day in the next 3 with gale wind AND heavy rain.
+    """
+    fut = [r for r in rows if today <= r.forecast_for_date <= today + timedelta(days=3)]
+    if not fut:
+        return None
+    return any(
+        (r.wind_speed_kmh or 0.0) >= _CYCLONE_WIND_KMH
+        and (r.rain_mm_expected or 0.0) >= _CYCLONE_RAIN_MM
+        for r in fut
+    )
+
+
 def _fog_days_consecutive(rows: list[ForecastRow], today: date) -> int | None:
     """Consecutive foggy days ending at ``today`` (walking backwards)."""
     by_date = {r.forecast_for_date: r.fog_observed for r in rows}
@@ -581,6 +600,72 @@ def _fog_days_consecutive(rows: list[ForecastRow], today: date) -> int | None:
 
 # The engine build/version tag the KB's D11/D12 provenance rules read.
 _MODEL_VERSION = "ginger-engine/v1.0"
+
+# Pre-harvest interval (days) by pesticide FRAC/IRAC group or common name.
+# AGRONOMIST TO CONFIRM — conservative default for anything unlisted. Getting
+# this wrong is a food-safety risk, so the default errs long (restrictive).
+_PHI_DAYS_DEFAULT = 21
+_PHI_DAYS_BY_GROUP: dict[str, int] = {
+    "M03": 7,
+    "mancozeb": 7,
+    "M01": 7,
+    "copper": 5,
+    "3": 7,
+    "chlorpyriphos": 14,
+    "1B": 14,
+    "quinalphos": 21,
+    "4A": 7,
+    "imidacloprid": 40,
+    "28": 3,
+    "chlorantraniliprole": 5,
+}
+
+# Approximate seasonal rainfall normal (mm, full monsoon season) by agro-zone —
+# AGRONOMIST/IMD TO REPLACE with real district normals. Prorated by DAP.
+_ZONE_SEASON_RAIN_MM = {
+    "marathwada_western": 750.0,
+    "marathwada_central": 680.0,
+    "marathwada_eastern": 820.0,
+}
+_SEASON_LEN_DAYS = 240  # ginger
+
+
+def _phi_days_remaining(state: dict[str, Any], today: date) -> int | None:
+    """Days until the pre-harvest interval clears after the most recent spray.
+
+    Reads the last fungicide/insecticide date + group from season_operations
+    fields; PHI comes from ``_PHI_DAYS_BY_GROUP`` (conservative default). Returns
+    the most restrictive (largest) remaining across the two sprays; 0 = cleared.
+    """
+    best: int | None = None
+    for date_field, group_field in (
+        ("last_fungicide_date", "last_fungicide_group"),
+        ("last_insecticide_date", "last_insecticide_group"),
+    ):
+        d = state.get(date_field)
+        if not isinstance(d, date):
+            continue
+        group = state.get(group_field)
+        phi = _PHI_DAYS_BY_GROUP.get(str(group), _PHI_DAYS_DEFAULT)
+        remaining = max(0, phi - (today - d).days)
+        best = remaining if best is None else max(best, remaining)
+    return best
+
+
+def _rainfall_deviation_pct(ytd_mm: object, zone: object, dap: object) -> float | None:
+    """(season-to-date rain - expected) / expected * 100, approximate.
+
+    Expected = the agro-zone seasonal normal prorated by DAP. Approximate until
+    real IMD district normals are wired (see docs/AGRONOMIST_REVIEW.md)."""
+    if ytd_mm is None or not isinstance(dap, int) or dap <= 0:
+        return None
+    normal = _ZONE_SEASON_RAIN_MM.get(str(zone))
+    if normal is None:
+        return None
+    expected = normal * min(dap, _SEASON_LEN_DAYS) / _SEASON_LEN_DAYS
+    if expected <= 0:
+        return None
+    return round((float(ytd_mm) - expected) / expected * 100.0, 1)
 
 
 def _prediction_stage(dap: int) -> str:
@@ -611,7 +696,7 @@ def _cwsi(lst_c: object, air_temp_max_c: object) -> float | None:
     return round(max(0.0, min(1.0, (diff + 2.0) / 10.0)), 3)
 
 
-def _derive_composite(state: dict[str, Any]) -> None:
+def _derive_composite(state: dict[str, Any], today: date) -> None:
     """Fields derived from other already-populated fields (no new source).
 
     ``vafsa_state`` (too_wet/workable/too_dry) is read off the soil-moisture VWC
@@ -634,6 +719,18 @@ def _derive_composite(state: dict[str, Any]) -> None:
     if cwsi is not None:
         _set(state, "cwsi", cwsi)
 
+    # Pre-harvest interval remaining after the most recent spray (food safety).
+    phi = _phi_days_remaining(state, today)
+    if phi is not None:
+        _set(state, "phi_days_remaining", phi)
+
+    # Rainfall deviation vs the agro-zone seasonal normal (approximate).
+    dev = _rainfall_deviation_pct(
+        state.get("rainfall_ytd_mm"), state.get("agro_climatic_zone"), dap
+    )
+    if dev is not None:
+        _set(state, "rainfall_deviation_pct", dev)
+
 
 def _populate_from_forecast(
     state: dict[str, Any], rows: list[ForecastRow], today: date, sowing_date: date | None = None
@@ -644,6 +741,7 @@ def _populate_from_forecast(
     _set(state, "forecast_source", rows[0].source_api if rows else None)
     _set(state, "forecast_rain_48h_mm", _forecast_rain_48h_mm(rows, today))
     _set(state, "rainfall_last_48h_mm", _rain_last_48h_mm(rows, today))
+    _set(state, "cyclone_alert_active", _cyclone_alert(rows, today))
     _set(state, "rain_gap_days", _rain_gap_days(rows, today))
     _set(state, "dry_spell_days", _dry_spell_days(rows, today))
     _set(state, "effective_rainfall_mm", _effective_rainfall_mm(rows, today))
