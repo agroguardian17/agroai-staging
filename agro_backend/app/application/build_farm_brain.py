@@ -304,13 +304,27 @@ def _populate_from_weather(state: dict[str, Any], w: WeatherStationReading) -> N
 
 # DB ``farms.soil_type`` domain (black/red/sandy/loamy/mixed) → the KB's
 # ``soil_type`` enum (vertisol/loam/sandy_loam/laterite/other). Anything not
-# listed maps to ``other``. Agronomist to confirm red→laterite.
+# listed maps to ``other``. AGRONOMIST TO CONFIRM red→laterite (many "red"
+# soils are red loams, not true laterite).
 _SOIL_TYPE_MAP = {
     "black": "vertisol",
     "loamy": "loam",
     "sandy": "sandy_loam",
     "red": "laterite",
     "mixed": "other",
+}
+
+# KB ``soil_texture_class`` (light/medium/heavy) DERIVED from the constrained
+# ``farms.soil_type`` column, NOT from the free-text ``farms.soil_texture``
+# (which has no controlled vocabulary). Standard texture-by-feel classing;
+# unknown soil types fall back to ``medium``. When a soil lab result lands
+# (sand/silt/clay %), compute this from the USDA triangle instead.
+_SOIL_TEXTURE_CLASS_MAP = {
+    "black": "heavy",
+    "loamy": "medium",
+    "sandy": "light",
+    "red": "medium",
+    "mixed": "medium",
 }
 
 
@@ -324,6 +338,7 @@ def _populate_from_farm(state: dict[str, Any], f: FarmFacts) -> None:
     """Fill farm-level facts the KB reads (soil, water source, irrigation)."""
     if f.soil_type is not None:
         _set(state, "soil_type", _SOIL_TYPE_MAP.get(f.soil_type, "other"))
+        _set(state, "soil_texture_class", _SOIL_TEXTURE_CLASS_MAP.get(f.soil_type, "medium"))
     _set(state, "soil_depth_cm", f.soil_depth_cm)
     _set(state, "water_source_type", f.water_source_primary)
     _set(state, "dripper_lph", f.drip_emitter_lph)

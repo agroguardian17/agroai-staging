@@ -486,6 +486,7 @@ async def test_fills_plot_farm_farmer_facts_under_kb_names() -> None:
             "area_acre",
             "plot_id",
             "soil_type",
+            "soil_texture_class",
             "soil_depth_cm",
             "water_source_type",
             "has_drip",
@@ -514,6 +515,7 @@ async def test_fills_plot_farm_farmer_facts_under_kb_names() -> None:
     assert state["area_acre"] == Decimal("1.0")
     assert state["plot_id"] == "PLOT_PILOT_001"
     assert state["soil_type"] == "vertisol"  # black -> vertisol value map
+    assert state["soil_texture_class"] == "heavy"  # black -> heavy (derived)
     assert state["soil_depth_cm"] == Decimal("30")
     assert state["water_source_type"] == "well"
     assert state["has_drip"] is True
