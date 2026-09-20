@@ -32,6 +32,7 @@ class FarmFacts:
     farm_id: uuid.UUID
     soil_type: str | None = None
     soil_depth_cm: Decimal | None = None
+    soil_organic_carbon_pct: Decimal | None = None
     water_source_primary: str | None = None
     irrigation_type: str | None = None
     drip_emitter_lph: Decimal | None = None
