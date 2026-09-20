@@ -56,6 +56,7 @@ from app.application.build_farm_brain import (
     build_farm_brain,
 )
 from app.application.ports.ai_suggestion_repo import AiSuggestion, AiSuggestionRepo
+from app.application.ports.crop_scouting_repo import CropScoutingRepo
 from app.application.ports.crop_season_repo import CropSeasonRepo, CropSeasonView
 from app.application.ports.farm_repo import FarmRepo
 from app.application.ports.farmer_repo import FarmerRepo
@@ -102,6 +103,8 @@ class GingerDailyDeps:
     farm_repo: FarmRepo | None = None
     # Optional soil-lab source for the farm-brain (KB nutrient chemistry).
     lab_soil_test_repo: LabSoilTestRepo | None = None
+    # Optional crop-scouting source (KB pest/disease observations).
+    crop_scouting_repo: CropScoutingRepo | None = None
     # Timezone the "today" date is computed in. Defaults to IST — the pilot
     # is in Aurangabad and the farmer's day boundary is IST midnight.
     timezone: ZoneInfo = field(default_factory=lambda: ZoneInfo("Asia/Kolkata"))
@@ -163,6 +166,7 @@ async def _run_one_plot(
         farm_repo=deps.farm_repo,
         farmer_repo=deps.farmer_repo,
         lab_soil_test_repo=deps.lab_soil_test_repo,
+        crop_scouting_repo=deps.crop_scouting_repo,
         declared_fields=declared_fields,
     )
     state = await build_farm_brain(plot_id=season.plot_id, today=today, deps=fb_deps)
