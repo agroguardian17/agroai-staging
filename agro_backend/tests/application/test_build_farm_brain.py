@@ -1095,6 +1095,68 @@ async def test_phase3_consent_language_model_and_forecast_extras() -> None:
 
 
 @pytest.mark.asyncio
+async def test_phi_rainfall_deviation_and_cyclone() -> None:
+    """PHI-remaining, rainfall deviation, and the cyclone proxy."""
+    from datetime import timedelta
+
+    from app.application.ports.farmer_repo import FarmerLocation
+
+    today = date(2026, 8, 3)
+    season = CropSeasonView(
+        season_id=_SEASON,
+        tenant_id=_TENANT,
+        farm_id=_FARM,
+        plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger",
+        crop_name_marathi="आले",
+        crop_category="cash_crop",
+        crop_variety="Mahima",
+        sowing_date=today - timedelta(days=120),
+        expected_harvest_date=date(2027, 2, 1),
+        current_growth_stage="rhizome",
+        crop_age_days_today=120,
+    )
+    ops = __import__(
+        "app.application.ports.season_operations_repo", fromlist=["SeasonOperationsView"]
+    ).SeasonOperationsView(
+        season_id=_SEASON,
+        last_fungicide_date=today - timedelta(days=3),
+        last_fungicide_group="mancozeb",
+    )
+    rows = [_fc(today - timedelta(days=k), rain=5.0) for k in range(0, 120)]
+    rows.append(_fc(today + timedelta(days=1), rain=60.0))
+    rows[-1] = __import__("dataclasses").replace(rows[-1], wind_speed_kmh=70.0)
+    loc = FarmerLocation(
+        farmer_id=_FARMER, district="Beed", taluka="X", language_preference="marathi"
+    )
+    declared = frozenset(
+        {
+            "dap",
+            "phi_days_remaining",
+            "rainfall_deviation_pct",
+            "cyclone_alert_active",
+            "rainfall_ytd_mm",
+            "agro_climatic_zone",
+            "last_fungicide_date",
+            "last_fungicide_group",
+        }
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(season),
+        farmer_repo=_FakeFarmerRepo(owner=_FARMER, location=loc),
+        season_operations_repo=_FakeOpsRepo(ops),
+        weather_forecast_repo=_FakeForecastRepo(rows),
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    assert state["phi_days_remaining"] == 4
+    assert state["cyclone_alert_active"] is True
+    assert state["rainfall_deviation_pct"] is not None
+
+
+@pytest.mark.asyncio
 async def test_peer_ndvi_baseline_when_enough_plots() -> None:
     """plot_ndvi_baseline_peer / gap fire once >= 3 cluster peers exist."""
     from datetime import timedelta
@@ -1131,7 +1193,7 @@ async def test_peer_ndvi_baseline_when_enough_plots() -> None:
     )
     state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
     assert state["plot_ndvi_baseline_peer"] == Decimal("0.50")
-    assert state["plot_ndvi_gap_peer"] == Decimal("0.05")  # 0.55 - 0.50
+    assert state["plot_ndvi_gap_peer"] == Decimal("0.05")
     assert state["plot_ndre_baseline_regional"] == Decimal("0.28")
 
 
@@ -1151,7 +1213,7 @@ async def test_peer_baseline_skipped_below_min_peers() -> None:
         satellite_source=SOURCE_OPTICAL,
         ndvi_mean=Decimal("0.55"),
     )
-    peer = PeerBaseline(ndvi_mean=Decimal("0.50"), ndre_mean=None, peer_count=1)  # too few
+    peer = PeerBaseline(ndvi_mean=Decimal("0.50"), ndre_mean=None, peer_count=1)
     declared = frozenset({"dap", "plot_ndvi_baseline_peer"})
     deps = FarmBrainDeps(
         reading_repo=_FakeReadingRepo(None),
@@ -1161,4 +1223,4 @@ async def test_peer_baseline_skipped_below_min_peers() -> None:
         declared_fields=declared,
     )
     state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
-    assert state["plot_ndvi_baseline_peer"] is None  # below _MIN_PEERS
+    assert state["plot_ndvi_baseline_peer"] is None
