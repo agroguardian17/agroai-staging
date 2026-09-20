@@ -48,6 +48,15 @@ class SatelliteScene:
     pipeline_version: str | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class PeerBaseline:
+    """Cluster peer mean NDVI/NDRE at a comparable growth stage."""
+
+    ndvi_mean: Decimal | None
+    ndre_mean: Decimal | None
+    peer_count: int
+
+
 @runtime_checkable
 class SatelliteReadingRepo(Protocol):
     """Persist and query per-scene satellite index rows."""
@@ -72,10 +81,26 @@ class SatelliteReadingRepo(Protocol):
         """Most-recent-first scenes for one plot and one source."""
         ...
 
+    async def peer_baseline_at_dap(
+        self,
+        *,
+        tenant_id: uuid.UUID,
+        crop_name_english: str,
+        dap: int,
+        today: datetime.date,
+        exclude_plot_id: str,
+        dap_window: int = 10,
+    ) -> PeerBaseline:
+        """Mean latest NDVI/NDRE of the tenant's other active plots of the same
+        crop currently within ``dap_window`` days of ``dap`` (same growth
+        stage). ``peer_count`` lets the caller enforce a minimum (KB: >= 3)."""
+        ...
+
 
 __all__ = [
     "SOURCE_OPTICAL",
     "SOURCE_SAR",
+    "PeerBaseline",
     "SatelliteReadingRepo",
     "SatelliteScene",
 ]
