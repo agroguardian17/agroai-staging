@@ -79,6 +79,57 @@ class CropSeasonView:
     azospirillum_psb_done: bool | None = None
     marigold_planted: bool | None = None
     target_product: str | None = None
+    # Part-2 agronomy-plan facts (migration 0024).
+    affected_plants_removed: bool | None = None
+    bed_former_arranged: bool | None = None
+    bud_orientation_instructed: bool | None = None
+    calibration_date: datetime.date | None = None
+    calibration_done: bool | None = None
+    crop_coefficient_kc: Decimal | None = None
+    drainage_levels_present: int | None = None
+    drainage_outlet_present: bool | None = None
+    drip_efficiency_measured: Decimal | None = None
+    drip_flow_lph_per_acre: Decimal | None = None
+    drip_lateral_spacing_ft: Decimal | None = None
+    drip_shifts_per_day: int | None = None
+    dripper_spacing_cm: Decimal | None = None
+    drippers_per_acre: int | None = None
+    dry_recovery_pct_actual: Decimal | None = None
+    drying_method: str | None = None
+    drying_space_ready: bool | None = None
+    field_history_rot: bool | None = None
+    field_history_wilt: bool | None = None
+    gap_filling_done: bool | None = None
+    harvest_route: str | None = None
+    intercrop_selected: str | None = None
+    limiting_nutrient: str | None = None
+    main_drain_connected: bool | None = None
+    moisture_probe_depth_cm: Decimal | None = None
+    pan_coefficient_kp: Decimal | None = None
+    perennial_weeds_removed: bool | None = None
+    ppe_available: bool | None = None
+    processing_trained_operator: bool | None = None
+    produce_washed: bool | None = None
+    rows_per_bed: int | None = None
+    season_water_plan_basis: str | None = None
+    seasonal_water_requirement_litres: Decimal | None = None
+    seed_at_planting_kg: Decimal | None = None
+    seed_buds_per_piece: int | None = None
+    seed_piece_weight_g: Decimal | None = None
+    seed_storage_loss_pct: Decimal | None = None
+    seed_storage_method: str | None = None
+    seed_stored_kg: Decimal | None = None
+    shade_pct: Decimal | None = None
+    so2_treatment_used: bool | None = None
+    storage_loss_monthly_pct: Decimal | None = None
+    vwc_field_capacity: Decimal | None = None
+    vwc_saturation: Decimal | None = None
+    vwc_stress_threshold: Decimal | None = None
+    water_available_oct_feb_litres: Decimal | None = None
+    water_stress_after_earthing_done: bool | None = None
+    water_withdrawal_pct: Decimal | None = None
+    water_withdrawal_start_date: datetime.date | None = None
+    water_withdrawal_started: bool | None = None
 
 
 @runtime_checkable

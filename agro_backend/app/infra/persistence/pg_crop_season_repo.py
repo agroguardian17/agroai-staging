@@ -28,7 +28,9 @@ _SELECT_COLS = (
     "neem_cake_basal_kg_per_acre, neem_cake_earthing_kg_per_acre, "
     "micronutrient_basal_done, micronutrient_spray_1_done, micronutrient_spray_2_done, "
     "hot_water_treatment_done, biofumigation_done, azospirillum_psb_done, "
-    "marigold_planted, target_product"
+    "marigold_planted, target_product, "
+    # Part-2 (migration 0024).
+    "affected_plants_removed, bed_former_arranged, bud_orientation_instructed, calibration_date, calibration_done, crop_coefficient_kc, drainage_levels_present, drainage_outlet_present, drip_efficiency_measured, drip_flow_lph_per_acre, drip_lateral_spacing_ft, drip_shifts_per_day, dripper_spacing_cm, drippers_per_acre, dry_recovery_pct_actual, drying_method, drying_space_ready, field_history_rot, field_history_wilt, gap_filling_done, harvest_route, intercrop_selected, limiting_nutrient, main_drain_connected, moisture_probe_depth_cm, pan_coefficient_kp, perennial_weeds_removed, ppe_available, processing_trained_operator, produce_washed, rows_per_bed, season_water_plan_basis, seasonal_water_requirement_litres, seed_at_planting_kg, seed_buds_per_piece, seed_piece_weight_g, seed_storage_loss_pct, seed_storage_method, seed_stored_kg, shade_pct, so2_treatment_used, storage_loss_monthly_pct, vwc_field_capacity, vwc_saturation, vwc_stress_threshold, water_available_oct_feb_litres, water_stress_after_earthing_done, water_withdrawal_pct, water_withdrawal_start_date, water_withdrawal_started"
 )
 
 
@@ -88,6 +90,56 @@ def _row_to_view(row: object) -> CropSeasonView:
         azospirillum_psb_done=r.azospirillum_psb_done,
         marigold_planted=r.marigold_planted,
         target_product=r.target_product,
+        affected_plants_removed=r.affected_plants_removed,
+        bed_former_arranged=r.bed_former_arranged,
+        bud_orientation_instructed=r.bud_orientation_instructed,
+        calibration_date=r.calibration_date,
+        calibration_done=r.calibration_done,
+        crop_coefficient_kc=r.crop_coefficient_kc,
+        drainage_levels_present=r.drainage_levels_present,
+        drainage_outlet_present=r.drainage_outlet_present,
+        drip_efficiency_measured=r.drip_efficiency_measured,
+        drip_flow_lph_per_acre=r.drip_flow_lph_per_acre,
+        drip_lateral_spacing_ft=r.drip_lateral_spacing_ft,
+        drip_shifts_per_day=r.drip_shifts_per_day,
+        dripper_spacing_cm=r.dripper_spacing_cm,
+        drippers_per_acre=r.drippers_per_acre,
+        dry_recovery_pct_actual=r.dry_recovery_pct_actual,
+        drying_method=r.drying_method,
+        drying_space_ready=r.drying_space_ready,
+        field_history_rot=r.field_history_rot,
+        field_history_wilt=r.field_history_wilt,
+        gap_filling_done=r.gap_filling_done,
+        harvest_route=r.harvest_route,
+        intercrop_selected=r.intercrop_selected,
+        limiting_nutrient=r.limiting_nutrient,
+        main_drain_connected=r.main_drain_connected,
+        moisture_probe_depth_cm=r.moisture_probe_depth_cm,
+        pan_coefficient_kp=r.pan_coefficient_kp,
+        perennial_weeds_removed=r.perennial_weeds_removed,
+        ppe_available=r.ppe_available,
+        processing_trained_operator=r.processing_trained_operator,
+        produce_washed=r.produce_washed,
+        rows_per_bed=r.rows_per_bed,
+        season_water_plan_basis=r.season_water_plan_basis,
+        seasonal_water_requirement_litres=r.seasonal_water_requirement_litres,
+        seed_at_planting_kg=r.seed_at_planting_kg,
+        seed_buds_per_piece=r.seed_buds_per_piece,
+        seed_piece_weight_g=r.seed_piece_weight_g,
+        seed_storage_loss_pct=r.seed_storage_loss_pct,
+        seed_storage_method=r.seed_storage_method,
+        seed_stored_kg=r.seed_stored_kg,
+        shade_pct=r.shade_pct,
+        so2_treatment_used=r.so2_treatment_used,
+        storage_loss_monthly_pct=r.storage_loss_monthly_pct,
+        vwc_field_capacity=r.vwc_field_capacity,
+        vwc_saturation=r.vwc_saturation,
+        vwc_stress_threshold=r.vwc_stress_threshold,
+        water_available_oct_feb_litres=r.water_available_oct_feb_litres,
+        water_stress_after_earthing_done=r.water_stress_after_earthing_done,
+        water_withdrawal_pct=r.water_withdrawal_pct,
+        water_withdrawal_start_date=r.water_withdrawal_start_date,
+        water_withdrawal_started=r.water_withdrawal_started,
     )
 
 

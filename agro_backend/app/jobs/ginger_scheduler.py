@@ -24,10 +24,13 @@ from app.infra.persistence.pg_crop_scouting_repo import PgCropScoutingRepo
 from app.infra.persistence.pg_crop_season_repo import PgCropSeasonRepo
 from app.infra.persistence.pg_farm_repo import PgFarmRepo
 from app.infra.persistence.pg_farmer_repo import PgFarmerRepo
+from app.infra.persistence.pg_farmer_schemes_repo import PgFarmerSchemesRepo
 from app.infra.persistence.pg_lab_soil_test_repo import PgLabSoilTestRepo
 from app.infra.persistence.pg_plot_repo import PgPlotRepo
 from app.infra.persistence.pg_reading_repo import PgReadingRepo
 from app.infra.persistence.pg_satellite_reading_repo import PgSatelliteReadingRepo
+from app.infra.persistence.pg_season_economics_repo import PgSeasonEconomicsRepo
+from app.infra.persistence.pg_season_operations_repo import PgSeasonOperationsRepo
 from app.infra.persistence.pg_weather_station_reading_repo import PgWeatherStationReadingRepo
 from app.jobs.ginger_daily import GingerDailyDeps, run_daily
 
@@ -59,6 +62,9 @@ async def build_and_start_scheduler(settings: Settings) -> AsyncIOScheduler | No
         farm_repo=PgFarmRepo(sessionmaker),
         lab_soil_test_repo=PgLabSoilTestRepo(sessionmaker),
         crop_scouting_repo=PgCropScoutingRepo(sessionmaker),
+        season_economics_repo=PgSeasonEconomicsRepo(sessionmaker),
+        season_operations_repo=PgSeasonOperationsRepo(sessionmaker),
+        farmer_schemes_repo=PgFarmerSchemesRepo(sessionmaker),
     )
 
     scheduler = AsyncIOScheduler(timezone=settings.GINGER_JOB_TIMEZONE)
