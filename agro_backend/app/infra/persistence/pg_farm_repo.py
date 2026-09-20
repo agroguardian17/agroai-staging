@@ -34,8 +34,8 @@ class PgFarmRepo:
 
     async def find_facts(self, farm_id: uuid.UUID) -> FarmFacts | None:
         stmt = text(
-            "SELECT farm_id, soil_type, soil_depth_cm, water_source_primary, "
-            "irrigation_type, drip_emitter_lph, previous_crops_json "
+            "SELECT farm_id, soil_type, soil_depth_cm, soil_organic_carbon_pct, "
+            "water_source_primary, irrigation_type, drip_emitter_lph, previous_crops_json "
             "FROM farms WHERE farm_id = :farm_id"
         )
         async with self._sm() as session:
@@ -47,6 +47,7 @@ class PgFarmRepo:
             farm_id=r.farm_id,
             soil_type=r.soil_type,
             soil_depth_cm=r.soil_depth_cm,
+            soil_organic_carbon_pct=r.soil_organic_carbon_pct,
             water_source_primary=r.water_source_primary,
             irrigation_type=r.irrigation_type,
             drip_emitter_lph=r.drip_emitter_lph,

@@ -527,3 +527,90 @@ async def test_fills_plot_farm_farmer_facts_under_kb_names() -> None:
     assert state["yield_target_quintal_per_acre"] == Decimal("300")
     assert state["yield_quintal_per_acre_actual"] is None
     assert state["seed_cost_per_kg"] == Decimal("8000")
+
+
+# ---------------------------------------------------------------------------
+# Phase-2 (lab_soil_tests): KB soil chemistry from the latest lab test,
+# with a farm-level organic-carbon fallback for soil_oc_pct.
+# ---------------------------------------------------------------------------
+
+
+class _FakeLabRepo:
+    def __init__(self, view=None) -> None:
+        self._view = view
+
+    async def latest_for_farm(self, farm_id):
+        return self._view
+
+
+def _season_min() -> CropSeasonView:
+    return CropSeasonView(
+        season_id=_SEASON,
+        tenant_id=_TENANT,
+        farm_id=_FARM,
+        plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger",
+        crop_name_marathi="आले",
+        crop_category="cash_crop",
+        crop_variety="Mahima",
+        sowing_date=date(2026, 6, 1),
+        expected_harvest_date=date(2027, 2, 1),
+        current_growth_stage="vegetative",
+        crop_age_days_today=63,
+    )
+
+
+@pytest.mark.asyncio
+async def test_fills_soil_chemistry_from_lab_test_overriding_farm_oc() -> None:
+    from app.application.ports.farm_repo import FarmFacts
+    from app.application.ports.lab_soil_test_repo import LabSoilTestView
+
+    farm = FarmFacts(farm_id=_FARM, soil_organic_carbon_pct=Decimal("0.55"))
+    lab = LabSoilTestView(
+        lab_test_id=uuid.uuid4(),
+        farm_id=_FARM,
+        sample_date=date(2026, 7, 1),
+        soil_oc_pct=Decimal("0.62"),
+        soil_ec=Decimal("0.30"),
+        soil_zn_ppm=Decimal("0.8"),
+        soil_free_lime_pct=Decimal("4.5"),
+    )
+    declared = frozenset(
+        {"soil_oc_pct", "soil_ec", "soil_zn_ppm", "soil_free_lime_pct", "soil_test_available"}
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(_season_min()),
+        farm_repo=_FakeFarmRepo(farm),
+        lab_soil_test_repo=_FakeLabRepo(lab),
+        declared_fields=declared,
+    )
+    state = (
+        await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)
+    ).state
+    assert state["soil_test_available"] is True
+    assert state["soil_oc_pct"] == Decimal("0.62")  # lab overrides farm 0.55
+    assert state["soil_ec"] == Decimal("0.30")
+    assert state["soil_zn_ppm"] == Decimal("0.8")
+    assert state["soil_free_lime_pct"] == Decimal("4.5")
+
+
+@pytest.mark.asyncio
+async def test_soil_oc_falls_back_to_farm_when_no_lab() -> None:
+    from app.application.ports.farm_repo import FarmFacts
+
+    farm = FarmFacts(farm_id=_FARM, soil_organic_carbon_pct=Decimal("0.55"))
+    declared = frozenset({"soil_oc_pct", "soil_test_available"})
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(_season_min()),
+        farm_repo=_FakeFarmRepo(farm),
+        declared_fields=declared,
+    )
+    state = (
+        await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)
+    ).state
+    assert state["soil_oc_pct"] == Decimal("0.55")  # farm fallback
+    assert state["soil_test_available"] is None  # no lab test seen

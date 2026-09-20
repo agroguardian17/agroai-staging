@@ -49,6 +49,7 @@ from typing import TYPE_CHECKING, Any
 from app.application.ports.crop_season_repo import CropSeasonRepo, CropSeasonView
 from app.application.ports.farm_repo import FarmFacts, FarmRepo
 from app.application.ports.farmer_repo import FarmerLocation, FarmerRepo
+from app.application.ports.lab_soil_test_repo import LabSoilTestRepo, LabSoilTestView
 from app.application.ports.plot_repo import PlotRepo
 from app.application.ports.reading_repo import ReadingRepo
 from app.application.ports.satellite_reading_repo import (
@@ -113,6 +114,10 @@ class FarmBrainDeps:
     # district/taluka). None keeps them UNKNOWN.
     farm_repo: FarmRepo | None = None
     farmer_repo: FarmerRepo | None = None
+    # Optional soil-lab source. When present the builder fills the KB's soil
+    # chemistry fields (organic carbon, EC, free lime, micronutrients) from
+    # the latest test, and sets soil_test_available. None keeps them UNKNOWN.
+    lab_soil_test_repo: LabSoilTestRepo | None = None
     # The full ``kb_farm_brain_fields`` set. Injected so tests can pin a
     # subset; the daily job reads it from the database at startup.
     declared_fields: frozenset[str] = field(default_factory=frozenset)
@@ -177,6 +182,14 @@ async def build_farm_brain(
         facts = await deps.farm_repo.find_facts(season.farm_id)
         if facts is not None:
             _populate_from_farm(state, facts)
+
+    # ---- Soil lab test (KB nutrient chemistry) ------------------------
+    # Overrides the farm-level soil_oc_pct fallback set above when a test
+    # exists, and fills the micronutrient / EC / free-lime fields.
+    if deps.lab_soil_test_repo is not None and season is not None:
+        lab = await deps.lab_soil_test_repo.latest_for_farm(season.farm_id)
+        if lab is not None:
+            _populate_from_lab_soil(state, lab)
 
     # ---- Farmer location (district / taluka) --------------------------
     if deps.farmer_repo is not None and season is not None:
@@ -340,6 +353,9 @@ def _populate_from_farm(state: dict[str, Any], f: FarmFacts) -> None:
         _set(state, "soil_type", _SOIL_TYPE_MAP.get(f.soil_type, "other"))
         _set(state, "soil_texture_class", _SOIL_TEXTURE_CLASS_MAP.get(f.soil_type, "medium"))
     _set(state, "soil_depth_cm", f.soil_depth_cm)
+    # Farm-level organic carbon is a coarse fallback for the KB's soil_oc_pct;
+    # a real lab test (populated later) overrides it.
+    _set(state, "soil_oc_pct", f.soil_organic_carbon_pct)
     _set(state, "water_source_type", f.water_source_primary)
     _set(state, "dripper_lph", f.drip_emitter_lph)
     if f.irrigation_type is not None:
@@ -352,6 +368,23 @@ def _populate_from_farmer(state: dict[str, Any], loc: FarmerLocation) -> None:
     """Fill farmer administrative location (D10 scheme rules)."""
     _set(state, "district", loc.district)
     _set(state, "taluka", loc.taluka)
+
+
+def _populate_from_lab_soil(state: dict[str, Any], lab: LabSoilTestView) -> None:
+    """Fill the KB soil-chemistry fields from the latest lab test.
+
+    A test existing at all sets ``soil_test_available``; the individual
+    nutrient values are set only when the lab reported them.
+    """
+    _set(state, "soil_test_available", True)
+    _set(state, "soil_oc_pct", lab.soil_oc_pct)  # overrides the farm fallback
+    _set(state, "soil_ec", lab.soil_ec)
+    _set(state, "soil_free_lime_pct", lab.soil_free_lime_pct)
+    _set(state, "soil_zn_ppm", lab.soil_zn_ppm)
+    _set(state, "soil_fe_ppm", lab.soil_fe_ppm)
+    _set(state, "soil_ca_ppm", lab.soil_ca_ppm)
+    _set(state, "soil_mg_ppm", lab.soil_mg_ppm)
+    _set(state, "soil_s_ppm", lab.soil_s_ppm)
 
 
 def _geojson_polygon_to_wkt(geojson: Any) -> str | None:
