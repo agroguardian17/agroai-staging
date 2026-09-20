@@ -41,6 +41,44 @@ class CropSeasonView:
     seed_cost_per_kg: Decimal | None = None
     target_yield_qtl_per_acre: Decimal | None = None
     actual_yield_qtl_per_acre: Decimal | None = None
+    # Agronomy-plan facts (migration 0022) — named to match the KB fields.
+    deep_ploughing_done: bool | None = None
+    solarization_done: bool | None = None
+    solarization_weeks: Decimal | None = None
+    planting_layout: str | None = None
+    bed_height_cm: Decimal | None = None
+    bed_width_cm: Decimal | None = None
+    furrow_width_cm: Decimal | None = None
+    plants_per_acre: int | None = None
+    planting_depth_cm: Decimal | None = None
+    earthing_up_date: datetime.date | None = None
+    earthing_up_2_date: datetime.date | None = None
+    mulch_stage_1_done: bool | None = None
+    mulch_stage_2_done: bool | None = None
+    mulch_stage_3_done: bool | None = None
+    n_target_kg_per_acre: Decimal | None = None
+    p_target_kg_per_acre: Decimal | None = None
+    k_target_kg_per_acre: Decimal | None = None
+    n_applied_kg_per_acre: Decimal | None = None
+    p_applied_kg_per_acre: Decimal | None = None
+    k_applied_kg_per_acre: Decimal | None = None
+    n_split_1_date: datetime.date | None = None
+    n_split_2_date: datetime.date | None = None
+    k_late_split_1_date: datetime.date | None = None
+    k_late_split_2_date: datetime.date | None = None
+    fym_t_per_acre: Decimal | None = None
+    fym_fully_decomposed: bool | None = None
+    trichoderma_kg_per_acre: Decimal | None = None
+    neem_cake_basal_kg_per_acre: Decimal | None = None
+    neem_cake_earthing_kg_per_acre: Decimal | None = None
+    micronutrient_basal_done: bool | None = None
+    micronutrient_spray_1_done: bool | None = None
+    micronutrient_spray_2_done: bool | None = None
+    hot_water_treatment_done: bool | None = None
+    biofumigation_done: bool | None = None
+    azospirillum_psb_done: bool | None = None
+    marigold_planted: bool | None = None
+    target_product: str | None = None
 
 
 @runtime_checkable
