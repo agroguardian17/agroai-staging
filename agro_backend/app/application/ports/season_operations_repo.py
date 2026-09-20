@@ -33,6 +33,7 @@ class SeasonOperationsView:
     metarhizium_kg_per_acre: Decimal | None = None
     naa_spray_count: int | None = None
     weeding_count: int | None = None
+    labour_arranged_date: datetime.date | None = None
 
 
 @runtime_checkable

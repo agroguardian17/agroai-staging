@@ -1,7 +1,7 @@
 """Assemble a Farm Brain state dict for the ginger engine.
 
 The teammate's engine expects a per-plot per-day dict keyed on the names
-declared in ``kb_farm_brain_fields`` — 306 fields covering sensors, weather,
+declared in ``kb_farm_brain_fields`` - 306 fields covering sensors, weather,
 crop stage, plot facts, operational records, derived durations, and synthetic
 helpers.
 
@@ -9,7 +9,7 @@ Our current data sources fill roughly one-third of those fields (latest
 Reading, Plot, CropSeason, computed DAP + month). The rest come back as
 ``None`` and the engine's three-valued logic reports
 ``"insufficient data: <field>"`` for any rule that references them. This is
-the intended behaviour — see ``ginger/engine/ARCHITECTURE.md`` §3.
+the intended behaviour - see ``ginger/engine/ARCHITECTURE.md`` §3.
 
 This module is pure application-layer code: it depends only on repository
 Protocols (``ReadingRepo``, ``PlotRepo``, ``CropSeasonRepo``) and stdlib.
@@ -27,7 +27,7 @@ Field coverage today:
 * **Weather station**, **operational records**, **satellite/NDVI**: 0 of
   the ~45 fields. These require adapters we have not built yet.
 * **Synthetic** (~15 of ~15): ``current_month``, ``days_to_planting``,
-  ``days_to_harvest``, product-policy proposals — all deterministic from
+  ``days_to_harvest``, product-policy proposals - all deterministic from
   the date and rule context.
 * **Duration fields** (``<field>__duration``): computed only for
   ``soil_moisture_avg_pct`` (via a 24-h history window) as a placeholder;
@@ -49,6 +49,7 @@ from typing import TYPE_CHECKING, Any
 from app.application.ports.crop_scouting_repo import CropScoutingRepo, CropScoutingView
 from app.application.ports.crop_season_repo import CropSeasonRepo, CropSeasonView
 from app.application.ports.farm_repo import FarmFacts, FarmRepo
+from app.application.ports.farmer_consent_repo import FarmerConsentRepo
 from app.application.ports.farmer_repo import FarmerLocation, FarmerRepo
 from app.application.ports.farmer_schemes_repo import FarmerSchemesRepo
 from app.application.ports.lab_soil_test_repo import LabSoilTestRepo, LabSoilTestView
@@ -134,6 +135,7 @@ class FarmBrainDeps:
     season_economics_repo: SeasonEconomicsRepo | None = None
     season_operations_repo: SeasonOperationsRepo | None = None
     farmer_schemes_repo: FarmerSchemesRepo | None = None
+    farmer_consent_repo: FarmerConsentRepo | None = None
     # The full ``kb_farm_brain_fields`` set. Injected so tests can pin a
     # subset; the daily job reads it from the database at startup.
     declared_fields: frozenset[str] = field(default_factory=frozenset)
@@ -162,7 +164,7 @@ async def build_farm_brain(
 
     Missing sources translate to ``None`` values, never to raised exceptions.
     A plot with zero readings and no active crop season still produces a
-    valid state dict — the engine's three-valued logic will report every
+    valid state dict - the engine's three-valued logic will report every
     dependent rule as ``UNKNOWN``.
     """
     state: dict[str, Any] = {}
@@ -238,6 +240,11 @@ async def build_farm_brain(
                 if sch is not None:
                     for _f in _SCHEMES_FIELDS:
                         _set(state, _f, getattr(sch, _f))
+            if deps.farmer_consent_repo is not None:
+                con = await deps.farmer_consent_repo.for_farmer(owner)
+                if con is not None:
+                    for _f in _CONSENT_FIELDS:
+                        _set(state, _f, getattr(con, _f))
 
     # ---- Weather station (air temp + humidity + derived VPD) -----------
     # Weather is farm-level; resolve it from the active season's farm. The
@@ -254,10 +261,10 @@ async def build_farm_brain(
     # fields without the (not-yet-installed) Main Node weather station.
     if deps.weather_forecast_repo is not None and season is not None:
         rows = await deps.weather_forecast_repo.window_for_farm(
-            season.farm_id, today - timedelta(days=21), today + timedelta(days=7)
+            season.farm_id, today - timedelta(days=92), today + timedelta(days=7)
         )
         if rows:
-            _populate_from_forecast(state, rows, today)
+            _populate_from_forecast(state, rows, today, season.sowing_date)
 
     # ---- Satellite (Domain 14 optical + SAR indices) -------------------
     # Reads the recent scenes per source, plus the plot boundary for the
@@ -274,7 +281,7 @@ async def build_farm_brain(
     # ---- Synthetic ------------------------------------------------------
     state["current_month"] = today.month
     # brand/capability/profit/price proposals are engine-side attempts,
-    # set at attempt time — not from data. Default to None; the immutable
+    # set at attempt time - not from data. Default to None; the immutable
     # guardrail rules read them only when an attempt is being made.
 
     # ---- Derived durations ------
@@ -321,7 +328,7 @@ def _populate_from_reading(state: dict[str, Any], r: Reading) -> None:
 
 
 # crop_seasons agronomy-plan columns (migration 0022) whose KB field name is
-# identical to the CropSeasonView attribute name — copied by name in the mapper.
+# identical to the CropSeasonView attribute name - copied by name in the mapper.
 _SEASON_PLAN_FIELDS: tuple[str, ...] = (
     "deep_ploughing_done",
     "solarization_done",
@@ -360,6 +367,7 @@ _SEASON_PLAN_FIELDS: tuple[str, ...] = (
     "azospirillum_psb_done",
     "marigold_planted",
     "target_product",
+    "k_source",
     # part 2 (migration 0024)
     "affected_plants_removed",
     "bed_former_arranged",
@@ -538,11 +546,56 @@ def _rain_last_48h_mm(rows: list[ForecastRow], today: date) -> float | None:
     return round(sum(past), 2) if past else None
 
 
+def _fog_days_consecutive(rows: list[ForecastRow], today: date) -> int | None:
+    """Consecutive foggy days ending at ``today`` (walking backwards)."""
+    by_date = {r.forecast_for_date: r.fog_observed for r in rows}
+    if by_date.get(today) is None:
+        return None
+    n = 0
+    d = today
+    while by_date.get(d) is True:
+        n += 1
+        d = d - timedelta(days=1)
+    return n
+
+
+# The engine build/version tag the KB's D11/D12 provenance rules read.
+_MODEL_VERSION = "ginger-engine/v1.0"
+
+
+def _prediction_stage(dap: int) -> str:
+    """Coarse yield-prediction stage from days-after-planting (ginger ~240 d).
+
+    AGRONOMIST TO CONFIRM the DAP cut-points.
+    """
+    if dap < 0:
+        return "pre_season"
+    if dap < 90:
+        return "g1_end"
+    if dap < 200:
+        return "mid_season"
+    return "pre_harvest_observation"
+
+
+def _cwsi(lst_c: object, air_temp_max_c: object) -> float | None:
+    """Crop Water Stress Index proxy in [0,1] from canopy (LST) minus air temp.
+
+    A simple normalisation of the LST-Tair difference: 0 well-watered, 1 fully
+    stressed. Only computed when a Landsat LST value is present (see satellite
+    ``lst_c``); the fetch of LST itself is a pending external adapter.
+    """
+    if lst_c is None or air_temp_max_c is None:
+        return None
+    diff = float(lst_c) - float(air_temp_max_c)
+    # -2 °C (cooler canopy = unstressed) .. +8 °C (hot canopy = stressed).
+    return round(max(0.0, min(1.0, (diff + 2.0) / 10.0)), 3)
+
+
 def _derive_composite(state: dict[str, Any]) -> None:
     """Fields derived from other already-populated fields (no new source).
 
     ``vafsa_state`` (too_wet/workable/too_dry) is read off the soil-moisture VWC
-    against the season's own field-capacity / stress thresholds — so it uses no
+    against the season's own field-capacity / stress thresholds - so it uses no
     hardcoded agronomy, only values the agronomist entered.
     """
     vwc = state.get("soil_moisture_vwc")
@@ -552,8 +605,19 @@ def _derive_composite(state: dict[str, Any]) -> None:
         vafsa = "too_wet" if vwc >= sat else ("too_dry" if vwc <= stress else "workable")
         _set(state, "vafsa_state", vafsa)
 
+    # Engine-side constants / stage classification (D11/D12).
+    _set(state, "model_version", _MODEL_VERSION)
+    dap = state.get("dap")
+    if isinstance(dap, int):
+        _set(state, "prediction_stage", _prediction_stage(dap))
+    cwsi = _cwsi(state.get("lst_c"), state.get("air_temp_max_c"))
+    if cwsi is not None:
+        _set(state, "cwsi", cwsi)
 
-def _populate_from_forecast(state: dict[str, Any], rows: list[ForecastRow], today: date) -> None:
+
+def _populate_from_forecast(
+    state: dict[str, Any], rows: list[ForecastRow], today: date, sowing_date: date | None = None
+) -> None:
     """Fill the KB's D07 rain-window / evaporation / radiation fields from the
     Open-Meteo past+future window. Station-only fields (station_id, gauge age,
     forecast bias vs station) stay UNKNOWN until the Main Node is installed."""
@@ -564,11 +628,22 @@ def _populate_from_forecast(state: dict[str, Any], rows: list[ForecastRow], toda
     _set(state, "dry_spell_days", _dry_spell_days(rows, today))
     _set(state, "effective_rainfall_mm", _effective_rainfall_mm(rows, today))
     _set(state, "heat_stress_days_count", _heat_stress_days(rows, today))
+    _set(state, "fog_days_consecutive", _fog_days_consecutive(rows, today))
+    # Season-to-date rain (bounded by the fetched window, ~92 days back).
+    if sowing_date is not None:
+        ytd = [
+            r.rain_mm_expected or 0.0 for r in rows if sowing_date <= r.forecast_for_date <= today
+        ]
+        if ytd:
+            _set(state, "rainfall_ytd_mm", round(sum(ytd), 1))
     today_row = next((r for r in rows if r.forecast_for_date == today), None)
     if today_row is not None:
         _set(state, "rainfall_mm", today_row.rain_mm_expected)
         _set(state, "pan_evaporation_mm_day", today_row.et0_mm)
         _set(state, "solar_radiation_mj_m2", today_row.solar_radiation_mj_m2)
+        _set(state, "vpd_night_mean_kpa", today_row.vpd_night_mean_kpa)
+        if today_row.fog_observed is not None:
+            _set(state, "fog_observed", today_row.fog_observed)
 
 
 # DB ``farms.soil_type`` domain (black/red/sandy/loamy/mixed) → the KB's
@@ -642,10 +717,12 @@ def _populate_from_farmer(state: dict[str, Any], loc: FarmerLocation) -> None:
     _set(state, "taluka", loc.taluka)
     if loc.district is not None:
         _set(state, "agro_climatic_zone", _AGRO_ZONE.get(loc.district, "unknown"))
+    if loc.language_preference is not None:
+        _set(state, "advisory_language", "mr" if loc.language_preference == "marathi" else "en")
 
 
 # crop_scouting observation columns (migration 0023) whose KB field name equals
-# the CropScoutingView attribute name — copied by name.
+# the CropScoutingView attribute name - copied by name.
 _SCOUTING_FIELDS: tuple[str, ...] = (
     "emergence_started",
     "establishment_pct",
@@ -743,6 +820,7 @@ _OPS_FIELDS: tuple[str, ...] = (
     "metarhizium_kg_per_acre",
     "naa_spray_count",
     "weeding_count",
+    "labour_arranged_date",
 )
 
 
@@ -768,6 +846,18 @@ _SCHEMES_FIELDS: tuple[str, ...] = (
     "subsidy_documents_ready",
     "subsidy_lottery_result",
     "subsidy_scheme_applied",
+)
+
+_CONSENT_FIELDS: tuple[str, ...] = (
+    "consent_advisory",
+    "consent_research",
+    "consent_date",
+    "third_party_share_consent_given",
+    "data_retention_until",
+    "deletion_requested",
+    "cluster_anonymised",
+    "sat_attribution_shown",
+    "sat_public_display_context",
 )
 
 

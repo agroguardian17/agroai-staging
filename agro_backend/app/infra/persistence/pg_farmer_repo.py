@@ -52,7 +52,8 @@ class PgFarmerRepo:
 
     async def find_location(self, farmer_id: uuid.UUID) -> FarmerLocation | None:
         stmt = text(
-            "SELECT farmer_id, district, taluka FROM farmers WHERE farmer_id = :fid LIMIT 1"
+            "SELECT farmer_id, district, taluka, language_preference "
+            "FROM farmers WHERE farmer_id = :fid LIMIT 1"
         )
         async with self._sm() as session:
             res = await session.execute(stmt, {"fid": farmer_id})
@@ -60,7 +61,12 @@ class PgFarmerRepo:
         if row is None:
             return None
         r: Any = row
-        return FarmerLocation(farmer_id=r.farmer_id, district=r.district, taluka=r.taluka)
+        return FarmerLocation(
+            farmer_id=r.farmer_id,
+            district=r.district,
+            taluka=r.taluka,
+            language_preference=r.language_preference,
+        )
 
 
 __all__ = ["PgFarmerRepo"]

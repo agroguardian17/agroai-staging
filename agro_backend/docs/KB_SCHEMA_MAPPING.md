@@ -10,11 +10,11 @@ Single source of truth for how every Ginger-KB input field reaches the engine. T
 |---|---:|
 | KB rules | **481** |
 | Distinct fields the rules read | **346** |
-| Fields wired (DB home + mapper) | **265** |
-| Fields not yet wired (Phase 3) | **81** |
-| Rules fully-wireable | **305** |
-| Rules partially wireable | 128 |
-| Rules fully blocked (all fields Phase 3) | 48 |
+| Fields wired (DB home + mapper) | **297** |
+| Fields not yet wired (Phase 3) | **49** |
+| Rules fully-wireable | **358** |
+| Rules partially wireable | 99 |
+| Rules fully blocked (all fields Phase 3) | 24 |
 
 *Wireable ≠ firing:* a rule fires only when its fields also hold **data** and its trigger is true. Most tables/columns below are populated on demand via the dashboard entry pages; sensor & weather fields depend on field hardware.
 
@@ -22,30 +22,30 @@ Single source of truth for how every Ginger-KB input field reaches the engine. T
 
 | Domain | Fully-wireable | Partial | Blocked | Total |
 |---|---:|---:|---:|---:|
-| D01 nursery/stage | 18 | 3 | 1 | 22 |
-| D02 land prep | 21 | 6 | 0 | 27 |
-| D03 irrigation | 20 | 11 | 0 | 31 |
-| D04 nutrients | 30 | 4 | 0 | 34 |
-| D05 pests | 28 | 5 | 0 | 33 |
-| D06 disease | 19 | 9 | 0 | 28 |
-| D07 weather | 4 | 27 | 7 | 38 |
-| D08 planting | 34 | 4 | 0 | 38 |
+| D01 nursery/stage | 21 | 1 | 0 | 22 |
+| D02 land prep | 24 | 3 | 0 | 27 |
+| D03 irrigation | 27 | 4 | 0 | 31 |
+| D04 nutrients | 31 | 3 | 0 | 34 |
+| D05 pests | 30 | 3 | 0 | 33 |
+| D06 disease | 21 | 7 | 0 | 28 |
+| D07 weather | 18 | 20 | 0 | 38 |
+| D08 planting | 38 | 0 | 0 | 38 |
 | D09 harvest | 38 | 1 | 0 | 39 |
-| D10 schemes | 32 | 3 | 0 | 35 |
-| D11 yield model | 4 | 17 | 13 | 34 |
-| D12 advisory QA | 1 | 17 | 18 | 36 |
-| D13 economics | 37 | 2 | 0 | 39 |
-| D14 satellite | 19 | 19 | 9 | 47 |
-| **Total** | **305** | **128** | **48** | **481** |
+| D10 schemes | 33 | 2 | 0 | 35 |
+| D11 yield model | 5 | 18 | 11 | 34 |
+| D12 advisory QA | 10 | 21 | 5 | 36 |
+| D13 economics | 38 | 1 | 0 | 39 |
+| D14 satellite | 24 | 15 | 8 | 47 |
+| **Total** | **358** | **99** | **24** | **481** |
 
 ## Wired fields by source
 
 Each source is a DB table (with its entry path) or a computed value.
 
-### crop_seasons — 96 fields
+### crop_seasons — 98 fields
 *Entry: Data Entry page · AGRO tab*
 
-`affected_plants_removed`, `azospirillum_psb_done`, `bed_former_arranged`, `bed_height_cm`, `bed_width_cm`, `biofumigation_done`, `bud_orientation_instructed`, `calibration_date`, `calibration_done`, `crop_coefficient_kc`, `current_stage`, `dap`, `days_to_planting`, `deep_ploughing_done`, `drainage_levels_present`, `drainage_outlet_present`, `drip_efficiency_measured`, `drip_flow_lph_per_acre`, `drip_lateral_spacing_ft`, `drip_shifts_per_day`, `dripper_spacing_cm`, `drippers_per_acre`, `dry_recovery_pct_actual`, `drying_method`, `drying_space_ready`, `earthing_up_2_date`, `earthing_up_date`, `field_history_rot`, `field_history_wilt`, `furrow_width_cm`, `fym_fully_decomposed`, `fym_t_per_acre`, `gap_filling_done`, `harvest_date`, `harvest_route`, `hot_water_treatment_done`, `intercrop_selected`, `k_applied_kg_per_acre`, `k_late_split_1_date`, `k_late_split_2_date`, `k_target_kg_per_acre`, `limiting_nutrient`, `main_drain_connected`, `marigold_planted`, `micronutrient_basal_done`, `micronutrient_spray_1_done`, `micronutrient_spray_2_done`, `moisture_probe_depth_cm`, `mulch_stage_1_done`, `mulch_stage_2_done`, `mulch_stage_3_done`, `n_applied_kg_per_acre`, `n_split_1_date`, `n_split_2_date`, `n_target_kg_per_acre`, `neem_cake_basal_kg_per_acre`, `neem_cake_earthing_kg_per_acre`, `p_applied_kg_per_acre`, `p_target_kg_per_acre`, `pan_coefficient_kp`, `perennial_weeds_removed`, `planting_date`, `planting_depth_cm`, `planting_layout`, `plants_per_acre`, `ppe_available`, `processing_trained_operator`, `produce_washed`, `rows_per_bed`, `season_water_plan_basis`, `seasonal_water_requirement_litres`, `seed_at_planting_kg`, `seed_buds_per_piece`, `seed_cost_per_kg`, `seed_piece_weight_g`, `seed_storage_loss_pct`, `seed_storage_method`, `seed_stored_kg`, `shade_pct`, `so2_treatment_used`, `solarization_done`, `solarization_weeks`, `storage_loss_monthly_pct`, `target_product`, `trichoderma_kg_per_acre`, `variety`, `vwc_field_capacity`, `vwc_saturation`, `vwc_stress_threshold`, `water_available_oct_feb_litres`, `water_stress_after_earthing_done`, `water_withdrawal_pct`, `water_withdrawal_start_date`, `water_withdrawal_started`, `yield_quintal_per_acre_actual`, `yield_target_quintal_per_acre`
+`affected_plants_removed`, `azospirillum_psb_done`, `bed_former_arranged`, `bed_height_cm`, `bed_width_cm`, `biofumigation_done`, `bud_orientation_instructed`, `calibration_date`, `calibration_done`, `crop_coefficient_kc`, `current_stage`, `dap`, `days_to_planting`, `deep_ploughing_done`, `drainage_levels_present`, `drainage_outlet_present`, `drip_efficiency_measured`, `drip_flow_lph_per_acre`, `drip_lateral_spacing_ft`, `drip_shifts_per_day`, `dripper_spacing_cm`, `drippers_per_acre`, `dry_recovery_pct_actual`, `drying_method`, `drying_space_ready`, `earthing_up_2_date`, `earthing_up_date`, `field_history_rot`, `field_history_wilt`, `furrow_width_cm`, `fym_fully_decomposed`, `fym_t_per_acre`, `gap_filling_done`, `harvest_date`, `harvest_route`, `hot_water_treatment_done`, `intercrop_selected`, `k_applied_kg_per_acre`, `k_late_split_1_date`, `k_late_split_2_date`, `k_source`, `k_target_kg_per_acre`, `limiting_nutrient`, `main_drain_connected`, `marigold_planted`, `micronutrient_basal_done`, `micronutrient_spray_1_done`, `micronutrient_spray_2_done`, `moisture_probe_depth_cm`, `mulch_stage_1_done`, `mulch_stage_2_done`, `mulch_stage_3_done`, `n_applied_kg_per_acre`, `n_split_1_date`, `n_split_2_date`, `n_target_kg_per_acre`, `neem_cake_basal_kg_per_acre`, `neem_cake_earthing_kg_per_acre`, `p_applied_kg_per_acre`, `p_target_kg_per_acre`, `pan_coefficient_kp`, `perennial_weeds_removed`, `planting_date`, `planting_depth_cm`, `planting_layout`, `plants_per_acre`, `ppe_available`, `processing_trained_operator`, `produce_washed`, `rows_per_bed`, `season_water_plan_basis`, `seasonal_water_requirement_litres`, `seed_at_planting_kg`, `seed_buds_per_piece`, `seed_cost_per_kg`, `seed_piece_weight_g`, `seed_storage_loss_pct`, `seed_storage_method`, `seed_stored_kg`, `shade_pct`, `so2_treatment_used`, `solarization_done`, `solarization_weeks`, `stage_source`, `storage_loss_monthly_pct`, `target_product`, `trichoderma_kg_per_acre`, `variety`, `vwc_field_capacity`, `vwc_saturation`, `vwc_stress_threshold`, `water_available_oct_feb_litres`, `water_stress_after_earthing_done`, `water_withdrawal_pct`, `water_withdrawal_start_date`, `water_withdrawal_started`, `yield_quintal_per_acre_actual`, `yield_target_quintal_per_acre`
 
 ### crop_scouting — 38 fields
 *Entry: 🔎 Crop Scouting page*
@@ -67,10 +67,20 @@ Each source is a DB table (with its entry path) or a computed value.
 
 `cgwb_block_category`, `cibrc_list_checked_date`, `data_review_due`, `drip_subsidy_pct_applicable`, `drought_prone_listed`, `farm_pond_planned`, `farmer_category`, `geo_tagging_done`, `kvk_contacted`, `pmfby_notified_for_ginger`, `pre_sanction_date`, `pre_sanction_received`, `priority_category`, `research_centre_contacted`, `scale_of_finance_per_acre`, `seed_supplier_identified`, `soil_lab_selected`, `subsidy_applied_date`, `subsidy_documents_ready`, `subsidy_lottery_result`, `subsidy_scheme_applied`
 
-### season_operations — 19 fields
+### season_operations — 20 fields
 *Entry: 📋 Season & Scheme Records page*
 
-`basal_k_kg_per_acre`, `basal_p_kg_per_acre`, `castor_bait_prepared_date`, `castor_bait_units_per_acre`, `drip_runtime_min`, `ethephon_spray_count`, `fertigation_active`, `fertigation_last_ec_response`, `herbicide_post_emergent_date`, `herbicide_pre_emergent_date`, `irrigation_applied_litres_today`, `kulav_passes`, `last_fungicide_date`, `last_fungicide_group`, `last_insecticide_date`, `last_insecticide_group`, `metarhizium_kg_per_acre`, `naa_spray_count`, `weeding_count`
+`basal_k_kg_per_acre`, `basal_p_kg_per_acre`, `castor_bait_prepared_date`, `castor_bait_units_per_acre`, `drip_runtime_min`, `ethephon_spray_count`, `fertigation_active`, `fertigation_last_ec_response`, `herbicide_post_emergent_date`, `herbicide_pre_emergent_date`, `irrigation_applied_litres_today`, `kulav_passes`, `labour_arranged_date`, `last_fungicide_date`, `last_fungicide_group`, `last_insecticide_date`, `last_insecticide_group`, `metarhizium_kg_per_acre`, `naa_spray_count`, `weeding_count`
+
+### weather_forecasts (Open-Meteo) — 14 fields
+*Entry: —*
+
+`dry_spell_days`, `effective_rainfall_mm`, `fog_days_consecutive`, `fog_observed`, `forecast_rain_48h_mm`, `forecast_source`, `heat_stress_days_count`, `pan_evaporation_mm_day`, `rain_gap_days`, `rainfall_last_48h_mm`, `rainfall_mm`, `rainfall_ytd_mm`, `solar_radiation_mj_m2`, `vpd_night_mean_kpa`
+
+### farmer_consent — 9 fields
+*Entry: —*
+
+`cluster_anonymised`, `consent_advisory`, `consent_date`, `consent_research`, `data_retention_until`, `deletion_requested`, `sat_attribution_shown`, `sat_public_display_context`, `third_party_share_consent_given`
 
 ### farms — 8 fields
 *Entry: Data Entry page (farm facts)*
@@ -87,6 +97,16 @@ Each source is a DB table (with its entry path) or a computed value.
 
 `air_temp_max_c`, `air_temp_min_c`, `dew_point_c`, `rh_pct`, `vpd_kpa`, `wind_speed_ms`
 
+### farmers — 4 fields
+*Entry: Data Entry page (identity)*
+
+`advisory_language`, `agro_climatic_zone`, `district`, `taluka`
+
+### computed in mapper — 4 fields
+*Entry: —*
+
+`cwsi`, `model_version`, `prediction_stage`, `vafsa_state`
+
 ### node_sensor_readings (Sub Node sensor) — 4 fields
 *Entry: MQTT telemetry (hardware)*
 
@@ -97,31 +117,26 @@ Each source is a DB table (with its entry path) or a computed value.
 
 `area_acre`, `plot_id`
 
-### farmers — 2 fields
-*Entry: Data Entry page (identity)*
-
-`district`, `taluka`
-
 ### derived in mapper (satellite/season) — 1 fields
 *Entry: —*
 
 `farmer_id`
 
-## Not yet wired — Phase 3 (81 fields)
+## Not yet wired — Phase 3 (49 fields)
 
 These have **no column by design** — they are external-adapter or engine-computed values.
 
-### Engine model / advisory-QA state (D11/D12) — 33 fields
-`action_compliance_rate`, `advisory_completed_count`, `advisory_completed_on_time_count`, `advisory_issued_count`, `advisory_language`, `asr_used`, `bias_observation_count`, `ceiling_basis`, `cluster_anonymised`, `cluster_id`, `cluster_pest_alert_active`, `consent_advisory`, `consent_date`, `consent_research`, `cumulative_loss_pct`, `data_retention_until`, `deletion_requested`, `false_alarm_count`, `gap_attributed_pct`, `gap_unexplained_pct`, `interdependence_group`, `model_version`, `non_compliance_reason`, `photo_labelled_count`, `photo_uploaded_count`, `predicted_yield_quintal_per_acre`, `prediction_interval_pct`, `prediction_stage`, `season_record_complete`, `true_alarm_count`, `u_value_source_class`, `u_values_applied`, `yield_prediction_interval_pct`
+### Engine model / advisory-QA state (D11/D12) — 24 fields
+`action_compliance_rate`, `advisory_completed_count`, `advisory_completed_on_time_count`, `advisory_issued_count`, `asr_used`, `bias_observation_count`, `ceiling_basis`, `cluster_id`, `cluster_pest_alert_active`, `cumulative_loss_pct`, `false_alarm_count`, `gap_attributed_pct`, `gap_unexplained_pct`, `interdependence_group`, `non_compliance_reason`, `photo_labelled_count`, `photo_uploaded_count`, `predicted_yield_quintal_per_acre`, `prediction_interval_pct`, `season_record_complete`, `true_alarm_count`, `u_value_source_class`, `u_values_applied`, `yield_prediction_interval_pct`
 
-### Weather adapter (D07) — 20 fields
-`agro_climatic_zone`, `cyclone_alert_active`, `dry_spell_days`, `effective_rainfall_mm`, `fog_days_consecutive`, `fog_observed`, `forecast_bias_correction_mm`, `forecast_rain_48h_mm`, `forecast_source`, `heat_stress_days_count`, `pan_evaporation_mm_day`, `rain_gap_days`, `rainfall_deviation_pct`, `rainfall_last_48h_mm`, `rainfall_mm`, `rainfall_ytd_mm`, `solar_radiation_mj_m2`, `station_data_age_hours`, `station_id`, `vpd_night_mean_kpa`
+### Domain-14 adapters / consent — 12 fields
+`claim_type`, `farmer_scout_report_days_ago`, `lst_c`, `monsoon_days_since_onset`, `outgoing_message_contains_claim`, `plot_ndre_baseline_regional`, `plot_ndre_gap_regional`, `plot_ndvi_baseline_peer`, `plot_ndvi_gap_peer`, `scout_request_pending`, `sub_node_ec_status`, `sub_node_moisture_status`
 
-### Domain-14 adapters / consent — 16 fields
-`claim_type`, `cwsi`, `farmer_scout_report_days_ago`, `lst_c`, `monsoon_days_since_onset`, `outgoing_message_contains_claim`, `plot_ndre_baseline_regional`, `plot_ndre_gap_regional`, `plot_ndvi_baseline_peer`, `plot_ndvi_gap_peer`, `sat_attribution_shown`, `sat_public_display_context`, `scout_request_pending`, `sub_node_ec_status`, `sub_node_moisture_status`, `third_party_share_consent_given`
+### Derived from other fields — 8 fields
+`ec_baseline`, `ec_trend_pct`, `leaf_wetness_hours`, `percolation_class`, `percolation_time_hours`, `phi_days_remaining`, `saturation_hours`, `spray_scheduled_today`
 
-### Derived from other fields — 12 fields
-`ec_baseline`, `ec_trend_pct`, `k_source`, `labour_arranged_date`, `leaf_wetness_hours`, `percolation_class`, `percolation_time_hours`, `phi_days_remaining`, `saturation_hours`, `spray_scheduled_today`, `stage_source`, `vafsa_state`
+### Weather adapter (D07) — 5 fields
+`cyclone_alert_active`, `forecast_bias_correction_mm`, `rainfall_deviation_pct`, `station_data_age_hours`, `station_id`
 
 ## Build history
 

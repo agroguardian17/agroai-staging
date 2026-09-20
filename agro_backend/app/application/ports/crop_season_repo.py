@@ -79,6 +79,7 @@ class CropSeasonView:
     azospirillum_psb_done: bool | None = None
     marigold_planted: bool | None = None
     target_product: str | None = None
+    k_source: str | None = None
     # Part-2 agronomy-plan facts (migration 0024).
     affected_plants_removed: bool | None = None
     bed_former_arranged: bool | None = None

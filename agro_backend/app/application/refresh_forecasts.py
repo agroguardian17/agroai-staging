@@ -67,6 +67,8 @@ async def execute(*, deps: RefreshForecastsDeps, now: datetime) -> RefreshForeca
                 wind_speed_kmh=d.wind_speed_kmh,
                 et0_mm=d.et0_mm,
                 solar_radiation_mj_m2=d.solar_radiation_mj_m2,
+                vpd_night_mean_kpa=d.vpd_night_mean_kpa,
+                fog_observed=d.fog_observed,
             )
             for d in daily
         ]

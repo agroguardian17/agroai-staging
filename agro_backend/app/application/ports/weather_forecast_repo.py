@@ -22,6 +22,8 @@ class ForecastRow:
     wind_speed_kmh: float | None
     et0_mm: float | None = None
     solar_radiation_mj_m2: float | None = None
+    vpd_night_mean_kpa: float | None = None
+    fog_observed: bool | None = None
 
 
 @runtime_checkable
