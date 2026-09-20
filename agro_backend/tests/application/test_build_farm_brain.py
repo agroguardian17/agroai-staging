@@ -724,3 +724,89 @@ async def test_fills_scouting_observations_and_derives_scouting_date() -> None:
     assert state["shoot_borer_incidence_pct"] == Decimal("3")
     assert state["pest_scouting_date"] == date(2026, 8, 1)  # derived from row
     assert state["nematode_suspected"] is None
+
+
+# ---------------------------------------------------------------------------
+# Phase-2.4: season_economics / season_operations (by season) + farmer_schemes
+# (by farm owner) 1:1 tables.
+# ---------------------------------------------------------------------------
+
+
+class _FakeEconRepo:
+    def __init__(self, v=None):
+        self._v = v
+
+    async def for_season(self, season_id):
+        return self._v
+
+
+class _FakeOpsRepo:
+    def __init__(self, v=None):
+        self._v = v
+
+    async def for_season(self, season_id):
+        return self._v
+
+
+class _FakeSchemesRepo:
+    def __init__(self, v=None):
+        self._v = v
+
+    async def for_farmer(self, farmer_id):
+        return self._v
+
+
+@pytest.mark.asyncio
+async def test_fills_economics_operations_and_schemes() -> None:
+    from app.application.ports.farmer_schemes_repo import FarmerSchemesView
+    from app.application.ports.season_economics_repo import SeasonEconomicsView
+    from app.application.ports.season_operations_repo import SeasonOperationsView
+
+    econ = SeasonEconomicsView(
+        season_id=_SEASON,
+        sale_price_per_quintal=Decimal("4200"),
+        total_cost_per_acre=Decimal("90000"),
+        grade_a_pct=Decimal("60"),
+    )
+    ops = SeasonOperationsView(
+        season_id=_SEASON,
+        last_fungicide_group="M03",
+        weeding_count=2,
+        irrigation_applied_litres_today=Decimal("5000"),
+    )
+    sch = FarmerSchemesView(
+        farmer_id=_FARMER, subsidy_scheme_applied="PMKSY", pmfby_notified_for_ginger="yes"
+    )
+    declared = frozenset(
+        {
+            "sale_price_per_quintal",
+            "total_cost_per_acre",
+            "grade_a_pct",
+            "last_fungicide_group",
+            "weeding_count",
+            "irrigation_applied_litres_today",
+            "subsidy_scheme_applied",
+            "pmfby_notified_for_ginger",
+        }
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(_season_min()),
+        farmer_repo=_FakeFarmerRepo(owner=_FARMER, location=None),
+        season_economics_repo=_FakeEconRepo(econ),
+        season_operations_repo=_FakeOpsRepo(ops),
+        farmer_schemes_repo=_FakeSchemesRepo(sch),
+        declared_fields=declared,
+    )
+    state = (
+        await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)
+    ).state
+    assert state["sale_price_per_quintal"] == Decimal("4200")
+    assert state["total_cost_per_acre"] == Decimal("90000")
+    assert state["grade_a_pct"] == Decimal("60")
+    assert state["last_fungicide_group"] == "M03"
+    assert state["weeding_count"] == 2
+    assert state["irrigation_applied_litres_today"] == Decimal("5000")
+    assert state["subsidy_scheme_applied"] == "PMKSY"
+    assert state["pmfby_notified_for_ginger"] == "yes"

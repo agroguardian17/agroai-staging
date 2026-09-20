@@ -50,6 +50,7 @@ from app.application.ports.crop_scouting_repo import CropScoutingRepo, CropScout
 from app.application.ports.crop_season_repo import CropSeasonRepo, CropSeasonView
 from app.application.ports.farm_repo import FarmFacts, FarmRepo
 from app.application.ports.farmer_repo import FarmerLocation, FarmerRepo
+from app.application.ports.farmer_schemes_repo import FarmerSchemesRepo
 from app.application.ports.lab_soil_test_repo import LabSoilTestRepo, LabSoilTestView
 from app.application.ports.plot_repo import PlotRepo
 from app.application.ports.reading_repo import ReadingRepo
@@ -59,6 +60,8 @@ from app.application.ports.satellite_reading_repo import (
     SatelliteReadingRepo,
     SatelliteScene,
 )
+from app.application.ports.season_economics_repo import SeasonEconomicsRepo
+from app.application.ports.season_operations_repo import SeasonOperationsRepo
 from app.application.ports.weather_station_reading_repo import WeatherStationReadingRepo
 from app.domain.plot import Plot
 from app.domain.satellite_metrics import (
@@ -122,6 +125,10 @@ class FarmBrainDeps:
     # Optional crop-scouting source. When present the builder fills the KB's
     # D05/D06 pest & disease observation fields from the latest scouting row.
     crop_scouting_repo: CropScoutingRepo | None = None
+    # Optional per-season economics / operations + per-farmer schemes (Phase 2.4).
+    season_economics_repo: SeasonEconomicsRepo | None = None
+    season_operations_repo: SeasonOperationsRepo | None = None
+    farmer_schemes_repo: FarmerSchemesRepo | None = None
     # The full ``kb_farm_brain_fields`` set. Injected so tests can pin a
     # subset; the daily job reads it from the database at startup.
     declared_fields: frozenset[str] = field(default_factory=frozenset)
@@ -201,6 +208,18 @@ async def build_farm_brain(
         if scouting is not None:
             _populate_from_scouting(state, scouting)
 
+    # ---- Season economics + operations (D13 / D03-D08), 1:1 per season -
+    if season is not None and deps.season_economics_repo is not None:
+        econ = await deps.season_economics_repo.for_season(season.season_id)
+        if econ is not None:
+            for _f in _ECON_FIELDS:
+                _set(state, _f, getattr(econ, _f))
+    if season is not None and deps.season_operations_repo is not None:
+        ops = await deps.season_operations_repo.for_season(season.season_id)
+        if ops is not None:
+            for _f in _OPS_FIELDS:
+                _set(state, _f, getattr(ops, _f))
+
     # ---- Farmer location (district / taluka) --------------------------
     if deps.farmer_repo is not None and season is not None:
         owner = await deps.farmer_repo.owner_of_farm(season.farm_id)
@@ -209,6 +228,11 @@ async def build_farm_brain(
             loc = await deps.farmer_repo.find_location(owner)
             if loc is not None:
                 _populate_from_farmer(state, loc)
+            if deps.farmer_schemes_repo is not None:
+                sch = await deps.farmer_schemes_repo.for_farmer(owner)
+                if sch is not None:
+                    for _f in _SCHEMES_FIELDS:
+                        _set(state, _f, getattr(sch, _f))
 
     # ---- Weather station (air temp + humidity + derived VPD) -----------
     # Weather is farm-level; resolve it from the active season's farm. The
@@ -467,6 +491,90 @@ _SCOUTING_FIELDS: tuple[str, ...] = (
     "standing_water_hours_observed",
     "harvest_injury_observed",
     "moisture_pct_final",
+)
+
+
+_ECON_FIELDS: tuple[str, ...] = (
+    "breakeven_price_per_quintal",
+    "breakeven_yield_quintal",
+    "cash_flow_gap_months",
+    "cash_outflow_to_date",
+    "ceiling_quintal_per_acre",
+    "cost_drainage",
+    "cost_earthing_labour",
+    "cost_harvest_transport",
+    "cost_micronutrients",
+    "cost_mulch",
+    "cost_seed",
+    "cost_seed_treatment_planting",
+    "crop_loan_taken",
+    "drip_annual_share",
+    "drip_capital_cost",
+    "drip_life_years",
+    "grade_a_pct",
+    "grade_b_pct",
+    "grade_c_pct",
+    "graded_separately",
+    "intercrop_revenue",
+    "interest_cost",
+    "land_rent_or_opportunity",
+    "mulch_material_price_per_tonne",
+    "mulch_quantity_t_per_acre",
+    "net_return_per_acre",
+    "sale_market",
+    "sale_price_per_quintal",
+    "seed_opportunity_cost",
+    "seed_retained_or_purchased",
+    "total_cost_per_acre",
+    "transport_cost_per_quintal",
+)
+
+
+_OPS_FIELDS: tuple[str, ...] = (
+    "basal_k_kg_per_acre",
+    "basal_p_kg_per_acre",
+    "castor_bait_prepared_date",
+    "castor_bait_units_per_acre",
+    "drip_runtime_min",
+    "ethephon_spray_count",
+    "fertigation_active",
+    "fertigation_last_ec_response",
+    "herbicide_post_emergent_date",
+    "herbicide_pre_emergent_date",
+    "irrigation_applied_litres_today",
+    "kulav_passes",
+    "last_fungicide_date",
+    "last_fungicide_group",
+    "last_insecticide_date",
+    "last_insecticide_group",
+    "metarhizium_kg_per_acre",
+    "naa_spray_count",
+    "weeding_count",
+)
+
+
+_SCHEMES_FIELDS: tuple[str, ...] = (
+    "cgwb_block_category",
+    "cibrc_list_checked_date",
+    "data_review_due",
+    "drip_subsidy_pct_applicable",
+    "drought_prone_listed",
+    "farm_pond_planned",
+    "farmer_category",
+    "geo_tagging_done",
+    "kvk_contacted",
+    "pmfby_notified_for_ginger",
+    "pre_sanction_date",
+    "pre_sanction_received",
+    "priority_category",
+    "research_centre_contacted",
+    "scale_of_finance_per_acre",
+    "seed_supplier_identified",
+    "soil_lab_selected",
+    "subsidy_applied_date",
+    "subsidy_documents_ready",
+    "subsidy_lottery_result",
+    "subsidy_scheme_applied",
 )
 
 

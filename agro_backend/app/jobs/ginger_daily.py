@@ -60,10 +60,13 @@ from app.application.ports.crop_scouting_repo import CropScoutingRepo
 from app.application.ports.crop_season_repo import CropSeasonRepo, CropSeasonView
 from app.application.ports.farm_repo import FarmRepo
 from app.application.ports.farmer_repo import FarmerRepo
+from app.application.ports.farmer_schemes_repo import FarmerSchemesRepo
 from app.application.ports.lab_soil_test_repo import LabSoilTestRepo
 from app.application.ports.plot_repo import PlotRepo
 from app.application.ports.reading_repo import ReadingRepo
 from app.application.ports.satellite_reading_repo import SatelliteReadingRepo
+from app.application.ports.season_economics_repo import SeasonEconomicsRepo
+from app.application.ports.season_operations_repo import SeasonOperationsRepo
 from app.application.ports.weather_station_reading_repo import WeatherStationReadingRepo
 from app.lib import metrics
 
@@ -105,6 +108,10 @@ class GingerDailyDeps:
     lab_soil_test_repo: LabSoilTestRepo | None = None
     # Optional crop-scouting source (KB pest/disease observations).
     crop_scouting_repo: CropScoutingRepo | None = None
+    # Optional per-season economics / operations + per-farmer schemes.
+    season_economics_repo: SeasonEconomicsRepo | None = None
+    season_operations_repo: SeasonOperationsRepo | None = None
+    farmer_schemes_repo: FarmerSchemesRepo | None = None
     # Timezone the "today" date is computed in. Defaults to IST — the pilot
     # is in Aurangabad and the farmer's day boundary is IST midnight.
     timezone: ZoneInfo = field(default_factory=lambda: ZoneInfo("Asia/Kolkata"))
@@ -167,6 +174,9 @@ async def _run_one_plot(
         farmer_repo=deps.farmer_repo,
         lab_soil_test_repo=deps.lab_soil_test_repo,
         crop_scouting_repo=deps.crop_scouting_repo,
+        season_economics_repo=deps.season_economics_repo,
+        season_operations_repo=deps.season_operations_repo,
+        farmer_schemes_repo=deps.farmer_schemes_repo,
         declared_fields=declared_fields,
     )
     state = await build_farm_brain(plot_id=season.plot_id, today=today, deps=fb_deps)
