@@ -24,6 +24,9 @@ class RefreshForecastsDeps:
     forecast_repo: WeatherForecastRepo
     source_api: str = "open-meteo"
     days: int = 7
+    # Days of past actuals to fetch alongside the forecast — feeds the KB's
+    # rain-window fields (rain_gap_days, dry_spell_days, effective rainfall).
+    past_days: int = 21
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,7 +43,7 @@ async def execute(*, deps: RefreshForecastsDeps, now: datetime) -> RefreshForeca
     for farm in farms:
         try:
             daily = await deps.forecast_provider.daily_forecast(
-                lat=farm.lat, lng=farm.lng, days=deps.days
+                lat=farm.lat, lng=farm.lng, days=deps.days, past_days=deps.past_days
             )
         except ForecastError:
             failed += 1
@@ -62,6 +65,8 @@ async def execute(*, deps: RefreshForecastsDeps, now: datetime) -> RefreshForeca
                 rain_mm_expected=d.rain_mm_expected,
                 rain_probability_pct=d.rain_probability_pct,
                 wind_speed_kmh=d.wind_speed_kmh,
+                et0_mm=d.et0_mm,
+                solar_radiation_mj_m2=d.solar_radiation_mj_m2,
             )
             for d in daily
         ]

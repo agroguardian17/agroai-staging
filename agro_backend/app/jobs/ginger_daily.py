@@ -67,6 +67,7 @@ from app.application.ports.reading_repo import ReadingRepo
 from app.application.ports.satellite_reading_repo import SatelliteReadingRepo
 from app.application.ports.season_economics_repo import SeasonEconomicsRepo
 from app.application.ports.season_operations_repo import SeasonOperationsRepo
+from app.application.ports.weather_forecast_repo import WeatherForecastRepo
 from app.application.ports.weather_station_reading_repo import WeatherStationReadingRepo
 from app.lib import metrics
 
@@ -104,6 +105,8 @@ class GingerDailyDeps:
     satellite_reading_repo: SatelliteReadingRepo | None = None
     # Optional farm source for the farm-brain (soil, water, irrigation facts).
     farm_repo: FarmRepo | None = None
+    # Optional weather-forecast source (Open-Meteo window) for D07 rain fields.
+    weather_forecast_repo: WeatherForecastRepo | None = None
     # Optional soil-lab source for the farm-brain (KB nutrient chemistry).
     lab_soil_test_repo: LabSoilTestRepo | None = None
     # Optional crop-scouting source (KB pest/disease observations).
@@ -172,6 +175,7 @@ async def _run_one_plot(
         satellite_reading_repo=deps.satellite_reading_repo,
         farm_repo=deps.farm_repo,
         farmer_repo=deps.farmer_repo,
+        weather_forecast_repo=deps.weather_forecast_repo,
         lab_soil_test_repo=deps.lab_soil_test_repo,
         crop_scouting_repo=deps.crop_scouting_repo,
         season_economics_repo=deps.season_economics_repo,

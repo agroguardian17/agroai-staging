@@ -853,3 +853,152 @@ async def test_season_part2_columns_are_wired() -> None:
     assert state["drip_flow_lph_per_acre"] == Decimal("1200")
     assert state["seed_storage_method"] == "pit"
     assert state["harvest_route"] == "dry_ginger_stored"
+
+
+# ---------------------------------------------------------------------------
+# Phase-3 weather: Open-Meteo forecast window -> D07 rain/ET/radiation fields.
+# ---------------------------------------------------------------------------
+
+
+def _fc(d: date, rain=0.0, tmax=30.0, et0=None, solar=None):
+    from app.application.ports.weather_forecast_repo import ForecastRow
+
+    return ForecastRow(
+        tenant_id=_TENANT,
+        farm_id=_FARM,
+        fetched_at=datetime(2026, 8, 3, 3, tzinfo=UTC),
+        forecast_for_date=d,
+        source_api="open-meteo",
+        temp_min_c=22.0,
+        temp_max_c=tmax,
+        rain_mm_expected=rain,
+        rain_probability_pct=None,
+        wind_speed_kmh=None,
+        et0_mm=et0,
+        solar_radiation_mj_m2=solar,
+    )
+
+
+def test_weather_window_helpers() -> None:
+    from datetime import timedelta
+
+    from app.application.build_farm_brain import (
+        _dry_spell_days,
+        _effective_rainfall_mm,
+        _forecast_rain_48h_mm,
+        _heat_stress_days,
+        _rain_gap_days,
+    )
+
+    today = date(2026, 8, 3)
+    rows = [_fc(today - timedelta(days=k)) for k in range(0, 8)]
+    # rain 10mm four days ago; two hot days; forecast rain next 2 days
+    rows[4] = _fc(today - timedelta(days=4), rain=10.0)
+    rows[1] = _fc(today - timedelta(days=1), tmax=38.0)
+    rows[2] = _fc(today - timedelta(days=2), tmax=39.0)
+    rows.append(_fc(today + timedelta(days=1), rain=3.0))
+    rows.append(_fc(today + timedelta(days=2), rain=8.0))
+    assert _rain_gap_days(rows, today) == 4
+    assert _dry_spell_days(rows, today) == 4
+    assert _effective_rainfall_mm(rows, today) == 10.0
+    assert _heat_stress_days(rows, today) == 2
+    assert _forecast_rain_48h_mm(rows, today) == 11.0
+
+
+class _FakeForecastRepo:
+    def __init__(self, rows):
+        self._rows = rows
+
+    async def save_daily(self, rows):  # pragma: no cover
+        return len(rows)
+
+    async def window_for_farm(self, farm_id, date_from, date_to):
+        return [r for r in self._rows if date_from <= r.forecast_for_date <= date_to]
+
+
+@pytest.mark.asyncio
+async def test_fills_forecast_weather_fields() -> None:
+    from datetime import timedelta
+
+    today = date(2026, 8, 3)
+    rows = [_fc(today, rain=0.0, et0=5.0, solar=22.0), _fc(today + timedelta(days=1), rain=6.0)]
+    declared = frozenset(
+        {
+            "forecast_source",
+            "forecast_rain_48h_mm",
+            "rainfall_mm",
+            "pan_evaporation_mm_day",
+            "solar_radiation_mj_m2",
+            "dry_spell_days",
+        }
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(_season_min()),
+        weather_forecast_repo=_FakeForecastRepo(rows),
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    assert state["forecast_source"] == "open-meteo"
+    assert state["forecast_rain_48h_mm"] == 6.0
+    assert state["rainfall_mm"] == 0.0
+    assert state["pan_evaporation_mm_day"] == 5.0
+    assert state["solar_radiation_mj_m2"] == 22.0
+
+
+@pytest.mark.asyncio
+async def test_derived_composite_and_zone_fields() -> None:
+    """Derived Phase-3 fields: vafsa_state (from season VWC thresholds),
+    agro_climatic_zone (district map), stage_source, rainfall_last_48h_mm."""
+    from datetime import timedelta
+
+    today = date(2026, 8, 3)
+    season = CropSeasonView(
+        season_id=_SEASON,
+        tenant_id=_TENANT,
+        farm_id=_FARM,
+        plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger",
+        crop_name_marathi="आले",
+        crop_category="cash_crop",
+        crop_variety="Mahima",
+        sowing_date=date(2026, 6, 1),
+        expected_harvest_date=date(2027, 2, 1),
+        current_growth_stage="vegetative",
+        crop_age_days_today=63,
+        vwc_saturation=Decimal("45"),
+        vwc_stress_threshold=Decimal("20"),
+    )
+    rows = [_fc(today, rain=1.0), _fc(today - timedelta(days=1), rain=4.0)]
+    declared = frozenset(
+        {
+            "vafsa_state",
+            "agro_climatic_zone",
+            "stage_source",
+            "rainfall_last_48h_mm",
+            "soil_moisture_vwc",
+            "vwc_saturation",
+            "vwc_stress_threshold",
+        }
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(_sample_reading()),  # soil_moisture_avg_pct 42.15 -> vwc
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(season),
+        farmer_repo=_FakeFarmerRepo(
+            owner=_FARMER,
+            location=__import__(
+                "app.application.ports.farmer_repo", fromlist=["FarmerLocation"]
+            ).FarmerLocation(
+                farmer_id=_FARMER, district="Chhatrapati Sambhajinagar", taluka="Kannad"
+            ),
+        ),
+        weather_forecast_repo=_FakeForecastRepo(rows),
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    assert state["vafsa_state"] == "workable"  # vwc 42.15 between stress 20 and sat 45
+    assert state["agro_climatic_zone"] == "marathwada_central"
+    assert state["stage_source"] == "calendar"
+    assert state["rainfall_last_48h_mm"] == 5.0

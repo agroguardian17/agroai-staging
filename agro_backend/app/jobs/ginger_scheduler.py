@@ -31,6 +31,7 @@ from app.infra.persistence.pg_reading_repo import PgReadingRepo
 from app.infra.persistence.pg_satellite_reading_repo import PgSatelliteReadingRepo
 from app.infra.persistence.pg_season_economics_repo import PgSeasonEconomicsRepo
 from app.infra.persistence.pg_season_operations_repo import PgSeasonOperationsRepo
+from app.infra.persistence.pg_weather_forecast_repo import PgWeatherForecastRepo
 from app.infra.persistence.pg_weather_station_reading_repo import PgWeatherStationReadingRepo
 from app.jobs.ginger_daily import GingerDailyDeps, run_daily
 
@@ -58,6 +59,7 @@ async def build_and_start_scheduler(settings: Settings) -> AsyncIOScheduler | No
         farmer_repo=PgFarmerRepo(sessionmaker),
         sync_dsn=settings.DATABASE_URL_SYNC,
         weather_station_reading_repo=PgWeatherStationReadingRepo(sessionmaker),
+        weather_forecast_repo=PgWeatherForecastRepo(sessionmaker),
         satellite_reading_repo=PgSatelliteReadingRepo(sessionmaker),
         farm_repo=PgFarmRepo(sessionmaker),
         lab_soil_test_repo=PgLabSoilTestRepo(sessionmaker),

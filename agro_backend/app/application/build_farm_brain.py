@@ -42,7 +42,7 @@ is missing entirely, because the DSL parser raises on unknown field names.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
@@ -62,6 +62,7 @@ from app.application.ports.satellite_reading_repo import (
 )
 from app.application.ports.season_economics_repo import SeasonEconomicsRepo
 from app.application.ports.season_operations_repo import SeasonOperationsRepo
+from app.application.ports.weather_forecast_repo import ForecastRow, WeatherForecastRepo
 from app.application.ports.weather_station_reading_repo import WeatherStationReadingRepo
 from app.domain.plot import Plot
 from app.domain.satellite_metrics import (
@@ -108,6 +109,10 @@ class FarmBrainDeps:
     # weather-station fields (air temperature, humidity) and the derived
     # ``vpd_kpa`` used by the Domain 7 VPD rules. None keeps weather UNKNOWN.
     weather_station_reading_repo: WeatherStationReadingRepo | None = None
+    # Optional weather-forecast source (Open-Meteo, past+future window). Feeds
+    # the KB's D07 rain-window / evaporation / radiation fields. None keeps them
+    # UNKNOWN.
+    weather_forecast_repo: WeatherForecastRepo | None = None
     # Optional satellite source. When present (and the plot has a boundary),
     # the builder fills the Domain 14 optical/SAR index fields, deltas,
     # freshness/confidence, baseline gap and plot polygon. None keeps them
@@ -243,6 +248,17 @@ async def build_farm_brain(
         if weather is not None:
             _populate_from_weather(state, weather)
 
+    # ---- Weather forecast (Open-Meteo past+future window, D07) ---------
+    # Farm-level; a ~3-week past window + short forecast lets us derive the
+    # KB's rain-gap / dry-spell / effective-rainfall / evaporation / radiation
+    # fields without the (not-yet-installed) Main Node weather station.
+    if deps.weather_forecast_repo is not None and season is not None:
+        rows = await deps.weather_forecast_repo.window_for_farm(
+            season.farm_id, today - timedelta(days=21), today + timedelta(days=7)
+        )
+        if rows:
+            _populate_from_forecast(state, rows, today)
+
     # ---- Satellite (Domain 14 optical + SAR indices) -------------------
     # Reads the recent scenes per source, plus the plot boundary for the
     # polygon/area gates. Computes deltas, freshness, confidence and the
@@ -251,6 +267,9 @@ async def build_farm_brain(
         optical = await deps.satellite_reading_repo.recent(plot_id, SOURCE_OPTICAL, limit=6)
         sar = await deps.satellite_reading_repo.recent(plot_id, SOURCE_SAR, limit=6)
         _populate_from_satellite(state, optical, sar, plot, today)
+
+    # ---- Composite derivations (from fields filled above) --------------
+    _derive_composite(state)
 
     # ---- Synthetic ------------------------------------------------------
     state["current_month"] = today.month
@@ -404,6 +423,8 @@ def _populate_from_season(
     dap = (today - season.sowing_date).days if season.sowing_date else None
     _set(state, "dap", dap)
     _set(state, "current_stage", season.current_growth_stage)
+    # We stage by calendar (DAP), so declare the provenance the KB reads.
+    _set(state, "stage_source", "calendar")
     _set(state, "crop_name_english", season.crop_name_english)
     _set(state, "crop_name_marathi", season.crop_name_marathi)
     _set(state, "crop_variety", season.crop_variety)
@@ -445,6 +466,109 @@ def _populate_from_weather(state: dict[str, Any], w: WeatherStationReading) -> N
     # KB reads wind in m/s; the station stores km/h.
     if w.wind_speed_kmh is not None:
         _set(state, "wind_speed_ms", w.wind_speed_kmh / Decimal("3.6"))
+
+
+# A day with >= this much rain counts as a "rain day" for gap/dry-spell logic.
+_RAIN_DAY_MM = 2.5
+_HEAT_STRESS_TMAX_C = 37.0
+
+
+def _rain_gap_days(rows: list[ForecastRow], today: date) -> int | None:
+    """Days since the last rain day at or before ``today`` (0 = rained today).
+
+    None when the window holds no past rows to judge from.
+    """
+    past = [r for r in rows if r.forecast_for_date <= today]
+    if not past:
+        return None
+    for r in sorted(past, key=lambda x: x.forecast_for_date, reverse=True):
+        if (r.rain_mm_expected or 0.0) >= _RAIN_DAY_MM:
+            return (today - r.forecast_for_date).days
+    return (today - min(r.forecast_for_date for r in past)).days
+
+
+def _dry_spell_days(rows: list[ForecastRow], today: date) -> int | None:
+    """Consecutive dry days ending at ``today`` (walking backwards)."""
+    by_date = {r.forecast_for_date: (r.rain_mm_expected or 0.0) for r in rows}
+    if today not in by_date:
+        return None
+    n = 0
+    d = today
+    while d in by_date and by_date[d] < _RAIN_DAY_MM:
+        n += 1
+        d = d - timedelta(days=1)
+    return n
+
+
+def _effective_rainfall_mm(rows: list[ForecastRow], today: date, window: int = 7) -> float | None:
+    """Sum of rain over the last ``window`` days, each day capped at 50 mm."""
+    start = today - timedelta(days=window - 1)
+    vals = [
+        min(r.rain_mm_expected or 0.0, 50.0) for r in rows if start <= r.forecast_for_date <= today
+    ]
+    return round(sum(vals), 2) if vals else None
+
+
+def _heat_stress_days(rows: list[ForecastRow], today: date, window: int = 30) -> int | None:
+    """Count of past days (within ``window``) with tmax >= the heat threshold."""
+    start = today - timedelta(days=window - 1)
+    past = [r for r in rows if start <= r.forecast_for_date <= today]
+    if not past:
+        return None
+    return sum(1 for r in past if (r.temp_max_c or 0.0) >= _HEAT_STRESS_TMAX_C)
+
+
+def _forecast_rain_48h_mm(rows: list[ForecastRow], today: date) -> float | None:
+    """Sum of expected rain over the next two days (today+1, today+2)."""
+    fut = [
+        r.rain_mm_expected or 0.0
+        for r in rows
+        if today < r.forecast_for_date <= today + timedelta(days=2)
+    ]
+    return round(sum(fut), 2) if fut else None
+
+
+def _rain_last_48h_mm(rows: list[ForecastRow], today: date) -> float | None:
+    """Cumulative rain over the last 48 h (today-1 .. today)."""
+    past = [
+        r.rain_mm_expected or 0.0
+        for r in rows
+        if today - timedelta(days=1) <= r.forecast_for_date <= today
+    ]
+    return round(sum(past), 2) if past else None
+
+
+def _derive_composite(state: dict[str, Any]) -> None:
+    """Fields derived from other already-populated fields (no new source).
+
+    ``vafsa_state`` (too_wet/workable/too_dry) is read off the soil-moisture VWC
+    against the season's own field-capacity / stress thresholds — so it uses no
+    hardcoded agronomy, only values the agronomist entered.
+    """
+    vwc = state.get("soil_moisture_vwc")
+    sat = state.get("vwc_saturation")
+    stress = state.get("vwc_stress_threshold")
+    if vwc is not None and sat is not None and stress is not None:
+        vafsa = "too_wet" if vwc >= sat else ("too_dry" if vwc <= stress else "workable")
+        _set(state, "vafsa_state", vafsa)
+
+
+def _populate_from_forecast(state: dict[str, Any], rows: list[ForecastRow], today: date) -> None:
+    """Fill the KB's D07 rain-window / evaporation / radiation fields from the
+    Open-Meteo past+future window. Station-only fields (station_id, gauge age,
+    forecast bias vs station) stay UNKNOWN until the Main Node is installed."""
+    _set(state, "forecast_source", rows[0].source_api if rows else None)
+    _set(state, "forecast_rain_48h_mm", _forecast_rain_48h_mm(rows, today))
+    _set(state, "rainfall_last_48h_mm", _rain_last_48h_mm(rows, today))
+    _set(state, "rain_gap_days", _rain_gap_days(rows, today))
+    _set(state, "dry_spell_days", _dry_spell_days(rows, today))
+    _set(state, "effective_rainfall_mm", _effective_rainfall_mm(rows, today))
+    _set(state, "heat_stress_days_count", _heat_stress_days(rows, today))
+    today_row = next((r for r in rows if r.forecast_for_date == today), None)
+    if today_row is not None:
+        _set(state, "rainfall_mm", today_row.rain_mm_expected)
+        _set(state, "pan_evaporation_mm_day", today_row.et0_mm)
+        _set(state, "solar_radiation_mj_m2", today_row.solar_radiation_mj_m2)
 
 
 # DB ``farms.soil_type`` domain (black/red/sandy/loamy/mixed) → the KB's
@@ -496,10 +620,28 @@ def _populate_from_farm(state: dict[str, Any], f: FarmFacts) -> None:
         _set(state, "previous_crops_3yr", f.previous_crops_json)
 
 
+# District → Marathwada agro-climatic zone (D07/D10). AGRONOMIST TO CONFIRM /
+# EXTEND; unlisted districts fall back to 'unknown'.
+_AGRO_ZONE = {
+    "Chhatrapati Sambhajinagar": "marathwada_central",
+    "Aurangabad": "marathwada_central",
+    "Jalna": "marathwada_central",
+    "Beed": "marathwada_central",
+    "Dharashiv": "marathwada_western",
+    "Osmanabad": "marathwada_western",
+    "Latur": "marathwada_eastern",
+    "Nanded": "marathwada_eastern",
+    "Parbhani": "marathwada_eastern",
+    "Hingoli": "marathwada_eastern",
+}
+
+
 def _populate_from_farmer(state: dict[str, Any], loc: FarmerLocation) -> None:
     """Fill farmer administrative location (D10 scheme rules)."""
     _set(state, "district", loc.district)
     _set(state, "taluka", loc.taluka)
+    if loc.district is not None:
+        _set(state, "agro_climatic_zone", _AGRO_ZONE.get(loc.district, "unknown"))
 
 
 # crop_scouting observation columns (migration 0023) whose KB field name equals
