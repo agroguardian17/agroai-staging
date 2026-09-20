@@ -268,6 +268,9 @@ async def build_farm_brain(
         sar = await deps.satellite_reading_repo.recent(plot_id, SOURCE_SAR, limit=6)
         _populate_from_satellite(state, optical, sar, plot, today)
 
+    # ---- Composite derivations (from fields filled above) --------------
+    _derive_composite(state)
+
     # ---- Synthetic ------------------------------------------------------
     state["current_month"] = today.month
     # brand/capability/profit/price proposals are engine-side attempts,
@@ -420,6 +423,8 @@ def _populate_from_season(
     dap = (today - season.sowing_date).days if season.sowing_date else None
     _set(state, "dap", dap)
     _set(state, "current_stage", season.current_growth_stage)
+    # We stage by calendar (DAP), so declare the provenance the KB reads.
+    _set(state, "stage_source", "calendar")
     _set(state, "crop_name_english", season.crop_name_english)
     _set(state, "crop_name_marathi", season.crop_name_marathi)
     _set(state, "crop_variety", season.crop_variety)
@@ -523,12 +528,38 @@ def _forecast_rain_48h_mm(rows: list[ForecastRow], today: date) -> float | None:
     return round(sum(fut), 2) if fut else None
 
 
+def _rain_last_48h_mm(rows: list[ForecastRow], today: date) -> float | None:
+    """Cumulative rain over the last 48 h (today-1 .. today)."""
+    past = [
+        r.rain_mm_expected or 0.0
+        for r in rows
+        if today - timedelta(days=1) <= r.forecast_for_date <= today
+    ]
+    return round(sum(past), 2) if past else None
+
+
+def _derive_composite(state: dict[str, Any]) -> None:
+    """Fields derived from other already-populated fields (no new source).
+
+    ``vafsa_state`` (too_wet/workable/too_dry) is read off the soil-moisture VWC
+    against the season's own field-capacity / stress thresholds — so it uses no
+    hardcoded agronomy, only values the agronomist entered.
+    """
+    vwc = state.get("soil_moisture_vwc")
+    sat = state.get("vwc_saturation")
+    stress = state.get("vwc_stress_threshold")
+    if vwc is not None and sat is not None and stress is not None:
+        vafsa = "too_wet" if vwc >= sat else ("too_dry" if vwc <= stress else "workable")
+        _set(state, "vafsa_state", vafsa)
+
+
 def _populate_from_forecast(state: dict[str, Any], rows: list[ForecastRow], today: date) -> None:
     """Fill the KB's D07 rain-window / evaporation / radiation fields from the
     Open-Meteo past+future window. Station-only fields (station_id, gauge age,
     forecast bias vs station) stay UNKNOWN until the Main Node is installed."""
     _set(state, "forecast_source", rows[0].source_api if rows else None)
     _set(state, "forecast_rain_48h_mm", _forecast_rain_48h_mm(rows, today))
+    _set(state, "rainfall_last_48h_mm", _rain_last_48h_mm(rows, today))
     _set(state, "rain_gap_days", _rain_gap_days(rows, today))
     _set(state, "dry_spell_days", _dry_spell_days(rows, today))
     _set(state, "effective_rainfall_mm", _effective_rainfall_mm(rows, today))
@@ -589,10 +620,28 @@ def _populate_from_farm(state: dict[str, Any], f: FarmFacts) -> None:
         _set(state, "previous_crops_3yr", f.previous_crops_json)
 
 
+# District → Marathwada agro-climatic zone (D07/D10). AGRONOMIST TO CONFIRM /
+# EXTEND; unlisted districts fall back to 'unknown'.
+_AGRO_ZONE = {
+    "Chhatrapati Sambhajinagar": "marathwada_central",
+    "Aurangabad": "marathwada_central",
+    "Jalna": "marathwada_central",
+    "Beed": "marathwada_central",
+    "Dharashiv": "marathwada_western",
+    "Osmanabad": "marathwada_western",
+    "Latur": "marathwada_eastern",
+    "Nanded": "marathwada_eastern",
+    "Parbhani": "marathwada_eastern",
+    "Hingoli": "marathwada_eastern",
+}
+
+
 def _populate_from_farmer(state: dict[str, Any], loc: FarmerLocation) -> None:
     """Fill farmer administrative location (D10 scheme rules)."""
     _set(state, "district", loc.district)
     _set(state, "taluka", loc.taluka)
+    if loc.district is not None:
+        _set(state, "agro_climatic_zone", _AGRO_ZONE.get(loc.district, "unknown"))
 
 
 # crop_scouting observation columns (migration 0023) whose KB field name equals

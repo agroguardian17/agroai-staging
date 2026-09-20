@@ -945,3 +945,60 @@ async def test_fills_forecast_weather_fields() -> None:
     assert state["rainfall_mm"] == 0.0
     assert state["pan_evaporation_mm_day"] == 5.0
     assert state["solar_radiation_mj_m2"] == 22.0
+
+
+@pytest.mark.asyncio
+async def test_derived_composite_and_zone_fields() -> None:
+    """Derived Phase-3 fields: vafsa_state (from season VWC thresholds),
+    agro_climatic_zone (district map), stage_source, rainfall_last_48h_mm."""
+    from datetime import timedelta
+
+    today = date(2026, 8, 3)
+    season = CropSeasonView(
+        season_id=_SEASON,
+        tenant_id=_TENANT,
+        farm_id=_FARM,
+        plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger",
+        crop_name_marathi="आले",
+        crop_category="cash_crop",
+        crop_variety="Mahima",
+        sowing_date=date(2026, 6, 1),
+        expected_harvest_date=date(2027, 2, 1),
+        current_growth_stage="vegetative",
+        crop_age_days_today=63,
+        vwc_saturation=Decimal("45"),
+        vwc_stress_threshold=Decimal("20"),
+    )
+    rows = [_fc(today, rain=1.0), _fc(today - timedelta(days=1), rain=4.0)]
+    declared = frozenset(
+        {
+            "vafsa_state",
+            "agro_climatic_zone",
+            "stage_source",
+            "rainfall_last_48h_mm",
+            "soil_moisture_vwc",
+            "vwc_saturation",
+            "vwc_stress_threshold",
+        }
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(_sample_reading()),  # soil_moisture_avg_pct 42.15 -> vwc
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(season),
+        farmer_repo=_FakeFarmerRepo(
+            owner=_FARMER,
+            location=__import__(
+                "app.application.ports.farmer_repo", fromlist=["FarmerLocation"]
+            ).FarmerLocation(
+                farmer_id=_FARMER, district="Chhatrapati Sambhajinagar", taluka="Kannad"
+            ),
+        ),
+        weather_forecast_repo=_FakeForecastRepo(rows),
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    assert state["vafsa_state"] == "workable"  # vwc 42.15 between stress 20 and sat 45
+    assert state["agro_climatic_zone"] == "marathwada_central"
+    assert state["stage_source"] == "calendar"
+    assert state["rainfall_last_48h_mm"] == 5.0
