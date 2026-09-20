@@ -48,7 +48,9 @@ class _FakeProvider:
         self._fail_for = fail_for or set()
         self.calls: list[tuple[float, float]] = []
 
-    async def daily_forecast(self, *, lat: float, lng: float, days: int) -> list[DailyForecast]:
+    async def daily_forecast(
+        self, *, lat: float, lng: float, days: int, past_days: int = 0
+    ) -> list[DailyForecast]:
         self.calls.append((lat, lng))
         # identify the farm by coordinates for the fail set
         for fid in self._fail_for:

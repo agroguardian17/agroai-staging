@@ -25,6 +25,8 @@ _DAILY_VARS = (
     "precipitation_sum",
     "precipitation_probability_max",
     "wind_speed_10m_max",
+    "et0_fao_evapotranspiration",
+    "shortwave_radiation_sum",
 )
 
 
@@ -45,21 +47,24 @@ class OpenMeteoForecastProvider:
         self._s = settings or OpenMeteoSettings()
         self._client = client
 
-    def _params(self, lat: float, lng: float, days: int) -> dict[str, Any]:
+    def _params(self, lat: float, lng: float, days: int, past_days: int) -> dict[str, Any]:
         return {
             "latitude": lat,
             "longitude": lng,
             "daily": ",".join(_DAILY_VARS),
             "timezone": "auto",
             "forecast_days": max(1, min(days, 16)),  # Open-Meteo caps at 16
+            "past_days": max(0, min(past_days, 92)),  # Open-Meteo caps at 92
         }
 
-    async def daily_forecast(self, *, lat: float, lng: float, days: int) -> list[DailyForecast]:
+    async def daily_forecast(
+        self, *, lat: float, lng: float, days: int, past_days: int = 0
+    ) -> list[DailyForecast]:
         url = f"{self._s.base_url.rstrip('/')}/forecast"
         owns = self._client is None
         client = self._client or httpx.AsyncClient(timeout=self._s.timeout_seconds)
         try:
-            resp = await client.get(url, params=self._params(lat, lng, days))
+            resp = await client.get(url, params=self._params(lat, lng, days, past_days))
         except httpx.HTTPError as exc:
             raise ForecastError(f"network_error: {exc}") from exc
         finally:
@@ -84,6 +89,8 @@ class OpenMeteoForecastProvider:
                     rain_mm_expected=_f(_at(daily, "precipitation_sum", i)),
                     rain_probability_pct=_f(_at(daily, "precipitation_probability_max", i)),
                     wind_speed_kmh=_f(_at(daily, "wind_speed_10m_max", i)),
+                    et0_mm=_f(_at(daily, "et0_fao_evapotranspiration", i)),
+                    solar_radiation_mj_m2=_f(_at(daily, "shortwave_radiation_sum", i)),
                 )
             )
         return out
