@@ -86,6 +86,9 @@ if TYPE_CHECKING:
 # Synthetic fields that the ginger engine always adds to the field vocabulary
 # regardless of what the database declares. Kept here as a constant so tests
 # can assert we know about all of them.
+# Minimum cluster peers before a peer NDVI baseline is meaningful (KB spec).
+_MIN_PEERS = 3
+
 SYNTHETIC_FIELDS: frozenset[str] = frozenset(
     {
         "current_month",
@@ -274,6 +277,23 @@ async def build_farm_brain(
         optical = await deps.satellite_reading_repo.recent(plot_id, SOURCE_OPTICAL, limit=6)
         sar = await deps.satellite_reading_repo.recent(plot_id, SOURCE_SAR, limit=6)
         _populate_from_satellite(state, optical, sar, plot, today)
+        # Peer NDVI/NDRE baseline across the cluster's other plots at the same
+        # growth stage (KB: available once >= 3 plots are enrolled).
+        dap = state.get("dap")
+        if optical and season is not None and isinstance(dap, int):
+            peer = await deps.satellite_reading_repo.peer_baseline_at_dap(
+                tenant_id=season.tenant_id,
+                crop_name_english=season.crop_name_english,
+                dap=dap,
+                today=today,
+                exclude_plot_id=plot_id,
+            )
+            if peer.peer_count >= _MIN_PEERS:
+                o0 = optical[0]
+                _set(state, "plot_ndvi_baseline_peer", peer.ndvi_mean)
+                _set(state, "plot_ndvi_gap_peer", baseline_gap(o0.ndvi_mean, peer.ndvi_mean))
+                _set(state, "plot_ndre_baseline_regional", peer.ndre_mean)
+                _set(state, "plot_ndre_gap_regional", baseline_gap(o0.ndre_mean, peer.ndre_mean))
 
     # ---- Composite derivations (from fields filled above) --------------
     _derive_composite(state)

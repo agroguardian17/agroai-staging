@@ -16,6 +16,7 @@ _GEOM = {
     "coordinates": [[[75.2, 20.1], [75.21, 20.1], [75.21, 20.11], [75.2, 20.1]]],
 }
 
+
 # Real Statistical API shape: no separate dataMask output; each band's stats
 # carry sampleCount/noDataCount, and cloudy pixels come back as "NaN" strings.
 def _stat(mean, sample=10, nodata=0, std=0.0):

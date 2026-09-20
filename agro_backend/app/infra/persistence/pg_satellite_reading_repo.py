@@ -7,6 +7,7 @@ constraint ``(plot_id, image_date, satellite_source)``.
 
 from __future__ import annotations
 
+import datetime
 import uuid
 from decimal import Decimal
 from typing import Any
@@ -14,7 +15,7 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.application.ports.satellite_reading_repo import SatelliteScene
+from app.application.ports.satellite_reading_repo import PeerBaseline, SatelliteScene
 
 # Columns written per scene (besides the tenant/farm/plot ids + source + date).
 _VALUE_COLUMNS: tuple[str, ...] = (
@@ -152,6 +153,63 @@ class PgSatelliteReadingRepo:
                 {"plot_id": plot_id, "source": satellite_source, "limit": limit},
             )
             return [_row_to_scene(r) for r in res.all()]
+
+    async def peer_baseline_at_dap(
+        self,
+        *,
+        tenant_id: uuid.UUID,
+        crop_name_english: str,
+        dap: int,
+        today: datetime.date,
+        exclude_plot_id: str,
+        dap_window: int = 10,
+    ) -> PeerBaseline:
+        stmt = text(
+            """
+            WITH peers AS (
+                SELECT cs.plot_id, (:today - cs.sowing_date) AS dap
+                FROM crop_seasons cs
+                WHERE cs.tenant_id = :tenant_id
+                  AND cs.season_status = 'active'
+                  AND cs.crop_name_english = :crop
+                  AND cs.plot_id <> :exclude
+            ),
+            latest AS (
+                SELECT DISTINCT ON (sd.plot_id) sd.plot_id, sd.ndvi_value, sd.ndre_value
+                FROM satellite_data sd
+                WHERE sd.satellite_source = 'sentinel2'
+                ORDER BY sd.plot_id, sd.image_date DESC
+            )
+            SELECT AVG(l.ndvi_value) AS ndvi_mean,
+                   AVG(l.ndre_value) AS ndre_mean,
+                   COUNT(*)          AS peer_count
+            FROM peers p
+            JOIN latest l ON l.plot_id = p.plot_id
+            WHERE ABS(p.dap - :dap) <= :window
+              AND l.ndvi_value IS NOT NULL
+            """
+        )
+        async with self._sm() as session:
+            row: Any = (
+                await session.execute(
+                    stmt,
+                    {
+                        "tenant_id": tenant_id,
+                        "crop": crop_name_english,
+                        "dap": dap,
+                        "today": today,
+                        "exclude": exclude_plot_id,
+                        "window": dap_window,
+                    },
+                )
+            ).first()
+        if row is None:
+            return PeerBaseline(ndvi_mean=None, ndre_mean=None, peer_count=0)
+        return PeerBaseline(
+            ndvi_mean=_d(row.ndvi_mean),
+            ndre_mean=_d(row.ndre_mean),
+            peer_count=int(row.peer_count or 0),
+        )
 
 
 __all__ = ["PgSatelliteReadingRepo"]

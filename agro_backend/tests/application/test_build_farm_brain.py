@@ -255,9 +255,10 @@ def _sample_plot():
 
 
 class _FakeSatelliteRepo:
-    def __init__(self, optical, sar) -> None:
+    def __init__(self, optical, sar, peer=None) -> None:
         self._optical = optical
         self._sar = sar
+        self._peer = peer
 
     async def recent(self, plot_id, satellite_source, limit):
         from app.application.ports.satellite_reading_repo import SOURCE_OPTICAL
@@ -266,6 +267,11 @@ class _FakeSatelliteRepo:
 
     async def save(self, **kwargs):  # pragma: no cover
         return None
+
+    async def peer_baseline_at_dap(self, **kwargs):
+        from app.application.ports.satellite_reading_repo import PeerBaseline
+
+        return self._peer or PeerBaseline(ndvi_mean=None, ndre_mean=None, peer_count=0)
 
 
 @pytest.mark.asyncio
@@ -1086,3 +1092,73 @@ async def test_phase3_consent_language_model_and_forecast_extras() -> None:
     assert state["vpd_night_mean_kpa"] == 0.25
     assert state["fog_observed"] is True
     assert state["rainfall_ytd_mm"] is not None and state["rainfall_ytd_mm"] > 0
+
+
+@pytest.mark.asyncio
+async def test_peer_ndvi_baseline_when_enough_plots() -> None:
+    """plot_ndvi_baseline_peer / gap fire once >= 3 cluster peers exist."""
+    from datetime import timedelta
+
+    from app.application.ports.satellite_reading_repo import (
+        SOURCE_OPTICAL,
+        PeerBaseline,
+        SatelliteScene,
+    )
+
+    today = date(2026, 8, 3)
+    opt = SatelliteScene(
+        image_date=today - timedelta(days=2),
+        satellite_source=SOURCE_OPTICAL,
+        ndvi_mean=Decimal("0.55"),
+        ndre_mean=Decimal("0.30"),
+    )
+    peer = PeerBaseline(ndvi_mean=Decimal("0.50"), ndre_mean=Decimal("0.28"), peer_count=4)
+    declared = frozenset(
+        {
+            "dap",
+            "plot_ndvi_baseline_peer",
+            "plot_ndvi_gap_peer",
+            "plot_ndre_baseline_regional",
+            "plot_ndre_gap_regional",
+        }
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(_sample_plot()),
+        crop_season_repo=_FakeSeasonRepo(_sample_season()),
+        satellite_reading_repo=_FakeSatelliteRepo([opt], [], peer=peer),
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    assert state["plot_ndvi_baseline_peer"] == Decimal("0.50")
+    assert state["plot_ndvi_gap_peer"] == Decimal("0.05")  # 0.55 - 0.50
+    assert state["plot_ndre_baseline_regional"] == Decimal("0.28")
+
+
+@pytest.mark.asyncio
+async def test_peer_baseline_skipped_below_min_peers() -> None:
+    from datetime import timedelta
+
+    from app.application.ports.satellite_reading_repo import (
+        SOURCE_OPTICAL,
+        PeerBaseline,
+        SatelliteScene,
+    )
+
+    today = date(2026, 8, 3)
+    opt = SatelliteScene(
+        image_date=today - timedelta(days=2),
+        satellite_source=SOURCE_OPTICAL,
+        ndvi_mean=Decimal("0.55"),
+    )
+    peer = PeerBaseline(ndvi_mean=Decimal("0.50"), ndre_mean=None, peer_count=1)  # too few
+    declared = frozenset({"dap", "plot_ndvi_baseline_peer"})
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(_sample_plot()),
+        crop_season_repo=_FakeSeasonRepo(_sample_season()),
+        satellite_reading_repo=_FakeSatelliteRepo([opt], [], peer=peer),
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    assert state["plot_ndvi_baseline_peer"] is None  # below _MIN_PEERS
