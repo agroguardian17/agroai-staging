@@ -19,6 +19,7 @@ from typing import Protocol, runtime_checkable
 # CHECK constraint from migration 0001 (no hyphen): 'sentinel2'/'sentinel1'/…
 SOURCE_OPTICAL = "sentinel2"
 SOURCE_SAR = "sentinel1"
+SOURCE_THERMAL = "landsat8"
 
 
 @dataclass(frozen=True, slots=True)
@@ -100,6 +101,7 @@ class SatelliteReadingRepo(Protocol):
 __all__ = [
     "SOURCE_OPTICAL",
     "SOURCE_SAR",
+    "SOURCE_THERMAL",
     "PeerBaseline",
     "SatelliteReadingRepo",
     "SatelliteScene",
