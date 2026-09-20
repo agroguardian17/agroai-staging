@@ -810,3 +810,46 @@ async def test_fills_economics_operations_and_schemes() -> None:
     assert state["irrigation_applied_litres_today"] == Decimal("5000")
     assert state["subsidy_scheme_applied"] == "PMKSY"
     assert state["pmfby_notified_for_ginger"] == "yes"
+
+
+@pytest.mark.asyncio
+async def test_season_part2_columns_are_wired() -> None:
+    """Guard: crop_seasons part-2 (0024) fields reach the farm-brain.
+
+    Regression test — these were added as columns + view fields but initially
+    missed from the mapper's copy-by-name tuple.
+    """
+    season = CropSeasonView(
+        season_id=_SEASON,
+        tenant_id=_TENANT,
+        farm_id=_FARM,
+        plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger",
+        crop_name_marathi="आले",
+        crop_category="cash_crop",
+        crop_variety="Mahima",
+        sowing_date=date(2026, 6, 1),
+        expected_harvest_date=date(2027, 2, 1),
+        current_growth_stage="vegetative",
+        crop_age_days_today=63,
+        vwc_field_capacity=Decimal("32"),
+        drip_flow_lph_per_acre=Decimal("1200"),
+        seed_storage_method="pit",
+        harvest_route="dry_ginger_stored",
+    )
+    declared = frozenset(
+        {"vwc_field_capacity", "drip_flow_lph_per_acre", "seed_storage_method", "harvest_route"}
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(season),
+        declared_fields=declared,
+    )
+    state = (
+        await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)
+    ).state
+    assert state["vwc_field_capacity"] == Decimal("32")
+    assert state["drip_flow_lph_per_acre"] == Decimal("1200")
+    assert state["seed_storage_method"] == "pit"
+    assert state["harvest_route"] == "dry_ginger_stored"
