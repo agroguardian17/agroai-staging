@@ -46,6 +46,7 @@ from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
+from app.application.ports.crop_scouting_repo import CropScoutingRepo, CropScoutingView
 from app.application.ports.crop_season_repo import CropSeasonRepo, CropSeasonView
 from app.application.ports.farm_repo import FarmFacts, FarmRepo
 from app.application.ports.farmer_repo import FarmerLocation, FarmerRepo
@@ -118,6 +119,9 @@ class FarmBrainDeps:
     # chemistry fields (organic carbon, EC, free lime, micronutrients) from
     # the latest test, and sets soil_test_available. None keeps them UNKNOWN.
     lab_soil_test_repo: LabSoilTestRepo | None = None
+    # Optional crop-scouting source. When present the builder fills the KB's
+    # D05/D06 pest & disease observation fields from the latest scouting row.
+    crop_scouting_repo: CropScoutingRepo | None = None
     # The full ``kb_farm_brain_fields`` set. Injected so tests can pin a
     # subset; the daily job reads it from the database at startup.
     declared_fields: frozenset[str] = field(default_factory=frozenset)
@@ -190,6 +194,12 @@ async def build_farm_brain(
         lab = await deps.lab_soil_test_repo.latest_for_farm(season.farm_id)
         if lab is not None:
             _populate_from_lab_soil(state, lab)
+
+    # ---- Crop scouting (D05/D06 pest & disease observations) ----------
+    if deps.crop_scouting_repo is not None:
+        scouting = await deps.crop_scouting_repo.latest_for_plot(plot_id)
+        if scouting is not None:
+            _populate_from_scouting(state, scouting)
 
     # ---- Farmer location (district / taluka) --------------------------
     if deps.farmer_repo is not None and season is not None:
@@ -415,6 +425,57 @@ def _populate_from_farmer(state: dict[str, Any], loc: FarmerLocation) -> None:
     """Fill farmer administrative location (D10 scheme rules)."""
     _set(state, "district", loc.district)
     _set(state, "taluka", loc.taluka)
+
+
+# crop_scouting observation columns (migration 0023) whose KB field name equals
+# the CropScoutingView attribute name — copied by name.
+_SCOUTING_FIELDS: tuple[str, ...] = (
+    "emergence_started",
+    "establishment_pct",
+    "tillers_per_plant",
+    "flowering_observed",
+    "central_shoot_dead",
+    "seed_sprouts_visible",
+    "shoot_borer_incidence_pct",
+    "leaf_roller_incidence_pct",
+    "rhizome_fly_incidence_pct",
+    "white_grub_suspected",
+    "nematode_suspected",
+    "leaf_caterpillar_observed",
+    "light_trap_installed",
+    "light_trap_count_nightly",
+    "straight_line_holes_in_whorl",
+    "stem_hole_with_webbing",
+    "exposed_rhizomes_observed",
+    "rot_incidence_pct",
+    "wilt_incidence_pct",
+    "leaf_spot_incidence_pct",
+    "wilt_while_green",
+    "leaf_spot_rings_visible",
+    "ooze_test_result",
+    "rhizome_texture",
+    "rhizome_smell",
+    "stem_cut_colour",
+    "stem_ooze_type",
+    "soft_rhizome_found",
+    "plant_pulls_easily",
+    "shoot_pulls_out_easily",
+    "leaf_yellowing_pattern",
+    "skin_scrape_result",
+    "sample_dig_120_done",
+    "sample_dig_180_done",
+    "standing_water_hours_observed",
+    "harvest_injury_observed",
+    "moisture_pct_final",
+)
+
+
+def _populate_from_scouting(state: dict[str, Any], s: CropScoutingView) -> None:
+    """Fill the KB pest/disease/growth observations from the latest scouting row."""
+    for f in _SCOUTING_FIELDS:
+        _set(state, f, getattr(s, f))
+    # pest_scouting_date is derived from the row's date, not a stored column.
+    _set(state, "pest_scouting_date", s.scouting_date)
 
 
 def _populate_from_lab_soil(state: dict[str, Any], lab: LabSoilTestView) -> None:

@@ -20,6 +20,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from app.infra.http.deps import _ensure_engine
 from app.infra.persistence.pg_ai_suggestion_repo import PgAiSuggestionRepo
+from app.infra.persistence.pg_crop_scouting_repo import PgCropScoutingRepo
 from app.infra.persistence.pg_crop_season_repo import PgCropSeasonRepo
 from app.infra.persistence.pg_farm_repo import PgFarmRepo
 from app.infra.persistence.pg_farmer_repo import PgFarmerRepo
@@ -57,6 +58,7 @@ async def build_and_start_scheduler(settings: Settings) -> AsyncIOScheduler | No
         satellite_reading_repo=PgSatelliteReadingRepo(sessionmaker),
         farm_repo=PgFarmRepo(sessionmaker),
         lab_soil_test_repo=PgLabSoilTestRepo(sessionmaker),
+        crop_scouting_repo=PgCropScoutingRepo(sessionmaker),
     )
 
     scheduler = AsyncIOScheduler(timezone=settings.GINGER_JOB_TIMEZONE)

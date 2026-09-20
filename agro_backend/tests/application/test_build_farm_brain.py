@@ -666,3 +666,61 @@ async def test_fills_season_agronomy_plan_fields() -> None:
     assert state["target_product"] == "dry_ginger"
     assert state["fym_t_per_acre"] == Decimal("6")
     assert state["solarization_done"] is None
+
+
+# ---------------------------------------------------------------------------
+# Phase-2.3 (crop_scouting): D05/D06 observations from the latest scouting row,
+# with pest_scouting_date derived from the row's date.
+# ---------------------------------------------------------------------------
+
+
+class _FakeScoutingRepo:
+    def __init__(self, view=None) -> None:
+        self._view = view
+
+    async def latest_for_plot(self, plot_id):
+        return self._view
+
+
+@pytest.mark.asyncio
+async def test_fills_scouting_observations_and_derives_scouting_date() -> None:
+    from app.application.ports.crop_scouting_repo import CropScoutingView
+
+    view = CropScoutingView(
+        scouting_id=uuid.uuid4(),
+        plot_id="PLOT_PILOT_001",
+        scouting_date=date(2026, 8, 1),
+        rot_incidence_pct=Decimal("12.5"),
+        wilt_while_green=True,
+        rhizome_texture="mushy_wet",
+        leaf_yellowing_pattern="interveinal_new",
+        shoot_borer_incidence_pct=Decimal("3"),
+    )
+    declared = frozenset(
+        {
+            "rot_incidence_pct",
+            "wilt_while_green",
+            "rhizome_texture",
+            "leaf_yellowing_pattern",
+            "shoot_borer_incidence_pct",
+            "pest_scouting_date",
+            "nematode_suspected",  # unset -> None
+        }
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(None),
+        crop_scouting_repo=_FakeScoutingRepo(view),
+        declared_fields=declared,
+    )
+    state = (
+        await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)
+    ).state
+    assert state["rot_incidence_pct"] == Decimal("12.5")
+    assert state["wilt_while_green"] is True
+    assert state["rhizome_texture"] == "mushy_wet"
+    assert state["leaf_yellowing_pattern"] == "interveinal_new"
+    assert state["shoot_borer_incidence_pct"] == Decimal("3")
+    assert state["pest_scouting_date"] == date(2026, 8, 1)  # derived from row
+    assert state["nematode_suspected"] is None
