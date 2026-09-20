@@ -58,6 +58,7 @@ from app.application.ports.reading_repo import ReadingRepo
 from app.application.ports.satellite_reading_repo import (
     SOURCE_OPTICAL,
     SOURCE_SAR,
+    SOURCE_THERMAL,
     SatelliteReadingRepo,
     SatelliteScene,
 )
@@ -277,6 +278,10 @@ async def build_farm_brain(
         optical = await deps.satellite_reading_repo.recent(plot_id, SOURCE_OPTICAL, limit=6)
         sar = await deps.satellite_reading_repo.recent(plot_id, SOURCE_SAR, limit=6)
         _populate_from_satellite(state, optical, sar, plot, today)
+        # Landsat thermal (LST) — the latest scene feeds cwsi (derived below).
+        thermal = await deps.satellite_reading_repo.recent(plot_id, SOURCE_THERMAL, limit=1)
+        if thermal:
+            _set(state, "lst_c", thermal[0].lst_c)
         # Peer NDVI/NDRE baseline across the cluster's other plots at the same
         # growth stage (KB: available once >= 3 plots are enrolled).
         dap = state.get("dap")

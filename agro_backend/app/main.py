@@ -49,6 +49,10 @@ from app.jobs.forecast_scheduler import (
 )
 from app.jobs.ginger_scheduler import build_and_start_scheduler, stop_scheduler
 from app.jobs.ingest_startup import build_and_start_ingest, stop_ingest
+from app.jobs.landsat_scheduler import (
+    build_and_start_landsat_scheduler,
+    stop_landsat_scheduler,
+)
 from app.jobs.learning_scheduler import (
     build_and_start_learning_scheduler,
     stop_learning_scheduler,
@@ -69,6 +73,7 @@ if TYPE_CHECKING:
     from app.jobs.advisory_subscriber import AdvisorySubscriberHandle
     from app.jobs.delivery_subscriber import DeliverySubscriberHandle
     from app.jobs.forecast_scheduler import ForecastSchedulerHandle
+    from app.jobs.landsat_scheduler import LandsatSchedulerHandle
     from app.jobs.satellite_scheduler import SatelliteSchedulerHandle
 
 log = structlog.get_logger(__name__)
@@ -99,6 +104,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     delivery: DeliverySubscriberHandle | None = None
     forecast: ForecastSchedulerHandle | None = None
     satellite: SatelliteSchedulerHandle | None = None
+    landsat: LandsatSchedulerHandle | None = None
     learning: AsyncIOScheduler | None = None
     try:
         broker = await build_and_start_ingest(settings)
@@ -107,11 +113,14 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         delivery = await build_and_start_delivery_subscriber(settings)
         forecast = await build_and_start_forecast_scheduler(settings)
         satellite = await build_and_start_satellite_scheduler(settings)
+        landsat = await build_and_start_landsat_scheduler(settings)
         learning = await build_and_start_learning_scheduler(settings)
         yield
     finally:
         if learning is not None:
             await stop_learning_scheduler(learning)
+        if landsat is not None:
+            await stop_landsat_scheduler(landsat)
         if satellite is not None:
             await stop_satellite_scheduler(satellite)
         if forecast is not None:

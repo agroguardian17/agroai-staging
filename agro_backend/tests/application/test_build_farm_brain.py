@@ -255,14 +255,17 @@ def _sample_plot():
 
 
 class _FakeSatelliteRepo:
-    def __init__(self, optical, sar, peer=None) -> None:
+    def __init__(self, optical, sar, peer=None, thermal=None) -> None:
         self._optical = optical
         self._sar = sar
         self._peer = peer
+        self._thermal = thermal or []
 
     async def recent(self, plot_id, satellite_source, limit):
-        from app.application.ports.satellite_reading_repo import SOURCE_OPTICAL
+        from app.application.ports.satellite_reading_repo import SOURCE_OPTICAL, SOURCE_THERMAL
 
+        if satellite_source == SOURCE_THERMAL:
+            return self._thermal
         return self._optical if satellite_source == SOURCE_OPTICAL else self._sar
 
     async def save(self, **kwargs):  # pragma: no cover
@@ -1224,3 +1227,30 @@ async def test_peer_baseline_skipped_below_min_peers() -> None:
     )
     state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
     assert state["plot_ndvi_baseline_peer"] is None
+
+
+@pytest.mark.asyncio
+async def test_lst_scene_sets_cwsi() -> None:
+    """A Landsat thermal scene sets lst_c; cwsi derives from LST - air temp."""
+    from datetime import timedelta
+
+    from app.application.ports.satellite_reading_repo import SOURCE_THERMAL, SatelliteScene
+
+    today = date(2026, 8, 3)
+    thermal = SatelliteScene(
+        image_date=today - timedelta(days=1), satellite_source=SOURCE_THERMAL,
+        lst_c=Decimal("35"),
+    )
+    declared = frozenset({"dap", "lst_c", "cwsi", "air_temp_max_c"})
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(_sample_plot()),
+        crop_season_repo=_FakeSeasonRepo(_sample_season()),
+        weather_station_reading_repo=_FakeWeatherRepo(_sample_weather()),  # air_temp_max 32
+        satellite_reading_repo=_FakeSatelliteRepo([], [], thermal=[thermal]),
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    assert state["lst_c"] == Decimal("35")
+    # cwsi = clamp((35 - 32 + 2)/10) = 0.5
+    assert state["cwsi"] == 0.5

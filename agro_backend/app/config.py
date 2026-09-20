@@ -197,6 +197,14 @@ class Settings(BaseSettings):
     COPERNICUS_TOKEN_URL: str = (
         "https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token"
     )
+    # ---- Landsat LST (USGS M2M) — Domain 14 thermal / CWSI ------------------
+    # ERS account + M2M application token. Empty = the Landsat sweep is disabled
+    # (lst_c/cwsi stay UNKNOWN). Verify end-to-end on staging once these are set.
+    USGS_M2M_USERNAME: str = ""
+    USGS_M2M_TOKEN: SecretStr = SecretStr("")
+    LANDSAT_JOB_ENABLED: bool = False
+    LANDSAT_JOB_HOUR: int = 4
+    LANDSAT_JOB_MINUTE: int = 30
     # Satellite fetch job (Domain 14). Off by default — enable once a CDSE
     # OAuth client is provisioned and pilot plots have boundary polygons.
     SATELLITE_JOB_ENABLED: bool = False
