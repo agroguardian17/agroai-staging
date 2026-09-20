@@ -21,6 +21,7 @@ from apscheduler.triggers.cron import CronTrigger
 from app.infra.http.deps import _ensure_engine
 from app.infra.persistence.pg_ai_suggestion_repo import PgAiSuggestionRepo
 from app.infra.persistence.pg_crop_season_repo import PgCropSeasonRepo
+from app.infra.persistence.pg_farm_repo import PgFarmRepo
 from app.infra.persistence.pg_farmer_repo import PgFarmerRepo
 from app.infra.persistence.pg_plot_repo import PgPlotRepo
 from app.infra.persistence.pg_reading_repo import PgReadingRepo
@@ -53,6 +54,7 @@ async def build_and_start_scheduler(settings: Settings) -> AsyncIOScheduler | No
         sync_dsn=settings.DATABASE_URL_SYNC,
         weather_station_reading_repo=PgWeatherStationReadingRepo(sessionmaker),
         satellite_reading_repo=PgSatelliteReadingRepo(sessionmaker),
+        farm_repo=PgFarmRepo(sessionmaker),
     )
 
     scheduler = AsyncIOScheduler(timezone=settings.GINGER_JOB_TIMEZONE)

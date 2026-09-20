@@ -13,7 +13,9 @@ _SELECT_COLS = (
     "season_id, tenant_id, farm_id, plot_id, "
     "crop_name_english, crop_name_marathi, crop_category, crop_variety, "
     "sowing_date, expected_harvest_date, current_growth_stage, "
-    "crop_age_days_today"
+    "crop_age_days_today, "
+    "actual_harvest_date, seed_cost_per_kg, "
+    "target_yield_qtl_per_acre, actual_yield_qtl_per_acre"
 )
 
 
@@ -32,6 +34,10 @@ def _row_to_view(row: object) -> CropSeasonView:
         expected_harvest_date=r.expected_harvest_date,
         current_growth_stage=r.current_growth_stage,
         crop_age_days_today=r.crop_age_days_today,
+        actual_harvest_date=r.actual_harvest_date,
+        seed_cost_per_kg=r.seed_cost_per_kg,
+        target_yield_qtl_per_acre=r.target_yield_qtl_per_acre,
+        actual_yield_qtl_per_acre=r.actual_yield_qtl_per_acre,
     )
 
 

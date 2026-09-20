@@ -408,3 +408,122 @@ def test_synthetic_fields_constant() -> None:
     # Guardrail proposals (used by immutable capability-claim rules)
     assert "capability_claim_proposed" in SYNTHETIC_FIELDS
     assert "profit_guarantee_proposed" in SYNTHETIC_FIELDS
+
+
+# ---------------------------------------------------------------------------
+# Phase-1 field wiring: plot / farm / farmer facts under their KB names.
+# ---------------------------------------------------------------------------
+
+
+class _FakeFarmRepo:
+    def __init__(self, facts=None) -> None:
+        self._facts = facts
+
+    async def find_facts(self, farm_id):
+        return self._facts
+
+    async def list_with_location(self):  # pragma: no cover
+        return []
+
+
+class _FakeFarmerRepo:
+    def __init__(self, owner=None, location=None) -> None:
+        self._owner = owner
+        self._loc = location
+
+    async def owner_of_farm(self, farm_id):
+        return self._owner
+
+    async def find_location(self, farmer_id):
+        return self._loc
+
+    async def find_by_phone(self, phone):  # pragma: no cover
+        return None
+
+    async def find_by_id(self, farmer_id):  # pragma: no cover
+        return None
+
+
+@pytest.mark.asyncio
+async def test_fills_plot_farm_farmer_facts_under_kb_names() -> None:
+    from app.application.ports.farm_repo import FarmFacts
+    from app.application.ports.farmer_repo import FarmerLocation
+
+    today = date(2026, 8, 3)
+    season = CropSeasonView(
+        season_id=_SEASON,
+        tenant_id=_TENANT,
+        farm_id=_FARM,
+        plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger",
+        crop_name_marathi="आले",
+        crop_category="cash_crop",
+        crop_variety="Mahima",
+        sowing_date=date(2026, 6, 1),
+        expected_harvest_date=date(2027, 2, 1),
+        current_growth_stage="vegetative",
+        crop_age_days_today=63,
+        actual_harvest_date=None,
+        seed_cost_per_kg=Decimal("8000"),
+        target_yield_qtl_per_acre=Decimal("300"),
+        actual_yield_qtl_per_acre=None,
+    )
+    facts = FarmFacts(
+        farm_id=_FARM,
+        soil_type="black",
+        soil_depth_cm=Decimal("30"),
+        water_source_primary="well",
+        irrigation_type="drip",
+        drip_emitter_lph=Decimal("4"),
+        previous_crops_json=["cotton", "soybean"],
+    )
+    loc = FarmerLocation(farmer_id=_FARMER, district="Chhatrapati Sambhajinagar", taluka="Kannad")
+    declared = frozenset(
+        {
+            "variety",
+            "planting_date",
+            "harvest_date",
+            "area_acre",
+            "plot_id",
+            "soil_type",
+            "soil_texture_class",
+            "soil_depth_cm",
+            "water_source_type",
+            "has_drip",
+            "dripper_lph",
+            "previous_crops_3yr",
+            "district",
+            "taluka",
+            "farmer_id",
+            "yield_target_quintal_per_acre",
+            "yield_quintal_per_acre_actual",
+            "seed_cost_per_kg",
+        }
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(_sample_plot()),
+        crop_season_repo=_FakeSeasonRepo(season),
+        farm_repo=_FakeFarmRepo(facts),
+        farmer_repo=_FakeFarmerRepo(owner=_FARMER, location=loc),
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    assert state["variety"] == "Mahima"
+    assert state["planting_date"] == date(2026, 6, 1)
+    assert state["harvest_date"] is None
+    assert state["area_acre"] == Decimal("1.0")
+    assert state["plot_id"] == "PLOT_PILOT_001"
+    assert state["soil_type"] == "vertisol"  # black -> vertisol value map
+    assert state["soil_texture_class"] == "heavy"  # black -> heavy (derived)
+    assert state["soil_depth_cm"] == Decimal("30")
+    assert state["water_source_type"] == "well"
+    assert state["has_drip"] is True
+    assert state["dripper_lph"] == Decimal("4")
+    assert state["previous_crops_3yr"] == ["cotton", "soybean"]
+    assert state["district"] == "Chhatrapati Sambhajinagar"
+    assert state["taluka"] == "Kannad"
+    assert state["farmer_id"] == str(_FARMER)
+    assert state["yield_target_quintal_per_acre"] == Decimal("300")
+    assert state["yield_quintal_per_acre_actual"] is None
+    assert state["seed_cost_per_kg"] == Decimal("8000")
