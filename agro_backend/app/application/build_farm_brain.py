@@ -41,6 +41,7 @@ is missing entirely, because the DSL parser raises on unknown field names.
 
 from __future__ import annotations
 
+import calendar
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from decimal import Decimal
@@ -633,9 +634,30 @@ def _fog_days_consecutive(rows: list[ForecastRow], today: date) -> int | None:
 # The engine build/version tag the KB's D11/D12 provenance rules read.
 _MODEL_VERSION = "ginger-engine/v1.0"
 
+GINGER_CROP_KEY = "Ginger"
+
+# Inputs the KB has an immutable "no" on for a crop (food safety / Seed Act).
+# When a blocklisted input is recorded, a pre-harvest-interval number would
+# contradict the block, so PHI is forced to UNKNOWN and the trace fields below
+# are set for the D05 'blocklisted_input_detected' branch. Seeded from
+# AGRONOMY_SIGNOFF (2026-09-21): chlorpyriphos is on the D05-CH-001 blocklist
+# for ginger. Replaced/extended by ginger_pesticide_registry.csv when it lands.
+# Keys are matched case-insensitively against the entered pesticide group/name.
+_CROP_INPUT_BLOCKLIST: dict[str, dict[str, dict[str, str]]] = {
+    GINGER_CROP_KEY: {
+        "chlorpyriphos": {
+            "reason": "Not registered on ginger; blocked by D05-CH-001.",
+            "source_ref": "CIB&RC label / FSSAI MRL; AGRONOMY_SIGNOFF 2026-09-21",
+        },
+    },
+}
+
 # Pre-harvest interval (days) by pesticide FRAC/IRAC group or common name.
-# AGRONOMIST TO CONFIRM — conservative default for anything unlisted. Getting
-# this wrong is a food-safety risk, so the default errs long (restrictive).
+# AGRONOMIST TO CONFIRM the full table (ginger_pesticide_registry.csv, ETA
+# 2026-09-30); conservative default for anything unlisted. Getting this wrong is
+# a food-safety risk, so the default errs long (restrictive). chlorpyriphos is
+# intentionally absent - it is blocklisted (see _CROP_INPUT_BLOCKLIST), never
+# assigned a PHI.
 _PHI_DAYS_DEFAULT = 21
 _PHI_DAYS_BY_GROUP: dict[str, int] = {
     "M03": 7,
@@ -643,8 +665,6 @@ _PHI_DAYS_BY_GROUP: dict[str, int] = {
     "M01": 7,
     "copper": 5,
     "3": 7,
-    "chlorpyriphos": 14,
-    "1B": 14,
     "quinalphos": 21,
     "4A": 7,
     "imidacloprid": 40,
@@ -652,14 +672,60 @@ _PHI_DAYS_BY_GROUP: dict[str, int] = {
     "chlorantraniliprole": 5,
 }
 
-# Approximate seasonal rainfall normal (mm, full monsoon season) by agro-zone —
-# AGRONOMIST/IMD TO REPLACE with real district normals. Prorated by DAP.
-_ZONE_SEASON_RAIN_MM = {
-    "marathwada_western": 750.0,
-    "marathwada_central": 680.0,
-    "marathwada_eastern": 820.0,
+# IMD 1991-2020 monthly rainfall normals (mm) by station, with provenance
+# (AGRONOMY_SIGNOFF / VJH-V1.0 §6). Ch. Sambhajinagar plots key to Chikalthana.
+# Additional Marathwada + expansion stations arrive as
+# imd_district_normals_1991_2020.csv (ETA 2026-09-25); add rows here.
+_STATION_RAINFALL_NORMAL: dict[str, dict[str, Any]] = {
+    "chikalthana": {
+        # Jan..Dec
+        "monthly_mm": [2.6, 2.2, 11.4, 6.0, 17.4, 155.6, 178.0, 171.5, 172.4, 68.2, 17.5, 8.9],
+        "annual_mm": 811.7,
+        "source_institution": "IMD",
+        "station_name": "Aurangabad (Chikalthana)",
+        "normal_period": "1991-2020",
+        "geographical_scope": "station",
+    },
+}
+# Interim agro-zone -> IMD station, until per-plot station codes are entered.
+_ZONE_TO_STATION = {
+    "marathwada_central": "chikalthana",
 }
 _SEASON_LEN_DAYS = 240  # ginger
+
+
+def _expected_rain_to_date_mm(monthly_mm: list[float], sowing_date: date, today: date) -> float:
+    """Season-to-date expected rainfall by summing the IMD monthly normals from
+    sowing to today, prorating the first and current partial months by day."""
+    if today < sowing_date:
+        return 0.0
+    total = 0.0
+    y, m = sowing_date.year, sowing_date.month
+    while (y, m) <= (today.year, today.month):
+        dim = calendar.monthrange(y, m)[1]
+        start = max(date(y, m, 1), sowing_date)
+        end = min(date(y, m, dim), today)
+        total += monthly_mm[m - 1] * ((end - start).days + 1) / dim
+        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    return total
+
+
+def _blocklisted_spray_inputs(state: dict[str, Any]) -> dict[str, dict[str, str]]:
+    """Blocklisted pesticide groups/names among the recorded sprays, if any.
+
+    Maps the offending (lower-cased) group -> its {reason, source_ref}. Empty
+    when nothing recorded is on the crop blocklist.
+    """
+    bl = _CROP_INPUT_BLOCKLIST.get(GINGER_CROP_KEY, {})
+    hits: dict[str, dict[str, str]] = {}
+    for group_field in ("last_fungicide_group", "last_insecticide_group"):
+        g = state.get(group_field)
+        if g is None:
+            continue
+        entry = bl.get(str(g).strip().lower())
+        if entry is not None:
+            hits[str(g).strip().lower()] = entry
+    return hits
 
 
 def _phi_days_remaining(state: dict[str, Any], today: date) -> int | None:
@@ -668,7 +734,11 @@ def _phi_days_remaining(state: dict[str, Any], today: date) -> int | None:
     Reads the last fungicide/insecticide date + group from season_operations
     fields; PHI comes from ``_PHI_DAYS_BY_GROUP`` (conservative default). Returns
     the most restrictive (largest) remaining across the two sprays; 0 = cleared.
+
+    Blocklisted inputs are skipped: they carry no valid PHI (a number would
+    contradict the immutable block), and are surfaced via the blocklist gate.
     """
+    bl = _CROP_INPUT_BLOCKLIST.get(GINGER_CROP_KEY, {})
     best: int | None = None
     for date_field, group_field in (
         ("last_fungicide_date", "last_fungicide_group"),
@@ -678,23 +748,29 @@ def _phi_days_remaining(state: dict[str, Any], today: date) -> int | None:
         if not isinstance(d, date):
             continue
         group = state.get(group_field)
+        if str(group).strip().lower() in bl:
+            continue
         phi = _PHI_DAYS_BY_GROUP.get(str(group), _PHI_DAYS_DEFAULT)
         remaining = max(0, phi - (today - d).days)
         best = remaining if best is None else max(best, remaining)
     return best
 
 
-def _rainfall_deviation_pct(ytd_mm: object, zone: object, dap: object) -> float | None:
-    """(season-to-date rain - expected) / expected * 100, approximate.
+def _rainfall_deviation_pct(
+    ytd_mm: object, zone: object, sowing_date: date | None, today: date
+) -> float | None:
+    """(season-to-date rain - expected) / expected * 100.
 
-    Expected = the agro-zone seasonal normal prorated by DAP. Approximate until
-    real IMD district normals are wired (see docs/AGRONOMIST_REVIEW.md)."""
-    if ytd_mm is None or not isinstance(dap, int) or dap <= 0:
+    Expected = the plot's IMD station monthly normals summed from sowing to
+    today. The station is resolved from the agro-zone until per-plot station
+    codes are entered (VJH-V1.0 §6)."""
+    if ytd_mm is None or not isinstance(sowing_date, date):
         return None
-    normal = _ZONE_SEASON_RAIN_MM.get(str(zone))
-    if normal is None:
+    station_key = _ZONE_TO_STATION.get(str(zone))
+    station = _STATION_RAINFALL_NORMAL.get(station_key) if station_key else None
+    if station is None:
         return None
-    expected = normal * min(dap, _SEASON_LEN_DAYS) / _SEASON_LEN_DAYS
+    expected = _expected_rain_to_date_mm(station["monthly_mm"], sowing_date, today)
     if expected <= 0:
         return None
     return round((float(ytd_mm) - expected) / expected * 100.0, 1)
@@ -751,17 +827,32 @@ def _derive_composite(state: dict[str, Any], today: date) -> None:
     if cwsi is not None:
         _set(state, "cwsi", cwsi)
 
-    # Pre-harvest interval remaining after the most recent spray (food safety).
+    # Food-safety blocklist gate (runs BEFORE the PHI number is trusted). A
+    # blocklisted input has no valid PHI - forcing it UNKNOWN and raising the
+    # D05 'blocklisted_input_detected' branch instead of a misleading number.
+    # (The trace fields surface once the KB declares them; harmless until then.)
+    blocked = _blocklisted_spray_inputs(state)
+    if blocked:
+        entry = next(iter(blocked.values()))
+        _set(state, "phi_blocklist_hit", True)
+        _set(state, "blocklist_reason", entry["reason"])
+        _set(state, "blocklist_source_ref", entry["source_ref"])
+        _set(state, "farmer_alert_type", "blocklisted_input_detected")
+    # PHI remaining after the most recent non-blocklisted spray (food safety).
     phi = _phi_days_remaining(state, today)
     if phi is not None:
         _set(state, "phi_days_remaining", phi)
 
-    # Rainfall deviation vs the agro-zone seasonal normal (approximate).
-    dev = _rainfall_deviation_pct(
-        state.get("rainfall_ytd_mm"), state.get("agro_climatic_zone"), dap
-    )
-    if dev is not None:
-        _set(state, "rainfall_deviation_pct", dev)
+    # Rainfall deviation vs the plot's IMD station normals (season-to-date).
+    if isinstance(dap, int) and dap > 0:
+        dev = _rainfall_deviation_pct(
+            state.get("rainfall_ytd_mm"),
+            state.get("agro_climatic_zone"),
+            today - timedelta(days=dap),
+            today,
+        )
+        if dev is not None:
+            _set(state, "rainfall_deviation_pct", dev)
 
 
 def _populate_from_forecast(
