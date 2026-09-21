@@ -46,6 +46,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
+from app.application.ports.advisory_metrics_repo import AdvisoryMetricsRepo
 from app.application.ports.crop_scouting_repo import CropScoutingRepo, CropScoutingView
 from app.application.ports.crop_season_repo import CropSeasonRepo, CropSeasonView
 from app.application.ports.farm_repo import FarmFacts, FarmRepo
@@ -89,6 +90,11 @@ if TYPE_CHECKING:
 # can assert we know about all of them.
 # Minimum cluster peers before a peer NDVI baseline is meaningful (KB spec).
 _MIN_PEERS = 3
+
+# Domain 12 compliance window: an advisory is "on time" when the farmer's
+# first following action is recorded no later than this many days after it was
+# issued (D12-AL-001 flags an action not recorded within 3 days of its deadline).
+_ADVISORY_ON_TIME_DAYS = 3
 
 SYNTHETIC_FIELDS: frozenset[str] = frozenset(
     {
@@ -140,6 +146,11 @@ class FarmBrainDeps:
     season_operations_repo: SeasonOperationsRepo | None = None
     farmer_schemes_repo: FarmerSchemesRepo | None = None
     farmer_consent_repo: FarmerConsentRepo | None = None
+    # Optional advisory-performance source (Domain 12 evaluation counters).
+    # Derived from the engine's own ai_suggestions + farmer_actions history;
+    # fills advisory_issued/completed/on_time counts and action_compliance_rate.
+    # None keeps them UNKNOWN.
+    advisory_metrics_repo: AdvisoryMetricsRepo | None = None
     # The full ``kb_farm_brain_fields`` set. Injected so tests can pin a
     # subset; the daily job reads it from the database at startup.
     declared_fields: frozenset[str] = field(default_factory=frozenset)
@@ -230,6 +241,22 @@ async def build_farm_brain(
         if ops is not None:
             for _f in _OPS_FIELDS:
                 _set(state, _f, getattr(ops, _f))
+
+    # ---- Advisory performance (D12 evaluation counters) ---------------
+    # History-derived: what the engine issued (ai_suggestions) vs what the
+    # farmer did (farmer_actions), aggregated over the active season.
+    if season is not None and deps.advisory_metrics_repo is not None:
+        perf = await deps.advisory_metrics_repo.performance_for_season(
+            season.season_id, on_time_days=_ADVISORY_ON_TIME_DAYS
+        )
+        _set(state, "advisory_issued_count", perf.advisory_issued_count)
+        _set(state, "advisory_completed_count", perf.advisory_completed_count)
+        _set(
+            state,
+            "advisory_completed_on_time_count",
+            perf.advisory_completed_on_time_count,
+        )
+        _set(state, "action_compliance_rate", perf.action_compliance_rate)
 
     # ---- Farmer location (district / taluka) --------------------------
     if deps.farmer_repo is not None and season is not None:
