@@ -1,8 +1,8 @@
 # KB ↔ DB Field Mapping Specification
 
-**Regenerated:** 2026-09-21 · **Status:** current (post-#48 + D12 counters) · **Owner:** backend
+**Regenerated:** 2026-09-22 · **Status:** current (post D11 scaffold + KB step-1 edits) · **Owner:** backend
 
-Single source of truth for how every Ginger-KB input field reaches the engine. The KB is **frozen**; all reconciliation lives in the DB schema and the mapper [`app/application/build_farm_brain.py`](../app/application/build_farm_brain.py). A field is *wired* when the mapper copies it into the per-plot farm-brain the engine reads.
+Single source of truth for how every Ginger-KB input field reaches the engine. The KB is authored in `new-docs/AgroGuardian_Ginger_Engine_v1.0_9931/` (JSON → `json_to_sql.py` → unified SQL); the backend loads that unified build (migration 0032) and reconciles via the mapper [`app/application/build_farm_brain.py`](../app/application/build_farm_brain.py). A field is *wired* when the mapper copies it into the per-plot farm-brain the engine reads.
 
 ## Summary
 
@@ -10,11 +10,11 @@ Single source of truth for how every Ginger-KB input field reaches the engine. T
 |---|---:|
 | KB rules | **481** |
 | Distinct fields the rules read | **346** |
-| Fields wired (DB home + mapper) | **309** |
-| Fields not yet wired | **37** |
-| Rules fully-wireable | **377** |
-| Rules partially wireable | 83 |
-| Rules fully blocked (all fields not yet wired) | 21 |
+| Fields wired (DB home + mapper) | **319** |
+| Fields not yet wired | **27** |
+| Rules fully-wireable | **406** |
+| Rules partially wireable | 66 |
+| Rules fully blocked (all fields not yet wired) | 9 |
 
 *Wireable ≠ firing:* a rule fires only when its fields also hold **data** and its trigger is true. Most tables/columns below are populated on demand via the dashboard entry pages; sensor & weather fields depend on field hardware.
 
@@ -22,7 +22,7 @@ Single source of truth for how every Ginger-KB input field reaches the engine. T
 
 | Domain | Fully-wireable | Partial | Blocked | Total |
 |---|---:|---:|---:|---:|
-| D01 nursery/stage | 21 | 1 | 0 | 22 |
+| D01 nursery/stage | 22 | 0 | 0 | 22 |
 | D02 land prep | 24 | 3 | 0 | 27 |
 | D03 irrigation | 27 | 4 | 0 | 31 |
 | D04 nutrients | 31 | 3 | 0 | 34 |
@@ -32,11 +32,11 @@ Single source of truth for how every Ginger-KB input field reaches the engine. T
 | D08 planting | 38 | 0 | 0 | 38 |
 | D09 harvest | 39 | 0 | 0 | 39 |
 | D10 schemes | 34 | 1 | 0 | 35 |
-| D11 yield model | 5 | 18 | 11 | 34 |
-| D12 advisory QA | 14 | 20 | 2 | 36 |
+| D11 yield model | 28 | 6 | 0 | 34 |
+| D12 advisory QA | 19 | 16 | 1 | 36 |
 | D13 economics | 39 | 0 | 0 | 39 |
 | D14 satellite | 28 | 11 | 8 | 47 |
-| **Total** | **377** | **83** | **21** | **481** |
+| **Total** | **406** | **66** | **9** | **481** |
 
 ## Wired fields by source
 
@@ -78,9 +78,9 @@ Each source is a DB table (with its entry path) or a computed value.
 `basal_k_kg_per_acre`, `basal_p_kg_per_acre`, `castor_bait_prepared_date`, `castor_bait_units_per_acre`, `drip_runtime_min`, `ethephon_spray_count`, `fertigation_active`, `fertigation_last_ec_response`, `herbicide_post_emergent_date`, `herbicide_pre_emergent_date`, `irrigation_applied_litres_today`, `kulav_passes`, `labour_arranged_date`, `last_fungicide_date`, `last_fungicide_group`, `last_insecticide_date`, `last_insecticide_group`, `metarhizium_kg_per_acre`, `naa_spray_count`, `weeding_count`
 
 ### weather_forecasts (Open-Meteo) — 16 fields
-*Entry: daily forecast fetch (automated). `rainfall_deviation_pct` / `cyclone_alert_active` are derived from the window + zone normals (PR #47).*
+*Entry: daily forecast fetch (automated). `rainfall_deviation_pct` now uses IMD station monthly normals; `severe_weather_alert_active` (renamed from `cyclone_alert_active`, VJH §7) trips on rain ≥ 75 mm OR wind ≥ 40 km/h.*
 
-`cyclone_alert_active`, `dry_spell_days`, `effective_rainfall_mm`, `fog_days_consecutive`, `fog_observed`, `forecast_rain_48h_mm`, `forecast_source`, `heat_stress_days_count`, `pan_evaporation_mm_day`, `rain_gap_days`, `rainfall_deviation_pct`, `rainfall_last_48h_mm`, `rainfall_mm`, `rainfall_ytd_mm`, `solar_radiation_mj_m2`, `vpd_night_mean_kpa`
+`dry_spell_days`, `effective_rainfall_mm`, `fog_days_consecutive`, `fog_observed`, `forecast_rain_48h_mm`, `forecast_source`, `heat_stress_days_count`, `pan_evaporation_mm_day`, `rain_gap_days`, `rainfall_deviation_pct`, `rainfall_last_48h_mm`, `rainfall_mm`, `rainfall_ytd_mm`, `severe_weather_alert_active`, `solar_radiation_mj_m2`, `vpd_night_mean_kpa`
 
 ### farmer_consent — 9 fields
 *Entry: —*
@@ -88,7 +88,7 @@ Each source is a DB table (with its entry path) or a computed value.
 `cluster_anonymised`, `consent_advisory`, `consent_date`, `consent_research`, `data_retention_until`, `deletion_requested`, `sat_attribution_shown`, `sat_public_display_context`, `third_party_share_consent_given`
 
 ### farms — 8 fields
-*Entry: Data Entry page (farm facts)*
+*Entry: Data Entry page (farm facts). `soil_type` now maps `red → red_loam` (VJH §3).*
 
 `dripper_lph`, `has_drip`, `previous_crops_3yr`, `soil_depth_cm`, `soil_oc_pct`, `soil_texture_class`, `soil_type`, `water_source_type`
 
@@ -112,6 +112,11 @@ Each source is a DB table (with its entry path) or a computed value.
 
 `action_compliance_rate`, `advisory_completed_count`, `advisory_completed_on_time_count`, `advisory_issued_count`
 
+### yield model (D11 process baseline) — 10 fields
+*Entry: computed each run by the yield-model scaffold (`yield_u_values` register + `predict_yield`), logged to `yield_prediction_log`. `ceiling_quintal_per_acre` comes from `season_economics` (above).*
+
+`ceiling_basis`, `cumulative_loss_pct`, `gap_attributed_pct`, `gap_unexplained_pct`, `predicted_yield_quintal_per_acre`, `prediction_interval_pct`, `season_record_complete`, `u_value_source_class`, `u_values_applied`, `yield_prediction_interval_pct`
+
 ### computed in mapper — 5 fields
 *Entry: derived each run from other filled fields.*
 
@@ -132,15 +137,19 @@ Each source is a DB table (with its entry path) or a computed value.
 
 `farmer_id`
 
-## Not yet wired (37 fields)
+### Declared + mapper-set, awaiting a consuming rule — 5 fields
+Newly declared in the KB (step-1 edits) and set by the mapper, but no rule reads them yet, so they are not counted in the 319/346 above. They stand ready for the agronomy team to author the consuming rules (esp. the D05 blocklist branch).
+`blocklist_reason`, `blocklist_source_ref`, `farmer_alert_type`, `phi_blocklist_hit`, `soil_texture_class_source`
+
+## Not yet wired (27 fields)
 
 None of these is a farm *input* the mapper can copy. Each is either an engine
 output, a value that needs a subsystem/workflow we have not built, or a value
 that depends on hardware/history that is not present yet.
 
-### Engine yield-model output (D11) — 11 fields
-The engine's own predictions and yield-gap attribution. Needs the agronomy team's **yield-model definition** (the U-value register, source classes, and how loss is split explained/unexplained) — a data-science artifact, not field-wiring. *See item #8.*
-`ceiling_basis`, `cumulative_loss_pct`, `gap_attributed_pct`, `gap_unexplained_pct`, `interdependence_group`, `predicted_yield_quintal_per_acre`, `prediction_interval_pct`, `season_record_complete`, `u_value_source_class`, `u_values_applied`, `yield_prediction_interval_pct`
+### Engine yield-model output (D11) — 1 field
+The 10 other D11 fields are now produced by the yield-model scaffold (above). `interdependence_group` remains UNKNOWN pending the KB's duplication-group map. *See item #8 / `D11_YIELD_MODEL_v1.md`.*
+`interdependence_group`
 
 ### Advisory-QA workflow (D12) — 8 fields
 Need a human QA-review / labelling workflow that does not exist yet (alarm classification, bias review, photo labelling, cluster assignment, non-compliance reason capture). The four *computable* D12 counters are now wired (above). *See item #8.*
@@ -171,4 +180,6 @@ Depend on the physical Main Node weather station being installed, or on observed
 - **Phase 3 agronomy** (#47): soil/zone/PHI defaults, `rainfall_deviation_pct`, `cyclone_alert_active`, `phi_days_remaining`, `prediction_stage`, `model_version` (items #3, #7).
 - **Phase 3 Landsat** (#48): USGS M2M LST adapter → `lst_c` → derived `cwsi` (item #6).
 - **D12 counters** (#49): advisory compliance counters from `ai_suggestions` + `farmer_actions` (`advisory_issued/completed/on_time_count`, `action_compliance_rate`) — the code-doable slice of item #8.
-- **Remaining (37 fields):** engine yield-model (D11) + advisory-QA workflow (D12) need agronomy/QA subsystems (item #8); the rest need field hardware, time-series history, or external feeds.
+- **D11 scaffold** (#51): process-baseline yield model (`yield_u_values` + `predict_yield` + `yield_prediction_log`) → 10 D11 fields.
+- **KB step-1** (this PR): switched the backend onto the unified 14-domain KB build (migration 0032, state-preserving reload). Applied AGRONOMY_SIGNOFF / VJH-V1.0 edits in the JSON source + regenerated: `cyclone_alert_active`→`severe_weather_alert_active` (rain≥75 OR wind≥40), `prediction_stage`→G0–G5, `soil_type` +`red_loam`, new declared fields (`soil_texture_class_source` + D05 blocklist trace).
+- **Remaining (27 fields):** `interdependence_group` (D11 duplication-group map) + the D12 advisory-QA workflow (item #8) need agronomy/QA subsystems; the rest need field hardware, time-series history, or external feeds.

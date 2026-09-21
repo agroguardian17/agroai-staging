@@ -24,7 +24,7 @@
         "u_values_applied": "array of rule_id",
         "predicted_yield_quintal_per_acre": "number",
         "prediction_interval_pct": "number",
-        "prediction_stage": "enum:[pre_season, g1_end, mid_season, pre_harvest_observation, pre_harvest_sampled]",
+        "prediction_stage": "enum:[G0, G1, G2, G3, G4, G5, pre_harvest_observation]",
         "gap_attributed_pct": "number",
         "gap_unexplained_pct": "number",
         "season_record_complete": "boolean",

@@ -611,21 +611,24 @@ def _rain_last_48h_mm(rows: list[ForecastRow], today: date) -> float | None:
     return round(sum(past), 2) if past else None
 
 
-# Cyclone proxy thresholds: an extreme wind + heavy rain day in the next 3 days.
-_CYCLONE_WIND_KMH = 60.0
-_CYCLONE_RAIN_MM = 50.0
+# Severe-weather proxy thresholds (VJH-V1.0 §7: renamed from the misleading
+# "cyclone" flag; AGRO_GUARDIAN_CUSTOM_OPERATIONAL_RULE, not an IMD warning).
+# Trip on heavy rain OR strong wind in the next 3 days: rainfall_24h_mm >= 75
+# OR wind_gust_kmph >= 40, approximated from the daily forecast until the
+# dedicated rainfall_24h_mm / wind_gust_kmph fields land (step 2 / rule D07-CY-WX-001).
+_SEVERE_WX_RAIN_MM = 75.0
+_SEVERE_WX_WIND_KMH = 40.0
 
 
-def _cyclone_alert(rows: list[ForecastRow], today: date) -> bool | None:
-    """Proxy cyclone/severe-weather flag from the forecast window (NOT an
-    official IMD warning): any day in the next 3 with gale wind AND heavy rain.
-    """
+def _severe_weather_alert(rows: list[ForecastRow], today: date) -> bool | None:
+    """Proxy severe-weather flag from the forecast window (NOT an official IMD
+    warning): any day in the next 3 with heavy rain OR strong wind."""
     fut = [r for r in rows if today <= r.forecast_for_date <= today + timedelta(days=3)]
     if not fut:
         return None
     return any(
-        (r.wind_speed_kmh or 0.0) >= _CYCLONE_WIND_KMH
-        and (r.rain_mm_expected or 0.0) >= _CYCLONE_RAIN_MM
+        (r.rain_mm_expected or 0.0) >= _SEVERE_WX_RAIN_MM
+        or (r.wind_speed_kmh or 0.0) >= _SEVERE_WX_WIND_KMH
         for r in fut
     )
 
@@ -789,16 +792,23 @@ def _rainfall_deviation_pct(
 
 
 def _prediction_stage(dap: int) -> str:
-    """Coarse yield-prediction stage from days-after-planting (ginger ~240 d).
+    """Operational growth stage from days-after-planting.
 
-    AGRONOMIST TO CONFIRM the DAP cut-points.
+    AGRO_GUARDIAN_OPERATIONAL_STAGE_MODEL (VJH-V1.0 §4): G0-G5 by DAP, then
+    pre_harvest_observation past 240 DAP. Cut-points verbatim from the sign-off.
     """
     if dap < 0:
-        return "pre_season"
+        return "G0"  # pre-plant
+    if dap < 35:
+        return "G1"  # sprouting / establishment
     if dap < 90:
-        return "g1_end"
-    if dap < 200:
-        return "mid_season"
+        return "G2"  # vegetative
+    if dap < 150:
+        return "G3"  # rhizome formation
+    if dap < 210:
+        return "G4"  # rhizome maturation
+    if dap <= 240:
+        return "G5"  # pre-harvest window
     return "pre_harvest_observation"
 
 
@@ -965,7 +975,7 @@ def _populate_from_forecast(
     _set(state, "forecast_source", rows[0].source_api if rows else None)
     _set(state, "forecast_rain_48h_mm", _forecast_rain_48h_mm(rows, today))
     _set(state, "rainfall_last_48h_mm", _rain_last_48h_mm(rows, today))
-    _set(state, "cyclone_alert_active", _cyclone_alert(rows, today))
+    _set(state, "severe_weather_alert_active", _severe_weather_alert(rows, today))
     _set(state, "rain_gap_days", _rain_gap_days(rows, today))
     _set(state, "dry_spell_days", _dry_spell_days(rows, today))
     _set(state, "effective_rainfall_mm", _effective_rainfall_mm(rows, today))
@@ -989,14 +999,15 @@ def _populate_from_forecast(
 
 
 # DB ``farms.soil_type`` domain (black/red/sandy/loamy/mixed) → the KB's
-# ``soil_type`` enum (vertisol/loam/sandy_loam/laterite/other). Anything not
-# listed maps to ``other``. AGRONOMIST TO CONFIRM red→laterite (many "red"
-# soils are red loams, not true laterite).
+# ``soil_type`` enum (vertisol/loam/sandy_loam/laterite/red_loam/other). Anything
+# not listed maps to ``other``. red→red_loam per AGRONOMY_SIGNOFF (2026-09-21):
+# the pilot's "red" soils are red loams, not true laterite (laterite is reserved
+# for actual laterite districts, none onboarded in Season 1).
 _SOIL_TYPE_MAP = {
     "black": "vertisol",
     "loamy": "loam",
     "sandy": "sandy_loam",
-    "red": "laterite",
+    "red": "red_loam",
     "mixed": "other",
 }
 
@@ -1025,6 +1036,9 @@ def _populate_from_farm(state: dict[str, Any], f: FarmFacts) -> None:
     if f.soil_type is not None:
         _set(state, "soil_type", _SOIL_TYPE_MAP.get(f.soil_type, "other"))
         _set(state, "soil_texture_class", _SOIL_TEXTURE_CLASS_MAP.get(f.soil_type, "medium"))
+        # Provenance of the texture class: derived from soil_type here; a lab
+        # sand/silt/clay result would override with "lab" (AGRONOMY_SIGNOFF row 2).
+        _set(state, "soil_texture_class_source", "derived")
     _set(state, "soil_depth_cm", f.soil_depth_cm)
     # Farm-level organic carbon is a coarse fallback for the KB's soil_oc_pct;
     # a real lab test (populated later) overrides it.

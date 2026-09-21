@@ -40,6 +40,10 @@
         "last_insecticide_date": "date",
         "last_insecticide_group": "string",
         "phi_days_remaining": "integer",
+        "phi_blocklist_hit": "boolean",
+        "blocklist_reason": "text",
+        "blocklist_source_ref": "text",
+        "farmer_alert_type": "text",
         "cluster_pest_alert_active": "boolean",
         "insecticide_group_repeated": "boolean — the last two applications shared a mode-of-action group"
       },

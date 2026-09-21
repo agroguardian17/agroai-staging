@@ -1089,7 +1089,7 @@ async def test_phase3_consent_language_model_and_forecast_extras() -> None:
     assert state["sat_public_display_context"] == "own_plot"
     assert state["advisory_language"] == "mr"
     assert state["model_version"] == "ginger-engine/v1.0"
-    assert state["prediction_stage"] == "g1_end"  # dap 60 < 90
+    assert state["prediction_stage"] == "G2"  # dap 60 -> G2 (35-90)
     assert state["k_source"] == "MOP"
     assert state["agro_climatic_zone"] == "marathwada_central"  # Beed
     assert state["vpd_night_mean_kpa"] == 0.25
@@ -1137,7 +1137,7 @@ async def test_phi_rainfall_deviation_and_cyclone() -> None:
             "dap",
             "phi_days_remaining",
             "rainfall_deviation_pct",
-            "cyclone_alert_active",
+            "severe_weather_alert_active",
             "rainfall_ytd_mm",
             "agro_climatic_zone",
             "last_fungicide_date",
@@ -1155,7 +1155,7 @@ async def test_phi_rainfall_deviation_and_cyclone() -> None:
     )
     state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
     assert state["phi_days_remaining"] == 4
-    assert state["cyclone_alert_active"] is True
+    assert state["severe_weather_alert_active"] is True  # wind 70 >= 40 (OR rule)
     assert state["rainfall_deviation_pct"] is not None
 
 
@@ -1510,9 +1510,10 @@ async def test_fills_d11_yield_prediction() -> None:
         declared_fields=declared,
     )
     state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
-    # dap 160 -> mid_season (current KB enum) -> interval 20
-    assert state["prediction_interval_pct"] == 20.0
-    assert state["yield_prediction_interval_pct"] == 20.0
+    # dap 160 -> G4 (150-210) -> interval 15
+    assert state["prediction_stage"] == "G4"
+    assert state["prediction_interval_pct"] == 15.0
+    assert state["yield_prediction_interval_pct"] == 15.0
     assert state["ceiling_basis"] == "unverified"  # no planting_layout entered
     # rot 40% -> intensity 0.4, u 0.60 -> surviving 0.76 -> 94*0.76 = 71.44
     assert state["predicted_yield_quintal_per_acre"] == 71.4
