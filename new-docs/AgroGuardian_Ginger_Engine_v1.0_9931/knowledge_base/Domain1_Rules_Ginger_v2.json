@@ -96,7 +96,7 @@
       "current_stage": "enum:stage_codes",
       "stage_source": "enum:[calendar, marker, gdd]",
       "target_product": "enum:[green_ginger, dry_ginger, seed_rhizome]",
-      "soil_type": "enum:[vertisol, loam, sandy_loam, laterite, other]",
+      "soil_type": "enum:[vertisol, loam, sandy_loam, laterite, red_loam, other]",
       "soil_ph": "number",
       "soil_ec": "number",
       "soil_oc_pct": "number",

@@ -20,6 +20,7 @@
       "new_farm_brain_fields": {
         "soil_depth_cm": "number",
         "soil_texture_class": "enum:[light, medium, heavy]",
+        "soil_texture_class_source": "enum:[derived, lab]",
         "percolation_time_hours": "number",
         "percolation_class": "enum:[excellent, moderate, poor, very_poor]",
         "deep_ploughing_done": "boolean",

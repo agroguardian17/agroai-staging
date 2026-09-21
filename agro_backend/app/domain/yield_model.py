@@ -18,14 +18,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-# Prediction interval (± percent) by prediction_stage - the CURRENT KB enum
-# (D11-PR-001). When the G0-G5 stage model lands in the KB, remap here.
+# Prediction interval (± percent) by prediction_stage. Mapped onto the G0-G5
+# operational stage model (VJH-V1.0 §4) from D11-PR-001's guidance (widest early,
+# narrowest near harvest: pre-season ±25, G1-end ±22, mid ±20, pre-harvest ±12,
+# sampled ±8). Interim; refined by D11_YIELD_MODEL_v1.md (15 Oct).
 PREDICTION_INTERVAL_PCT: dict[str, float] = {
-    "pre_season": 25.0,
-    "g1_end": 22.0,
-    "mid_season": 20.0,
-    "pre_harvest_observation": 12.0,
-    "pre_harvest_sampled": 8.0,
+    "G0": 25.0,
+    "G1": 22.0,
+    "G2": 20.0,
+    "G3": 20.0,
+    "G4": 15.0,
+    "G5": 12.0,
+    "pre_harvest_observation": 10.0,
 }
 _DEFAULT_INTERVAL_PCT = 25.0
 
@@ -40,11 +44,13 @@ MODEL_VERSION = "ginger-yield/v0.1-scaffold"
 
 # Confidence rises as the season progresses and the crop is observable.
 _CONFIDENCE_BY_STAGE: dict[str, float] = {
-    "pre_season": 0.30,
-    "g1_end": 0.45,
-    "mid_season": 0.60,
-    "pre_harvest_observation": 0.75,
-    "pre_harvest_sampled": 0.90,
+    "G0": 0.30,
+    "G1": 0.40,
+    "G2": 0.55,
+    "G3": 0.65,
+    "G4": 0.75,
+    "G5": 0.85,
+    "pre_harvest_observation": 0.90,
 }
 
 

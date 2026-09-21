@@ -30,7 +30,7 @@
         "forecast_source": "string",
         "forecast_bias_correction_mm": "number",
         "bias_observation_count": "integer",
-        "cyclone_alert_active": "boolean",
+        "severe_weather_alert_active": "boolean",
         "heat_stress_days_count": "integer",
         "fog_observed": "boolean",
         "season_water_plan_basis": "enum:[poor_year, average_year, good_year]",
@@ -1244,7 +1244,7 @@
       "farm_brain_schema": [
         "air_temp_max_c",
         "current_stage",
-        "cyclone_alert_active"
+        "severe_weather_alert_active"
       ],
       "u_value": null,
       "recoverability": "partial",
@@ -1711,7 +1711,7 @@
       "farm_brain_schema": [
         "forecast_rain_48h_mm",
         "current_stage",
-        "cyclone_alert_active",
+        "severe_weather_alert_active",
         "drainage_levels_present",
         "saturation_hours"
       ],
