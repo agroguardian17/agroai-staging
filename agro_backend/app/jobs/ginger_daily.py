@@ -71,6 +71,7 @@ from app.application.ports.season_economics_repo import SeasonEconomicsRepo
 from app.application.ports.season_operations_repo import SeasonOperationsRepo
 from app.application.ports.weather_forecast_repo import WeatherForecastRepo
 from app.application.ports.weather_station_reading_repo import WeatherStationReadingRepo
+from app.application.ports.yield_model_repo import YieldModelRepo
 from app.lib import metrics
 
 if TYPE_CHECKING:
@@ -120,6 +121,8 @@ class GingerDailyDeps:
     farmer_consent_repo: FarmerConsentRepo | None = None
     # Optional advisory-performance source (D12 compliance counters).
     advisory_metrics_repo: AdvisoryMetricsRepo | None = None
+    # Optional Domain 11 yield-model source (U-value register + prediction log).
+    yield_model_repo: YieldModelRepo | None = None
     # Timezone the "today" date is computed in. Defaults to IST — the pilot
     # is in Aurangabad and the farmer's day boundary is IST midnight.
     timezone: ZoneInfo = field(default_factory=lambda: ZoneInfo("Asia/Kolkata"))
@@ -188,6 +191,7 @@ async def _run_one_plot(
         farmer_schemes_repo=deps.farmer_schemes_repo,
         farmer_consent_repo=deps.farmer_consent_repo,
         advisory_metrics_repo=deps.advisory_metrics_repo,
+        yield_model_repo=deps.yield_model_repo,
         declared_fields=declared_fields,
     )
     state = await build_farm_brain(plot_id=season.plot_id, today=today, deps=fb_deps)

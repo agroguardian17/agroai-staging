@@ -1449,3 +1449,76 @@ async def test_rainfall_deviation_uses_imd_station_normals() -> None:
     # Jalna -> marathwada_central -> Chikalthana; a real number comes back.
     assert state["agro_climatic_zone"] == "marathwada_central"
     assert isinstance(state["rainfall_deviation_pct"], float)
+
+
+class _FakeYieldModelRepo:
+    def __init__(self, rows) -> None:
+        self._rows = rows
+        self.logged = []
+
+    async def list_u_values(self, crop="Ginger"):
+        return self._rows
+
+    async def log_prediction(self, row) -> None:
+        self.logged.append(row)
+
+
+@pytest.mark.asyncio
+async def test_fills_d11_yield_prediction() -> None:
+    """The yield model fills the D11 fields and logs a prediction."""
+    from datetime import timedelta
+
+    from app.application.ports.yield_model_repo import UValueRow
+
+    today = date(2026, 8, 3)
+    season = CropSeasonView(
+        season_id=_SEASON, tenant_id=_TENANT, farm_id=_FARM, plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger", crop_name_marathi="आले", crop_category="cash_crop",
+        crop_variety="Mahima", sowing_date=today - timedelta(days=160),
+        expected_harvest_date=date(2027, 2, 1), current_growth_stage="rhizome",
+        crop_age_days_today=160,
+    )
+    rows = [
+        UValueRow(factor_key="soft_rot", rank=1, u_value=0.60,
+                  signal_field="rot_incidence_pct", representative_rule_id="D06-ROT-001"),
+        UValueRow(factor_key="k_deficiency", rank=4, u_value=0.20,
+                  signal_field=None, representative_rule_id="D04-K-001"),
+    ]
+    repo = _FakeYieldModelRepo(rows)
+    declared = frozenset(
+        {
+            "dap", "prediction_stage", "planting_layout", "rot_incidence_pct",
+            "predicted_yield_quintal_per_acre", "prediction_interval_pct",
+            "yield_prediction_interval_pct", "cumulative_loss_pct",
+            "gap_attributed_pct", "gap_unexplained_pct", "ceiling_basis",
+            "ceiling_quintal_per_acre", "u_values_applied", "u_value_source_class",
+            "season_record_complete",
+        }
+    )
+    from app.application.ports.crop_scouting_repo import CropScoutingView
+
+    scout = CropScoutingView(
+        scouting_id=uuid.uuid4(), plot_id="PLOT_PILOT_001",
+        scouting_date=today, rot_incidence_pct=Decimal("40"),
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(season),
+        crop_scouting_repo=_FakeScoutingRepo(scout),
+        yield_model_repo=repo,
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    # dap 160 -> mid_season (current KB enum) -> interval 20
+    assert state["prediction_interval_pct"] == 20.0
+    assert state["yield_prediction_interval_pct"] == 20.0
+    assert state["ceiling_basis"] == "unverified"  # no planting_layout entered
+    # rot 40% -> intensity 0.4, u 0.60 -> surviving 0.76 -> 94*0.76 = 71.44
+    assert state["predicted_yield_quintal_per_acre"] == 71.4
+    assert state["cumulative_loss_pct"] == 24.0
+    assert "D06-ROT-001" in state["u_values_applied"]
+    assert state["u_value_source_class"] == "EST"
+    assert state["season_record_complete"] is False
+    assert len(repo.logged) == 1
+    assert repo.logged[0].season_id == _SEASON

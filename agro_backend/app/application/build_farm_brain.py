@@ -42,6 +42,7 @@ is missing entirely, because the DSL parser raises on unknown field names.
 from __future__ import annotations
 
 import calendar
+from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from decimal import Decimal
@@ -68,6 +69,7 @@ from app.application.ports.season_economics_repo import SeasonEconomicsRepo
 from app.application.ports.season_operations_repo import SeasonOperationsRepo
 from app.application.ports.weather_forecast_repo import ForecastRow, WeatherForecastRepo
 from app.application.ports.weather_station_reading_repo import WeatherStationReadingRepo
+from app.application.ports.yield_model_repo import YieldModelRepo, YieldPredictionLog
 from app.domain.plot import Plot
 from app.domain.satellite_metrics import (
     acre_to_hectare,
@@ -80,6 +82,7 @@ from app.domain.satellite_metrics import (
 from app.domain.sensor import Reading
 from app.domain.vpd import vpd_kpa
 from app.domain.weather_station_reading import WeatherStationReading
+from app.domain.yield_model import UValue, ceiling_basis_for_layout, predict_yield
 
 if TYPE_CHECKING:
     # Kept to declare unused ports if future rounds add extra data sources.
@@ -152,6 +155,10 @@ class FarmBrainDeps:
     # fills advisory_issued/completed/on_time counts and action_compliance_rate.
     # None keeps them UNKNOWN.
     advisory_metrics_repo: AdvisoryMetricsRepo | None = None
+    # Optional Domain 11 yield-model source. When present the builder runs the
+    # process-baseline predictor and fills the D11 prediction/attribution fields,
+    # logging each prediction. None keeps them UNKNOWN.
+    yield_model_repo: YieldModelRepo | None = None
     # The full ``kb_farm_brain_fields`` set. Injected so tests can pin a
     # subset; the daily job reads it from the database at startup.
     declared_fields: frozenset[str] = field(default_factory=frozenset)
@@ -330,6 +337,11 @@ async def build_farm_brain(
 
     # ---- Composite derivations (from fields filled above) --------------
     _derive_composite(state, today)
+
+    # ---- Domain 11 yield model (process baseline) ----------------------
+    # Runs after the composite step so prediction_stage / signal fields are set.
+    if season is not None and deps.yield_model_repo is not None:
+        await _populate_yield_prediction(state, deps.yield_model_repo, season, today)
 
     # ---- Synthetic ------------------------------------------------------
     state["current_month"] = today.month
@@ -853,6 +865,95 @@ def _derive_composite(state: dict[str, Any], today: date) -> None:
         )
         if dev is not None:
             _set(state, "rainfall_deviation_pct", dev)
+
+
+async def _populate_yield_prediction(
+    state: dict[str, Any],
+    repo: YieldModelRepo,
+    season: CropSeasonView,
+    today: date,
+) -> None:
+    """Run the Domain 11 process-baseline predictor and fill the D11 fields.
+
+    ``interdependence_group`` stays UNKNOWN in this scaffold (needs the KB
+    duplication-group mapping); everything else the model outputs is set, and
+    the prediction is appended to yield_prediction_log (non-fatal)."""
+    rows = await repo.list_u_values(season.crop_name_english)
+    if not rows:
+        return
+    factors = [
+        UValue(
+            factor_key=r.factor_key,
+            u_value=r.u_value,
+            signal_field=r.signal_field,
+            representative_rule_id=r.representative_rule_id,
+            rank=r.rank,
+        )
+        for r in rows
+    ]
+    override = state.get("ceiling_quintal_per_acre")
+    pred = predict_yield(
+        ceiling_basis=ceiling_basis_for_layout(state.get("planting_layout")),
+        factors=factors,
+        signals=state,
+        prediction_stage=state.get("prediction_stage"),
+        ceiling_override=float(override) if override is not None else None,
+    )
+
+    _set(state, "predicted_yield_quintal_per_acre", pred.predicted_yield_quintal_per_acre)
+    _set(state, "prediction_interval_pct", pred.prediction_interval_pct)
+    _set(state, "yield_prediction_interval_pct", pred.prediction_interval_pct)
+    _set(state, "cumulative_loss_pct", pred.cumulative_loss_pct)
+    _set(state, "gap_attributed_pct", pred.gap_attributed_pct)
+    _set(state, "gap_unexplained_pct", pred.gap_unexplained_pct)
+    _set(state, "ceiling_basis", pred.ceiling_basis)
+    _set(state, "u_values_applied", pred.u_values_applied)
+    _set(state, "u_value_source_class", pred.u_value_source_class)
+    if state.get("ceiling_quintal_per_acre") is None:
+        _set(state, "ceiling_quintal_per_acre", pred.ceiling_quintal_per_acre)
+    _set(
+        state,
+        "season_record_complete",
+        state.get("harvest_date") is not None
+        and state.get("yield_quintal_per_acre_actual") is not None,
+    )
+
+    dap = state.get("dap")
+    log = YieldPredictionLog(
+        tenant_id=season.tenant_id,
+        season_id=season.season_id,
+        plot_id=season.plot_id,
+        prediction_date=today,
+        dap=dap if isinstance(dap, int) else None,
+        prediction_stage=state.get("prediction_stage"),
+        ceiling_quintal_per_acre=pred.ceiling_quintal_per_acre,
+        ceiling_basis=pred.ceiling_basis,
+        predicted_yield_quintal_per_acre=pred.predicted_yield_quintal_per_acre,
+        ci_low_quintal_per_acre=pred.ci_low_quintal_per_acre,
+        ci_high_quintal_per_acre=pred.ci_high_quintal_per_acre,
+        prediction_interval_pct=pred.prediction_interval_pct,
+        cumulative_loss_pct=pred.cumulative_loss_pct,
+        gap_attributed_pct=pred.gap_attributed_pct,
+        gap_unexplained_pct=pred.gap_unexplained_pct,
+        u_values_applied=pred.u_values_applied,
+        attribution=[
+            {
+                "factor_key": c.factor_key,
+                "u_value": c.u_value,
+                "intensity": c.intensity,
+                "loss_pct": c.loss_pct,
+                "rule_id": c.rule_id,
+            }
+            for c in pred.attribution
+        ],
+        u_value_source_class=pred.u_value_source_class,
+        model_version=pred.model_version,
+        data_quality=pred.data_quality,
+        confidence=pred.confidence,
+    )
+    # A log-write hiccup must never suppress the plot's advisory.
+    with suppress(Exception):
+        await repo.log_prediction(log)
 
 
 def _populate_from_forecast(
