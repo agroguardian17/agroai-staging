@@ -27,6 +27,7 @@ _DAILY_VARS = (
     "precipitation_sum",
     "precipitation_probability_max",
     "wind_speed_10m_max",
+    "wind_gusts_10m_max",
     "et0_fao_evapotranspiration",
     "shortwave_radiation_sum",
 )
@@ -135,6 +136,7 @@ class OpenMeteoForecastProvider:
                     rain_mm_expected=_f(_at(daily, "precipitation_sum", i)),
                     rain_probability_pct=_f(_at(daily, "precipitation_probability_max", i)),
                     wind_speed_kmh=_f(_at(daily, "wind_speed_10m_max", i)),
+                    wind_gust_kmph=_f(_at(daily, "wind_gusts_10m_max", i)),
                     et0_mm=_f(_at(daily, "et0_fao_evapotranspiration", i)),
                     solar_radiation_mj_m2=_f(_at(daily, "shortwave_radiation_sum", i)),
                     vpd_night_mean_kpa=vpd_night,

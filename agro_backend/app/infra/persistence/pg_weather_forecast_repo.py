@@ -30,12 +30,12 @@ class PgWeatherForecastRepo:
                 fetched_at, tenant_id, farm_id, forecast_for_date, source_api,
                 temp_min_c, temp_max_c, rain_mm_expected,
                 rain_probability_pct, wind_speed_kmh, et0_mm, solar_radiation_mj_m2,
-                vpd_night_mean_kpa, fog_observed
+                vpd_night_mean_kpa, fog_observed, wind_gust_kmph
             ) VALUES (
                 :fetched_at, :tenant_id, :farm_id, :forecast_for_date, :source_api,
                 :temp_min_c, :temp_max_c, :rain_mm_expected,
                 :rain_probability_pct, :wind_speed_kmh, :et0_mm, :solar_radiation_mj_m2,
-                :vpd_night_mean_kpa, :fog_observed
+                :vpd_night_mean_kpa, :fog_observed, :wind_gust_kmph
             )
             """
         )
@@ -55,6 +55,7 @@ class PgWeatherForecastRepo:
                 "solar_radiation_mj_m2": r.solar_radiation_mj_m2,
                 "vpd_night_mean_kpa": r.vpd_night_mean_kpa,
                 "fog_observed": r.fog_observed,
+                "wind_gust_kmph": r.wind_gust_kmph,
             }
             for r in rows
         ]
@@ -76,7 +77,7 @@ class PgWeatherForecastRepo:
                    tenant_id, farm_id, fetched_at, forecast_for_date, source_api,
                    temp_min_c, temp_max_c, rain_mm_expected, rain_probability_pct,
                    wind_speed_kmh, et0_mm, solar_radiation_mj_m2,
-                   vpd_night_mean_kpa, fog_observed
+                   vpd_night_mean_kpa, fog_observed, wind_gust_kmph
             FROM weather_forecasts
             WHERE farm_id = :farm_id
               AND forecast_for_date BETWEEN :date_from AND :date_to
@@ -108,6 +109,7 @@ class PgWeatherForecastRepo:
                     solar_radiation_mj_m2=r.solar_radiation_mj_m2,
                     vpd_night_mean_kpa=r.vpd_night_mean_kpa,
                     fog_observed=r.fog_observed,
+                    wind_gust_kmph=r.wind_gust_kmph,
                 )
             )
         return out

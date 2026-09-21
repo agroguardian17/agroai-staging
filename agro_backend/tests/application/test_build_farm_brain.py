@@ -869,7 +869,7 @@ async def test_season_part2_columns_are_wired() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _fc(d: date, rain=0.0, tmax=30.0, et0=None, solar=None):
+def _fc(d: date, rain=0.0, tmax=30.0, et0=None, solar=None, gust=None):
     from app.application.ports.weather_forecast_repo import ForecastRow
 
     return ForecastRow(
@@ -885,6 +885,7 @@ def _fc(d: date, rain=0.0, tmax=30.0, et0=None, solar=None):
         wind_speed_kmh=None,
         et0_mm=et0,
         solar_radiation_mj_m2=solar,
+        wind_gust_kmph=gust,
     )
 
 
@@ -1523,3 +1524,28 @@ async def test_fills_d11_yield_prediction() -> None:
     assert state["season_record_complete"] is False
     assert len(repo.logged) == 1
     assert repo.logged[0].season_id == _SEASON
+
+
+@pytest.mark.asyncio
+async def test_fills_rainfall_24h_and_wind_gust_for_severe_weather_rule() -> None:
+    """rainfall_24h_mm / wind_gust_kmph = peak forecast over today..today+1
+    (the raw values the D07-CY-WX-001 rule reads)."""
+    from datetime import timedelta
+
+    today = date(2026, 8, 3)
+    rows = [
+        _fc(today, rain=20.0, gust=35.0),
+        _fc(today + timedelta(days=1), rain=80.0, gust=48.0),  # peak day
+        _fc(today + timedelta(days=2), rain=200.0, gust=90.0),  # outside 24h window
+    ]
+    declared = frozenset({"rainfall_24h_mm", "wind_gust_kmph"})
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(_season_min()),
+        weather_forecast_repo=_FakeForecastRepo(rows),
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    assert state["rainfall_24h_mm"] == 80.0  # max over today, today+1 (not day+2)
+    assert state["wind_gust_kmph"] == 48.0

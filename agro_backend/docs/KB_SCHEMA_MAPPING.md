@@ -1,6 +1,6 @@
 # KB ↔ DB Field Mapping Specification
 
-**Regenerated:** 2026-09-22 · **Status:** current (post D11 scaffold + KB step-1 edits) · **Owner:** backend
+**Regenerated:** 2026-09-22 · **Status:** current (post KB step-2: rule D07-CY-WX-001) · **Owner:** backend
 
 Single source of truth for how every Ginger-KB input field reaches the engine. The KB is authored in `new-docs/AgroGuardian_Ginger_Engine_v1.0_9931/` (JSON → `json_to_sql.py` → unified SQL); the backend loads that unified build (migration 0032) and reconciles via the mapper [`app/application/build_farm_brain.py`](../app/application/build_farm_brain.py). A field is *wired* when the mapper copies it into the per-plot farm-brain the engine reads.
 
@@ -8,11 +8,11 @@ Single source of truth for how every Ginger-KB input field reaches the engine. T
 
 | | Count |
 |---|---:|
-| KB rules | **481** |
-| Distinct fields the rules read | **346** |
-| Fields wired (DB home + mapper) | **319** |
+| KB rules | **482** |
+| Distinct fields the rules read | **348** |
+| Fields wired (DB home + mapper) | **321** |
 | Fields not yet wired | **27** |
-| Rules fully-wireable | **406** |
+| Rules fully-wireable | **407** |
 | Rules partially wireable | 66 |
 | Rules fully blocked (all fields not yet wired) | 9 |
 
@@ -28,7 +28,7 @@ Single source of truth for how every Ginger-KB input field reaches the engine. T
 | D04 nutrients | 31 | 3 | 0 | 34 |
 | D05 pests | 32 | 1 | 0 | 33 |
 | D06 disease | 22 | 6 | 0 | 28 |
-| D07 weather | 23 | 15 | 0 | 38 |
+| D07 weather | 24 | 15 | 0 | 39 |
 | D08 planting | 38 | 0 | 0 | 38 |
 | D09 harvest | 39 | 0 | 0 | 39 |
 | D10 schemes | 34 | 1 | 0 | 35 |
@@ -36,7 +36,7 @@ Single source of truth for how every Ginger-KB input field reaches the engine. T
 | D12 advisory QA | 19 | 16 | 1 | 36 |
 | D13 economics | 39 | 0 | 0 | 39 |
 | D14 satellite | 28 | 11 | 8 | 47 |
-| **Total** | **406** | **66** | **9** | **481** |
+| **Total** | **407** | **66** | **9** | **482** |
 
 ## Wired fields by source
 
@@ -77,10 +77,10 @@ Each source is a DB table (with its entry path) or a computed value.
 
 `basal_k_kg_per_acre`, `basal_p_kg_per_acre`, `castor_bait_prepared_date`, `castor_bait_units_per_acre`, `drip_runtime_min`, `ethephon_spray_count`, `fertigation_active`, `fertigation_last_ec_response`, `herbicide_post_emergent_date`, `herbicide_pre_emergent_date`, `irrigation_applied_litres_today`, `kulav_passes`, `labour_arranged_date`, `last_fungicide_date`, `last_fungicide_group`, `last_insecticide_date`, `last_insecticide_group`, `metarhizium_kg_per_acre`, `naa_spray_count`, `weeding_count`
 
-### weather_forecasts (Open-Meteo) — 16 fields
-*Entry: daily forecast fetch (automated). `rainfall_deviation_pct` now uses IMD station monthly normals; `severe_weather_alert_active` (renamed from `cyclone_alert_active`, VJH §7) trips on rain ≥ 75 mm OR wind ≥ 40 km/h.*
+### weather_forecasts (Open-Meteo) — 18 fields
+*Entry: daily forecast fetch (automated). `rainfall_deviation_pct` uses IMD station monthly normals; `severe_weather_alert_active` (renamed from `cyclone_alert_active`, VJH §7) and the new rule `D07-CY-WX-001` both trip on rain ≥ 75 mm OR wind ≥ 40 km/h — the latter reads the raw `rainfall_24h_mm` / `wind_gust_kmph` (wind gust now fetched from Open-Meteo).*
 
-`dry_spell_days`, `effective_rainfall_mm`, `fog_days_consecutive`, `fog_observed`, `forecast_rain_48h_mm`, `forecast_source`, `heat_stress_days_count`, `pan_evaporation_mm_day`, `rain_gap_days`, `rainfall_deviation_pct`, `rainfall_last_48h_mm`, `rainfall_mm`, `rainfall_ytd_mm`, `severe_weather_alert_active`, `solar_radiation_mj_m2`, `vpd_night_mean_kpa`
+`dry_spell_days`, `effective_rainfall_mm`, `fog_days_consecutive`, `fog_observed`, `forecast_rain_48h_mm`, `forecast_source`, `heat_stress_days_count`, `pan_evaporation_mm_day`, `rain_gap_days`, `rainfall_24h_mm`, `rainfall_deviation_pct`, `rainfall_last_48h_mm`, `rainfall_mm`, `rainfall_ytd_mm`, `severe_weather_alert_active`, `solar_radiation_mj_m2`, `vpd_night_mean_kpa`, `wind_gust_kmph`
 
 ### farmer_consent — 9 fields
 *Entry: —*
@@ -181,5 +181,6 @@ Depend on the physical Main Node weather station being installed, or on observed
 - **Phase 3 Landsat** (#48): USGS M2M LST adapter → `lst_c` → derived `cwsi` (item #6).
 - **D12 counters** (#49): advisory compliance counters from `ai_suggestions` + `farmer_actions` (`advisory_issued/completed/on_time_count`, `action_compliance_rate`) — the code-doable slice of item #8.
 - **D11 scaffold** (#51): process-baseline yield model (`yield_u_values` + `predict_yield` + `yield_prediction_log`) → 10 D11 fields.
-- **KB step-1** (this PR): switched the backend onto the unified 14-domain KB build (migration 0032, state-preserving reload). Applied AGRONOMY_SIGNOFF / VJH-V1.0 edits in the JSON source + regenerated: `cyclone_alert_active`→`severe_weather_alert_active` (rain≥75 OR wind≥40), `prediction_stage`→G0–G5, `soil_type` +`red_loam`, new declared fields (`soil_texture_class_source` + D05 blocklist trace).
+- **KB step-1** (PR #52): switched the backend onto the unified 14-domain KB build (migration 0032, state-preserving reload). Applied AGRONOMY_SIGNOFF / VJH-V1.0 edits in the JSON source + regenerated: `cyclone_alert_active`→`severe_weather_alert_active` (rain≥75 OR wind≥40), `prediction_stage`→G0–G5, `soil_type` +`red_loam`, new declared fields (`soil_texture_class_source` + D05 blocklist trace).
+- **KB step-2** (this PR): new rule **`D07-CY-WX-001`** (VJH §8) authored in the JSON + authoring `.py` with 9 boundary golden tests, regenerated (482 rules). Added `rainfall_24h_mm` / `wind_gust_kmph` fields end-to-end (Open-Meteo `wind_gusts_10m_max` → `weather_forecasts.wind_gust_kmph` col via migration 0033 → mapper), and an additive KB reload (migration 0034).
 - **Remaining (27 fields):** `interdependence_group` (D11 duplication-group map) + the D12 advisory-QA workflow (item #8) need agronomy/QA subsystems; the rest need field hardware, time-series history, or external feeds.

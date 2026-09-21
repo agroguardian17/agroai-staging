@@ -620,6 +620,17 @@ _SEVERE_WX_RAIN_MM = 75.0
 _SEVERE_WX_WIND_KMH = 40.0
 
 
+def _peak_next_2d(rows: list[ForecastRow], today: date, attr: str) -> float | None:
+    """Max of a daily forecast attribute over today..today+1 (peak 24h-scale)."""
+    vals = [
+        getattr(r, attr)
+        for r in rows
+        if today <= r.forecast_for_date <= today + timedelta(days=1)
+        and getattr(r, attr) is not None
+    ]
+    return round(max(vals), 1) if vals else None
+
+
 def _severe_weather_alert(rows: list[ForecastRow], today: date) -> bool | None:
     """Proxy severe-weather flag from the forecast window (NOT an official IMD
     warning): any day in the next 3 with heavy rain OR strong wind."""
@@ -976,6 +987,10 @@ def _populate_from_forecast(
     _set(state, "forecast_rain_48h_mm", _forecast_rain_48h_mm(rows, today))
     _set(state, "rainfall_last_48h_mm", _rain_last_48h_mm(rows, today))
     _set(state, "severe_weather_alert_active", _severe_weather_alert(rows, today))
+    # Raw values the D07-CY-WX-001 severe-weather rule reads: peak forecast
+    # 24h rainfall and wind gust over the next two days.
+    _set(state, "rainfall_24h_mm", _peak_next_2d(rows, today, "rain_mm_expected"))
+    _set(state, "wind_gust_kmph", _peak_next_2d(rows, today, "wind_gust_kmph"))
     _set(state, "rain_gap_days", _rain_gap_days(rows, today))
     _set(state, "dry_spell_days", _dry_spell_days(rows, today))
     _set(state, "effective_rainfall_mm", _effective_rainfall_mm(rows, today))

@@ -37,7 +37,9 @@
         "station_data_age_hours": "number — hours since the last weather station reading; above 24 the station is treated as down",
         "vpd_kpa": "number — vapour pressure deficit in kilopascals; derived from air_temp_max_c and rh_pct via Tetens' equation; 0.8–1.5 kPa is the plant-friendly band",
         "vpd_night_mean_kpa": "number — mean nighttime VPD (2200–0600 local) in kilopascals; below 0.3 signals almost certain dew and leaf wetness",
-        "spray_scheduled_today": "boolean — true when a foliar spray of any kind is queued for the current day; used by SILENT_GUARD rules to check safety before the recommendation leaves the engine"
+        "spray_scheduled_today": "boolean — true when a foliar spray of any kind is queued for the current day; used by SILENT_GUARD rules to check safety before the recommendation leaves the engine",
+        "rainfall_24h_mm": "number",
+        "wind_gust_kmph": "number"
       },
       "constants": {
         "kannad_latitude": 20.27,
@@ -167,7 +169,7 @@
     "status": "PHASE_1_RAW_UNVALIDATED",
     "agronomist_validated": false,
     "validation_note": "Climate figures are from government gazetteer and published climate databases and are reliable at district level. Kannad taluka-specific rainfall and evaporation are not available and must come from the cluster station. The agro-climatic sub-zone assignment is an inference, not a confirmed classification.",
-    "total_rules": 38,
+    "total_rules": 39,
     "rule_count_note": "30 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count. | 2026-09-17: +3 rules (D07-VP-001/002/003) added under VP category — VPD retrofit, additive-only.",
     "review_by": null,
     "review_note": "Climate normals are stable. The declining rainfall trend means historical averages will drift, so the safety margin should be reviewed every few seasons rather than the rules themselves.",
@@ -3366,6 +3368,123 @@
       "status": "AUTHOR_DRAFT",
       "immutable": false,
       "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D07-CY-WX-001",
+      "category": "CY",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Forecast 24h rainfall at or above 75 mm OR wind gust at or above 40 km/h",
+        "marathi": "२४ तासांत ७५ मिमी किंवा जास्त पाऊस किंवा ४० किमी/तास किंवा जास्त वाऱ्याचा झोत अपेक्षित",
+        "expr": "rainfall_24h_mm >= 75 OR wind_gust_kmph >= 40",
+        "expr_version": "dsl-1.0",
+        "expr_note": "AGRO_GUARDIAN_CUSTOM_OPERATIONAL_RULE (VJH-V1.0 section 8). Sibling to D07-CY-001, which stays as-is; rain-OR-wind operational trigger, not the calendar rule. Not an IMD warning.",
+        "golden_tests": [
+          {
+            "context": {
+              "rainfall_24h_mm": 74.9,
+              "wind_gust_kmph": 20
+            },
+            "expect": "FALSE",
+            "label": "पाऊस मर्यादेखाली"
+          },
+          {
+            "context": {
+              "rainfall_24h_mm": 75.0,
+              "wind_gust_kmph": 20
+            },
+            "expect": "TRUE",
+            "label": "पाऊस मर्यादेवर"
+          },
+          {
+            "context": {
+              "rainfall_24h_mm": 75.1,
+              "wind_gust_kmph": 20
+            },
+            "expect": "TRUE",
+            "label": "पाऊस मर्यादेवर"
+          },
+          {
+            "context": {
+              "rainfall_24h_mm": 30,
+              "wind_gust_kmph": 39.9
+            },
+            "expect": "FALSE",
+            "label": "वारा मर्यादेखाली"
+          },
+          {
+            "context": {
+              "rainfall_24h_mm": 30,
+              "wind_gust_kmph": 40.0
+            },
+            "expect": "TRUE",
+            "label": "वारा मर्यादेवर"
+          },
+          {
+            "context": {
+              "rainfall_24h_mm": 30,
+              "wind_gust_kmph": 40.1
+            },
+            "expect": "TRUE",
+            "label": "वारा मर्यादेवर"
+          },
+          {
+            "context": {},
+            "expect": "UNKNOWN",
+            "label": "दोन्ही अनुपलब्ध — गृहीत धरू नये"
+          },
+          {
+            "context": {
+              "wind_gust_kmph": 45.0
+            },
+            "expect": "TRUE",
+            "label": "फक्त वारा"
+          },
+          {
+            "context": {
+              "rainfall_24h_mm": 80.0
+            },
+            "expect": "TRUE",
+            "label": "फक्त पाऊस"
+          }
+        ]
+      },
+      "action": {
+        "english": "Raise a severe-weather advisory (weather_stress_risk = HIGH): stop drip, clear drainage channels, secure staking and shade, and delay any spray. Check saturation within 12 hours of the rain stopping. This is an operational risk trigger, not an official IMD warning.",
+        "marathi": "तीव्र-हवामान सूचना द्या (हवामान-ताण = उच्च): ठिबक बंद करा, निचरा चर मोकळे करा, आधार व सावली मजबूत करा, फवारणी पुढे ढकला. पाऊस थांबल्यावर बारा तासांत संपृक्तता तपासा. हा कार्यान्वयनात्मक धोका-इशारा आहे, IMD चा अधिकृत इशारा नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "A custom operational trigger for severe weather. 75 mm sits in the lower part of the IMD Heavy Rainfall band (64.5-115.5 mm) and 40 km/h is below the IMD severe-thunderstorm gust band (62-87 km/h); neither is an IMD crop-loss threshold, so this is an Agro-Guardian operational risk flag for lodging, canopy damage, drainage stress and spray timing, not a claim of an official warning.",
+        "yield_impact": "Framing/operational; the yield cost of the underlying saturation or lodging is carried by the Domain 3 and Domain 6 rules it feeds.",
+        "confidence_score": 0.7,
+        "source_tier": "C",
+        "references": [
+          "AGRONOMY_SIGNOFF 2026-09-21 sections 7-8",
+          "IMD rainfall and thunderstorm classification"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "rainfall_24h_mm",
+        "wind_gust_kmph"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "EST",
+      "kannad_note": "Kept separate from D07-CY-001 (the October-November calendar rule) so each can be validated and tuned independently. Severity is yellow while validation is pending; raise to red only after field validation confirms the thresholds locally.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
     }
   ],
   "open_items": [

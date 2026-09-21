@@ -23,6 +23,7 @@ class ForecastRow:
     et0_mm: float | None = None
     solar_radiation_mj_m2: float | None = None
     vpd_night_mean_kpa: float | None = None
+    wind_gust_kmph: float | None = None
     fog_observed: bool | None = None
 
 

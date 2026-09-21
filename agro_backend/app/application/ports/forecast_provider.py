@@ -29,6 +29,8 @@ class DailyForecast:
     # (nighttime RH at/above saturation) - both computed in the adapter.
     vpd_night_mean_kpa: float | None = None
     fog_observed: bool | None = None
+    # Daily max wind gust (km/h) - feeds the D07-CY-WX-001 severe-weather rule.
+    wind_gust_kmph: float | None = None
 
 
 class ForecastError(Exception):
