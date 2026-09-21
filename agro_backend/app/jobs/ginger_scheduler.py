@@ -19,6 +19,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from app.infra.http.deps import _ensure_engine
+from app.infra.persistence.pg_advisory_metrics_repo import PgAdvisoryMetricsRepo
 from app.infra.persistence.pg_ai_suggestion_repo import PgAiSuggestionRepo
 from app.infra.persistence.pg_crop_scouting_repo import PgCropScoutingRepo
 from app.infra.persistence.pg_crop_season_repo import PgCropSeasonRepo
@@ -34,6 +35,7 @@ from app.infra.persistence.pg_season_economics_repo import PgSeasonEconomicsRepo
 from app.infra.persistence.pg_season_operations_repo import PgSeasonOperationsRepo
 from app.infra.persistence.pg_weather_forecast_repo import PgWeatherForecastRepo
 from app.infra.persistence.pg_weather_station_reading_repo import PgWeatherStationReadingRepo
+from app.infra.persistence.pg_yield_model_repo import PgYieldModelRepo
 from app.jobs.ginger_daily import GingerDailyDeps, run_daily
 
 if TYPE_CHECKING:
@@ -69,6 +71,8 @@ async def build_and_start_scheduler(settings: Settings) -> AsyncIOScheduler | No
         season_operations_repo=PgSeasonOperationsRepo(sessionmaker),
         farmer_schemes_repo=PgFarmerSchemesRepo(sessionmaker),
         farmer_consent_repo=PgFarmerConsentRepo(sessionmaker),
+        advisory_metrics_repo=PgAdvisoryMetricsRepo(sessionmaker),
+        yield_model_repo=PgYieldModelRepo(sessionmaker),
     )
 
     scheduler = AsyncIOScheduler(timezone=settings.GINGER_JOB_TIMEZONE)

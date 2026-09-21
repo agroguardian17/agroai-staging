@@ -869,7 +869,7 @@ async def test_season_part2_columns_are_wired() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _fc(d: date, rain=0.0, tmax=30.0, et0=None, solar=None):
+def _fc(d: date, rain=0.0, tmax=30.0, et0=None, solar=None, gust=None):
     from app.application.ports.weather_forecast_repo import ForecastRow
 
     return ForecastRow(
@@ -885,6 +885,7 @@ def _fc(d: date, rain=0.0, tmax=30.0, et0=None, solar=None):
         wind_speed_kmh=None,
         et0_mm=et0,
         solar_radiation_mj_m2=solar,
+        wind_gust_kmph=gust,
     )
 
 
@@ -1089,7 +1090,7 @@ async def test_phase3_consent_language_model_and_forecast_extras() -> None:
     assert state["sat_public_display_context"] == "own_plot"
     assert state["advisory_language"] == "mr"
     assert state["model_version"] == "ginger-engine/v1.0"
-    assert state["prediction_stage"] == "g1_end"  # dap 60 < 90
+    assert state["prediction_stage"] == "G2"  # dap 60 -> G2 (35-90)
     assert state["k_source"] == "MOP"
     assert state["agro_climatic_zone"] == "marathwada_central"  # Beed
     assert state["vpd_night_mean_kpa"] == 0.25
@@ -1137,7 +1138,7 @@ async def test_phi_rainfall_deviation_and_cyclone() -> None:
             "dap",
             "phi_days_remaining",
             "rainfall_deviation_pct",
-            "cyclone_alert_active",
+            "severe_weather_alert_active",
             "rainfall_ytd_mm",
             "agro_climatic_zone",
             "last_fungicide_date",
@@ -1155,7 +1156,7 @@ async def test_phi_rainfall_deviation_and_cyclone() -> None:
     )
     state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
     assert state["phi_days_remaining"] == 4
-    assert state["cyclone_alert_active"] is True
+    assert state["severe_weather_alert_active"] is True  # wind 70 >= 40 (OR rule)
     assert state["rainfall_deviation_pct"] is not None
 
 
@@ -1254,3 +1255,297 @@ async def test_lst_scene_sets_cwsi() -> None:
     assert state["lst_c"] == Decimal("35")
     # cwsi = clamp((35 - 32 + 2)/10) = 0.5
     assert state["cwsi"] == 0.5
+
+
+class _FakeAdvisoryMetricsRepo:
+    def __init__(self, perf) -> None:
+        self._perf = perf
+        self.asked_for = None
+        self.on_time_days = None
+
+    async def performance_for_season(self, season_id, *, on_time_days: int = 3):
+        self.asked_for = season_id
+        self.on_time_days = on_time_days
+        return self._perf
+
+
+@pytest.mark.asyncio
+async def test_fills_advisory_performance_counters() -> None:
+    """D12 evaluation counters populate from the advisory-metrics repo."""
+    from app.application.ports.advisory_metrics_repo import AdvisoryPerformance
+
+    perf = AdvisoryPerformance(
+        advisory_issued_count=10,
+        advisory_completed_count=8,
+        advisory_completed_on_time_count=7,
+        action_compliance_rate=Decimal("70.0"),
+    )
+    declared = frozenset(
+        {
+            "advisory_issued_count",
+            "advisory_completed_count",
+            "advisory_completed_on_time_count",
+            "action_compliance_rate",
+        }
+    )
+    repo = _FakeAdvisoryMetricsRepo(perf)
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(_season_min()),
+        advisory_metrics_repo=repo,
+        declared_fields=declared,
+    )
+    state = (
+        await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)
+    ).state
+    assert state["advisory_issued_count"] == 10
+    assert state["advisory_completed_count"] == 8
+    assert state["advisory_completed_on_time_count"] == 7
+    assert state["action_compliance_rate"] == Decimal("70.0")
+    # scoped to the active season, with the KB's 3-day compliance window
+    assert repo.asked_for == _SEASON
+    assert repo.on_time_days == 3
+
+
+@pytest.mark.asyncio
+async def test_advisory_compliance_rate_none_keeps_field_unknown() -> None:
+    """When nothing was issued the rate is None -> the KB field stays UNKNOWN."""
+    from app.application.ports.advisory_metrics_repo import AdvisoryPerformance
+
+    perf = AdvisoryPerformance(
+        advisory_issued_count=0,
+        advisory_completed_count=0,
+        advisory_completed_on_time_count=0,
+        action_compliance_rate=None,
+    )
+    declared = frozenset({"advisory_issued_count", "action_compliance_rate"})
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(_season_min()),
+        advisory_metrics_repo=_FakeAdvisoryMetricsRepo(perf),
+        declared_fields=declared,
+    )
+    state = (
+        await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)
+    ).state
+    assert state["advisory_issued_count"] == 0
+    assert state["action_compliance_rate"] is None
+
+
+@pytest.mark.asyncio
+async def test_blocklisted_pesticide_forces_phi_unknown_and_flags() -> None:
+    """A blocklisted input (chlorpyriphos on ginger) must NOT get a PHI number;
+    it raises the blocklist trace fields instead (food safety, D05-CH-001)."""
+    from datetime import timedelta
+
+    from app.application.ports.season_operations_repo import SeasonOperationsView
+
+    today = date(2026, 8, 3)
+    season = CropSeasonView(
+        season_id=_SEASON, tenant_id=_TENANT, farm_id=_FARM, plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger", crop_name_marathi="आले", crop_category="cash_crop",
+        crop_variety="Mahima", sowing_date=today - timedelta(days=60),
+        expected_harvest_date=date(2027, 2, 1), current_growth_stage="vegetative",
+        crop_age_days_today=60,
+    )
+    ops = SeasonOperationsView(
+        season_id=_SEASON,
+        last_insecticide_date=today - timedelta(days=1),
+        last_insecticide_group="Chlorpyriphos",  # case-insensitive match
+    )
+    declared = frozenset(
+        {
+            "dap", "phi_days_remaining", "phi_blocklist_hit",
+            "blocklist_reason", "blocklist_source_ref", "farmer_alert_type",
+            "last_insecticide_date", "last_insecticide_group",
+        }
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(season),
+        season_operations_repo=_FakeOpsRepo(ops),
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    assert state["phi_days_remaining"] is None  # never a misleading number
+    assert state["phi_blocklist_hit"] is True
+    assert state["farmer_alert_type"] == "blocklisted_input_detected"
+    assert "D05-CH-001" in state["blocklist_reason"]
+    assert state["blocklist_source_ref"]
+
+
+@pytest.mark.asyncio
+async def test_blocklisted_input_does_not_suppress_other_valid_phi() -> None:
+    """A blocklisted insecticide flags the block but a valid fungicide PHI
+    still computes from the non-blocklisted spray."""
+    from datetime import timedelta
+
+    from app.application.ports.season_operations_repo import SeasonOperationsView
+
+    today = date(2026, 8, 3)
+    season = CropSeasonView(
+        season_id=_SEASON, tenant_id=_TENANT, farm_id=_FARM, plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger", crop_name_marathi="आले", crop_category="cash_crop",
+        crop_variety="Mahima", sowing_date=today - timedelta(days=60),
+        expected_harvest_date=date(2027, 2, 1), current_growth_stage="vegetative",
+        crop_age_days_today=60,
+    )
+    ops = SeasonOperationsView(
+        season_id=_SEASON,
+        last_fungicide_date=today - timedelta(days=2),
+        last_fungicide_group="copper",  # PHI 5 -> 3 remaining
+        last_insecticide_date=today - timedelta(days=1),
+        last_insecticide_group="chlorpyriphos",  # blocklisted
+    )
+    declared = frozenset(
+        {"dap", "phi_days_remaining", "phi_blocklist_hit",
+         "last_fungicide_date", "last_fungicide_group",
+         "last_insecticide_date", "last_insecticide_group"}
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(season),
+        season_operations_repo=_FakeOpsRepo(ops),
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    assert state["phi_blocklist_hit"] is True
+    assert state["phi_days_remaining"] == 3  # copper 5 - 2 days
+
+
+@pytest.mark.asyncio
+async def test_rainfall_deviation_uses_imd_station_normals() -> None:
+    """Deviation resolves the agro-zone to the IMD Chikalthana station and
+    compares season-to-date rain against its monthly normals."""
+    from datetime import timedelta
+
+    from app.application.ports.farmer_repo import FarmerLocation
+
+    today = date(2026, 8, 3)
+    season = CropSeasonView(
+        season_id=_SEASON, tenant_id=_TENANT, farm_id=_FARM, plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger", crop_name_marathi="आले", crop_category="cash_crop",
+        crop_variety="Mahima", sowing_date=today - timedelta(days=60),
+        expected_harvest_date=date(2027, 2, 1), current_growth_stage="vegetative",
+        crop_age_days_today=60,
+    )
+    rows = [_fc(today - timedelta(days=k), rain=10.0) for k in range(0, 60)]
+    loc = FarmerLocation(
+        farmer_id=_FARMER, district="Jalna", taluka="X", language_preference="marathi"
+    )
+    declared = frozenset({"dap", "rainfall_deviation_pct", "rainfall_ytd_mm", "agro_climatic_zone"})
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(season),
+        farmer_repo=_FakeFarmerRepo(owner=_FARMER, location=loc),
+        weather_forecast_repo=_FakeForecastRepo(rows),
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    # Jalna -> marathwada_central -> Chikalthana; a real number comes back.
+    assert state["agro_climatic_zone"] == "marathwada_central"
+    assert isinstance(state["rainfall_deviation_pct"], float)
+
+
+class _FakeYieldModelRepo:
+    def __init__(self, rows) -> None:
+        self._rows = rows
+        self.logged = []
+
+    async def list_u_values(self, crop="Ginger"):
+        return self._rows
+
+    async def log_prediction(self, row) -> None:
+        self.logged.append(row)
+
+
+@pytest.mark.asyncio
+async def test_fills_d11_yield_prediction() -> None:
+    """The yield model fills the D11 fields and logs a prediction."""
+    from datetime import timedelta
+
+    from app.application.ports.yield_model_repo import UValueRow
+
+    today = date(2026, 8, 3)
+    season = CropSeasonView(
+        season_id=_SEASON, tenant_id=_TENANT, farm_id=_FARM, plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger", crop_name_marathi="आले", crop_category="cash_crop",
+        crop_variety="Mahima", sowing_date=today - timedelta(days=160),
+        expected_harvest_date=date(2027, 2, 1), current_growth_stage="rhizome",
+        crop_age_days_today=160,
+    )
+    rows = [
+        UValueRow(factor_key="soft_rot", rank=1, u_value=0.60,
+                  signal_field="rot_incidence_pct", representative_rule_id="D06-ROT-001"),
+        UValueRow(factor_key="k_deficiency", rank=4, u_value=0.20,
+                  signal_field=None, representative_rule_id="D04-K-001"),
+    ]
+    repo = _FakeYieldModelRepo(rows)
+    declared = frozenset(
+        {
+            "dap", "prediction_stage", "planting_layout", "rot_incidence_pct",
+            "predicted_yield_quintal_per_acre", "prediction_interval_pct",
+            "yield_prediction_interval_pct", "cumulative_loss_pct",
+            "gap_attributed_pct", "gap_unexplained_pct", "ceiling_basis",
+            "ceiling_quintal_per_acre", "u_values_applied", "u_value_source_class",
+            "season_record_complete",
+        }
+    )
+    from app.application.ports.crop_scouting_repo import CropScoutingView
+
+    scout = CropScoutingView(
+        scouting_id=uuid.uuid4(), plot_id="PLOT_PILOT_001",
+        scouting_date=today, rot_incidence_pct=Decimal("40"),
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(season),
+        crop_scouting_repo=_FakeScoutingRepo(scout),
+        yield_model_repo=repo,
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    # dap 160 -> G4 (150-210) -> interval 15
+    assert state["prediction_stage"] == "G4"
+    assert state["prediction_interval_pct"] == 15.0
+    assert state["yield_prediction_interval_pct"] == 15.0
+    assert state["ceiling_basis"] == "unverified"  # no planting_layout entered
+    # rot 40% -> intensity 0.4, u 0.60 -> surviving 0.76 -> 94*0.76 = 71.44
+    assert state["predicted_yield_quintal_per_acre"] == 71.4
+    assert state["cumulative_loss_pct"] == 24.0
+    assert "D06-ROT-001" in state["u_values_applied"]
+    assert state["u_value_source_class"] == "EST"
+    assert state["season_record_complete"] is False
+    assert len(repo.logged) == 1
+    assert repo.logged[0].season_id == _SEASON
+
+
+@pytest.mark.asyncio
+async def test_fills_rainfall_24h_and_wind_gust_for_severe_weather_rule() -> None:
+    """rainfall_24h_mm / wind_gust_kmph = peak forecast over today..today+1
+    (the raw values the D07-CY-WX-001 rule reads)."""
+    from datetime import timedelta
+
+    today = date(2026, 8, 3)
+    rows = [
+        _fc(today, rain=20.0, gust=35.0),
+        _fc(today + timedelta(days=1), rain=80.0, gust=48.0),  # peak day
+        _fc(today + timedelta(days=2), rain=200.0, gust=90.0),  # outside 24h window
+    ]
+    declared = frozenset({"rainfall_24h_mm", "wind_gust_kmph"})
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(_season_min()),
+        weather_forecast_repo=_FakeForecastRepo(rows),
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    assert state["rainfall_24h_mm"] == 80.0  # max over today, today+1 (not day+2)
+    assert state["wind_gust_kmph"] == 48.0

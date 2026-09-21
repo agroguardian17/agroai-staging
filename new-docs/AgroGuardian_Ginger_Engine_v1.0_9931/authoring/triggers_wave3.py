@@ -214,6 +214,19 @@ TRIGGERS_W3 = {
   'tests': [({'air_temp_max_c':40,'current_stage':'G1'}, T, 'उगवणीत उष्णता'),
             ({'air_temp_max_c':30,'current_stage':'G1'}, F, '')]},
 
+'D07-CY-WX-001': {
+  'expr': "rainfall_24h_mm >= 75 OR wind_gust_kmph >= 40",
+  'note': 'AGRO_GUARDIAN_CUSTOM_OPERATIONAL_RULE (VJH-V1.0 section 8). Sibling to D07-CY-001; rain-OR-wind operational trigger, not the calendar rule. Not an IMD warning.',
+  'tests': [({'rainfall_24h_mm':74.9,'wind_gust_kmph':20}, F, 'पाऊस मर्यादेखाली'),
+            ({'rainfall_24h_mm':75.0,'wind_gust_kmph':20}, T, 'पाऊस मर्यादेवर'),
+            ({'rainfall_24h_mm':75.1,'wind_gust_kmph':20}, T, 'पाऊस मर्यादेवर'),
+            ({'rainfall_24h_mm':30,'wind_gust_kmph':39.9}, F, 'वारा मर्यादेखाली'),
+            ({'rainfall_24h_mm':30,'wind_gust_kmph':40.0}, T, 'वारा मर्यादेवर'),
+            ({'rainfall_24h_mm':30,'wind_gust_kmph':40.1}, T, 'वारा मर्यादेवर'),
+            ({}, U, 'दोन्ही अनुपलब्ध — गृहीत धरू नये'),
+            ({'wind_gust_kmph':45.0}, T, 'फक्त वारा'),
+            ({'rainfall_24h_mm':80.0}, T, 'फक्त पाऊस')]},
+
 'D07-TM-002': {
   'expr': "air_temp_min_c < 12 AND STAGE IN [G4]",
   'note': 'The Marathwada winter suits bulking, but a cold snap still slows it.',
