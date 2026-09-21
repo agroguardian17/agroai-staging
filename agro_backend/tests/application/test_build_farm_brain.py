@@ -1254,3 +1254,80 @@ async def test_lst_scene_sets_cwsi() -> None:
     assert state["lst_c"] == Decimal("35")
     # cwsi = clamp((35 - 32 + 2)/10) = 0.5
     assert state["cwsi"] == 0.5
+
+
+class _FakeAdvisoryMetricsRepo:
+    def __init__(self, perf) -> None:
+        self._perf = perf
+        self.asked_for = None
+        self.on_time_days = None
+
+    async def performance_for_season(self, season_id, *, on_time_days: int = 3):
+        self.asked_for = season_id
+        self.on_time_days = on_time_days
+        return self._perf
+
+
+@pytest.mark.asyncio
+async def test_fills_advisory_performance_counters() -> None:
+    """D12 evaluation counters populate from the advisory-metrics repo."""
+    from app.application.ports.advisory_metrics_repo import AdvisoryPerformance
+
+    perf = AdvisoryPerformance(
+        advisory_issued_count=10,
+        advisory_completed_count=8,
+        advisory_completed_on_time_count=7,
+        action_compliance_rate=Decimal("70.0"),
+    )
+    declared = frozenset(
+        {
+            "advisory_issued_count",
+            "advisory_completed_count",
+            "advisory_completed_on_time_count",
+            "action_compliance_rate",
+        }
+    )
+    repo = _FakeAdvisoryMetricsRepo(perf)
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(_season_min()),
+        advisory_metrics_repo=repo,
+        declared_fields=declared,
+    )
+    state = (
+        await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)
+    ).state
+    assert state["advisory_issued_count"] == 10
+    assert state["advisory_completed_count"] == 8
+    assert state["advisory_completed_on_time_count"] == 7
+    assert state["action_compliance_rate"] == Decimal("70.0")
+    # scoped to the active season, with the KB's 3-day compliance window
+    assert repo.asked_for == _SEASON
+    assert repo.on_time_days == 3
+
+
+@pytest.mark.asyncio
+async def test_advisory_compliance_rate_none_keeps_field_unknown() -> None:
+    """When nothing was issued the rate is None -> the KB field stays UNKNOWN."""
+    from app.application.ports.advisory_metrics_repo import AdvisoryPerformance
+
+    perf = AdvisoryPerformance(
+        advisory_issued_count=0,
+        advisory_completed_count=0,
+        advisory_completed_on_time_count=0,
+        action_compliance_rate=None,
+    )
+    declared = frozenset({"advisory_issued_count", "action_compliance_rate"})
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(_season_min()),
+        advisory_metrics_repo=_FakeAdvisoryMetricsRepo(perf),
+        declared_fields=declared,
+    )
+    state = (
+        await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)
+    ).state
+    assert state["advisory_issued_count"] == 0
+    assert state["action_compliance_rate"] is None
