@@ -1239,7 +1239,8 @@ async def test_lst_scene_sets_cwsi() -> None:
 
     today = date(2026, 8, 3)
     thermal = SatelliteScene(
-        image_date=today - timedelta(days=1), satellite_source=SOURCE_THERMAL,
+        image_date=today - timedelta(days=1),
+        satellite_source=SOURCE_THERMAL,
         lst_c=Decimal("35"),
     )
     declared = frozenset({"dap", "lst_c", "cwsi", "air_temp_max_c"})
@@ -1344,10 +1345,17 @@ async def test_blocklisted_pesticide_forces_phi_unknown_and_flags() -> None:
 
     today = date(2026, 8, 3)
     season = CropSeasonView(
-        season_id=_SEASON, tenant_id=_TENANT, farm_id=_FARM, plot_id="PLOT_PILOT_001",
-        crop_name_english="Ginger", crop_name_marathi="आले", crop_category="cash_crop",
-        crop_variety="Mahima", sowing_date=today - timedelta(days=60),
-        expected_harvest_date=date(2027, 2, 1), current_growth_stage="vegetative",
+        season_id=_SEASON,
+        tenant_id=_TENANT,
+        farm_id=_FARM,
+        plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger",
+        crop_name_marathi="आले",
+        crop_category="cash_crop",
+        crop_variety="Mahima",
+        sowing_date=today - timedelta(days=60),
+        expected_harvest_date=date(2027, 2, 1),
+        current_growth_stage="vegetative",
         crop_age_days_today=60,
     )
     ops = SeasonOperationsView(
@@ -1357,9 +1365,14 @@ async def test_blocklisted_pesticide_forces_phi_unknown_and_flags() -> None:
     )
     declared = frozenset(
         {
-            "dap", "phi_days_remaining", "phi_blocklist_hit",
-            "blocklist_reason", "blocklist_source_ref", "farmer_alert_type",
-            "last_insecticide_date", "last_insecticide_group",
+            "dap",
+            "phi_days_remaining",
+            "phi_blocklist_hit",
+            "blocklist_reason",
+            "blocklist_source_ref",
+            "farmer_alert_type",
+            "last_insecticide_date",
+            "last_insecticide_group",
         }
     )
     deps = FarmBrainDeps(
@@ -1387,10 +1400,17 @@ async def test_blocklisted_input_does_not_suppress_other_valid_phi() -> None:
 
     today = date(2026, 8, 3)
     season = CropSeasonView(
-        season_id=_SEASON, tenant_id=_TENANT, farm_id=_FARM, plot_id="PLOT_PILOT_001",
-        crop_name_english="Ginger", crop_name_marathi="आले", crop_category="cash_crop",
-        crop_variety="Mahima", sowing_date=today - timedelta(days=60),
-        expected_harvest_date=date(2027, 2, 1), current_growth_stage="vegetative",
+        season_id=_SEASON,
+        tenant_id=_TENANT,
+        farm_id=_FARM,
+        plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger",
+        crop_name_marathi="आले",
+        crop_category="cash_crop",
+        crop_variety="Mahima",
+        sowing_date=today - timedelta(days=60),
+        expected_harvest_date=date(2027, 2, 1),
+        current_growth_stage="vegetative",
         crop_age_days_today=60,
     )
     ops = SeasonOperationsView(
@@ -1401,9 +1421,15 @@ async def test_blocklisted_input_does_not_suppress_other_valid_phi() -> None:
         last_insecticide_group="chlorpyriphos",  # blocklisted
     )
     declared = frozenset(
-        {"dap", "phi_days_remaining", "phi_blocklist_hit",
-         "last_fungicide_date", "last_fungicide_group",
-         "last_insecticide_date", "last_insecticide_group"}
+        {
+            "dap",
+            "phi_days_remaining",
+            "phi_blocklist_hit",
+            "last_fungicide_date",
+            "last_fungicide_group",
+            "last_insecticide_date",
+            "last_insecticide_group",
+        }
     )
     deps = FarmBrainDeps(
         reading_repo=_FakeReadingRepo(None),
@@ -1427,10 +1453,17 @@ async def test_rainfall_deviation_uses_imd_station_normals() -> None:
 
     today = date(2026, 8, 3)
     season = CropSeasonView(
-        season_id=_SEASON, tenant_id=_TENANT, farm_id=_FARM, plot_id="PLOT_PILOT_001",
-        crop_name_english="Ginger", crop_name_marathi="आले", crop_category="cash_crop",
-        crop_variety="Mahima", sowing_date=today - timedelta(days=60),
-        expected_harvest_date=date(2027, 2, 1), current_growth_stage="vegetative",
+        season_id=_SEASON,
+        tenant_id=_TENANT,
+        farm_id=_FARM,
+        plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger",
+        crop_name_marathi="आले",
+        crop_category="cash_crop",
+        crop_variety="Mahima",
+        sowing_date=today - timedelta(days=60),
+        expected_harvest_date=date(2027, 2, 1),
+        current_growth_stage="vegetative",
         crop_age_days_today=60,
     )
     rows = [_fc(today - timedelta(days=k), rain=10.0) for k in range(0, 60)]
@@ -1473,34 +1506,62 @@ async def test_fills_d11_yield_prediction() -> None:
 
     today = date(2026, 8, 3)
     season = CropSeasonView(
-        season_id=_SEASON, tenant_id=_TENANT, farm_id=_FARM, plot_id="PLOT_PILOT_001",
-        crop_name_english="Ginger", crop_name_marathi="आले", crop_category="cash_crop",
-        crop_variety="Mahima", sowing_date=today - timedelta(days=160),
-        expected_harvest_date=date(2027, 2, 1), current_growth_stage="rhizome",
+        season_id=_SEASON,
+        tenant_id=_TENANT,
+        farm_id=_FARM,
+        plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger",
+        crop_name_marathi="आले",
+        crop_category="cash_crop",
+        crop_variety="Mahima",
+        sowing_date=today - timedelta(days=160),
+        expected_harvest_date=date(2027, 2, 1),
+        current_growth_stage="rhizome",
         crop_age_days_today=160,
     )
     rows = [
-        UValueRow(factor_key="soft_rot", rank=1, u_value=0.60,
-                  signal_field="rot_incidence_pct", representative_rule_id="D06-ROT-001"),
-        UValueRow(factor_key="k_deficiency", rank=4, u_value=0.20,
-                  signal_field=None, representative_rule_id="D04-K-001"),
+        UValueRow(
+            factor_key="soft_rot",
+            rank=1,
+            u_value=0.60,
+            signal_field="rot_incidence_pct",
+            representative_rule_id="D06-ROT-001",
+        ),
+        UValueRow(
+            factor_key="k_deficiency",
+            rank=4,
+            u_value=0.20,
+            signal_field=None,
+            representative_rule_id="D04-K-001",
+        ),
     ]
     repo = _FakeYieldModelRepo(rows)
     declared = frozenset(
         {
-            "dap", "prediction_stage", "planting_layout", "rot_incidence_pct",
-            "predicted_yield_quintal_per_acre", "prediction_interval_pct",
-            "yield_prediction_interval_pct", "cumulative_loss_pct",
-            "gap_attributed_pct", "gap_unexplained_pct", "ceiling_basis",
-            "ceiling_quintal_per_acre", "u_values_applied", "u_value_source_class",
+            "dap",
+            "prediction_stage",
+            "planting_layout",
+            "rot_incidence_pct",
+            "predicted_yield_quintal_per_acre",
+            "prediction_interval_pct",
+            "yield_prediction_interval_pct",
+            "cumulative_loss_pct",
+            "gap_attributed_pct",
+            "gap_unexplained_pct",
+            "ceiling_basis",
+            "ceiling_quintal_per_acre",
+            "u_values_applied",
+            "u_value_source_class",
             "season_record_complete",
         }
     )
     from app.application.ports.crop_scouting_repo import CropScoutingView
 
     scout = CropScoutingView(
-        scouting_id=uuid.uuid4(), plot_id="PLOT_PILOT_001",
-        scouting_date=today, rot_incidence_pct=Decimal("40"),
+        scouting_id=uuid.uuid4(),
+        plot_id="PLOT_PILOT_001",
+        scouting_date=today,
+        rot_incidence_pct=Decimal("40"),
     )
     deps = FarmBrainDeps(
         reading_repo=_FakeReadingRepo(None),

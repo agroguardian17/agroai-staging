@@ -50,7 +50,7 @@ _PERFORMANCE_SQL = text(
         (SELECT count(*) FROM issued) AS issued_count,
         (SELECT count(*) FROM completed) AS completed_count,
         (SELECT count(*) FROM completed c
-           WHERE c.first_action_date <= c.issued_date + :on_time_days) AS on_time_count
+           WHERE c.first_action_date <= c.issued_date + CAST(:on_time_days AS integer)) AS on_time_count
     """
 )
 

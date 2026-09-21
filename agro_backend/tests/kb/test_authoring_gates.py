@@ -52,7 +52,17 @@ pytestmark = pytest.mark.skipif(
 @pytest.mark.parametrize(("script", "label"), _GATES, ids=[g[0] for g in _GATES])
 def test_kb_authoring_gate(script: str, label: str) -> None:
     """Run one authoring-surface gate; fail loudly with its output if it exits non-zero."""
-    env = dict(os.environ)
+    # Strip pytest-cov's subprocess-coverage handshake vars (COV_CORE_*) and any
+    # COVERAGE_* settings before spawning. Otherwise the child auto-starts coverage
+    # from the authoring package (cwd, no branch=true) and writes a statement-mode
+    # data file that the branch-mode parent cannot combine ("Can't combine statement
+    # coverage data with branch data"). The authoring build is not in source=["app"],
+    # so there is nothing worth measuring here anyway.
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if not k.startswith("COV_CORE_") and not k.startswith("COVERAGE_")
+    }
     env["PYTHONPATH"] = os.pathsep.join(
         [str(_PKG / "engine"), str(_PKG / "authoring"), str(_PKG / "tests")]
     )
