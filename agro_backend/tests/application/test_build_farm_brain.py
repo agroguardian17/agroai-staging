@@ -1331,3 +1331,121 @@ async def test_advisory_compliance_rate_none_keeps_field_unknown() -> None:
     ).state
     assert state["advisory_issued_count"] == 0
     assert state["action_compliance_rate"] is None
+
+
+@pytest.mark.asyncio
+async def test_blocklisted_pesticide_forces_phi_unknown_and_flags() -> None:
+    """A blocklisted input (chlorpyriphos on ginger) must NOT get a PHI number;
+    it raises the blocklist trace fields instead (food safety, D05-CH-001)."""
+    from datetime import timedelta
+
+    from app.application.ports.season_operations_repo import SeasonOperationsView
+
+    today = date(2026, 8, 3)
+    season = CropSeasonView(
+        season_id=_SEASON, tenant_id=_TENANT, farm_id=_FARM, plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger", crop_name_marathi="आले", crop_category="cash_crop",
+        crop_variety="Mahima", sowing_date=today - timedelta(days=60),
+        expected_harvest_date=date(2027, 2, 1), current_growth_stage="vegetative",
+        crop_age_days_today=60,
+    )
+    ops = SeasonOperationsView(
+        season_id=_SEASON,
+        last_insecticide_date=today - timedelta(days=1),
+        last_insecticide_group="Chlorpyriphos",  # case-insensitive match
+    )
+    declared = frozenset(
+        {
+            "dap", "phi_days_remaining", "phi_blocklist_hit",
+            "blocklist_reason", "blocklist_source_ref", "farmer_alert_type",
+            "last_insecticide_date", "last_insecticide_group",
+        }
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(season),
+        season_operations_repo=_FakeOpsRepo(ops),
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    assert state["phi_days_remaining"] is None  # never a misleading number
+    assert state["phi_blocklist_hit"] is True
+    assert state["farmer_alert_type"] == "blocklisted_input_detected"
+    assert "D05-CH-001" in state["blocklist_reason"]
+    assert state["blocklist_source_ref"]
+
+
+@pytest.mark.asyncio
+async def test_blocklisted_input_does_not_suppress_other_valid_phi() -> None:
+    """A blocklisted insecticide flags the block but a valid fungicide PHI
+    still computes from the non-blocklisted spray."""
+    from datetime import timedelta
+
+    from app.application.ports.season_operations_repo import SeasonOperationsView
+
+    today = date(2026, 8, 3)
+    season = CropSeasonView(
+        season_id=_SEASON, tenant_id=_TENANT, farm_id=_FARM, plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger", crop_name_marathi="आले", crop_category="cash_crop",
+        crop_variety="Mahima", sowing_date=today - timedelta(days=60),
+        expected_harvest_date=date(2027, 2, 1), current_growth_stage="vegetative",
+        crop_age_days_today=60,
+    )
+    ops = SeasonOperationsView(
+        season_id=_SEASON,
+        last_fungicide_date=today - timedelta(days=2),
+        last_fungicide_group="copper",  # PHI 5 -> 3 remaining
+        last_insecticide_date=today - timedelta(days=1),
+        last_insecticide_group="chlorpyriphos",  # blocklisted
+    )
+    declared = frozenset(
+        {"dap", "phi_days_remaining", "phi_blocklist_hit",
+         "last_fungicide_date", "last_fungicide_group",
+         "last_insecticide_date", "last_insecticide_group"}
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(season),
+        season_operations_repo=_FakeOpsRepo(ops),
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    assert state["phi_blocklist_hit"] is True
+    assert state["phi_days_remaining"] == 3  # copper 5 - 2 days
+
+
+@pytest.mark.asyncio
+async def test_rainfall_deviation_uses_imd_station_normals() -> None:
+    """Deviation resolves the agro-zone to the IMD Chikalthana station and
+    compares season-to-date rain against its monthly normals."""
+    from datetime import timedelta
+
+    from app.application.ports.farmer_repo import FarmerLocation
+
+    today = date(2026, 8, 3)
+    season = CropSeasonView(
+        season_id=_SEASON, tenant_id=_TENANT, farm_id=_FARM, plot_id="PLOT_PILOT_001",
+        crop_name_english="Ginger", crop_name_marathi="आले", crop_category="cash_crop",
+        crop_variety="Mahima", sowing_date=today - timedelta(days=60),
+        expected_harvest_date=date(2027, 2, 1), current_growth_stage="vegetative",
+        crop_age_days_today=60,
+    )
+    rows = [_fc(today - timedelta(days=k), rain=10.0) for k in range(0, 60)]
+    loc = FarmerLocation(
+        farmer_id=_FARMER, district="Jalna", taluka="X", language_preference="marathi"
+    )
+    declared = frozenset({"dap", "rainfall_deviation_pct", "rainfall_ytd_mm", "agro_climatic_zone"})
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(season),
+        farmer_repo=_FakeFarmerRepo(owner=_FARMER, location=loc),
+        weather_forecast_repo=_FakeForecastRepo(rows),
+        declared_fields=declared,
+    )
+    state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+    # Jalna -> marathwada_central -> Chikalthana; a real number comes back.
+    assert state["agro_climatic_zone"] == "marathwada_central"
+    assert isinstance(state["rainfall_deviation_pct"], float)
