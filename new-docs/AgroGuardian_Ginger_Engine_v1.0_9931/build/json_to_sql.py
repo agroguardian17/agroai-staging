@@ -181,6 +181,13 @@ def validate(domains, fields, cats, dupgroups):
             if u is not None and not (0.0 <= u <= 1.0):
                 errors.append(f"{rid}: u_value {u} outside 0..1")
 
+            # Must stay in lock-step with the kb_rules.recoverability CHECK in the
+            # emitted DDL; a value here that the constraint rejects only surfaces on
+            # a fresh-database load, not on an existing (already-created) table.
+            recov = r.get("recoverability")
+            if recov not in ("none", "partial", "full", "same_season"):
+                errors.append(f"{rid}: recoverability '{recov}' not in allowed set")
+
             for fld in r["farm_brain_schema"]:
                 if fld not in fields:
                     errors.append(f"{rid}: undeclared farm_brain field '{fld}'")
@@ -355,7 +362,7 @@ CREATE TABLE IF NOT EXISTS kb_rules (
     source_class TEXT NOT NULL REFERENCES kb_source_classes(source_class),
 
     u_value NUMERIC(4,3) CHECK (u_value IS NULL OR u_value BETWEEN 0 AND 1),
-    recoverability TEXT NOT NULL CHECK (recoverability IN ('none','partial','full')),
+    recoverability TEXT NOT NULL CHECK (recoverability IN ('none','partial','full','same_season')),
     kannad_note TEXT NOT NULL,
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
