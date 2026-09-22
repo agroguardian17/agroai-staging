@@ -71,6 +71,8 @@ COPY --chown=agro:agro scripts/dev/seed_pilot.py ./scripts/dev/seed_pilot.py
 COPY --chown=agro:agro scripts/dev/cleanup_stale_pilot_data.py ./scripts/dev/cleanup_stale_pilot_data.py
 # One-time loader for the pilot intake-sheet values (sources FI/FO/TECH/OPS/DEALER).
 COPY --chown=agro:agro scripts/dev/load_pilot_sheet.py ./scripts/dev/load_pilot_sheet.py
+# Credential-gated live check for the USGS M2M LST adapter (run with USGS_M2M_* set).
+COPY --chown=agro:agro scripts/dev/lst_smoke.py ./scripts/dev/lst_smoke.py
 COPY --chown=agro:agro pyproject.toml ./
 
 USER agro
