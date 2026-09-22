@@ -73,6 +73,8 @@ COPY --chown=agro:agro scripts/dev/cleanup_stale_pilot_data.py ./scripts/dev/cle
 COPY --chown=agro:agro scripts/dev/load_pilot_sheet.py ./scripts/dev/load_pilot_sheet.py
 # Credential-gated live check for the USGS M2M LST adapter (run with USGS_M2M_* set).
 COPY --chown=agro:agro scripts/dev/lst_smoke.py ./scripts/dev/lst_smoke.py
+# Credential-gated live check for the WhatsApp advisory template (run with META_WHATSAPP_* set).
+COPY --chown=agro:agro scripts/dev/whatsapp_smoke.py ./scripts/dev/whatsapp_smoke.py
 COPY --chown=agro:agro pyproject.toml ./
 
 USER agro
