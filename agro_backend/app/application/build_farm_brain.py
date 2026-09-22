@@ -783,7 +783,7 @@ def _phi_days_remaining(state: dict[str, Any], today: date) -> int | None:
 
 
 def _rainfall_deviation_pct(
-    ytd_mm: object, zone: object, sowing_date: date | None, today: date
+    ytd_mm: float | None, zone: object, sowing_date: date | None, today: date
 ) -> float | None:
     """(season-to-date rain - expected) / expected * 100.
 
@@ -823,7 +823,7 @@ def _prediction_stage(dap: int) -> str:
     return "pre_harvest_observation"
 
 
-def _cwsi(lst_c: object, air_temp_max_c: object) -> float | None:
+def _cwsi(lst_c: float | None, air_temp_max_c: float | None) -> float | None:
     """Crop Water Stress Index proxy in [0,1] from canopy (LST) minus air temp.
 
     A simple normalisation of the LST-Tair difference: 0 well-watered, 1 fully

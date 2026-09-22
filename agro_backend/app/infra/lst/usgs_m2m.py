@@ -210,7 +210,8 @@ class UsgsM2mLstProvider:
         )
         avail = (req or {}).get("availableDownloads", []) if isinstance(req, dict) else []
         if avail and isinstance(avail, list):
-            return avail[0].get("url")
+            url = avail[0].get("url")
+            return url if isinstance(url, str) else None
         return None
 
 

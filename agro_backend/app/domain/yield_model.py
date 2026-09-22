@@ -174,9 +174,7 @@ def predict_yield(
 
     # Explained gap = sum of individual losses for materially-expressed factors
     # (intensity > 0.2, per VJH §2). Clamp against the (product-based) gap.
-    explained = sum(
-        c.u_value * c.intensity * ceiling for c in contributions if c.intensity > 0.2
-    )
+    explained = sum(c.u_value * c.intensity * ceiling for c in contributions if c.intensity > 0.2)
     if gap > 1e-9:
         attributed = min(explained, gap)
         gap_attributed_pct: float | None = round(attributed / gap * 100.0, 1)
