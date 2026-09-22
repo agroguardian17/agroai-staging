@@ -84,6 +84,7 @@ class PostgresSource:
                r.confidence_score, r.source_tier, r.source_class,
                r.u_value, r.recoverability, r.kannad_note
         FROM kb_rules r
+        ORDER BY r.rule_id
     """
     Q_FIELDS = "SELECT rule_id, field_name FROM kb_rule_fields"
     Q_ALLFIELDS = "SELECT field_name FROM kb_farm_brain_fields"

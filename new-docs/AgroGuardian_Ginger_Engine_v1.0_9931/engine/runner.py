@@ -286,7 +286,10 @@ class Runner:
                 note = f"({o['by']} यांनी या शेतासाठी बदल केला आहे — {o['rationale'][:52]}…)"
             messages.append(compose(rule, ctx, titles, note, eff_sev.get(rid)))
 
-        messages.sort(key=lambda m: (SEV_RANK[m.severity], -m.priority_score))
+        # rule_id is the final tiebreaker so the ordering is a *total* order:
+        # equal (severity, priority_score) messages must not fall back on input
+        # order, or the DB-loaded and JSON-loaded paths diverge (drift-gate flake).
+        messages.sort(key=lambda m: (SEV_RANK[m.severity], -m.priority_score, m.rule_id))
 
         # diagnosis, only when there is something to diagnose
         dxr = None
