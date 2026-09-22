@@ -188,8 +188,8 @@
     "status": "PHASE_1_RAW_UNVALIDATED",
     "agronomist_validated": false,
     "validation_note": "Pest descriptions and control measures are from the same institutional centre as Domains 2, 4 and 6. Economic threshold levels are NOT published for ginger pests and the provisional levels in this file are estimates that must be replaced by first-season records.",
-    "total_rules": 33,
-    "rule_count_note": "32 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count.",
+    "total_rules": 34,
+    "rule_count_note": "33 rules are the distinct, traceable rules the source document supports; D05-CH-008 is the runtime blocklist-detection alert added when the farm-brain mapper began flagging phi_blocklist_hit. No rules were generated to reach a target count.",
     "review_by": null,
     "review_note": "Pest biology is stable. The chemical blocklist and CIB&RC status must be rechecked annually.",
     "purpose": "Pest management for ginger in the Kannad belt, organised around the finding that pest control in this crop is primarily disease prevention. Every major pest wounds the rhizome or roots, and those wounds are the entry route for soft rot and bacterial wilt.",
@@ -2428,6 +2428,74 @@
       "immutable": false
     },
     {
+      "rule_id": "D05-CH-008",
+      "category": "CH",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "A recorded spray input is on the crop blocklist, so its pre-harvest interval cannot be certified",
+        "marathi": "नोंदवलेली फवारणी निविष्ठा पिकाच्या प्रतिबंधित यादीत आहे, त्यामुळे तिचा प्रतीक्षा कालावधी प्रमाणित करता येत नाही",
+        "expr": "phi_blocklist_hit IS TRUE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Set by the farm-brain mapper when a recorded spray matches the crop input blocklist (e.g. chlorpyriphos, D05-CH-001).",
+        "golden_tests": [
+          {
+            "context": {
+              "phi_blocklist_hit": true
+            },
+            "expect": "TRUE",
+            "label": "प्रतिबंधित निविष्ठा नोंदली"
+          },
+          {
+            "context": {
+              "phi_blocklist_hit": false
+            },
+            "expect": "FALSE",
+            "label": "प्रतिबंधित नाही"
+          },
+          {
+            "context": {},
+            "expect": "UNKNOWN",
+            "label": "नोंद नाही — अपुरी माहिती"
+          }
+        ]
+      },
+      "action": {
+        "english": "Warn the farmer that a blocklisted input (not registered for ginger) was recorded on this plot, so no valid pre-harvest interval exists for it. Do not present any PHI number as clearance and do not advise harvest or sale on that basis. Show the block reason and its source, and tell the farmer to consult the agronomist before harvesting this crop.",
+        "marathi": "शेतकऱ्याला सावध करा — या प्लॉटवर आल्यासाठी नोंदणी नसलेली प्रतिबंधित निविष्ठा नोंदवली गेली आहे, त्यामुळे तिचा वैध प्रतीक्षा कालावधी नाही. कोणताही PHI आकडा 'सुरक्षित' म्हणून दाखवू नका आणि त्या आधारे काढणी किंवा विक्री सुचवू नका. प्रतिबंधाचे कारण व स्रोत दाखवा आणि काढणीपूर्वी कृषी सल्लागाराचा सल्ला घ्यायला सांगा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The farm-brain mapper raises phi_blocklist_hit when a recorded fungicide or insecticide group matches the crop input blocklist (e.g. chlorpyriphos, which is not registered on ginger and is blocked by D05-CH-001). A blocklisted molecule carries no valid pre-harvest interval, so any PHI figure would be misleading; the honest engine response is to surface the block to the farmer rather than emit a number.",
+        "yield_impact": "Food-safety and regulatory, not yield. Harvesting or selling produce treated with an unregistered molecule risks an MRL violation, market rejection and legal exposure.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "CIB&RC label / FSSAI MRL",
+          "AGRONOMY_SIGNOFF 2026-09-21"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "phi_blocklist_hit",
+        "blocklist_reason",
+        "blocklist_source_ref",
+        "farmer_alert_type"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "An input that is not registered for the crop cannot be given a pre-harvest interval, so the honest response is to flag it, not to invent a PHI. This is the runtime counterpart to the D05-CH-001 emission guard: CH-001 stops the engine recommending a blocklisted molecule, this rule surfaces one the farmer has already recorded.",
+      "decision_type": "DIAGNOSTIC",
+      "automation": "advisory",
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false
+    },
+    {
       "rule_id": "D05-SW-001",
       "category": "SW",
       "priority": 4,
@@ -2736,7 +2804,7 @@
     }
   ],
   "summary": {
-    "total_rules": 33,
+    "total_rules": 34,
     "by_category": {
       "PC": 4,
       "RF": 3,
@@ -2747,30 +2815,30 @@
       "WG": 3,
       "TC": 2,
       "IP": 2,
-      "CH": 7,
+      "CH": 8,
       "SC": 2,
       "SW": 2
     },
     "by_priority": {
-      "5": 12,
+      "5": 13,
       "4": 15,
       "3": 6
     },
     "by_severity": {
       "info": 12,
       "yellow": 16,
-      "red": 3,
+      "red": 4,
       "blocking": 2
     },
     "by_source_tier": {
-      "A": 26,
+      "A": 27,
       "B": 7,
       "C": 0
     },
     "by_source_class": {
       "SRC-D": 7,
       "SRC-Q": 15,
-      "DERIVED": 8,
+      "DERIVED": 9,
       "EST": 3
     },
     "confidence_range": {
@@ -2779,7 +2847,7 @@
       "mean": 0.832
     },
     "rules_with_u_value": 12,
-    "irrecoverable_rules": 11,
+    "irrecoverable_rules": 12,
     "zero_cost_rules": [
       "D05-PC-002",
       "D05-PC-004",
@@ -2793,13 +2861,13 @@
     "by_decision_type": {
       "PLANNING_GUIDANCE": 11,
       "SCHEDULED_REMINDER": 6,
-      "DIAGNOSTIC": 10,
+      "DIAGNOSTIC": 11,
       "BLOCK": 3,
       "SENSOR_ALERT": 3
     },
     "reviewed_t1": 3,
-    "rules_with_trigger_expr": 16,
-    "rules_with_delivery_class": 16,
+    "rules_with_trigger_expr": 17,
+    "rules_with_delivery_class": 17,
     "immutable_rules": 2
   },
   "next_steps": [

@@ -8,11 +8,11 @@ Single source of truth for how every Ginger-KB input field reaches the engine. T
 
 | | Count |
 |---|---:|
-| KB rules | **482** |
-| Distinct fields the rules read | **348** |
-| Fields wired (DB home + mapper) | **321** |
+| KB rules | **483** |
+| Distinct fields the rules read | **352** |
+| Fields wired (DB home + mapper) | **325** |
 | Fields not yet wired | **27** |
-| Rules fully-wireable | **407** |
+| Rules fully-wireable | **408** |
 | Rules partially wireable | 66 |
 | Rules fully blocked (all fields not yet wired) | 9 |
 
@@ -26,7 +26,7 @@ Single source of truth for how every Ginger-KB input field reaches the engine. T
 | D02 land prep | 24 | 3 | 0 | 27 |
 | D03 irrigation | 27 | 4 | 0 | 31 |
 | D04 nutrients | 31 | 3 | 0 | 34 |
-| D05 pests | 32 | 1 | 0 | 33 |
+| D05 pests | 33 | 1 | 0 | 34 |
 | D06 disease | 22 | 6 | 0 | 28 |
 | D07 weather | 24 | 15 | 0 | 39 |
 | D08 planting | 38 | 0 | 0 | 38 |
@@ -36,7 +36,7 @@ Single source of truth for how every Ginger-KB input field reaches the engine. T
 | D12 advisory QA | 19 | 16 | 1 | 36 |
 | D13 economics | 39 | 0 | 0 | 39 |
 | D14 satellite | 28 | 11 | 8 | 47 |
-| **Total** | **407** | **66** | **9** | **482** |
+| **Total** | **408** | **66** | **9** | **483** |
 
 ## Wired fields by source
 
@@ -137,9 +137,11 @@ Each source is a DB table (with its entry path) or a computed value.
 
 `farmer_id`
 
-### Declared + mapper-set, awaiting a consuming rule — 5 fields
-Newly declared in the KB (step-1 edits) and set by the mapper, but no rule reads them yet, so they are not counted in the 319/346 above. They stand ready for the agronomy team to author the consuming rules (esp. the D05 blocklist branch).
-`blocklist_reason`, `blocklist_source_ref`, `farmer_alert_type`, `phi_blocklist_hit`, `soil_texture_class_source`
+### Declared + mapper-set, awaiting a consuming rule — 1 field
+Newly declared in the KB (step-1 edits) and set by the mapper, but no rule reads it yet, so it is not counted in the read/wired totals above. `soil_texture_class_source` stands ready for the agronomy team to author the consuming rule.
+`soil_texture_class_source`
+
+The four D05 blocklist trace fields (`phi_blocklist_hit`, `blocklist_reason`, `blocklist_source_ref`, `farmer_alert_type`) are now consumed by **`D05-CH-008`** — the runtime blocklist-detection alert (severity red, `ONCE_UNTIL_RESOLVED`) that fires on `phi_blocklist_hit IS TRUE` and warns the farmer that a blocklisted input has no certifiable pre-harvest interval. They are therefore counted in the read/wired totals above.
 
 ## Not yet wired (27 fields)
 
@@ -182,5 +184,7 @@ Depend on the physical Main Node weather station being installed, or on observed
 - **D12 counters** (#49): advisory compliance counters from `ai_suggestions` + `farmer_actions` (`advisory_issued/completed/on_time_count`, `action_compliance_rate`) — the code-doable slice of item #8.
 - **D11 scaffold** (#51): process-baseline yield model (`yield_u_values` + `predict_yield` + `yield_prediction_log`) → 10 D11 fields.
 - **KB step-1** (PR #52): switched the backend onto the unified 14-domain KB build (migration 0032, state-preserving reload). Applied AGRONOMY_SIGNOFF / VJH-V1.0 edits in the JSON source + regenerated: `cyclone_alert_active`→`severe_weather_alert_active` (rain≥75 OR wind≥40), `prediction_stage`→G0–G5, `soil_type` +`red_loam`, new declared fields (`soil_texture_class_source` + D05 blocklist trace).
-- **KB step-2** (this PR): new rule **`D07-CY-WX-001`** (VJH §8) authored in the JSON + authoring `.py` with 9 boundary golden tests, regenerated (482 rules). Added `rainfall_24h_mm` / `wind_gust_kmph` fields end-to-end (Open-Meteo `wind_gusts_10m_max` → `weather_forecasts.wind_gust_kmph` col via migration 0033 → mapper), and an additive KB reload (migration 0034).
+- **KB step-2** (PR #54): new rule **`D07-CY-WX-001`** (VJH §8) authored in the JSON + authoring `.py` with 9 boundary golden tests, regenerated (482 rules). Added `rainfall_24h_mm` / `wind_gust_kmph` fields end-to-end (Open-Meteo `wind_gusts_10m_max` → `weather_forecasts.wind_gust_kmph` col via migration 0033 → mapper), and an additive KB reload (migration 0034).
+- **KB step-3 / structured references** (PR #58): split the free-text `kb_rule_references.reference` into an evidence hierarchy — `ref_kind` (external/internal), `institution` (curated recogniser), `source_tier` (A/B/C on external refs) — derived in `json_to_sql.py`; migration 0035 reshaped `kb_rule_references`.
+- **D05 blocklist branch** (this PR): new rule **`D05-CH-008`** (severity red, `ONCE_UNTIL_RESOLVED`) authored in the JSON + authoring `.py` with 3 golden tests, regenerated (483 rules). It consumes the four blocklist trace fields the mapper already set (`phi_blocklist_hit` / `blocklist_reason` / `blocklist_source_ref` / `farmer_alert_type`) — the runtime counterpart to the `D05-CH-001` emission guard — and lands via an additive KB reload (migration 0036).
 - **Remaining (27 fields):** `interdependence_group` (D11 duplication-group map) + the D12 advisory-QA workflow (item #8) need agronomy/QA subsystems; the rest need field hardware, time-series history, or external feeds.
