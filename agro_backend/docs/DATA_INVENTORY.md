@@ -916,11 +916,14 @@ Populated at KB import by parsing `trigger_expr`. Enables impact analysis when a
 |---|---|---|---|
 | `rule_id` FK + `field_name` FK — composite PK | TEXT + TEXT | AGRO | |
 
-#### `kb_rule_references` (citations for the rule's agronomic basis)
+#### `kb_rule_references` (citations for the rule's agronomic basis, with evidence hierarchy)
 
 | Field | Type | Source | Notes |
 |---|---|---|---|
-| `rule_id` FK + `reference` PK | TEXT | AGRO | Free-form citation (paper, report, extension bulletin, etc.). |
+| `rule_id` FK + `reference` PK | TEXT | AGRO | Full original citation, verbatim (paper, report, extension bulletin, internal cross-reference). Lossless. |
+| `ref_kind` | TEXT | DERIVED | `external` (outside evidence) or `internal` (points at another Domain/Core/RAW-MASTER section or rule). |
+| `institution` | TEXT | DERIVED | Best-effort source name from a curated recogniser (e.g. `Agrowon`, `ICAR-CRIDA`, `FAO-56`); `NULL` when not confidently matched (≈80% of external refs matched). |
+| `source_tier` FK | CHAR(1) | DERIVED | The rule's own `source_tier` (A/B/C → `kb_source_tiers`) inherited onto its external references; `NULL` for internal cross-references. |
 
 #### `kb_rule_dependencies` (inter-domain wiring)
 

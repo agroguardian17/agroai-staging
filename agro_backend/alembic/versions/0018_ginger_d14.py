@@ -35,6 +35,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from pathlib import Path
 
+from sqlalchemy import text
+
 from alembic import op
 
 revision: str = "0018"
@@ -90,7 +92,27 @@ END $$;
 
 
 def upgrade() -> None:
-    """Load the Domain 14 + VPD knowledge-base delta."""
+    """Load the Domain 14 + VPD knowledge-base delta.
+
+    Redundancy guard: this migration was written when the unified build
+    (loaded by 0010) still ended at Domain 13, so the D14/VPD delta had to be
+    applied on top. The delta has since been folded into the unified JSON, so on
+    any fresh ``upgrade head`` migration 0010 already loads every D14/VPD row —
+    including into the structured ``kb_rule_references`` shape (ref_kind NOT
+    NULL) that 0035 introduces. Re-running this standalone delta then both
+    duplicates rows and, fatally, replays its historical 2-column
+    ``INSERT INTO kb_rule_references (rule_id, reference)`` statements, which
+    violate the NOT NULL columns. So if the delta is already present (D14 rules
+    exist), skip it. On a legacy DB whose 0010 predates D14, the rows are absent
+    and ``kb_rule_references`` is still 2-column, so the delta loads as before.
+    """
+    bind = op.get_bind()
+    already_loaded = bind.execute(
+        text("SELECT 1 FROM kb_rules WHERE rule_id LIKE 'D14-%' LIMIT 1")
+    ).scalar()
+    if already_loaded:
+        return
+
     if not _SQL_PATH.exists():
         raise RuntimeError(
             f"Ginger D14 delta SQL not found at {_SQL_PATH}. "

@@ -82,6 +82,64 @@ def arr(items):
 
 
 # ---------------------------------------------------------------------------
+# Source-reference structuring (kb_rule_references)
+#
+# Each rule's free-text references are split into: ref_kind (external evidence
+# vs internal cross-reference), a best-effort institution (curated recogniser,
+# NULL when not confidently matched — never a fragile word split), and the
+# rule's own source_tier inherited onto its external references. The full
+# original string is preserved verbatim in `reference`, so nothing is lost.
+# ---------------------------------------------------------------------------
+
+_REF_INTERNAL_PREFIXES = (
+    "Domain ", "Domains ", "Core ", "RAW MASTER", "VJH", "AGRONOMY_SIGNOFF",
+)
+
+# Curated known sources. Longest match wins, so list specific/multi-word names
+# before their shorter prefixes (e.g. 'ICAR-IISR' before 'ICAR').
+_REF_INSTITUTIONS = [
+    "ICAR-IISR", "ICAR-CRIDA", "ICAR-IISS", "ICAR-AICRP", "ICAR",
+    "News18 Marathi", "Agrowon", "AgroWorld", "Organic Mandya", "Shetkari Marg",
+    "Spices Board", "Directorate of Agriculture", "Government gazetteer",
+    "District Profile", "ScienceDirect Heliyon", "Heliyon", "CJAST",
+    "ICL Growing Solutions", "ICL", "DPDP Act", "Arabian Journal of Geosciences",
+    "Springer", "IntechOpen", "PubMed", "NCBI", "Microbiology Spectrum", "FAO-56",
+    "ESA Sentinel-2", "ESA", "USGS", "AI4Bharat", "Vikaspedia", "Tractorkarvan",
+    "Krishi Jagran", "Krishi app blog", "climate-data.org", "climatestotravel",
+    "Int. J.", "KAU", "TNAU", "CPCRI", "VNMKV", "Agro-Climatic Zonation",
+    "ResearchGate", "SciELO", "Netafim", "Roy et al", "IISR", "Samuel", "Sarma",
+    "Idso", "Rouse et al", "Gao ", "Gitelson", "Zhang et al", "Zhu &",
+    "Fitzgerald", "Bamler", "Torres et al", "Small 2011", "Key & Benson",
+    "Grantz", "Sakamoto",
+]
+_REF_INSTITUTIONS_BY_LEN = sorted(set(_REF_INSTITUTIONS), key=len, reverse=True)
+
+
+def _ref_is_internal(ref: str) -> bool:
+    if ref.startswith(_REF_INTERNAL_PREFIXES):
+        return True
+    # 'D01-HW-001'-style pointers to another rule
+    return len(ref) >= 4 and ref[0] == "D" and ref[1:3].isdigit() and ref[3] == "-"
+
+
+def _ref_institution(ref: str):
+    for inst in _REF_INSTITUTIONS_BY_LEN:
+        if ref.startswith(inst):
+            return inst
+    return None
+
+
+def classify_reference(ref: str, rule_tier):
+    """(ref_kind, institution, source_tier) for one rule reference string.
+
+    Internal cross-references carry no external-evidence tier or institution.
+    """
+    if _ref_is_internal(ref):
+        return "internal", None, None
+    return "external", _ref_institution(ref), rule_tier
+
+
+# ---------------------------------------------------------------------------
 # Load
 # ---------------------------------------------------------------------------
 
@@ -410,8 +468,11 @@ CREATE TABLE IF NOT EXISTS kb_rule_fields (
 );
 
 CREATE TABLE IF NOT EXISTS kb_rule_references (
-    rule_id TEXT NOT NULL REFERENCES kb_rules(rule_id) ON DELETE CASCADE,
-    reference TEXT NOT NULL,
+    rule_id     TEXT NOT NULL REFERENCES kb_rules(rule_id) ON DELETE CASCADE,
+    reference   TEXT NOT NULL,                                 -- full original citation (lossless)
+    ref_kind    TEXT NOT NULL CHECK (ref_kind IN ('external','internal')),
+    institution TEXT,                                          -- curated match; NULL when not confident
+    source_tier CHAR(1) REFERENCES kb_source_tiers(tier),      -- rule's tier for external refs; NULL internal
     PRIMARY KEY (rule_id, reference)
 );
 
@@ -677,8 +738,15 @@ ON CONFLICT (stage_code) DO NOTHING;
 
             refs = rz.get("references", [])
             if refs:
-                w("INSERT INTO kb_rule_references (rule_id, reference) VALUES\n")
-                w(",\n".join(f" ({q(r['rule_id'])}, {q(x)})" for x in dict.fromkeys(refs)))
+                w("INSERT INTO kb_rule_references "
+                  "(rule_id, reference, ref_kind, institution, source_tier) VALUES\n")
+                rows = []
+                for x in dict.fromkeys(refs):
+                    kind, inst, tier = classify_reference(x, rz.get("source_tier"))
+                    rows.append(
+                        f" ({q(r['rule_id'])}, {q(x)}, {q(kind)}, {q(inst)}, {q(tier)})"
+                    )
+                w(",\n".join(rows))
                 w("\nON CONFLICT DO NOTHING;\n\n")
 
             deps = []
