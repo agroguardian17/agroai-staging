@@ -242,6 +242,15 @@ TRIGGERS = {
     ({'last_insecticide_group':'quinalphos'}, F, 'परवानगी'),
   ]},
 
+'D05-CH-008': {
+  'expr': "phi_blocklist_hit IS TRUE",
+  'note': 'Runtime counterpart to D05-CH-001: the mapper set phi_blocklist_hit because a recorded spray is on the crop blocklist, so PHI cannot be certified — alert the farmer.',
+  'tests': [
+    ({'phi_blocklist_hit':True}, T, 'प्रतिबंधित निविष्ठा नोंदली'),
+    ({'phi_blocklist_hit':False}, F, 'प्रतिबंधित नाही'),
+    ({}, U, 'नोंद नाही — अपुरी माहिती'),
+  ]},
+
 'D05-CH-003': {
   'expr': "phi_days_remaining IS NULL AND WITHIN(harvest_date, 30 DAYS)",
   'note': 'Duplication group: pre_harvest_interval_block.',

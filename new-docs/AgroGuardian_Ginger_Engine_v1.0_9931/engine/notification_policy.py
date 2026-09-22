@@ -65,6 +65,7 @@ DELIVERY = {
  'D04-NS-003': SILENT_GUARD,   # nitrogen after 80 DAP
  'D05-CH-001': SILENT_GUARD,   # blocklisted molecule
  'D05-CH-003': SILENT_GUARD,   # PHI unknown
+ 'D05-CH-008': ONCE_UNTIL_RESOLVED,  # blocklisted input recorded — standing alert until resolved
  'D06-CH-001': SILENT_GUARD,   # fungicide on bacterial wilt
  'D06-CH-003': SILENT_GUARD,
  'D09-SF-001': SILENT_GUARD,   # PPE absent
