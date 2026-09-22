@@ -9,11 +9,13 @@ Fetches per-plot land-surface temperature from Landsat-8/9 Collection-2 Level-2
      the DN to Celsius (ST_B10 * 0.00341802 + 149.0 - 273.15).
 
 Auth needs a USGS ERS account + an M2M application token
-(``USGS_M2M_USERNAME`` / ``USGS_M2M_TOKEN``). Not exercised against the live API
-in CI (that needs credentials + a real scene); the login/search/parse paths are
-unit-tested with a mocked transport, and the raster + download-staging steps
-must be verified against staging once credentials are set (mirrors the CDSE
-adapter). Every failure surfaces as :class:`LstError` so a sweep skips one plot.
+(``USGS_M2M_USERNAME`` / ``USGS_M2M_TOKEN``). The login/search/parse flow, the
+download-staging retry (``_resolve_st_url`` returning None), and the raster mean
+(:func:`_mean_lst` / :func:`_reduce_lst_band`, against a local GeoTIFF) are all
+unit-tested without credentials. Only the live end-to-end against a real USGS
+scene is credential-gated -- run ``scripts/dev/lst_smoke.py`` with the two env
+vars set to verify it. Every failure surfaces as :class:`LstError` so a sweep
+skips one plot.
 """
 
 from __future__ import annotations
@@ -61,6 +63,42 @@ def _bbox(geometry: dict[str, Any]) -> tuple[float, float, float, float]:
     if not xs or not ys:
         raise LstError("bad_geometry")
     return min(xs), min(ys), max(xs), max(ys)
+
+
+def _reduce_lst_band(arr: Any) -> float | None:
+    """Mean the valid ST_B10 pixels of a masked read and scale to Celsius.
+
+    ``arr`` is the ``(bands, rows, cols)`` output of ``rasterio.mask.mask``; band
+    0 is used, with ``0`` treated as fill/nodata. Returns None when no valid
+    pixel remains (an empty or all-nodata polygon).
+    """
+    import numpy as np
+
+    band = np.ma.masked_equal(arr[0], 0)
+    if band.count() == 0:
+        return None
+    return round(st_dn_to_celsius(float(band.mean())), 2)
+
+
+def _mean_lst(src_path: str, geometry: dict[str, Any]) -> float | None:
+    """Open a ST_B10 raster, mask it to the polygon, return the mean LST in C.
+
+    ``src_path`` is any rasterio-openable path: ``/vsicurl/<https url>`` for the
+    remote COG in production, a local GeoTIFF in tests. Returns None when no
+    valid pixels fall inside the polygon; raises :class:`LstError` on a read or
+    missing-dependency failure.
+    """
+    try:
+        import rasterio
+        from rasterio.mask import mask as rio_mask
+    except ImportError as exc:  # pragma: no cover
+        raise LstError(f"raster_deps_missing: {exc}") from exc
+    try:
+        with rasterio.open(src_path) as src:
+            arr, _ = rio_mask(src, [geometry], crop=True, filled=False)
+    except Exception as exc:
+        raise LstError(f"raster_read_failed: {exc}") from exc
+    return _reduce_lst_band(arr)
 
 
 class UsgsM2mLstProvider:
@@ -133,26 +171,13 @@ class UsgsM2mLstProvider:
         return results if isinstance(results, list) else []
 
     def _polygon_mean_lst(self, band_url: str, geometry: dict[str, Any]) -> float | None:
-        """Mask the ST_B10 COG to the polygon and return the mean LST in C.
+        """Mask the ST_B10 COG at ``band_url`` to the polygon; mean LST in C.
 
-        Uses a windowed read over HTTP (``/vsicurl/``); needs the raster to be
-        reachable. Returns None when no valid pixels fall in the polygon.
+        A windowed read over HTTP (``/vsicurl/``); the raster must be reachable.
+        Returns None when no valid pixels fall in the polygon. The open/mask/mean
+        is :func:`_mean_lst` so it can be exercised against a local GeoTIFF.
         """
-        try:
-            import numpy as np
-            import rasterio
-            from rasterio.mask import mask as rio_mask
-        except ImportError as exc:  # pragma: no cover
-            raise LstError(f"raster_deps_missing: {exc}") from exc
-        try:
-            with rasterio.open(f"/vsicurl/{band_url}") as src:
-                arr, _ = rio_mask(src, [geometry], crop=True, filled=False)
-        except Exception as exc:
-            raise LstError(f"raster_read_failed: {exc}") from exc
-        band = np.ma.masked_equal(arr[0], 0)  # 0 = fill/nodata for ST_B10
-        if band.count() == 0:
-            return None
-        return round(st_dn_to_celsius(float(band.mean())), 2)
+        return _mean_lst(f"/vsicurl/{band_url}", geometry)
 
     async def lst_for_polygon(
         self, *, geometry: dict[str, Any], date_from: datetime.date, date_to: datetime.date
