@@ -139,6 +139,17 @@ class Settings(BaseSettings):
     LEARNING_JOB_MINUTE: int = 0
     LEARNING_BATCH_LIMIT: int = 500
 
+    # ---- D12 weekly QA digest (D12_QA_WORKFLOW §5.4) ------------------------
+    # Sunday 18:00 IST: emits weekly_report_{date}.md (agronomist) +
+    # bias_digest_{date}.md (KB author) from the four QA tables. Off in tests/CI.
+    # Email routing (D12-OI-04) is a later Ops step; v1 writes files to a dir.
+    QA_DIGEST_JOB_ENABLED: bool = True
+    QA_DIGEST_JOB_DAY_OF_WEEK: str = "sun"
+    QA_DIGEST_JOB_HOUR: int = 18
+    QA_DIGEST_JOB_MINUTE: int = 0
+    QA_DIGEST_DIR: str = "qa_digests"
+    QA_DIGEST_TOP_FP_RULES: int = 10
+
     # ---- Advisory subscriber (Round 13) -------------------------------------
     # Master switch for the alert->advisory subscriber (LISTEN agro_events ->
     # compose_advisory -> ai_suggestions). Off in tests/CI so no background
