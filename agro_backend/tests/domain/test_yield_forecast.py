@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import pytest
+
 from app.domain.yield_forecast import (
     YieldFactor,
     bootstrap_ci,
+    factor_intensity,
     predict_yield_full,
     resolve_site_index,
+    site_index_keys,
     survival_factors,
 )
 
@@ -122,3 +126,78 @@ def test_predict_yield_full_reduces_grouped_factors_in_product() -> None:
 def test_predict_yield_full_passes_missing_factors() -> None:
     fc = predict_yield_full(y_potential=90.0, factors=[_f(1, 0.5, 0.4)], missing_factors=[6, 12])
     assert fc.missing_factors == [6, 12]
+
+
+# --- site-index key derivation (plot facts -> §3.2 keys) --------------------
+
+
+def test_site_index_keys_ideal_vertisol() -> None:
+    keys = site_index_keys(
+        soil_type="vertisol",
+        has_drip=True,
+        planting_layout="broad_ridge",
+        water_source="assured canal",
+        agro_zone="marathwada_central",
+    )
+    assert keys == (
+        "black_vertisol_with_drip_broad_ridge",
+        "assured_source_year_round",
+        "within_kannad_zone",
+    )
+
+
+def test_site_index_keys_unknown_falls_back_conservative() -> None:
+    keys = site_index_keys(
+        soil_type=None, has_drip=None, planting_layout=None, water_source=None, agro_zone=None
+    )
+    assert keys == ("other", "marginal_source", "outside_marathwada")
+
+
+def test_site_index_keys_red_loam_no_drip_east() -> None:
+    keys = site_index_keys(
+        soil_type="red_loam",
+        has_drip=False,
+        planting_layout="flat",
+        water_source="rainfed",
+        agro_zone="marathwada_eastern",
+    )
+    assert keys == ("red_loam_without_drip", "rain_dependent_only", "marathwada_east")
+
+
+# --- factor intensity (§3.3) ------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("fid", "sig", "signals", "expected"),
+    [
+        (1, "rot_incidence_pct", {"rot_incidence_pct": 40}, 0.4),
+        (6, "establishment_pct", {"establishment_pct": 45}, 0.5),
+        (12, "nematode_suspected", {"nematode_suspected": True}, 0.3),
+        (12, "nematode_suspected", {"nematode_suspected": False}, 0.0),
+        (4, None, {}, None),  # no signal -> missing
+        (13, "planting_date", {"planting_date": "2026-06-15"}, 0.0),  # on time
+        (
+            14,
+            "drip_lateral_spacing_ft",
+            {"soil_texture_class": "heavy", "has_drip": True, "drip_lateral_spacing_ft": 4.0},
+            1.0,
+        ),
+        (
+            14,
+            "drip_lateral_spacing_ft",
+            {"soil_texture_class": "light", "has_drip": True, "drip_lateral_spacing_ft": 4.0},
+            None,
+        ),
+        (15, "herbicide_post_emergent_date", {"phi_blocklist_hit": True}, 1.0),
+        (15, "herbicide_post_emergent_date", {}, None),
+    ],
+)
+def test_factor_intensity(
+    fid: int, sig: str | None, signals: dict[str, object], expected: float | None
+) -> None:
+    assert factor_intensity(fid, sig, signals) == expected
+
+
+def test_factor_intensity_late_planting_scales() -> None:
+    # 15 days after 15 June -> 15/30 = 0.5
+    assert factor_intensity(13, "planting_date", {"planting_date": "2026-06-30"}) == 0.5

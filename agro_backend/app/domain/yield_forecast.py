@@ -25,6 +25,7 @@ from __future__ import annotations
 import random
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from datetime import date
 
 # Per-dimension fallback multipliers when a plot's key is not in site_index_config
 # (mirrors the spec's 'other' / 'outside_marathwada' catch-alls).
@@ -74,6 +75,123 @@ class YieldForecast:
 
 def _clamp01(x: float) -> float:
     return max(0.0, min(1.0, x))
+
+
+# Agro-climatic zone (build_farm_brain._AGRO_ZONE) -> the SI climate key (§3.2).
+_ZONE_TO_CLIMATE_KEY = {
+    "marathwada_central": "within_kannad_zone",
+    "marathwada_western": "marathwada_west",
+    "marathwada_eastern": "marathwada_east",
+}
+
+
+def site_index_keys(
+    *,
+    soil_type: str | None,
+    has_drip: bool | None,
+    planting_layout: str | None,
+    water_source: str | None,
+    agro_zone: str | None,
+) -> tuple[str, str, str]:
+    """Derive the (soil, water, climate) site_index_config keys from plot facts.
+
+    Best-effort mapping (agronomy to confirm; Season-1 data calibrates). Unknown
+    inputs fall back to the conservative multiplier: water -> marginal_source,
+    climate -> outside_marathwada, soil -> other.
+    """
+    drip = bool(has_drip)
+    layout = (planting_layout or "").lower()
+    broad = any(k in layout for k in ("broad", "ridge", "bed", "raised"))
+    st = (soil_type or "").lower()
+    if st == "vertisol":
+        soil_key = (
+            "black_vertisol_with_drip_broad_ridge"
+            if drip and broad
+            else "black_vertisol_with_drip_flat"
+            if drip
+            else "black_vertisol_flood_irrigated"
+        )
+    elif st == "red_loam":
+        soil_key = "red_loam_with_drip" if drip else "red_loam_without_drip"
+    elif st == "sandy_loam" and drip:
+        soil_key = "sandy_loam_with_drip"
+    elif st == "laterite":
+        soil_key = "laterite"
+    else:
+        soil_key = "other"
+
+    w = (water_source or "").lower()
+    if any(k in w for k in ("assured", "canal", "perennial", "river", "year")):
+        water_key = "assured_source_year_round"
+    elif "seasonal" in w or "gap" in w:
+        water_key = "assured_source_seasonal_gap"
+    elif any(k in w for k in ("rain", "rainfed")):
+        water_key = "rain_dependent_only"
+    else:
+        water_key = "marginal_source"  # unknown -> conservative
+
+    climate_key = _ZONE_TO_CLIMATE_KEY.get(agro_zone or "", "outside_marathwada")
+    return soil_key, water_key, climate_key
+
+
+def factor_intensity(
+    factor_id: int, signal_field: str | None, signals: Mapping[str, object]
+) -> float | None:
+    """Intensity I_i in [0,1] for one factor from farm-brain signals (§3.3).
+
+    Returns None when the factor's signal is not measurable this season (the
+    caller flags it a missing_factor and skips it). Transforms are the transparent
+    Phase-1 forms; Season-1 data recalibrates.
+    """
+    # Factors 13-15 use compound signals rather than a single _pct field.
+    if factor_id == 13:  # late planting: days after 15 June / 30
+        pd = signals.get("planting_date") or signals.get("sowing_date")
+        if pd is None:
+            return None
+        try:
+            d = date.fromisoformat(str(pd)[:10])
+        except ValueError:
+            return None
+        days_late = (d - date(d.year, 6, 15)).days
+        return _clamp01(days_late / 30.0) if days_late > 0 else 0.0
+    if factor_id == 14:  # wrong drip design: heavy soil + close dripper
+        if signals.get("soil_texture_class") != "heavy" or not signals.get("has_drip"):
+            return None
+        spacing = signals.get("drip_lateral_spacing_ft")
+        if spacing is None:
+            return None
+        try:
+            close = float(spacing) < 4.5  # type: ignore[arg-type]  # <4.5 ft = too close
+        except (TypeError, ValueError):
+            return None
+        return 1.0 if close else 0.0
+    if factor_id == 15:  # herbicide damage after emergence
+        if signals.get("phi_blocklist_hit") or signals.get("herbicide_post_emergent_date"):
+            return 1.0
+        return None
+
+    if signal_field is None:
+        return None
+    v = signals.get(signal_field)
+    if v is None:
+        return None
+    if signal_field == "nematode_suspected":
+        return 0.3 if bool(v) else 0.0
+    try:
+        val = float(v)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    if signal_field == "establishment_pct":
+        return _clamp01(1.0 - val / 90.0)  # poor emergence = high intensity
+    if signal_field == "standing_water_hours_observed":
+        return _clamp01(val / 96.0)
+    if signal_field == "dry_spell_days":
+        return _clamp01(val / 30.0)
+    if signal_field == "heat_stress_days_count":
+        return _clamp01(val / 15.0)
+    if signal_field.endswith("_pct"):
+        return _clamp01(val / 100.0)
+    return None
 
 
 def resolve_site_index(
@@ -226,7 +344,9 @@ __all__ = [
     "YieldFactor",
     "YieldForecast",
     "bootstrap_ci",
+    "factor_intensity",
     "predict_yield_full",
     "resolve_site_index",
+    "site_index_keys",
     "survival_factors",
 ]
