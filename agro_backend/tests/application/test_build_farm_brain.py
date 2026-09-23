@@ -1515,6 +1515,22 @@ class _FakeYieldModelRepo:
     async def list_u_values(self, crop="Ginger"):
         return self._rows
 
+    async def get_variety_potential(self, variety):
+        from app.application.ports.yield_model_repo import VarietyPotential
+
+        return VarietyPotential(
+            variety="IISR Mahima", y_var_q_per_acre=94.0, verification_status="CONFIRMED"
+        )
+
+    async def list_site_index_config(self):
+        # SI = 1.0 for the keys the test's (no-farm) plot resolves to, so
+        # Y_potential = Y_var = 94 and the process-baseline math is exercised cleanly.
+        return {
+            ("soil", "other"): 1.0,
+            ("water", "marginal_source"): 1.0,
+            ("climate", "outside_marathwada"): 1.0,
+        }
+
     async def log_prediction(self, row) -> None:
         self.logged.append(row)
 
@@ -1548,6 +1564,7 @@ async def test_fills_d11_yield_prediction() -> None:
             u_value=0.60,
             signal_field="rot_incidence_pct",
             representative_rule_id="D06-ROT-001",
+            factor_id=1,
         ),
         UValueRow(
             factor_key="k_deficiency",
@@ -1555,6 +1572,7 @@ async def test_fills_d11_yield_prediction() -> None:
             u_value=0.20,
             signal_field=None,
             representative_rule_id="D04-K-001",
+            factor_id=4,
         ),
     ]
     repo = _FakeYieldModelRepo(rows)
@@ -1594,19 +1612,24 @@ async def test_fills_d11_yield_prediction() -> None:
         declared_fields=declared,
     )
     state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
-    # dap 160 -> G4 (150-210) -> interval 15
     assert state["prediction_stage"] == "G4"
-    assert state["prediction_interval_pct"] == 15.0
-    assert state["yield_prediction_interval_pct"] == 15.0
-    assert state["ceiling_basis"] == "unverified"  # no planting_layout entered
-    # rot 40% -> intensity 0.4, u 0.60 -> surviving 0.76 -> 94*0.76 = 71.44
+    # v1 model: Y_var 94 x SI 1.0 = 94 potential; rot 40% -> I 0.4, u 0.60 ->
+    # surviving 0.76 -> 94 * 0.76 = 71.44.
     assert state["predicted_yield_quintal_per_acre"] == 71.4
+    assert state["ceiling_quintal_per_acre"] == 94.0
     assert state["cumulative_loss_pct"] == 24.0
+    # Interval now comes from the bootstrap band, not the fixed stage table.
+    assert state["prediction_interval_pct"] is not None
+    assert state["prediction_interval_pct"] > 0
+    assert state["yield_prediction_interval_pct"] == state["prediction_interval_pct"]
+    assert state["ceiling_basis"] == "unverified"  # no planting_layout entered
     assert "D06-ROT-001" in state["u_values_applied"]
     assert state["u_value_source_class"] == "EST"
     assert state["season_record_complete"] is False
     assert len(repo.logged) == 1
     assert repo.logged[0].season_id == _SEASON
+    assert repo.logged[0].missing_factors == [4]  # k_deficiency has no signal
+    assert repo.logged[0].model_version == "ginger-yield/v1-est-phase-1"
 
 
 @pytest.mark.asyncio
