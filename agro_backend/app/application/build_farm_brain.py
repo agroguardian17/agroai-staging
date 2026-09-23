@@ -91,7 +91,14 @@ from app.domain.satellite_metrics import (
 from app.domain.sensor import Reading
 from app.domain.vpd import vpd_kpa
 from app.domain.weather_station_reading import WeatherStationReading
-from app.domain.yield_model import UValue, ceiling_basis_for_layout, predict_yield
+from app.domain.yield_forecast import (
+    YieldFactor,
+    factor_intensity,
+    predict_yield_full,
+    resolve_site_index,
+    site_index_keys,
+)
+from app.domain.yield_model import ceiling_basis_for_layout
 
 if TYPE_CHECKING:
     # Kept to declare unused ports if future rounds add extra data sources.
@@ -875,50 +882,102 @@ def _derive_composite(state: dict[str, Any], today: date) -> None:
             _set(state, "rainfall_deviation_pct", dev)
 
 
+def _as_str(v: object) -> str | None:
+    return None if v is None else str(v)
+
+
+def _as_bool(v: object) -> bool | None:
+    return None if v is None else bool(v)
+
+
 async def _populate_yield_prediction(
     state: dict[str, Any],
     repo: YieldModelRepo,
     season: CropSeasonView,
     today: date,
 ) -> None:
-    """Run the Domain 11 process-baseline predictor and fill the D11 fields.
+    """Run the Domain 11 v1 predictor (Y_var x SI x prod(1 - u_i*I_i)) and fill
+    the D11 fields, then append the prediction to yield_prediction_log (non-fatal).
 
-    ``interdependence_group`` stays UNKNOWN in this scaffold (needs the KB
-    duplication-group mapping); everything else the model outputs is set, and
-    the prediction is appended to yield_prediction_log (non-fatal)."""
+    Y_var comes from variety_potential (skip the plot if the season's variety is
+    unknown); SI from site_index_config via the plot's soil/water/climate keys;
+    each factor's intensity from its farm-brain signal (unmeasurable factors are
+    flagged missing). interdependence_group is now resolvable (the active
+    clusters), no longer UNKNOWN."""
     rows = await repo.list_u_values(season.crop_name_english)
     if not rows:
         return
-    factors = [
-        UValue(
-            factor_key=r.factor_key,
-            u_value=r.u_value,
-            signal_field=r.signal_field,
-            representative_rule_id=r.representative_rule_id,
-            rank=r.rank,
-        )
-        for r in rows
-    ]
+    variety = getattr(season, "crop_variety", None)
+    vp = await repo.get_variety_potential(variety) if variety else None
+    if vp is None:
+        return  # no variety ceiling to anchor Y_var on -> skip this plot
+
+    si_config = await repo.list_site_index_config()
+    soil_key, water_key, climate_key = site_index_keys(
+        soil_type=_as_str(state.get("soil_type")),
+        has_drip=_as_bool(state.get("has_drip")),
+        planting_layout=_as_str(state.get("planting_layout")),
+        water_source=_as_str(state.get("water_source_type")),
+        agro_zone=_as_str(state.get("agro_climatic_zone")),
+    )
+    si = resolve_site_index(
+        si_config, soil_key=soil_key, water_key=water_key, climate_key=climate_key
+    )
     override = state.get("ceiling_quintal_per_acre")
-    pred = predict_yield(
-        ceiling_basis=ceiling_basis_for_layout(state.get("planting_layout")),
-        factors=factors,
-        signals=state,
-        prediction_stage=state.get("prediction_stage"),
-        ceiling_override=float(override) if override is not None else None,
+    y_potential = float(override) if override is not None else vp.y_var_q_per_acre * si
+
+    factors: list[YieldFactor] = []
+    missing: list[int] = []
+    for r in rows:
+        fid = r.factor_id or 0
+        intensity = factor_intensity(fid, r.signal_field, state)
+        if intensity is None:
+            if fid:
+                missing.append(fid)
+        elif intensity > 0.0:
+            factors.append(
+                YieldFactor(
+                    factor_id=fid,
+                    factor_key=r.factor_key,
+                    u_value=r.u_value,
+                    intensity=intensity,
+                    groups=r.interdependence_group,
+                    rule_id=r.representative_rule_id,
+                )
+            )
+
+    fc = predict_yield_full(
+        y_potential=y_potential, factors=factors, missing_factors=missing, seed=0
     )
 
-    _set(state, "predicted_yield_quintal_per_acre", pred.predicted_yield_quintal_per_acre)
-    _set(state, "prediction_interval_pct", pred.prediction_interval_pct)
-    _set(state, "yield_prediction_interval_pct", pred.prediction_interval_pct)
-    _set(state, "cumulative_loss_pct", pred.cumulative_loss_pct)
-    _set(state, "gap_attributed_pct", pred.gap_attributed_pct)
-    _set(state, "gap_unexplained_pct", pred.gap_unexplained_pct)
-    _set(state, "ceiling_basis", pred.ceiling_basis)
-    _set(state, "u_values_applied", pred.u_values_applied)
-    _set(state, "u_value_source_class", pred.u_value_source_class)
-    if state.get("ceiling_quintal_per_acre") is None:
-        _set(state, "ceiling_quintal_per_acre", pred.ceiling_quintal_per_acre)
+    gap = fc.y_potential - fc.y_process
+    cumulative_loss_pct = (
+        round((1.0 - fc.y_process / fc.y_potential) * 100.0, 2) if fc.y_potential > 0 else 0.0
+    )
+    attributed_pct = round(100.0 - fc.unexplained_pct, 1) if gap > 1e-9 else None
+    unexplained_pct = fc.unexplained_pct if gap > 1e-9 else None
+    interval_pct = (
+        round((fc.y_high_90 - fc.y_low_90) / (2.0 * fc.y_point) * 100.0, 1)
+        if fc.y_point > 0
+        else None
+    )
+    applied = [f.rule_id for f in factors if f.rule_id]
+    active_groups = sorted({g for f in factors for g in f.groups})
+    data_quality = round(len(factors) / len(rows), 2) if rows else 0.0
+    basis = ceiling_basis_for_layout(state.get("planting_layout"))
+
+    _set(state, "predicted_yield_quintal_per_acre", fc.y_point)
+    if override is None:
+        _set(state, "ceiling_quintal_per_acre", round(y_potential, 1))
+    _set(state, "prediction_interval_pct", interval_pct)
+    _set(state, "yield_prediction_interval_pct", interval_pct)
+    _set(state, "cumulative_loss_pct", cumulative_loss_pct)
+    _set(state, "gap_attributed_pct", attributed_pct)
+    _set(state, "gap_unexplained_pct", unexplained_pct)
+    _set(state, "ceiling_basis", basis)
+    _set(state, "u_values_applied", applied)
+    _set(state, "u_value_source_class", "EST")
+    _set(state, "interdependence_group", ",".join(active_groups) if active_groups else None)
     _set(
         state,
         "season_record_complete",
@@ -934,30 +993,40 @@ async def _populate_yield_prediction(
         prediction_date=today,
         dap=dap if isinstance(dap, int) else None,
         prediction_stage=state.get("prediction_stage"),
-        ceiling_quintal_per_acre=pred.ceiling_quintal_per_acre,
-        ceiling_basis=pred.ceiling_basis,
-        predicted_yield_quintal_per_acre=pred.predicted_yield_quintal_per_acre,
-        ci_low_quintal_per_acre=pred.ci_low_quintal_per_acre,
-        ci_high_quintal_per_acre=pred.ci_high_quintal_per_acre,
-        prediction_interval_pct=pred.prediction_interval_pct,
-        cumulative_loss_pct=pred.cumulative_loss_pct,
-        gap_attributed_pct=pred.gap_attributed_pct,
-        gap_unexplained_pct=pred.gap_unexplained_pct,
-        u_values_applied=pred.u_values_applied,
+        ceiling_quintal_per_acre=round(y_potential, 1),
+        ceiling_basis=basis,
+        predicted_yield_quintal_per_acre=fc.y_point,
+        ci_low_quintal_per_acre=fc.y_low_90,
+        ci_high_quintal_per_acre=fc.y_high_90,
+        prediction_interval_pct=interval_pct,
+        cumulative_loss_pct=cumulative_loss_pct,
+        gap_attributed_pct=attributed_pct,
+        gap_unexplained_pct=unexplained_pct,
+        u_values_applied=applied,
         attribution=[
             {
-                "factor_key": c.factor_key,
-                "u_value": c.u_value,
-                "intensity": c.intensity,
-                "loss_pct": c.loss_pct,
-                "rule_id": c.rule_id,
+                "factor_id": a.factor_id,
+                "factor_key": a.factor_key,
+                "loss_quintal": a.loss_quintal,
+                "u_value": a.u_value,
+                "intensity": a.intensity,
+                "in_survival_product": a.in_survival_product,
             }
-            for c in pred.attribution
+            for a in fc.attribution
         ],
-        u_value_source_class=pred.u_value_source_class,
-        model_version=pred.model_version,
-        data_quality=pred.data_quality,
-        confidence=pred.confidence,
+        u_value_source_class="EST",
+        model_version="ginger-yield/v1-est-phase-1",
+        data_quality=data_quality,
+        confidence=data_quality,
+        y_potential=fc.y_potential,
+        y_process=fc.y_process,
+        epsilon_ml=fc.epsilon_ml,
+        y_point=fc.y_point,
+        y_low_90=fc.y_low_90,
+        y_high_90=fc.y_high_90,
+        unexplained_pct=fc.unexplained_pct,
+        missing_factors=fc.missing_factors,
+        as_of_date=today,
     )
     # A log-write hiccup must never suppress the plot's advisory.
     with suppress(Exception):
