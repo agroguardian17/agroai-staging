@@ -29,6 +29,11 @@ class LabSoilTestView:
     soil_ca_ppm: Decimal | None = None
     soil_mg_ppm: Decimal | None = None
     soil_s_ppm: Decimal | None = None
+    # Particle-size fractions (migration 0021) — feed the USDA-triangle texture
+    # override of the soil-type-derived ``soil_texture_class``.
+    sand_pct: Decimal | None = None
+    silt_pct: Decimal | None = None
+    clay_pct: Decimal | None = None
 
 
 @runtime_checkable
