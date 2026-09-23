@@ -832,6 +832,11 @@ def _derive_composite(state: dict[str, Any], today: date) -> None:
     if vwc is not None and sat is not None and stress is not None:
         vafsa = "too_wet" if vwc >= sat else ("too_dry" if vwc <= stress else "workable")
         _set(state, "vafsa_state", vafsa)
+    elif vwc is not None:
+        # Moisture is present but a threshold is missing: say so explicitly
+        # rather than silently omitting (which a reader could mistake for
+        # 'workable'). AGRONOMY_SIGNOFF row 8.
+        _set(state, "vafsa_state", "unknown")
 
     # Engine-side constants / stage classification (D11/D12).
     _set(state, "model_version", _MODEL_VERSION)

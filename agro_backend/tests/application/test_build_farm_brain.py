@@ -1014,6 +1014,26 @@ async def test_derived_composite_and_zone_fields() -> None:
     assert state["rainfall_last_48h_mm"] == 5.0
 
 
+def test_vafsa_state_unknown_when_thresholds_missing() -> None:
+    """VWC present but a threshold missing -> vafsa_state 'unknown', not silent /
+    a false 'workable' (AGRONOMY_SIGNOFF row 8)."""
+    from datetime import date as _date
+
+    from app.application.build_farm_brain import _derive_composite
+
+    # Moisture but no saturation/stress thresholds -> explicit 'unknown'.
+    # (vafsa_state pre-declared to None, as build_farm_brain does before deriving;
+    # _set only writes declared keys.)
+    s: dict[str, object] = {"soil_moisture_vwc": 30.0, "vafsa_state": None}
+    _derive_composite(s, _date(2026, 9, 1))
+    assert s["vafsa_state"] == "unknown"
+
+    # No moisture reading at all -> nothing to derive, stays None.
+    s2: dict[str, object] = {"vafsa_state": None}
+    _derive_composite(s2, _date(2026, 9, 1))
+    assert s2["vafsa_state"] is None
+
+
 class _FakeConsentRepo:
     def __init__(self, v=None):
         self._v = v
