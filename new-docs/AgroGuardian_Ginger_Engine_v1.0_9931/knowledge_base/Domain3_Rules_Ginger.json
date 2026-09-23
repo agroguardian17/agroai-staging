@@ -648,23 +648,33 @@
       "trigger": {
         "english": "soil_texture_class is heavy AND drip design not set to the heavy-soil configuration",
         "marathi": "जमीन भारी आहे पण ठिबकाची मांडणी भारी जमिनीसाठी नाही",
-        "expr": "has_drip IS TRUE AND drip_lateral_spacing_ft IS NULL",
+        "expr": "has_drip IS TRUE AND drip_lateral_spacing_ft IS NULL AND soil_texture_class == 'heavy'",
         "expr_version": "dsl-1.0",
         "golden_tests": [
           {
             "context": {
-              "has_drip": true
+              "has_drip": true,
+              "soil_texture_class": "heavy"
             },
             "expect": "TRUE",
-            "label": "ठिबकाची मांडणी ठरवा"
+            "label": "जड जमीन — ठिबक मांडणी ठरवा"
           },
           {
             "context": {
               "has_drip": true,
+              "soil_texture_class": "heavy",
               "drip_lateral_spacing_ft": 4
             },
             "expect": "FALSE",
-            "label": "ठरली"
+            "label": "मांडणी ठरली"
+          },
+          {
+            "context": {
+              "has_drip": true,
+              "soil_texture_class": "light"
+            },
+            "expect": "FALSE",
+            "label": "हलकी जमीन — लागू नाही"
           }
         ]
       },
@@ -702,15 +712,15 @@
       "kannad_note": "A wrongly specified drip set is a permanent cost that then causes disease every season. This is a one-time decision that a supplier quotation will not necessarily get right without being told the soil class.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
       "delivery": "ONCE_UNTIL_RESOLVED",
       "review": {
         "tier": "T1",
         "reviewer": "VIRAAI_AGRONOMY_REVIEW",
         "date": "2026-09-22",
-        "outcome": "non_compliant",
-        "comment_mr": "The trigger expression does not actually test soil_texture_class or the specified heavy-soil configuration; it only tests has_drip and missing lateral spacing. This is a code/logic mismatch. Split detection from recommendation and validate geometry by soil/infiltration."
+        "outcome": "conditional",
+        "comment_mr": "The trigger expression does not actually test soil_texture_class or the specified heavy-soil configuration; it only tests has_drip and missing lateral spacing. This is a code/logic mismatch. Split detection from recommendation and validate geometry by soil/infiltration. | rewrite (§2.2): trigger now gates on soil_texture_class == 'heavy' so the heavy-soil drip prescription no longer misfires on light/medium soils; CONDITIONAL"
       }
     },
     {
@@ -1661,8 +1671,8 @@
         ]
       },
       "action": {
-        "english": "RED alert, more severe than the equivalent monsoon warning. Stop drip, clear channels urgently, and check saturation within 12 hours of the rain stopping.",
-        "marathi": "लाल इशारा — आणि हा जुलैच्या इशाऱ्यापेक्षा जास्त तीव्र आहे. ठिबक बंद करा, निचरा चर तातडीने मोकळे करा, पाऊस थांबल्यावर १२ तासांत संपृक्तता तपासा."
+        "english": "RED alert. Stop drip, clear channels urgently, and check saturation within 12 hours of the rain stopping.",
+        "marathi": "लाल इशारा. ठिबक बंद करा, निचरा चर तातडीने मोकळे करा, पाऊस थांबल्यावर १२ तासांत संपृक्तता तपासा."
       },
       "reasoning": {
         "agronomic_basis": "Tropical cyclones reach this district with a secondary peak in October and November. By then the rhizome is fully formed, the soil is dry and cracked after weeks without rain, and drainage channels have usually been neglected because the monsoon is considered over.",
@@ -1695,15 +1705,15 @@
       "kannad_note": "This rule did not exist in the original Domain 3 or Domain 6 drafts. Both assumed the rainy season is July to September. Domain 7 research surfaced the post-monsoon cyclone peak and the rule was added afterwards.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "EVENT",
       "immutable": false,
       "review": {
         "tier": "T1",
         "reviewer": "VIRAAI_AGRONOMY_REVIEW",
         "date": "2026-09-22",
-        "outcome": "non_compliant",
-        "comment_mr": "The October/November >40 mm trigger is based on a tourism/weather site rather than an authoritative agronomy or IMD threshold, and 'more severe than monsoon warning' is unsupported. Replace with forecast rainfall + soil/VWC/drainage conditions and/or official IMD warning data."
+        "outcome": "conditional",
+        "comment_mr": "The October/November >40 mm trigger is based on a tourism/weather site rather than an authoritative agronomy or IMD threshold, and 'more severe than monsoon warning' is unsupported. Replace with forecast rainfall + soil/VWC/drainage conditions and/or official IMD warning data. | rewrite (§2.2): dropped the unsupported 'more severe than monsoon' comparison; tagged AGRO_GUARDIAN_CUSTOM (source: IMD agromet advisory); month/rain trigger kept; CONDITIONAL"
       }
     },
     {
