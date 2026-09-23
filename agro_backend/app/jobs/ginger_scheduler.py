@@ -30,6 +30,7 @@ from app.infra.persistence.pg_farmer_repo import PgFarmerRepo
 from app.infra.persistence.pg_farmer_schemes_repo import PgFarmerSchemesRepo
 from app.infra.persistence.pg_lab_soil_test_repo import PgLabSoilTestRepo
 from app.infra.persistence.pg_plot_repo import PgPlotRepo
+from app.infra.persistence.pg_qa_counters_repo import PgQaCountersRepo
 from app.infra.persistence.pg_reading_repo import PgReadingRepo
 from app.infra.persistence.pg_satellite_reading_repo import PgSatelliteReadingRepo
 from app.infra.persistence.pg_season_economics_repo import PgSeasonEconomicsRepo
@@ -75,6 +76,7 @@ async def build_and_start_scheduler(settings: Settings) -> AsyncIOScheduler | No
         advisory_metrics_repo=PgAdvisoryMetricsRepo(sessionmaker),
         yield_model_repo=PgYieldModelRepo(sessionmaker),
         cluster_repo=PgClusterRepo(sessionmaker),
+        qa_counters_repo=PgQaCountersRepo(sessionmaker),
     )
 
     scheduler = AsyncIOScheduler(timezone=settings.GINGER_JOB_TIMEZONE)

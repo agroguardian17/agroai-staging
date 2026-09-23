@@ -58,6 +58,7 @@ from app.application.ports.farmer_repo import FarmerLocation, FarmerRepo
 from app.application.ports.farmer_schemes_repo import FarmerSchemesRepo
 from app.application.ports.lab_soil_test_repo import LabSoilTestRepo, LabSoilTestView
 from app.application.ports.plot_repo import PlotRepo
+from app.application.ports.qa_counters_repo import QaCountersRepo
 from app.application.ports.reading_repo import ReadingRepo
 from app.application.ports.satellite_reading_repo import (
     SOURCE_OPTICAL,
@@ -180,6 +181,9 @@ class FarmBrainDeps:
     # ``cluster_id`` field from the plot's stored assignment (the assignment
     # itself runs at enrollment, not here). None keeps ``cluster_id`` UNKNOWN.
     cluster_repo: ClusterRepo | None = None
+    # Optional D12 QA-counter source. When present the builder fills the
+    # per-plot true/false-alarm and photo counts. None keeps them UNKNOWN.
+    qa_counters_repo: QaCountersRepo | None = None
     # The full ``kb_farm_brain_fields`` set. Injected so tests can pin a
     # subset; the daily job reads it from the database at startup.
     declared_fields: frozenset[str] = field(default_factory=frozenset)
@@ -362,6 +366,16 @@ async def build_farm_brain(
     if deps.cluster_repo is not None:
         cluster_id = await deps.cluster_repo.cluster_id_for_plot(plot_id)
         _set(state, "cluster_id", cluster_id)
+
+    # ---- D12 QA counters (cumulative per plot) -------------------------
+    # true/false-alarm counts from the review workflow + photo counts. The
+    # farmer-answer non_compliance_reason is a separate channel, left UNKNOWN.
+    if deps.qa_counters_repo is not None:
+        qa = await deps.qa_counters_repo.counts_for_plot(plot_id)
+        _set(state, "true_alarm_count", qa.true_alarm_count)
+        _set(state, "false_alarm_count", qa.false_alarm_count)
+        _set(state, "photo_uploaded_count", qa.photo_uploaded_count)
+        _set(state, "photo_labelled_count", qa.photo_labelled_count)
 
     # ---- Composite derivations (from fields filled above) --------------
     _derive_composite(state, today)
