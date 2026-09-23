@@ -74,6 +74,7 @@ from app.application.ports.season_operations_repo import SeasonOperationsRepo
 from app.application.ports.weather_forecast_repo import WeatherForecastRepo
 from app.application.ports.weather_station_reading_repo import WeatherStationReadingRepo
 from app.application.ports.yield_model_repo import YieldModelRepo
+from app.domain.disclaimer import append_disclaimer
 from app.lib import metrics
 
 if TYPE_CHECKING:
@@ -291,7 +292,7 @@ async def _persist_message(
     today: date,
 ) -> None:
     """Write one engine message as an ``ai_suggestions`` row."""
-    body = msg.render() if hasattr(msg, "render") else str(msg)
+    body = append_disclaimer(msg.render() if hasattr(msg, "render") else str(msg))
     suggestion = AiSuggestion(
         suggestion_id=uuid.uuid4(),
         tenant_id=season.tenant_id,

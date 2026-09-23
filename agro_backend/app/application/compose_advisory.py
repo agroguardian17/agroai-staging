@@ -31,6 +31,7 @@ from app.application.ports.chat_model import ChatModel, ChatRequest
 from app.application.ports.crop_season_repo import CropSeasonRepo, CropSeasonView
 from app.application.ports.plot_repo import PlotRepo
 from app.application.ports.reading_repo import ReadingRepo
+from app.domain.disclaimer import append_disclaimer
 from app.domain.plot import Plot
 from app.domain.sensor import Reading
 
@@ -157,7 +158,7 @@ async def execute(
         season_id=season.season_id,
         generated_at=now,
         suggestion_type="alert",
-        full_message_marathi=response.text,
+        full_message_marathi=append_disclaimer(response.text),
         ai_model_version=response.model,
         tokens_used=response.input_tokens + response.output_tokens,
         generation_time_ms=response.latency_ms,
