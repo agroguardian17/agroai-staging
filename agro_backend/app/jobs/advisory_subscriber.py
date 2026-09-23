@@ -36,6 +36,7 @@ from app.infra.events.pg_notify_listener import PgNotifyListener
 from app.infra.http.deps import _ensure_engine
 from app.infra.llm.claude_chat import ClaudeChatModel, ClaudeSettings
 from app.infra.llm.log_only_chat import LogOnlyChatModel
+from app.infra.persistence.pg_advisory_audit_repo import PgAdvisoryAuditRepo
 from app.infra.persistence.pg_ai_suggestion_repo import PgAiSuggestionRepo
 from app.infra.persistence.pg_alert_repo import PgAlertRepo
 from app.infra.persistence.pg_crop_season_repo import PgCropSeasonRepo
@@ -76,6 +77,7 @@ async def build_and_start_advisory_subscriber(
         ai_suggestion_repo=PgAiSuggestionRepo(sm),
         chat_model=_build_chat_model(settings),
         chat_model_name=settings.model_id_for(ModelRole.PRIMARY),
+        advisory_audit_repo=PgAdvisoryAuditRepo(sm),
     )
     deps = DispatchAdvisoryDeps(
         alert_repo=alert_repo, compose_deps=compose_deps, event_bus=event_bus

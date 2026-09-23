@@ -55,6 +55,7 @@ from app.application.build_farm_brain import (
     FarmBrainDeps,
     build_farm_brain,
 )
+from app.application.ports.advisory_audit_repo import AdvisoryAuditRepo, AdvisoryAuditRow
 from app.application.ports.advisory_metrics_repo import AdvisoryMetricsRepo
 from app.application.ports.ai_suggestion_repo import AiSuggestion, AiSuggestionRepo
 from app.application.ports.cluster_repo import ClusterRepo
@@ -133,6 +134,8 @@ class GingerDailyDeps:
     cluster_repo: ClusterRepo | None = None
     # Optional D12 QA-counter source (true/false-alarm + photo counts).
     qa_counters_repo: QaCountersRepo | None = None
+    # Optional immutable advisory-audit sink (A4.2, §7.3).
+    advisory_audit_repo: AdvisoryAuditRepo | None = None
     # Timezone the "today" date is computed in. Defaults to IST — the pilot
     # is in Aurangabad and the farmer's day boundary is IST midnight.
     timezone: ZoneInfo = field(default_factory=lambda: ZoneInfo("Asia/Kolkata"))
@@ -229,8 +232,20 @@ async def _run_one_plot(
         return 0
 
     rows = 0
+    gate_snapshot = {
+        "blocklist_hit": state.state.get("phi_blocklist_hit"),
+        "phi_days_remaining": state.state.get("phi_days_remaining"),
+    }
     for msg in engine_result.get("messages", []):
-        await _persist_message(deps.ai_suggestion_repo, season, farmer_id, msg, today)
+        await _persist_message(
+            deps.ai_suggestion_repo,
+            season,
+            farmer_id,
+            msg,
+            today,
+            audit_repo=deps.advisory_audit_repo,
+            gate_snapshot=gate_snapshot,
+        )
         rows += 1
         delivery_class = (
             engine_result.get("delivery", {}).get(msg.rule_id, "unknown")
@@ -293,11 +308,16 @@ async def _persist_message(
     farmer_id: uuid.UUID,
     msg: Any,
     today: date,
+    audit_repo: AdvisoryAuditRepo | None = None,
+    gate_snapshot: dict[str, Any] | None = None,
 ) -> None:
-    """Write one engine message as an ``ai_suggestions`` row."""
+    """Write one engine message as an ``ai_suggestions`` row (+ audit trail)."""
     body = append_disclaimer(msg.render() if hasattr(msg, "render") else str(msg))
+    suggestion_id = uuid.uuid4()
+    rule_id = getattr(msg, "rule_id", None)
+    confidence = getattr(msg, "confidence", None)
     suggestion = AiSuggestion(
-        suggestion_id=uuid.uuid4(),
+        suggestion_id=suggestion_id,
         tenant_id=season.tenant_id,
         farmer_id=farmer_id,
         farm_id=season.farm_id,
@@ -311,11 +331,29 @@ async def _persist_message(
         generation_time_ms=None,
         crop_age_days=season.crop_age_days_today,
         crop_stage=season.current_growth_stage,
-        rule_id=getattr(msg, "rule_id", None),  # links the advisory to its KB rule (D12 QA)
-        confidence=getattr(msg, "confidence", None),  # audit trail §7.3
+        rule_id=rule_id,  # links the advisory to its KB rule (D12 QA)
+        confidence=confidence,  # audit trail §7.3
         rule_version=GINGER_KB_VERSION,
     )
     await repo.create(suggestion)
+    # Immutable generation-audit row (A4.2, §7.3). Delivery facts stay on
+    # ai_suggestions; this captures the immutable rule/model/gate facts.
+    if audit_repo is not None:
+        await audit_repo.record(
+            AdvisoryAuditRow(
+                suggestion_id=suggestion_id,
+                rule_id=rule_id,
+                rule_version=GINGER_KB_VERSION,
+                model_version=GINGER_MODEL_TAG,
+                confidence=confidence,
+                gate_results=gate_snapshot or {},
+                inputs={
+                    "dap": season.crop_age_days_today,
+                    "stage": season.current_growth_stage,
+                    "as_of": today.isoformat(),
+                },
+            )
+        )
 
 
 def _today_in(tz: ZoneInfo) -> date:

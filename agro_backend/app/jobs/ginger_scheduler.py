@@ -19,6 +19,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from app.infra.http.deps import _ensure_engine
+from app.infra.persistence.pg_advisory_audit_repo import PgAdvisoryAuditRepo
 from app.infra.persistence.pg_advisory_metrics_repo import PgAdvisoryMetricsRepo
 from app.infra.persistence.pg_ai_suggestion_repo import PgAiSuggestionRepo
 from app.infra.persistence.pg_cluster_repo import PgClusterRepo
@@ -77,6 +78,7 @@ async def build_and_start_scheduler(settings: Settings) -> AsyncIOScheduler | No
         yield_model_repo=PgYieldModelRepo(sessionmaker),
         cluster_repo=PgClusterRepo(sessionmaker),
         qa_counters_repo=PgQaCountersRepo(sessionmaker),
+        advisory_audit_repo=PgAdvisoryAuditRepo(sessionmaker),
     )
 
     scheduler = AsyncIOScheduler(timezone=settings.GINGER_JOB_TIMEZONE)
