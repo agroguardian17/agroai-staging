@@ -36,6 +36,9 @@ class AiSuggestion:
     generation_time_ms: int | None
     crop_age_days: int | None = None
     crop_stage: str | None = None
+    # The KB rule that produced this advisory (migration 0043). NULL for rows
+    # written before rule-level QA, and for non-engine (LLM daily) advisories.
+    rule_id: str | None = None
 
 
 @runtime_checkable

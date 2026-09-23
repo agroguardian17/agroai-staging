@@ -303,6 +303,7 @@ async def _persist_message(
         generation_time_ms=None,
         crop_age_days=season.crop_age_days_today,
         crop_stage=season.current_growth_stage,
+        rule_id=getattr(msg, "rule_id", None),  # links the advisory to its KB rule (D12 QA)
     )
     await repo.create(suggestion)
 

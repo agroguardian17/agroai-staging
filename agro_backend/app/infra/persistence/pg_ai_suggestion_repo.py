@@ -15,7 +15,7 @@ _SELECT_COLS = (
     "suggestion_id, tenant_id, farmer_id, farm_id, plot_id, season_id, "
     "generated_at, suggestion_type, full_message_marathi, "
     "ai_model_version, tokens_used, generation_time_ms, "
-    "crop_age_days, crop_stage"
+    "crop_age_days, crop_stage, rule_id"
 )
 
 
@@ -36,6 +36,7 @@ def _row_to_suggestion(row: object) -> AiSuggestion:
         generation_time_ms=r.generation_time_ms,
         crop_age_days=r.crop_age_days,
         crop_stage=r.crop_stage,
+        rule_id=r.rule_id,
     )
 
 
@@ -50,12 +51,12 @@ class PgAiSuggestionRepo:
                 suggestion_id, tenant_id, farmer_id, farm_id, plot_id,
                 season_id, generated_at, suggestion_type,
                 full_message_marathi, ai_model_version, tokens_used,
-                generation_time_ms, crop_age_days, crop_stage
+                generation_time_ms, crop_age_days, crop_stage, rule_id
             ) VALUES (
                 :sid, :tenant, :farmer, :farm, :plot,
                 :season, :gen_at, :stype,
                 :msg, :model, :tokens,
-                :ms, :age, :stage
+                :ms, :age, :stage, :rule_id
             )
             RETURNING suggestion_id
             """
@@ -75,6 +76,7 @@ class PgAiSuggestionRepo:
             "ms": s.generation_time_ms,
             "age": s.crop_age_days,
             "stage": s.crop_stage,
+            "rule_id": s.rule_id,
         }
         async with self._sm() as session:
             res = await session.execute(stmt, params)
