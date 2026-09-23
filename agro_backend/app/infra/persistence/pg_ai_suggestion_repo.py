@@ -15,7 +15,7 @@ _SELECT_COLS = (
     "suggestion_id, tenant_id, farmer_id, farm_id, plot_id, season_id, "
     "generated_at, suggestion_type, full_message_marathi, "
     "ai_model_version, tokens_used, generation_time_ms, "
-    "crop_age_days, crop_stage, rule_id"
+    "crop_age_days, crop_stage, rule_id, confidence, rule_version"
 )
 
 
@@ -37,6 +37,8 @@ def _row_to_suggestion(row: object) -> AiSuggestion:
         crop_age_days=r.crop_age_days,
         crop_stage=r.crop_stage,
         rule_id=r.rule_id,
+        confidence=float(r.confidence) if r.confidence is not None else None,
+        rule_version=r.rule_version,
     )
 
 
@@ -51,12 +53,14 @@ class PgAiSuggestionRepo:
                 suggestion_id, tenant_id, farmer_id, farm_id, plot_id,
                 season_id, generated_at, suggestion_type,
                 full_message_marathi, ai_model_version, tokens_used,
-                generation_time_ms, crop_age_days, crop_stage, rule_id
+                generation_time_ms, crop_age_days, crop_stage, rule_id,
+                confidence, rule_version
             ) VALUES (
                 :sid, :tenant, :farmer, :farm, :plot,
                 :season, :gen_at, :stype,
                 :msg, :model, :tokens,
-                :ms, :age, :stage, :rule_id
+                :ms, :age, :stage, :rule_id,
+                :confidence, :rule_version
             )
             RETURNING suggestion_id
             """
@@ -77,6 +81,8 @@ class PgAiSuggestionRepo:
             "age": s.crop_age_days,
             "stage": s.crop_stage,
             "rule_id": s.rule_id,
+            "confidence": s.confidence,
+            "rule_version": s.rule_version,
         }
         async with self._sm() as session:
             res = await session.execute(stmt, params)

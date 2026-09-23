@@ -39,6 +39,10 @@ class AiSuggestion:
     # The KB rule that produced this advisory (migration 0043). NULL for rows
     # written before rule-level QA, and for non-engine (LLM daily) advisories.
     rule_id: str | None = None
+    # Advisory audit trail (migration 0044, §7.3): the rule's confidence and the
+    # KB ruleset version. NULL on the non-rule LLM path.
+    confidence: float | None = None
+    rule_version: str | None = None
 
 
 @runtime_checkable

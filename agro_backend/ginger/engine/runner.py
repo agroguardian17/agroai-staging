@@ -174,6 +174,9 @@ class Message:
     override_note: str | None
     bundled_with: list = field(default_factory=list)
     engine_speak: bool = False
+    # Per-rule confidence (reasoning.confidence_score) surfaced for the advisory
+    # audit trail (LEGAL_COMPLIANCE_CERTIFICATE §7.3). Not rendered to the farmer.
+    confidence: float | None = None
 
     def render(self, width=76) -> str:
         icon = SEV_ICON[self.severity]
@@ -222,6 +225,7 @@ def compose(rule, ctx, bundled_titles=None, override_note=None, severity=None) -
         override_note=override_note,
         bundled_with=bundled_titles or [],
         engine_speak=reads_as_engine_instruction(what_short),
+        confidence=rule["reasoning"].get("confidence_score"),
     )
 
 

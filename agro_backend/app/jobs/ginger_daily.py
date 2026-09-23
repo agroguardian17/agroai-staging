@@ -90,6 +90,9 @@ GINGER_CROP_NAME: str = "Ginger"
 # ``ai_model_version`` tag written on every advisory this job produces so
 # rows can be filtered from the dashboard and from other tools.
 GINGER_MODEL_TAG: str = "ginger-engine/v1.0"
+# The KB ruleset version an advisory is generated under (advisory audit, §7.3).
+# Bump when the deployed KB reload changes the ruleset.
+GINGER_KB_VERSION: str = "ginger-kb/v1.0"
 
 
 @dataclass(frozen=True, slots=True)
@@ -309,6 +312,8 @@ async def _persist_message(
         crop_age_days=season.crop_age_days_today,
         crop_stage=season.current_growth_stage,
         rule_id=getattr(msg, "rule_id", None),  # links the advisory to its KB rule (D12 QA)
+        confidence=getattr(msg, "confidence", None),  # audit trail §7.3
+        rule_version=GINGER_KB_VERSION,
     )
     await repo.create(suggestion)
 
@@ -322,4 +327,10 @@ def _today_in(tz: ZoneInfo) -> date:
     return datetime.now(UTC).astimezone(tz).date()
 
 
-__all__ = ["GINGER_CROP_NAME", "GINGER_MODEL_TAG", "GingerDailyDeps", "run_daily"]
+__all__ = [
+    "GINGER_CROP_NAME",
+    "GINGER_KB_VERSION",
+    "GINGER_MODEL_TAG",
+    "GingerDailyDeps",
+    "run_daily",
+]
