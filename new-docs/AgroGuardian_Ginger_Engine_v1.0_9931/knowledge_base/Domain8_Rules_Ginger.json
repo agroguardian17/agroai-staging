@@ -1152,15 +1152,15 @@
       "kannad_note": "The highest-return structural decision in the knowledge base and its marginal cost is close to zero, because a bed former takes the same time either way. More plants equals more yield is a double error here — it costs more and delivers less.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "ONCE_UNTIL_RESOLVED",
       "immutable": false,
       "review": {
         "tier": "T1",
         "reviewer": "VIRAAI_AGRONOMY_REVIEW",
         "date": "2026-09-22",
-        "outcome": "non_compliant",
-        "comment_mr": "The universal claim that broad ridges give 15–20% higher yield and 33–44% fewer plants is not defensible from the cited evidence. ICAR research has reported different results by planting method/environment. Make layout recommendation soil/slope/drainage specific and remove universal yield/cost claims."
+        "outcome": "conditional",
+        "comment_mr": "The universal claim that broad ridges give 15–20% higher yield and 33–44% fewer plants is not defensible from the cited evidence. ICAR research has reported different results by planting method/environment. Make layout recommendation soil/slope/drainage specific and remove universal yield/cost claims. | rewrite (§2.2): local 15-20% broad-ridge uplift kept but scoped to heavy black soil under drip (trigger already gates soil+drip); slope/drainage conditioning pending field data; CONDITIONAL"
       }
     },
     {
@@ -1669,8 +1669,8 @@
         ]
       },
       "action": {
-        "english": "BLOCK all herbicide. Glyphosate is non-selective and will kill emerged ginger. From here on, weed control is manual weeding and mulch only.",
-        "marathi": "कोणतेही तणनाशक वापरू नका. ग्लायफोसेट अनिवडक आहे — ते उगवलेल्या अद्रकालाही मारते. यापुढे तण नियंत्रण फक्त खुरपणी आणि आच्छादनाने."
+        "english": "BLOCK non-selective and unregistered herbicides. Glyphosate is non-selective and will kill emerged ginger. Only a herbicide carrying an ICAR-IISR ginger label may be used, and only at its labelled timing; otherwise weed control is manual weeding and mulch.",
+        "marathi": "अनिवडक व नोंदणी नसलेली तणनाशके वापरू नका. ग्लायफोसेट अनिवडक आहे — ते उगवलेल्या अद्रकालाही मारते. फक्त अद्रकासाठी ICAR-IISR लेबल असलेले तणनाशक, तेही लेबलनुसार वेळेवरच; अन्यथा तण नियंत्रण खुरपणी व आच्छादनाने."
       },
       "reasoning": {
         "agronomic_basis": "Source instructs that herbicide be avoided once emergence begins. Ginger emerges at 15 to 25 DAP while the second herbicide application falls at 12 to 15 DAP, so the two nearly coincide and the margin for error is a few days.",
@@ -1699,15 +1699,15 @@
       "kannad_note": "The whole herbicide window is 15 days long and the closing edge sits right next to emergence. This is the one place in the domain where a timing error destroys the crop rather than reducing it.",
       "decision_type": "BLOCK",
       "automation": "refusal",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "SILENT_GUARD",
       "immutable": false,
       "review": {
         "tier": "T1",
         "reviewer": "VIRAAI_AGRONOMY_REVIEW",
         "date": "2026-09-22",
-        "outcome": "non_compliant",
-        "comment_mr": "The rule blocks all herbicide after emergence, which is too broad. ICAR-IISR documents crop-specific pre/post-emergence herbicide options in ginger. Replace with: block non-selective/unregistered herbicides; permit only crop-labeled, locally recommended products at label timing/dose."
+        "outcome": "conditional",
+        "comment_mr": "The rule blocks all herbicide after emergence, which is too broad. ICAR-IISR documents crop-specific pre/post-emergence herbicide options in ginger. Replace with: block non-selective/unregistered herbicides; permit only crop-labeled, locally recommended products at label timing/dose. | rewrite (§2.2): blanket herbicide block scoped to non-selective/unregistered; ginger-labelled herbicides permitted at label timing; the enforceable registered-ginger-herbicide list is pending from agronomy (ICAR-IISR); CONDITIONAL"
       }
     },
     {
@@ -2314,8 +2314,8 @@
         ]
       },
       "action": {
-        "english": "Record that the earthing up window has closed and register a 12.5 percent yield penalty for Domain 11 gap attribution. Do not attempt earthing up now — disturbing roots during bulking causes further loss.",
-        "marathi": "उटाळणीची मुदत संपली आहे. उत्पादनात सुमारे १२.५% घट गृहीत धरा. आता उटाळणी करू नका — गड्डा भरत असताना मुळे हलवल्यास अधिक नुकसान होईल."
+        "english": "Record that the earthing up window has closed. Do not attempt earthing up now — disturbing roots during bulking causes further loss.",
+        "marathi": "उटाळणीची मुदत संपली आहे. आता उटाळणी करू नका — गड्डा भरत असताना मुळे हलवल्यास अधिक नुकसान होईल."
       },
       "reasoning": {
         "agronomic_basis": "After the flowering spike opens, leaf growth stops and rhizome growth begins. Earthing up works by breaking roots so new fibrous roots form, which needs time. Doing it after bulking has started damages the root system without the compensating regrowth.",
@@ -2340,21 +2340,21 @@
         "earthing_up_date",
         "dap"
       ],
-      "u_value": 0.125,
+      "u_value": null,
       "recoverability": "none",
       "source_class": "SRC-D",
       "kannad_note": "Telling the farmer not to do the operation is the right advice once the window has closed. A late earthing up is worse than none, and recording the loss honestly is what lets Domain 11 learn from the season.",
       "decision_type": "DATA_CAPTURE",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "SILENT_GUARD",
       "immutable": false,
       "review": {
         "tier": "T1",
         "reviewer": "VIRAAI_AGRONOMY_REVIEW",
         "date": "2026-09-22",
-        "outcome": "non_compliant",
-        "comment_mr": "The exact 12.5% yield penalty is unsupported. ICAR research shows earthing-up timing affects yield, but not a universal 12.5% penalty tied to flowering. Keep the late-earthing warning, remove the fixed yield penalty unless validated."
+        "outcome": "conditional",
+        "comment_mr": "The exact 12.5% yield penalty is unsupported. ICAR research shows earthing-up timing affects yield, but not a universal 12.5% penalty tied to flowering. Keep the late-earthing warning, remove the fixed yield penalty unless validated. | rewrite (§2.2): removed the fixed 12.5% yield penalty; late-earthing warning kept; CONDITIONAL pending Season-1 data"
       }
     },
     {

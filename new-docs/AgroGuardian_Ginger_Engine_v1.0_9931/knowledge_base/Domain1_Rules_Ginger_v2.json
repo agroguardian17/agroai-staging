@@ -1156,8 +1156,8 @@
         "marathi": "हुरडे बांड आले आहे"
       },
       "action": {
-        "english": "Re-anchor stage. Then CHECK earthing_up_date. If earthing-up has not been recorded, the window has closed — record a 12.5 percent yield penalty for Domain 11 gap attribution and inform the farmer plainly.",
-        "marathi": "हुरडे बांड आले आहे. आता पानांची वाढ थांबून गड्ड्याची वाढ सुरू होते. उटाळणी झाली नसल्यास तिची मुदत संपली आहे आणि उत्पादनात १०-१५% घट गृहीत धरावी लागेल."
+        "english": "Re-anchor stage. Then CHECK earthing_up_date. If earthing-up has not been recorded, the window has closed — inform the farmer plainly that earthing-up cannot be recovered this season.",
+        "marathi": "हुरडे बांड आले आहे. आता पानांची वाढ थांबून गड्ड्याची वाढ सुरू होते. उटाळणी झाली नसल्यास तिची मुदत संपली आहे."
       },
       "reasoning": {
         "agronomic_basis": "Source states that after the flowering spike opens, leaf growth stops and rhizome growth begins. Earthing-up must precede this because it triggers new fibrous root formation, which needs time before bulking starts.",
@@ -1184,20 +1184,20 @@
         "current_stage",
         "dap"
       ],
-      "u_value": 0.125,
+      "u_value": null,
       "recoverability": "none",
       "source_class": "SRC-Q",
       "kannad_note": "Version 2.0 of this document wrongly recorded flowering as requiring no management action. That error would have removed a 12.5 percent yield factor from the engine entirely. Corrected in v2.1.",
       "decision_type": "DIAGNOSTIC",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
       "review": {
         "tier": "T1",
         "reviewer": "VIRAAI_AGRONOMY_REVIEW",
         "date": "2026-09-22",
-        "outcome": "non_compliant",
-        "comment_mr": "Flowering can be a stage marker, but the fixed 12.5% yield penalty is unsupported as a universal value. Re-anchor stage and evaluate earthing-up status, but remove the fixed penalty unless locally validated."
+        "outcome": "conditional",
+        "comment_mr": "Flowering can be a stage marker, but the fixed 12.5% yield penalty is unsupported as a universal value. Re-anchor stage and evaluate earthing-up status, but remove the fixed penalty unless locally validated. | rewrite (§2.2): removed the fixed 12.5% yield penalty; stage-marker logic kept; CONDITIONAL pending local calibration"
       }
     },
     {

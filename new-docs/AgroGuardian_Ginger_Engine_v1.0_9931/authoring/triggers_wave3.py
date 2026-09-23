@@ -94,9 +94,11 @@ TRIGGERS_W3 = {
             ({'water_withdrawal_start_date':'done','soil_texture_class':'light'}, F, '')]},
 
 'D03-DS-001': {
-  'expr': "has_drip IS TRUE AND drip_lateral_spacing_ft IS NULL",
-  'tests': [({'has_drip':True}, T, 'ठिबकाची मांडणी ठरवा'),
-            ({'has_drip':True,'drip_lateral_spacing_ft':4}, F, 'ठरली')]},
+  'expr': "has_drip IS TRUE AND drip_lateral_spacing_ft IS NULL AND soil_texture_class == 'heavy'",
+  'note': 'Rewritten (§2.2): gate on soil_texture_class so it does not misfire on light/medium soils.',
+  'tests': [({'has_drip':True,'soil_texture_class':'heavy'}, T, 'जड जमीन — ठिबक मांडणी ठरवा'),
+            ({'has_drip':True,'soil_texture_class':'heavy','drip_lateral_spacing_ft':4}, F, 'ठरली'),
+            ({'has_drip':True,'soil_texture_class':'light'}, F, 'हलकी जमीन — लागू नाही')]},
 
 'D03-DS-002': {
   'expr': "has_drip IS TRUE AND drip_system_flow_lph IS NULL",

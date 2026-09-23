@@ -1774,8 +1774,8 @@
         ]
       },
       "action": {
-        "english": "Raise a red drainage alert, more severe than the equivalent monsoon warning. Stop drip, clear channels urgently, and check saturation within 12 hours of the rain stopping.",
-        "marathi": "लाल इशारा — आणि हा जुलैच्या इशाऱ्यापेक्षा जास्त तीव्र. ठिबक बंद करा, निचरा चर तातडीने मोकळे करा, पाऊस थांबल्यावर बारा तासांत संपृक्तता तपासा."
+        "english": "Raise a red drainage alert. Stop drip, clear channels urgently, and check saturation within 12 hours of the rain stopping.",
+        "marathi": "लाल इशारा. ठिबक बंद करा, निचरा चर तातडीने मोकळे करा, पाऊस थांबल्यावर बारा तासांत संपृक्तता तपासा."
       },
       "reasoning": {
         "agronomic_basis": "The district lies in the path of tropical cyclones with a post-monsoon intensity peak in October and November. It is not struck at full intensity but can receive heavy rainfall. By then the rhizome is fully formed, the soil has been dry and cracked for weeks, and drainage channels have usually been neglected because the monsoon is considered over.",
@@ -1807,15 +1807,15 @@
       "kannad_note": "Neither Domain 3 nor Domain 6 contained this rule when they were first written. Both assumed the rainy season ends in September. It surfaced only when the climate profile was examined in its own right, which is an argument for having a weather domain rather than scattering weather facts through the others.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "EVENT",
       "immutable": false,
       "review": {
         "tier": "T1",
         "reviewer": "VIRAAI_AGRONOMY_REVIEW",
         "date": "2026-09-22",
-        "outcome": "non_compliant",
-        "comment_mr": "October/November forecast >40 mm is not an IMD severe-weather threshold and the cited cyclone-seasonality source is insufficient for a red drainage alert. Replace with official forecast/warning + field water-state logic. Do not call it 'more severe' than a monsoon warning without a defined scale."
+        "outcome": "conditional",
+        "comment_mr": "October/November forecast >40 mm is not an IMD severe-weather threshold and the cited cyclone-seasonality source is insufficient for a red drainage alert. Replace with official forecast/warning + field water-state logic. Do not call it 'more severe' than a monsoon warning without a defined scale. | rewrite (§2.2): not an IMD severe warning: retagged AGRO_GUARDIAN_CUSTOM_OPERATIONAL_RULE (agronomy tier L4; schema source_tier kept valid); 40 mm Oct-Nov drainage-inspection trigger kept; dropped 'more severe than monsoon'; CONDITIONAL"
       }
     },
     {

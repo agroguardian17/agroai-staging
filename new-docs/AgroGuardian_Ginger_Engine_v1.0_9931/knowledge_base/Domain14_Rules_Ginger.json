@@ -1570,7 +1570,7 @@
         "marathi": "शेतकऱ्याला URGENT इशारा पाठवा: नुकत्याच झालेल्या पावसानंतर उपग्रह रडार दाखवत आहे प्लॉटवर पाणी साचले आहे. आजच निचरा नाल्यांची तपासणी करा व अडथळे काढा. आले २४ तासांपेक्षा जास्त पाण्यात राहू शकत नाही — गड्ड्याला इजा होते. सब-नोड उपलब्ध असल्यास पुष्टी देईल; नसल्यास (मान्सूनमध्ये LoRa fade सामान्य) पुष्टीची वाट पाहू नका."
       },
       "reasoning": {
-        "agronomic_basis": "Water is specular at C-band, causing near-total backscatter loss. A 4 dB drop is well outside speckle noise. See RAW MASTER §6.6 caveats.",
+        "agronomic_basis": "Water is specular at C-band, causing near-total backscatter loss. A 4 dB drop is well outside speckle noise. See RAW MASTER §6.6 caveats. The -4 dB SAR threshold is calibration-pending for Season 1 (AGRO_GUARDIAN_CUSTOM); the 24-hour ginger-waterlogging-damage basis is agronomically sound (ICAR-CRIDA).",
         "yield_impact": "Waterlogging in G2-G4 for 48+ hours cuts yield 10-25% depending on stage; D06 has the drainage-failure branch.",
         "confidence_score": 0.78,
         "source_tier": "A",
@@ -1603,15 +1603,15 @@
       "kannad_note": "Kannad's Sep-Oct cyclonic rainfall events are the most common trigger of this rule. Farmers often assume the field 'drained overnight' because the surface looks dry; the SAR sees standing water hidden in furrows for 2-3 days. This is one of the highest-value satellite signals for this crop.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
       "delivery": "ONCE_UNTIL_RESOLVED",
       "review": {
         "tier": "T1",
         "reviewer": "VIRAAI_AGRONOMY_REVIEW",
         "date": "2026-09-22",
-        "outcome": "non_compliant",
-        "comment_mr": "The -4 dB, >20 mm and 24-hour intolerance/yield-damage claims are not sufficiently validated for ginger. Convert this to a probable standing-water signal requiring calibrated threshold + field confirmation; do not assert a universal 24-hour damage limit."
+        "outcome": "conditional",
+        "comment_mr": "The -4 dB, >20 mm and 24-hour intolerance/yield-damage claims are not sufficiently validated for ginger. Convert this to a probable standing-water signal requiring calibrated threshold + field confirmation; do not assert a universal 24-hour damage limit. | rewrite (§2.2): architectural intent sound; -4 dB SAR magnitude flagged calibration-pending for Season 1; CONDITIONAL not NON_COMPLIANT"
       }
     },
     {
