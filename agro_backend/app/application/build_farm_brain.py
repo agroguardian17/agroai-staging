@@ -91,6 +91,7 @@ from app.domain.satellite_metrics import (
     sar_rvi,
 )
 from app.domain.sensor import Reading
+from app.domain.soil_texture import texture_class_from_fractions
 from app.domain.vpd import vpd_kpa
 from app.domain.weather_station_reading import WeatherStationReading
 from app.domain.yield_forecast import (
@@ -1337,6 +1338,15 @@ def _populate_from_lab_soil(state: dict[str, Any], lab: LabSoilTestView) -> None
     _set(state, "soil_ca_ppm", lab.soil_ca_ppm)
     _set(state, "soil_mg_ppm", lab.soil_mg_ppm)
     _set(state, "soil_s_ppm", lab.soil_s_ppm)
+    # USDA-triangle texture override: a measured sand/silt/clay result supersedes
+    # the soil-type-derived class and stamps the source as "lab" (B5.2).
+    if lab.sand_pct is not None and lab.silt_pct is not None and lab.clay_pct is not None:
+        texture = texture_class_from_fractions(
+            float(lab.sand_pct), float(lab.silt_pct), float(lab.clay_pct)
+        )
+        if texture is not None:
+            _set(state, "soil_texture_class", texture)
+            _set(state, "soil_texture_class_source", "lab")
 
 
 def _geojson_polygon_to_wkt(geojson: Any) -> str | None:

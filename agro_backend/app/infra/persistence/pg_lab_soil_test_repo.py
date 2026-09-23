@@ -13,7 +13,8 @@ from app.application.ports.lab_soil_test_repo import LabSoilTestView
 _SELECT_COLS = (
     "lab_test_id, farm_id, sample_date, "
     "soil_oc_pct, soil_ec, soil_free_lime_pct, "
-    "soil_zn_ppm, soil_fe_ppm, soil_ca_ppm, soil_mg_ppm, soil_s_ppm"
+    "soil_zn_ppm, soil_fe_ppm, soil_ca_ppm, soil_mg_ppm, soil_s_ppm, "
+    "sand_pct, silt_pct, clay_pct"
 )
 
 
@@ -31,6 +32,9 @@ def _row_to_view(row: object) -> LabSoilTestView:
         soil_ca_ppm=r.soil_ca_ppm,
         soil_mg_ppm=r.soil_mg_ppm,
         soil_s_ppm=r.soil_s_ppm,
+        sand_pct=r.sand_pct,
+        silt_pct=r.silt_pct,
+        clay_pct=r.clay_pct,
     )
 
 

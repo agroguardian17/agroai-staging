@@ -1717,3 +1717,67 @@ async def test_qa_counters_absent_leaves_fields_unknown() -> None:
     ).state
     assert state["true_alarm_count"] is None
     assert state["false_alarm_count"] is None
+
+
+class _FakeLabRepo:
+    def __init__(self, view: object) -> None:
+        self._v = view
+
+    async def latest_for_farm(self, farm_id: uuid.UUID) -> object:
+        return self._v
+
+
+@pytest.mark.asyncio
+async def test_lab_sand_silt_clay_overrides_derived_texture_class() -> None:
+    """A lab particle-size result supersedes the soil-type-derived texture
+    class and stamps soil_texture_class_source = 'lab' (B5.2)."""
+    from app.application.ports.farm_repo import FarmFacts
+    from app.application.ports.lab_soil_test_repo import LabSoilTestView
+
+    # Black soil derives "heavy"; the lab reports a sandy (light) mix.
+    facts = FarmFacts(farm_id=_FARM, soil_type="black")
+    lab = LabSoilTestView(
+        lab_test_id=uuid.uuid4(),
+        farm_id=_FARM,
+        sample_date=date(2026, 7, 1),
+        sand_pct=Decimal("90"),
+        silt_pct=Decimal("5"),
+        clay_pct=Decimal("5"),
+    )
+    declared = frozenset({"soil_texture_class", "soil_texture_class_source", "soil_test_available"})
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(_sample_plot()),
+        crop_season_repo=_FakeSeasonRepo(_sample_season()),
+        farm_repo=_FakeFarmRepo(facts),
+        lab_soil_test_repo=_FakeLabRepo(lab),
+        declared_fields=declared,
+    )
+    state = (
+        await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)
+    ).state
+    assert state["soil_texture_class"] == "light"  # lab sandy mix overrides black->heavy
+    assert state["soil_texture_class_source"] == "lab"
+
+
+@pytest.mark.asyncio
+async def test_lab_without_particle_sizes_keeps_derived_texture() -> None:
+    from app.application.ports.farm_repo import FarmFacts
+    from app.application.ports.lab_soil_test_repo import LabSoilTestView
+
+    facts = FarmFacts(farm_id=_FARM, soil_type="black")
+    lab = LabSoilTestView(lab_test_id=uuid.uuid4(), farm_id=_FARM, sample_date=date(2026, 7, 1))
+    declared = frozenset({"soil_texture_class", "soil_texture_class_source"})
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(_sample_plot()),
+        crop_season_repo=_FakeSeasonRepo(_sample_season()),
+        farm_repo=_FakeFarmRepo(facts),
+        lab_soil_test_repo=_FakeLabRepo(lab),
+        declared_fields=declared,
+    )
+    state = (
+        await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)
+    ).state
+    assert state["soil_texture_class"] == "heavy"  # falls back to black->heavy
+    assert state["soil_texture_class_source"] == "derived"
