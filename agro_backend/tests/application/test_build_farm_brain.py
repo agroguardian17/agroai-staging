@@ -21,6 +21,7 @@ from app.application.build_farm_brain import (
     build_farm_brain,
 )
 from app.application.ports.crop_season_repo import CropSeasonView
+from app.application.ports.qa_counters_repo import QaCounters
 from app.domain.sensor import Reading, TransmissionType
 from app.domain.weather_station_reading import WeatherStationReading
 
@@ -1655,3 +1656,64 @@ async def test_fills_rainfall_24h_and_wind_gust_for_severe_weather_rule() -> Non
     state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
     assert state["rainfall_24h_mm"] == 80.0  # max over today, today+1 (not day+2)
     assert state["wind_gust_kmph"] == 48.0
+
+
+class _FakeQaCountersRepo:
+    def __init__(self, counts: QaCounters) -> None:
+        self._c = counts
+        self.asked_for: str | None = None
+
+    async def counts_for_plot(self, plot_id: str) -> QaCounters:
+        self.asked_for = plot_id
+        return self._c
+
+
+@pytest.mark.asyncio
+async def test_qa_counters_fill_the_d12_count_fields() -> None:
+    declared = frozenset(
+        {
+            "true_alarm_count",
+            "false_alarm_count",
+            "photo_uploaded_count",
+            "photo_labelled_count",
+        }
+    )
+    repo = _FakeQaCountersRepo(
+        QaCounters(
+            true_alarm_count=4,
+            false_alarm_count=1,
+            photo_uploaded_count=7,
+            photo_labelled_count=5,
+        )
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(_season_min()),
+        qa_counters_repo=repo,
+        declared_fields=declared,
+    )
+    state = (
+        await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)
+    ).state
+    assert repo.asked_for == "PLOT_PILOT_001"
+    assert state["true_alarm_count"] == 4
+    assert state["false_alarm_count"] == 1
+    assert state["photo_uploaded_count"] == 7
+    assert state["photo_labelled_count"] == 5
+
+
+@pytest.mark.asyncio
+async def test_qa_counters_absent_leaves_fields_unknown() -> None:
+    declared = frozenset({"true_alarm_count", "false_alarm_count"})
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(None),
+        plot_repo=_FakePlotRepo(None),
+        crop_season_repo=_FakeSeasonRepo(_season_min()),
+        declared_fields=declared,
+    )
+    state = (
+        await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)
+    ).state
+    assert state["true_alarm_count"] is None
+    assert state["false_alarm_count"] is None
