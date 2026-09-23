@@ -1354,8 +1354,15 @@
       "kannad_note": "The machine does not make fertiliser, bring rain or kill pathogens. It reminds at the right time, and Domain 11 puts a number on what that is worth.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-POS-003",
@@ -1465,8 +1472,15 @@
       "kannad_note": "The product is sellable before any machine learning exists. That removes the pressure to fake the capability and redirects effort to recording the right data, which is what actually compounds.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-LOG-001",
@@ -1564,8 +1578,15 @@
       "kannad_note": "The interface design matters here more than the model. If recording an earthing-up date takes three taps it will happen; if it takes a form it will not.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-LOG-003",
@@ -1610,8 +1631,15 @@
       "kannad_note": "The ATmega328P sub-node has limited power budget, so this is a real constraint rather than a preference. Sampling everything hourly all season would not survive the season.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-LANG-001",
@@ -1651,8 +1679,15 @@
       "kannad_note": "The English version is for the operator and for analysis, not for the farmer. Keeping both in sync from one source is why every rule in these files carries both.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-LANG-002",
@@ -1694,8 +1729,15 @@
       "kannad_note": "This is why every rule in this knowledge base carries a u-value and a yield_impact statement. Those fields exist so the fourth part of the message can be generated automatically.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-VOC-001",
@@ -1738,8 +1780,15 @@
       "kannad_note": "The vocabulary is the first step of the training programme, not the last. Thirteen terms are already identified across the domains and local Kannad usage may add more.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-VOC-002",
@@ -1780,8 +1829,15 @@
       "kannad_note": "This is the kind of gap that only closes by listening to farmers in the field. It cannot be researched from published material because published material uses the standard term.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Confidence 0.70 — architectural intent OK, पण source / local validation पूर्ण होईपर्यंत CONDITIONAL. Season 1 data नंतर confidence upgrade करावी."
+      }
     },
     {
       "rule_id": "D12-MOD-001",
@@ -1823,8 +1879,15 @@
       "kannad_note": "The blocklist rules in Domains 5, 6 and 9 exist precisely because unsafe recommendations are available in the source material. A generative layer over that base would be the wrong order to build in.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-MOD-002",
@@ -1866,8 +1929,15 @@
       "kannad_note": "Worth stating in a partnership conversation. The dataset does not exist, and the organisation that builds it holds something the open models do not have.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-CLS-001",
@@ -1964,8 +2034,15 @@
       "kannad_note": "The correct role for ML here is narrow — automating two observations inside a tree that stays human-authored. That is a much more defensible design than a end-to-end classifier.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-IMG-001",
@@ -2005,8 +2082,15 @@
       "kannad_note": "Marked irrecoverable because a season without photograph collection is a season of training data permanently lost, exactly like the operation records.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-IMG-002",
@@ -2052,8 +2136,15 @@
       "kannad_note": "The flowering spike at rank 6 is worth noting separately. It is not a disease sign but a stage marker, and it re-anchors the calendar and sets the earthing-up deadline even when the planting date was entered wrongly.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
+      }
     },
     {
       "rule_id": "D12-VOI-001",
@@ -2093,8 +2184,15 @@
       "kannad_note": "Voice matters for accessibility where literacy is limited, so it is deferred rather than dismissed. Supplying the controlled vocabulary as ASR biasing hints is what makes it work when it arrives.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-COLD-001",
@@ -2139,8 +2237,15 @@
       "kannad_note": "Saying what is missing also creates the incentive to fix it. A farmer told that a soil test would sharpen the fertiliser advice is more likely to get one than a farmer given confident-sounding generic doses.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
+      }
     },
     {
       "rule_id": "D12-COLD-002",
@@ -2183,8 +2288,15 @@
       "kannad_note": "This is why every rule in the knowledge base carries a confidence score and a source class. Those fields exist so this rule can be implemented rather than promised.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-AL-001",
@@ -2230,8 +2342,15 @@
       "kannad_note": "If the answer is repeatedly labour unavailable in August, that is not a message problem — it is the earthing-up labour competition identified in Domain 8, and the fix is a reminder at 60 DAP rather than better wording.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-AL-002",
@@ -2273,8 +2392,15 @@
       "kannad_note": "A symptom outside the tree is the most interesting entry of the five. It means the differential diagnosis is incomplete, which is a finding worth having early.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-CLU-001",
@@ -2320,7 +2446,14 @@
       "decision_type": "POLICY",
       "automation": "none",
       "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "legal_review_required",
+        "comment_mr": "DPDP Act 2023 / privacy compliance — legal/privacy desk कडून consent wording, retention period व erasure statement verification झाल्यावर production release."
+      }
     },
     {
       "rule_id": "D12-CLU-002",
@@ -2366,8 +2499,15 @@
       "kannad_note": "This is one of two things the cluster architecture makes possible that a single-farm app cannot replicate. The other is warning a neighbour before symptoms appear.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-DPDP-001",
@@ -2434,7 +2574,14 @@
       "status": "PHASE_1_RAW_UNVALIDATED",
       "delivery": "SILENT_GUARD",
       "immutable": true,
-      "immutable_reason": "Consent before collection is a legal requirement."
+      "immutable_reason": "Consent before collection is a legal requirement.",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "legal_review_required",
+        "comment_mr": "Privacy-law compliance is outside agronomy scope. Keep the consent gate, but obtain legal/privacy review for the exact DPDP wording, retention and erasure statements."
+      }
     },
     {
       "rule_id": "D12-DPDP-002",
@@ -2498,7 +2645,14 @@
       "status": "PHASE_1_RAW_UNVALIDATED",
       "delivery": "SILENT_GUARD",
       "immutable": true,
-      "immutable_reason": "Separate consent for data sharing is a legal requirement."
+      "immutable_reason": "Separate consent for data sharing is a legal requirement.",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "legal_review_required",
+        "comment_mr": "Separate-consent architecture is sensible, but exact DPDP purpose/consent interpretation requires legal/privacy review. Agronomy sign-off is not applicable."
+      }
     },
     {
       "rule_id": "D12-DPDP-003",
@@ -2615,7 +2769,14 @@
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
       "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "legal_review_required",
+        "comment_mr": "DPDP Act 2023 consent/privacy — कायदेशीर/नियामक क्षेत्र, agronomy scope बाहेर. Legal/regulatory desk कडून final wording आणि compliance verification झाल्यावर production release."
+      }
     },
     {
       "rule_id": "D12-EVAL-001",
@@ -2658,8 +2819,15 @@
       "kannad_note": "Messages sent measures effort, app opens measures curiosity, and neither measures whether the crop was better. Compliance rate measures the only thing that converts advice into yield.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-EVAL-002",
@@ -2704,8 +2872,15 @@
       "kannad_note": "The counter-pressure is notification fatigue. The answer is to keep the advisory quiet in calm periods so that a red alert still carries weight, rather than to raise the threshold on the alerts that matter.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-EVAL-003",
@@ -2745,8 +2920,15 @@
       "kannad_note": "The before-and-after comparison is confounded by weather, which varies more here than in most belts. Reporting it alongside the season's rainfall against the long-term average is the honest way to present it.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
+      }
     },
     {
       "rule_id": "D12-MOAT-001",
@@ -2786,8 +2968,15 @@
       "kannad_note": "The most undervalued asset is field disease history. Bacterial wilt persists for many years, prior outbreak is a first-class input, paper does not survive and memory is incomplete — and unlike almost everything else, it appreciates with age.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D12-ROAD-001",
@@ -2832,7 +3021,14 @@
       "decision_type": "POLICY",
       "automation": "none",
       "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "legal_review_required",
+        "comment_mr": "DPDP Act 2023 / privacy compliance — legal/privacy desk कडून consent wording, retention period व erasure statement verification झाल्यावर production release."
+      }
     },
     {
       "rule_id": "D12-ROAD-002",
@@ -2878,8 +3074,15 @@
       "kannad_note": "Stating when the claim becomes true is more useful than claiming it now. It also gives the team a concrete definition of done for the learning layer rather than an open-ended aspiration.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Confidence 0.70 — architectural intent OK, पण source / local validation पूर्ण होईपर्यंत CONDITIONAL. Season 1 data नंतर confidence upgrade करावी."
+      }
     },
     {
       "rule_id": "D12-LOG-004",
@@ -2924,8 +3127,15 @@
       "kannad_note": "A device already in the field, already accepted by the farmer, producing a measurement that is currently thrown away. That is the cheapest data asset available in the whole system.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
+      }
     },
     {
       "rule_id": "D12-COLD-003",
@@ -2968,8 +3178,15 @@
       "kannad_note": "Eight rules in Domain 10 alone are VERIFY class. Flagging them keeps the open item list live rather than letting unverified values quietly harden into assumed facts.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     }
   ],
   "open_items": [

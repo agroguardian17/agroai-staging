@@ -16,27 +16,30 @@ and a script that folds their sign-offs back into the KB JSON.
    - `review_packet.md` — the same rules with full English + Marathi text, for
      reading the content.
 
-2. **Review.** For each rule the panel signs off, fill the four columns in
-   `review_tracker.csv`:
-   - `review_outcome` — `accepted`, `revise`, or `rejected`
-   - `reviewer` — who reviewed (e.g. `panel_kannad`, `dr_patil`)
-   - `review_date` — `YYYY-MM-DD`
-   - `review_comment_mr` — a Marathi note (optional)
+2. **Review.** For each rule the panel signs off, fill the four sign-off columns
+   in the tracker (`.csv` or the delivered `.xlsx`):
+   - `review_outcome` — one of `COMPLIANT`, `CONDITIONAL`, `NON_COMPLIANT`,
+     `LEGAL_REVIEW_REQUIRED`, `LEGAL_FOOD_SAFETY_REVIEW_REQUIRED` (case-insensitive;
+     the legacy `accepted`/`revise`/`rejected` are still honoured)
+   - `reviewer` — who reviewed (e.g. `VIRAAI_AGRONOMY_REVIEW`)
+   - `review_date` — `YYYY-MM-DD` (or an Excel serial, auto-converted)
+   - `review_comment_mr` — a Marathi note (the condition, for CONDITIONAL rules)
 
-   Leave the four columns blank for rules not yet reviewed; only filled rows are
-   applied.
+   Leave the sign-off columns blank for rules not yet reviewed; only filled rows
+   are applied.
 
 3. **Apply the sign-offs** back into the JSON (dry run first):
    ```
-   python build/kb_apply_reviews.py --dir knowledge_base --csv review/review_tracker.csv
-   python build/kb_apply_reviews.py --dir knowledge_base --csv review/review_tracker.csv --apply
+   python build/kb_apply_reviews.py --dir knowledge_base --tracker review/review_tracker_completed_v1.csv
+   python build/kb_apply_reviews.py --dir knowledge_base --tracker review/review_tracker_completed_v1.csv --apply
    ```
-   - `accepted` → the rule's `status` becomes `AGRONOMIST_REVIEWED` and a
+   - `COMPLIANT` / `CONDITIONAL` → `status` becomes `AGRONOMIST_REVIEWED` and a
      `review` block `{tier, reviewer, date, outcome, comment_mr}` is written
-     (mirrors the existing convention, e.g. `D05-CH-001`).
-   - `revise` / `rejected` → the `review` block is recorded for the trail;
-     `status` is left unchanged so the rule stays out of the reviewed set (act on
-     the comment, then re-review).
+     (mirrors `D05-CH-001`). CONDITIONAL keeps its condition in the note for
+     audit + Season-1 elevation.
+   - `NON_COMPLIANT` → recorded for the trail; `status` unchanged (these are
+     rewritten separately — see the NON_COMPLIANT rewrite migration).
+   - `LEGAL_*` → recorded; `status` unchanged; routed to the legal track.
 
 4. **Regenerate** (optional but tidy): `python build/json_to_sql.py --dir
    knowledge_base --out "$(pwd)/generated/agroguardian_ginger_kb.sql"`, copy to
