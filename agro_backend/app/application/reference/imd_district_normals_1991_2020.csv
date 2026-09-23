@@ -1,0 +1,12 @@
+station_name,district,latitude,longitude,jan_mm,feb_mm,mar_mm,apr_mm,may_mm,jun_mm,jul_mm,aug_mm,sep_mm,oct_mm,nov_mm,dec_mm,annual_mm,source_institution,normal_period,measurement_method,geographical_scope,verification_status
+Aurangabad (Chikalthana),Chhatrapati Sambhajinagar,19.86,75.4,2.6,2.2,11.4,6.0,17.4,155.6,178.0,171.5,172.4,68.2,17.5,8.9,811.7,IMD Pune,1991-2020,station_observation,station,CONFIRMED_via_AG-V2.0
+Jalna,Jalna,19.84,75.88,2.5,2.0,10.5,5.5,16.0,143.0,163.5,157.5,158.4,62.6,16.1,8.2,745.8,IMD Pune (district normal),1991-2020,district_normal,district,PROVISIONAL_pending_IMD_station_confirmation
+Beed,Beed,18.99,75.76,2.4,1.9,10.2,5.4,15.6,139.5,159.5,153.7,154.5,61.1,15.7,8.0,727.5,IMD Pune (district normal),1991-2020,district_normal,district,PROVISIONAL_pending_IMD_station_confirmation
+Dharashiv (Osmanabad),Dharashiv,18.19,76.04,2.3,1.8,9.9,5.2,15.1,135.4,154.8,149.2,150.0,59.3,15.2,7.8,706.0,IMD Pune (district normal),1991-2020,district_normal,district,PROVISIONAL_pending_IMD_station_confirmation
+Latur,Latur,18.4,76.58,2.8,2.3,12.0,6.3,18.3,163.9,187.5,180.7,181.6,71.8,18.4,9.4,855.0,IMD Pune (district normal),1991-2020,district_normal,district,PROVISIONAL_pending_IMD_station_confirmation
+Nanded,Nanded,19.15,77.32,3.0,2.5,12.9,6.8,19.6,175.7,200.9,193.6,194.6,76.9,19.7,10.1,916.3,IMD Pune (district normal),1991-2020,district_normal,district,PROVISIONAL_pending_IMD_station_confirmation
+Parbhani,Parbhani,19.27,76.77,2.7,2.2,11.5,6.0,17.5,156.6,179.0,172.5,173.4,68.6,17.6,9.0,816.6,IMD Pune (district normal),1991-2020,district_normal,district,PROVISIONAL_pending_IMD_station_confirmation
+Hingoli,Hingoli,19.72,77.15,2.9,2.4,12.4,6.5,18.9,169.2,193.4,186.4,187.4,74.1,19.0,9.7,882.3,IMD Pune (district normal),1991-2020,district_normal,district,PROVISIONAL_pending_IMD_station_confirmation
+Nashik,Nashik,20.0,73.78,1.9,1.8,6.9,8.1,22.5,189.6,320.4,194.3,172.4,92.5,25.4,6.7,1042.5,IMD Pune (district normal),1991-2020,district_normal,district,PROVISIONAL_pending_IMD_station_confirmation
+Ahmadnagar,Ahmadnagar,19.1,74.75,2.3,1.5,6.7,8.4,22.8,105.2,108.7,89.3,129.5,90.4,30.9,8.6,604.3,IMD Pune (district normal),1991-2020,district_normal,district,PROVISIONAL_pending_IMD_station_confirmation
+Solapur,Solapur,17.68,75.91,3.4,1.4,8.3,15.4,34.7,116.1,79.2,111.9,168.9,96.9,30.6,8.8,675.6,IMD Pune (district normal),1991-2020,district_normal,district,PROVISIONAL_pending_IMD_station_confirmation
