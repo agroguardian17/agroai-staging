@@ -70,6 +70,12 @@ from app.application.ports.season_operations_repo import SeasonOperationsRepo
 from app.application.ports.weather_forecast_repo import ForecastRow, WeatherForecastRepo
 from app.application.ports.weather_station_reading_repo import WeatherStationReadingRepo
 from app.application.ports.yield_model_repo import YieldModelRepo, YieldPredictionLog
+from app.application.reference.pesticide_registry import (
+    CROP_INPUT_BLOCKLIST as _REGISTRY_BLOCKLIST,
+)
+from app.application.reference.pesticide_registry import (
+    PHI_DAYS_BY_GROUP as _PHI_DAYS_BY_GROUP,
+)
 from app.domain.plot import Plot
 from app.domain.satellite_metrics import (
     acre_to_hectare,
@@ -665,38 +671,21 @@ GINGER_CROP_KEY = "Ginger"
 # Inputs the KB has an immutable "no" on for a crop (food safety / Seed Act).
 # When a blocklisted input is recorded, a pre-harvest-interval number would
 # contradict the block, so PHI is forced to UNKNOWN and the trace fields below
-# are set for the D05 'blocklisted_input_detected' branch. Seeded from
-# AGRONOMY_SIGNOFF (2026-09-21): chlorpyriphos is on the D05-CH-001 blocklist
-# for ginger. Replaced/extended by ginger_pesticide_registry.csv when it lands.
-# Keys are matched case-insensitively against the entered pesticide group/name.
+# are set for the D05 'blocklisted_input_detected' branch. The blocklist and the
+# PHI-by-group table are both loaded from ginger_pesticide_registry.csv
+# (agronomy-team deliverable, VNMKV-aligned) via ``reference.pesticide_registry``
+# - 9 blocklisted molecules incl. chlorpyriphos + the 2024 streptocycline ban.
+# Group keys are lower-cased there and matched case-insensitively below.
 _CROP_INPUT_BLOCKLIST: dict[str, dict[str, dict[str, str]]] = {
-    GINGER_CROP_KEY: {
-        "chlorpyriphos": {
-            "reason": "Not registered on ginger; blocked by D05-CH-001.",
-            "source_ref": "CIB&RC label / FSSAI MRL; AGRONOMY_SIGNOFF 2026-09-21",
-        },
-    },
+    GINGER_CROP_KEY: _REGISTRY_BLOCKLIST,
 }
 
-# Pre-harvest interval (days) by pesticide FRAC/IRAC group or common name.
-# AGRONOMIST TO CONFIRM the full table (ginger_pesticide_registry.csv, ETA
-# 2026-09-30); conservative default for anything unlisted. Getting this wrong is
-# a food-safety risk, so the default errs long (restrictive). chlorpyriphos is
-# intentionally absent - it is blocklisted (see _CROP_INPUT_BLOCKLIST), never
-# assigned a PHI.
+# Pre-harvest interval (days) by pesticide group comes from the registry
+# (``_PHI_DAYS_BY_GROUP``, imported above). Anything unlisted falls through to
+# this conservative default; getting PHI wrong is a food-safety risk, so the
+# default errs long (restrictive). Blocklisted molecules carry no PHI - they are
+# surfaced via _CROP_INPUT_BLOCKLIST instead.
 _PHI_DAYS_DEFAULT = 21
-_PHI_DAYS_BY_GROUP: dict[str, int] = {
-    "M03": 7,
-    "mancozeb": 7,
-    "M01": 7,
-    "copper": 5,
-    "3": 7,
-    "quinalphos": 21,
-    "4A": 7,
-    "imidacloprid": 40,
-    "28": 3,
-    "chlorantraniliprole": 5,
-}
 
 # IMD 1991-2020 monthly rainfall normals (mm) by station, with provenance
 # (AGRONOMY_SIGNOFF / VJH-V1.0 §6). Ch. Sambhajinagar plots key to Chikalthana.
@@ -776,7 +765,7 @@ def _phi_days_remaining(state: dict[str, Any], today: date) -> int | None:
         group = state.get(group_field)
         if str(group).strip().lower() in bl:
             continue
-        phi = _PHI_DAYS_BY_GROUP.get(str(group), _PHI_DAYS_DEFAULT)
+        phi = _PHI_DAYS_BY_GROUP.get(str(group).strip().lower(), _PHI_DAYS_DEFAULT)
         remaining = max(0, phi - (today - d).days)
         best = remaining if best is None else max(best, remaining)
     return best

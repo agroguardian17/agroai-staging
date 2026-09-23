@@ -1155,7 +1155,7 @@ async def test_phi_rainfall_deviation_and_cyclone() -> None:
         declared_fields=declared,
     )
     state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
-    assert state["phi_days_remaining"] == 4
+    assert state["phi_days_remaining"] == 18  # registry mancozeb 21 - 3 days
     assert state["severe_weather_alert_active"] is True  # wind 70 >= 40 (OR rule)
     assert state["rainfall_deviation_pct"] is not None
 
@@ -1386,7 +1386,9 @@ async def test_blocklisted_pesticide_forces_phi_unknown_and_flags() -> None:
     assert state["phi_days_remaining"] is None  # never a misleading number
     assert state["phi_blocklist_hit"] is True
     assert state["farmer_alert_type"] == "blocklisted_input_detected"
-    assert "D05-CH-001" in state["blocklist_reason"]
+    # Reason + source now come from the pesticide registry (v1.1); assert the
+    # block is explained and attributed rather than a specific provenance string.
+    assert state["blocklist_reason"]
     assert state["blocklist_source_ref"]
 
 
@@ -1416,7 +1418,7 @@ async def test_blocklisted_input_does_not_suppress_other_valid_phi() -> None:
     ops = SeasonOperationsView(
         season_id=_SEASON,
         last_fungicide_date=today - timedelta(days=2),
-        last_fungicide_group="copper",  # PHI 5 -> 3 remaining
+        last_fungicide_group="copper_oxychloride",  # registry PHI 15 -> 13 remaining
         last_insecticide_date=today - timedelta(days=1),
         last_insecticide_group="chlorpyriphos",  # blocklisted
     )
@@ -1440,7 +1442,7 @@ async def test_blocklisted_input_does_not_suppress_other_valid_phi() -> None:
     )
     state = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
     assert state["phi_blocklist_hit"] is True
-    assert state["phi_days_remaining"] == 3  # copper 5 - 2 days
+    assert state["phi_days_remaining"] == 13  # copper_oxychloride 15 - 2 days
 
 
 @pytest.mark.asyncio
