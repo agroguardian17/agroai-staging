@@ -161,9 +161,10 @@ def factor_intensity(
         if spacing is None:
             return None
         try:
-            return 1.0 if float(spacing) < 4.5 else 0.0  # < 4.5 ft = too close on heavy soil
+            close = float(spacing) < 4.5  # type: ignore[arg-type]  # <4.5 ft = too close
         except (TypeError, ValueError):
             return None
+        return 1.0 if close else 0.0
     if factor_id == 15:  # herbicide damage after emergence
         if signals.get("phi_blocklist_hit") or signals.get("herbicide_post_emergent_date"):
             return 1.0
