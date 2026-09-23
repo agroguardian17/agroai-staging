@@ -8,12 +8,48 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.application.ports.farmer_consent_repo import FarmerConsentView
+from app.application.ports.farmer_consent_repo import ConsentCapture, FarmerConsentView
 
 _COLS = (
     "farmer_id, consent_advisory, consent_research, consent_date, "
     "third_party_share_consent_given, data_retention_until, deletion_requested, "
     "cluster_anonymised, sat_attribution_shown, sat_public_display_context"
+)
+
+_CAPTURE_SQL = text(
+    """
+    INSERT INTO farmer_consent (
+        farmer_id, tenant_id, consent_advisory, consent_research,
+        third_party_share_consent_given, consent_date, data_retention_until,
+        consent_version, consent_notice_hash, notice_shown_at, consent_channel,
+        parental_consent_by, parental_consent_verified, updated_at
+    ) VALUES (
+        :farmer_id, :tenant_id, :consent_advisory, :consent_research,
+        :third_party, :consent_date, :data_retention_until,
+        :consent_version, :consent_notice_hash, :notice_shown_at, :consent_channel,
+        :parental_consent_by, :parental_consent_verified, now()
+    )
+    ON CONFLICT (farmer_id) DO UPDATE SET
+        consent_advisory = EXCLUDED.consent_advisory,
+        consent_research = EXCLUDED.consent_research,
+        third_party_share_consent_given = EXCLUDED.third_party_share_consent_given,
+        consent_date = EXCLUDED.consent_date,
+        data_retention_until = EXCLUDED.data_retention_until,
+        consent_version = EXCLUDED.consent_version,
+        consent_notice_hash = EXCLUDED.consent_notice_hash,
+        notice_shown_at = EXCLUDED.notice_shown_at,
+        consent_channel = EXCLUDED.consent_channel,
+        parental_consent_by = EXCLUDED.parental_consent_by,
+        parental_consent_verified = EXCLUDED.parental_consent_verified,
+        updated_at = now()
+    """
+)
+
+_EVENT_SQL = text(
+    """
+    INSERT INTO consent_event (farmer_id, event_type, scope, consent_version, channel, actor)
+    VALUES (:farmer_id, :event_type, :scope, :consent_version, :channel, :actor)
+    """
 )
 
 
@@ -40,6 +76,48 @@ class PgFarmerConsentRepo:
             sat_attribution_shown=r.sat_attribution_shown,
             sat_public_display_context=r.sat_public_display_context,
         )
+
+    async def capture(self, record: ConsentCapture) -> None:
+        params = {
+            "farmer_id": record.farmer_id,
+            "tenant_id": record.tenant_id,
+            "consent_advisory": record.consent_advisory,
+            "consent_research": record.consent_research,
+            "third_party": record.third_party_share_consent_given,
+            "consent_date": record.consent_date,
+            "data_retention_until": record.data_retention_until,
+            "consent_version": record.consent_version,
+            "consent_notice_hash": record.consent_notice_hash,
+            "notice_shown_at": record.notice_shown_at,
+            "consent_channel": record.consent_channel,
+            "parental_consent_by": record.parental_consent_by,
+            "parental_consent_verified": record.parental_consent_verified,
+        }
+        async with self._sm() as session:
+            await session.execute(_CAPTURE_SQL, params)
+            await session.commit()
+
+    async def record_event(
+        self,
+        *,
+        farmer_id: uuid.UUID,
+        event_type: str,
+        scope: str,
+        consent_version: str | None,
+        channel: str | None,
+        actor: str | None,
+    ) -> None:
+        params = {
+            "farmer_id": farmer_id,
+            "event_type": event_type,
+            "scope": scope,
+            "consent_version": consent_version,
+            "channel": channel,
+            "actor": actor,
+        }
+        async with self._sm() as session:
+            await session.execute(_EVENT_SQL, params)
+            await session.commit()
 
 
 __all__ = ["PgFarmerConsentRepo"]
