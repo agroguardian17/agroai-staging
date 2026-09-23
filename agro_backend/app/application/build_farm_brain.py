@@ -70,6 +70,9 @@ from app.application.ports.season_operations_repo import SeasonOperationsRepo
 from app.application.ports.weather_forecast_repo import ForecastRow, WeatherForecastRepo
 from app.application.ports.weather_station_reading_repo import WeatherStationReadingRepo
 from app.application.ports.yield_model_repo import YieldModelRepo, YieldPredictionLog
+from app.application.reference.imd_normals import (
+    STATION_RAINFALL_NORMAL as _STATION_RAINFALL_NORMAL,
+)
 from app.application.reference.pesticide_registry import (
     CROP_INPUT_BLOCKLIST as _REGISTRY_BLOCKLIST,
 )
@@ -687,21 +690,11 @@ _CROP_INPUT_BLOCKLIST: dict[str, dict[str, dict[str, str]]] = {
 # surfaced via _CROP_INPUT_BLOCKLIST instead.
 _PHI_DAYS_DEFAULT = 21
 
-# IMD 1991-2020 monthly rainfall normals (mm) by station, with provenance
-# (AGRONOMY_SIGNOFF / VJH-V1.0 §6). Ch. Sambhajinagar plots key to Chikalthana.
-# Additional Marathwada + expansion stations arrive as
-# imd_district_normals_1991_2020.csv (ETA 2026-09-25); add rows here.
-_STATION_RAINFALL_NORMAL: dict[str, dict[str, Any]] = {
-    "chikalthana": {
-        # Jan..Dec
-        "monthly_mm": [2.6, 2.2, 11.4, 6.0, 17.4, 155.6, 178.0, 171.5, 172.4, 68.2, 17.5, 8.9],
-        "annual_mm": 811.7,
-        "source_institution": "IMD",
-        "station_name": "Aurangabad (Chikalthana)",
-        "normal_period": "1991-2020",
-        "geographical_scope": "station",
-    },
-}
+# IMD 1991-2020 monthly rainfall normals (mm) by station come from
+# imd_district_normals_1991_2020.csv (agronomy deliverable), loaded via
+# ``reference.imd_normals`` - 11 stations (Chikalthana CONFIRMED + 10
+# PROVISIONAL), each carrying full provenance. Ch. Sambhajinagar plots key to
+# Chikalthana.
 # Interim agro-zone -> IMD station, until per-plot station codes are entered.
 _ZONE_TO_STATION = {
     "marathwada_central": "chikalthana",
