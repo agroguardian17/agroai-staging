@@ -530,8 +530,15 @@
       "kannad_note": "Marathwada has pockets of sodic and saline soil, particularly in low-lying command areas. This must be screened before any other planning, because no amount of drip or mulch compensates.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D02-SL-002",
@@ -571,8 +578,15 @@
       "kannad_note": "Kannad vertisol is generally medium-deep to deep, so this is the one soil criterion of six that is naturally satisfied here.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D02-CA-001",
@@ -620,8 +634,15 @@
       "kannad_note": "In other belts micronutrient spray is an enhancement. Here it exists to prevent an expected loss, which is a different budget line and a different priority.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
+      }
     },
     {
       "rule_id": "D02-CA-002",
@@ -903,9 +924,16 @@
       "kannad_note": "July here delivers about 195 mm, the wettest month, and the crop is then at end of G2 or start of G3 — the most sensitive point. Drainage channels are not a monsoon task; they must exist before planting.",
       "decision_type": "BLOCK",
       "automation": "refusal",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "ONCE_UNTIL_RESOLVED",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Good drainage and raised beds are strongly supported, but 25–30 cm beds + 60 cm furrows + mandatory external outlet are not universal ginger standards. IISR guidance supports raised beds/drainage with different dimensions. Make geometry soil/slope specific."
+      }
     },
     {
       "rule_id": "D02-DR-003",
@@ -973,9 +1001,16 @@
       "kannad_note": "This rule must also fire in October and November, not only during the monsoon. Cyclonic rainfall reaches this district in those months, and by then the channels have been neglected for weeks while the rhizome is fully formed.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "EVENT",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D02-ST-001",
@@ -1023,8 +1058,15 @@
       "kannad_note": "Four months of lead time is not caution; laboratory turnaround plus the need to buy amendments before land preparation makes any later request useless for this season.",
       "decision_type": "DATA_CAPTURE",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
+      }
     },
     {
       "rule_id": "D02-ST-002",
@@ -1068,8 +1110,15 @@
       "kannad_note": "Zero cost, one day, no laboratory. For this crop in this soil it is arguably more decisive than the chemical panel.",
       "decision_type": "DATA_CAPTURE",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
+      }
     },
     {
       "rule_id": "D02-TL-001",
@@ -1113,8 +1162,15 @@
       "kannad_note": "Official guidance says one to two kulav passes. Black soil forms larger clods, so three to four is more realistic here, and a rotavator is often needed to finish.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D02-TL-002",
@@ -1158,8 +1214,15 @@
       "kannad_note": "The chain is tight: March ploughing, April solarization, May bed forming and drip, planting by 7 June. Losing March compresses everything downstream.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D02-TL-003",
@@ -1233,9 +1296,16 @@
       "kannad_note": "This is a genuinely sensor-enabled advisory with no manual equivalent. The farmer currently judges vafsa by squeezing a handful of soil, which is a coarse test on a narrow window.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "EVENT",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Confidence 0.70 — architectural intent OK, पण source / local validation पूर्ण होईपर्यंत CONDITIONAL. Season 1 data नंतर confidence upgrade करावी."
+      }
     },
     {
       "rule_id": "D02-WD-001",
@@ -1277,8 +1347,15 @@
       "kannad_note": "The causal chain runs: heavy FYM carries weed seed, weed pressure forces more weeding, weeding injures the rhizome, injury admits rot. Weed removal two months before planting is therefore a disease-prevention operation, not a tidiness one.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D02-OM-001",
@@ -1324,8 +1401,15 @@
       "kannad_note": "Sources disagree widely, from 8 to 16 tonnes per acre. The Maharashtra institutional figure is used and the upper end is chosen because the soil constraint here is structural, not nutritional.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D02-OM-002",
@@ -1367,8 +1451,15 @@
       "kannad_note": "Because the FYM rate here is high at 14 to 16 tonnes per acre, the white grub exposure from undecomposed material is proportionally larger than in belts using half that quantity.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
+      }
     },
     {
       "rule_id": "D02-OM-003",
@@ -1412,8 +1503,15 @@
       "kannad_note": "Cheapest and safest soft rot measure available, with no CIB&RC restriction and no pre-harvest interval. It must be applied at land preparation, so a missed window cannot be recovered later in the season.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D02-SN-001",
@@ -1490,9 +1588,16 @@
       "kannad_note": "April and May maxima here reach 40 to 45 C, among the most favourable conditions in the country for solarization. The same heat that threatens the crop after planting is an asset before it. Since soft rot is the dominant risk in this belt, this is a genuine local advantage and should be trialled in a strip against an untreated strip in season one.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "WINDOW",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D02-LY-001",
@@ -1538,8 +1643,15 @@
       "kannad_note": "This is the highest-return structural decision in the knowledge base and its marginal cost is close to zero, because a bed former takes the same time either way. It also reduces plant population by roughly 44 percent against flat beds, which cuts the largest cost line while raising yield.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D02-LY-002",
@@ -1585,8 +1697,15 @@
       "kannad_note": "Domain 1 left bed height open as a field item and estimated that 15 cm would be inadequate for black soil. The Maharashtra recommendation of 20 to 25 cm confirmed that estimate. Twenty-five to thirty is chosen here because July delivers 195 mm and cyclonic rain can arrive in October.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D02-LY-003",
@@ -1629,8 +1748,15 @@
       "kannad_note": "Documented machine settings exist for 120 cm wide beds in onion. The 60 cm ridge with 60 cm furrow arrangement for ginger will need confirmation with a local operator before the season.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Confidence 0.70 — architectural intent OK, पण source / local validation पूर्ण होईपर्यंत CONDITIONAL. Season 1 data नंतर confidence upgrade करावी."
+      }
     },
     {
       "rule_id": "D02-BF-001",
@@ -1674,8 +1800,15 @@
       "kannad_note": "Original figures are 75:75 kg per hectare, converted to 30:30 per acre. Adjust against the soil test where available.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D02-BF-002",
@@ -1720,8 +1853,15 @@
       "kannad_note": "The instinctive response to poor phosphorus availability is to apply more. In calcareous soil that is the wrong answer and it is expensive.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D02-CL-001",
@@ -1800,9 +1940,16 @@
       "kannad_note": "Drip and subsidy approval must precede this calendar, not run alongside it. The subsidy application chain includes a lottery and takes months, so it starts six or more months before planting.",
       "decision_type": "SCHEDULED_REMINDER",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "WINDOW",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Agronomic basis आणि Kannad local applicability दोन्ही तपासले. ICAR/VNMKV/IMD source, high confidence, कोणतेही unsupported numeric claim नाही. Production मध्ये source, version, execution logging कायम ठेवावे."
+      }
     },
     {
       "rule_id": "D02-CL-002",
@@ -1928,8 +2075,15 @@
       "kannad_note": "Three years is the stated minimum, but bacterial wilt is documented as persisting in soil for many years. Where wilt has actually been recorded on the plot, three years should be treated as insufficient.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D02-DR-004",
@@ -1976,8 +2130,15 @@
       "kannad_note": "Bed height is decided once and cannot be changed after planting. Where the percolation test is borderline, choosing the higher bed is the cheap insurance.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D02-OM-004",
@@ -2020,8 +2181,15 @@
       "kannad_note": "Setting the expectation honestly matters here. A farmer told to reach 1 percent organic carbon this season will conclude the advice failed. Told it is a four-season programme, the same inputs are seen as working.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     }
   ],
   "open_items": [

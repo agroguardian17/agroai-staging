@@ -758,9 +758,16 @@
       "kannad_note": "This is the single highest-value zero-cost rule in the domain. It requires no input, only a date. In a belt where every other precondition (drip, mulch, beds) costs money, this one is free.",
       "decision_type": "BLOCK",
       "automation": "refusal",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "ONCE_UNTIL_RESOLVED",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "The planting-window concept is supported, but the exact 7 June cutoff, doubled prevention claim and fixed u=0.20 loss are not sufficiently universal. Make the cutoff region/variety/advisory-source specific and remove the fixed loss unless locally validated."
+      }
     },
     {
       "rule_id": "D01-PW-002",
@@ -822,9 +829,16 @@
       "kannad_note": "Marathwada monsoon onset is unreliable and 55 percent of years fall below average rainfall. Waiting for rain here is a worse bet than in the western belt.",
       "decision_type": "SCHEDULED_REMINDER",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "WINDOW",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "The pre-monsoon planting principle is sound, but the exact May/early-June window must follow the locally approved ginger planting window and current extension advice."
+      }
     },
     {
       "rule_id": "D01-HW-001",
@@ -891,9 +905,16 @@
       "kannad_note": "The sub-node was originally built and installed for sugarcane on this plot. A deep reading is not merely imprecise here, it is irrelevant, and irrelevant readings are more dangerous than wrong ones because nobody checks them.",
       "decision_type": "BLOCK",
       "automation": "refusal",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "ONCE_UNTIL_RESOLVED",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "0–20 cm probe placement is a useful operational gate, but the exact 0–20 cm universal sensing depth should remain soil/root-zone calibrated. Keep the gate; validate depth by field and soil profile."
+      }
     },
     {
       "rule_id": "D01-PH-001",
@@ -962,9 +983,16 @@
       "kannad_note": "Duration profiles are estimated, not measured. First-season observations should correct them for this belt.",
       "decision_type": "SCHEDULED_REMINDER",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Recording planting date and variety as the foundation for stage calculation is agronomically and operationally sound."
+      }
     },
     {
       "rule_id": "D01-PH-002",
@@ -1038,9 +1066,16 @@
       "kannad_note": "Especially important where the GDD arm is disabled, because calendar is otherwise the only clock.",
       "decision_type": "DIAGNOSTIC",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "WINDOW",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Farmer-observable stage markers are useful, but marker definitions must be crop/variety-specific and consistently recorded before they drive rules."
+      }
     },
     {
       "rule_id": "D01-PH-003",
@@ -1099,9 +1134,16 @@
       "kannad_note": "Once the cluster weather station has one full season of data, a local GDD series can be derived for this belt. That would be FIELD-class data that exists in no publication.",
       "decision_type": "BLOCK",
       "automation": "refusal",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Disabling unsupported GDD staging for ginger and falling back to calendar plus validated phenology markers is appropriate until a validated Indian ginger thermal-time dataset exists."
+      }
     },
     {
       "rule_id": "D01-PH-004",
@@ -1149,7 +1191,14 @@
       "decision_type": "DIAGNOSTIC",
       "automation": "assisted",
       "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "non_compliant",
+        "comment_mr": "Flowering can be a stage marker, but the fixed 12.5% yield penalty is unsupported as a universal value. Re-anchor stage and evaluate earthing-up status, but remove the fixed penalty unless locally validated."
+      }
     },
     {
       "rule_id": "D01-PH-005",
@@ -1195,8 +1244,15 @@
       "kannad_note": "If establishment is below 70 percent, diagnose before gap filling. If the cause is rot, replanting simply wastes a second lot of the most expensive input on the farm.",
       "decision_type": "DATA_CAPTURE",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "An establishment count around 35 DAP can be useful, but the rule must define sampling method, sample size and acceptable stand range from a validated planting-density standard."
+      }
     },
     {
       "rule_id": "D01-PH-006",
@@ -1261,9 +1317,16 @@
       "kannad_note": "Cost of one sacrificed plant is negligible against Rs 1.45 lakh invested per acre. Running the season blind is the expensive option.",
       "decision_type": "DIAGNOSTIC",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "WINDOW",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "A 120-DAP destructive sample is useful for early crop diagnosis, but '3–5 fingers expected' is not a universal maturity/yield standard. Keep as a scouting sample and validate expected morphology locally."
+      }
     },
     {
       "rule_id": "D01-PH-007",
@@ -1307,8 +1370,15 @@
       "kannad_note": "This is the rule that makes the prediction interval honest. Skipping the dig does not make the forecast worse, it makes the stated uncertainty larger — and the engine must say so rather than quietly reporting the tighter number.",
       "decision_type": "DATA_CAPTURE",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "A 180-DAP destructive sample is useful for calibration, but the automatic 8%/12% yield-prediction interval is not justified by the cited agronomy. Replace with a statistically calibrated model uncertainty."
+      }
     },
     {
       "rule_id": "D01-VR-001",
@@ -1373,9 +1443,16 @@
       "kannad_note": "Local availability is the real constraint. Maharashtra has only about 4000 ha under ginger, so the seed market is thin. Order at least five months ahead or the choice is made for you.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "ONCE_UNTIL_RESOLVED"
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Mahima/Varada/Rejatha can be presented as documented options, but recommending Mahima as the main area variety requires local market, disease, seed availability and trial evidence. Do not make a universal 'best variety' claim."
+      }
     },
     {
       "rule_id": "D01-VR-002",
@@ -1441,9 +1518,16 @@
       "kannad_note": "This is one of the four commonly forgotten actions. It costs nothing and is worth roughly 40 percent of next season's largest cost line.",
       "decision_type": "SCHEDULED_REMINDER",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "WINDOW",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Selecting healthy, disease-free seed plants before harvest is agronomically sound. The exact 180-DAP timing is operational and should be linked to variety/stage; keep the disease-history block."
+      }
     },
     {
       "rule_id": "D01-VR-003",
@@ -1488,8 +1572,15 @@
       "kannad_note": "The field history record is the input here, and it only exists if the app has been keeping it. This is precisely the asset that paper records and farmer memory do not preserve across years.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Do not retain seed from fields with rot/wilt history is a strong disease-management principle. The exact pathogen persistence statement should be source-specific; retain the block with a validated disease basis."
+      }
     },
     {
       "rule_id": "D01-YD-001",
@@ -1535,8 +1626,15 @@
       "kannad_note": "The ceiling itself carries declared uncertainty of 94 to 113 q/acre depending on whether variety trials already used broad ridge. This is open item D01-OI-05 and it is blocking for Domain 11.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "A yield target range is preferable to a single target, but 60/90/110 q/acre must be treated as planning scenarios, not scientific yield standards, until local multi-season validation."
+      }
     },
     {
       "rule_id": "D01-YD-002",
@@ -1758,9 +1856,16 @@
       "kannad_note": "The whole season strategy compresses to: May-June defend against heat, July-September defend against water, October-January let the crop fill. Yield is decided in the third phase, but only if the first two are survived.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "SILENT_GUARD",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "The 18–20°C rhizome-growth concept is plausible, but the exact G4/Nov–Jan window depends on the stage framework and local variety. Use it as a contextual advisory, not a universal optimum."
+      }
     },
     {
       "rule_id": "D01-HV-001",
@@ -1823,9 +1928,16 @@
       "kannad_note": "Simplest high-value test in the whole knowledge base. Needs a thumb.",
       "decision_type": "SCHEDULED_REMINDER",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "ONCE_UNTIL_RESOLVED"
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "200 DAP is a valid reference for some ginger varieties such as IISR-Mahima, but not a universal harvest date. Use variety-specific maturity plus physiological maturity test."
+      }
     },
     {
       "rule_id": "D01-HV-002",
@@ -1959,8 +2071,15 @@
       "kannad_note": "Dry ginger matters more here than in wetter belts because the local market is thin — state daily arrivals are about one percent of onion — and storage capacity is the only real bargaining power a grower has.",
       "decision_type": "HUMAN_DECISION",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Presenting multiple harvest routes without recommending one respects the economic decision. The route descriptions and maturity gates must remain crop/market specific."
+      }
     },
     {
       "rule_id": "D01-HV-004",
@@ -2033,9 +2152,16 @@
       "kannad_note": "Seed rhizome already loses 28 to 40 percent of its weight in storage. Starting that clock with an immature rhizome makes the loss worse and the germination unreliable.",
       "decision_type": "BLOCK",
       "automation": "refusal",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Seed-rhizome harvest should use physiological maturity and variety-specific maturity, not a universal DAP<235 block. Replace with a maturity-test gate; 235 DAP is not valid for all ginger varieties."
+      }
     },
     {
       "rule_id": "D01-PH-008",
@@ -2080,8 +2206,15 @@
       "kannad_note": "G3 and G4 fall in September to December here, exactly when the monsoon has ended and the entire water load shifts to the well. This is the hardest period to serve and the most costly to fail.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Critical irrigation windows should be tied to validated ginger phenology. Keep the cross-domain escalation, but do not hard-code G1/G3/G4 as universal critical stages until stage definitions are validated."
+      }
     }
   ],
   "open_items": [

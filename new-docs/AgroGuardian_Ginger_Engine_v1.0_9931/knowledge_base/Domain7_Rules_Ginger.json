@@ -857,9 +857,16 @@
       "kannad_note": "This is the single most important planning statistic in the domain and it is routinely ignored because averages feel like normal. Here the average is an optimistic case.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "ONCE_UNTIL_RESOLVED",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Poor-year water planning is a sound risk-management principle, but the cited 776 mm/55% figures are not yet the authoritative station-normal dataset in the system. Load IMD 1991–2020 station normals first and calculate water-budget risk locally."
+      }
     },
     {
       "rule_id": "D07-CL-001",
@@ -903,8 +910,15 @@
       "kannad_note": "Worth saying to partners as well as farmers. Marathwada is not a difficult market for this product — it is the market of greatest need, because where nature supplies thirty percent and management seventy, guidance is worth more.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-CL-002",
@@ -960,9 +974,16 @@
       "kannad_note": "Ginger does not appear in the zone's recommended crop list, but that list is a rainfed list. Ginger belongs here as an irrigated high-value crop, which is exactly why the irrigation preconditions carry the weight they do.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Confidence 0.65 — architectural intent OK, पण source / local validation पूर्ण होईपर्यंत CONDITIONAL. Season 1 data नंतर confidence upgrade करावी."
+      }
     },
     {
       "rule_id": "D07-TM-001",
@@ -1025,9 +1046,16 @@
       "kannad_note": "The match table matters as much as the mismatch. Ten of twelve months are fine, so the engine should not be issuing temperature warnings all season — that would train the farmer to ignore them.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-HS-001",
@@ -1178,9 +1206,16 @@
       "kannad_note": "In a belt this hot, misreading heat scorch as disease would produce a fungicide recommendation every few weeks in summer. The weather record is what makes the distinction possible.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
+      }
     },
     {
       "rule_id": "D07-HS-003",
@@ -1254,9 +1289,16 @@
       "kannad_note": "October is the second stress point of the season after May, and unlike May it arrives when the whole season's investment is already committed.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-TM-002",
@@ -1321,9 +1363,16 @@
       "kannad_note": "The whole season compresses to: May and June defend against heat, July to September defend against water, October to January let the crop fill. Yield is made in the third phase, but only if the first two are survived.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-RF-002",
@@ -1388,9 +1437,16 @@
       "kannad_note": "Choosing between sources matters here because the spread is 130 mm, which is nearly a fifth of the total. The oldest and longest series is also the most conservative, which makes the choice easy.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
+      }
     },
     {
       "rule_id": "D07-RF-003",
@@ -1453,9 +1509,16 @@
       "kannad_note": "IMD's own framing applies directly here — distribution matters more than quantity. For ginger in this belt the mismatch between the two peaks is the defining water problem.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-MO-001",
@@ -1519,9 +1582,16 @@
       "kannad_note": "This is a habit conflict rather than a knowledge gap. The farmer knows when to plant ginger; the difficulty is that every other crop in the field says wait, and the monsoon arrives three days too late to help.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "WINDOW",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Agronomic basis आणि Kannad local applicability दोन्ही तपासले. ICAR/VNMKV/IMD source, high confidence, कोणतेही unsupported numeric claim नाही. Production मध्ये source, version, execution logging कायम ठेवावे."
+      }
     },
     {
       "rule_id": "D07-MO-002",
@@ -1588,9 +1658,16 @@
       "kannad_note": "The recorded 20 to 45 day spells are what make drip a precondition rather than an efficiency measure. Without it, a single average dry spell at G3 ends the season.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "EVENT",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Dry-spell monitoring is appropriate, but '7 days = full irrigation' is too absolute. IISR recommends 7–10 day intervals based on weather and soil and identifies critical stages. Use VWC/ETc/rainfall rather than dry days alone."
+      }
     },
     {
       "rule_id": "D07-MO-003",
@@ -1654,9 +1731,16 @@
       "kannad_note": "In 2026 the July forecast was below 94 percent of the long period average and state sowing was 23 percent behind by late June. The right response for ginger is to adjust area, not to adjust the planting date.",
       "decision_type": "SCHEDULED_REMINDER",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
+      }
     },
     {
       "rule_id": "D07-CY-001",
@@ -1725,7 +1809,14 @@
       "automation": "assisted",
       "status": "PHASE_1_RAW_UNVALIDATED",
       "delivery": "EVENT",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "non_compliant",
+        "comment_mr": "October/November forecast >40 mm is not an IMD severe-weather threshold and the cited cyclone-seasonality source is insufficient for a red drainage alert. Replace with official forecast/warning + field water-state logic. Do not call it 'more severe' than a monsoon warning without a defined scale."
+      }
     },
     {
       "rule_id": "D07-CY-002",
@@ -1790,9 +1881,16 @@
       "kannad_note": "A one-line reminder protecting a 0.30 exposure. The channels already exist; the failure mode is neglect rather than absence.",
       "decision_type": "SCHEDULED_REMINDER",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "EVENT",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
+      }
     },
     {
       "rule_id": "D07-HU-001",
@@ -1856,9 +1954,16 @@
       "kannad_note": "One of two distinct disease seasons here. The other is winter fog driving foliar disease, and the two need different responses at different times of year.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "EVENT",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
+      }
     },
     {
       "rule_id": "D07-HU-002",
@@ -1932,9 +2037,16 @@
       "kannad_note": "Fog frequency and duration in Marathwada were not found in any source. The station will measure it directly, and it is one of the more useful pieces of local data the first season will generate.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Confidence 0.70 — architectural intent OK, पण source / local validation पूर्ण होईपर्यंत CONDITIONAL. Season 1 data नंतर confidence upgrade करावी."
+      }
     },
     {
       "rule_id": "D07-HU-003",
@@ -1998,9 +2110,16 @@
       "kannad_note": "The most valuable thing the station does for pest management, because the alternative is waiting for visible damage by which point the cheapest interventions have expired.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
+      }
     },
     {
       "rule_id": "D07-WS-001",
@@ -2063,9 +2182,16 @@
       "kannad_note": "If a pan is not fitted, evaporation can be computed from temperature, humidity, wind and solar radiation. That is arithmetic on the master unit rather than additional hardware, so there is no reason to defer it.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Agronomic basis आणि Kannad local applicability दोन्ही तपासले. ICAR/VNMKV/IMD source, high confidence, कोणतेही unsupported numeric claim नाही. Production मध्ये source, version, execution logging कायम ठेवावे."
+      }
     },
     {
       "rule_id": "D07-WS-002",
@@ -2130,9 +2256,16 @@
       "kannad_note": "Recorded rather than acted on. Ranked above the three-depth soil probe from Domain 3 because it unlocks a trigger that currently runs on estimation.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
+      }
     },
     {
       "rule_id": "D07-WS-003",
@@ -2199,9 +2332,16 @@
       "kannad_note": "Accumulated rainfall against expectation is the earliest warning that this is turning into a poor year, and it gives time to act on area or storage while there is still a choice.",
       "decision_type": "AUTO_DECISION",
       "automation": "full",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-BC-001",
@@ -2267,9 +2407,16 @@
       "kannad_note": "Especially valuable here because terrain varies widely within one district. Kannad sits at 633 m near the Ajanta range while the rest of the district is flatter and lower, and the gazetteer itself notes the district average runs slightly below the Aurangabad station figure.",
       "decision_type": "AUTO_DECISION",
       "automation": "full",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-BC-002",
@@ -2327,9 +2474,16 @@
       "kannad_note": "A farmer quoted in the dry spell coverage said that ten to twenty days notice would have prevented the loss. That is a real need, but claiming to meet it with a village weather station would be dishonest. Correcting the forecast and translating it into an action is both achievable and useful.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
+      }
     },
     {
       "rule_id": "D07-BC-003",
@@ -2390,9 +2544,16 @@
       "kannad_note": "Graceful degradation applied to the weather layer. The system runs on the public forecast from day one and improves on it as the record builds, rather than waiting for data before being useful.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Confidence 0.70 — architectural intent OK, पण source / local validation पूर्ण होईपर्यंत CONDITIONAL. Season 1 data नंतर confidence upgrade करावी."
+      }
     },
     {
       "rule_id": "D07-CC-001",
@@ -2456,9 +2617,16 @@
       "kannad_note": "A quiet but important reason why drip must be operational before planting rather than shortly after. The published practice assumes water that is now 31 percent less likely to arrive.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "ONCE_UNTIL_RESOLVED",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-CC-002",
@@ -2502,8 +2670,15 @@
       "kannad_note": "Relevant to the farm pond decision in particular, since the pond is sized against a shortfall that is itself growing.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-RF-004",
@@ -2569,9 +2744,16 @@
       "kannad_note": "The 25 percent threshold is a judgement, not a sourced figure. It should be tuned once a few seasons of local accumulation curves exist.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-TM-003",
@@ -2635,9 +2817,16 @@
       "kannad_note": "A locally derived GDD series would be genuinely novel and would exist in no publication. It costs nothing beyond logging temperature, which is already happening.",
       "decision_type": "BLOCK",
       "automation": "refusal",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-HS-004",
@@ -2702,9 +2891,16 @@
       "kannad_note": "The usable spray window here is genuinely narrow because of daytime temperature. Scheduling without checking both temperature and forecast wastes product and labour together.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "SILENT_GUARD",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-MO-004",
@@ -2771,9 +2967,16 @@
       "kannad_note": "A counterintuitive framing in a water-scarce belt. The same rain that is welcome for cotton is a hazard for ginger, because one crop tolerates saturation and the other does not.",
       "decision_type": "BLOCK",
       "automation": "refusal",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
+      }
     },
     {
       "rule_id": "D07-CL-003",
@@ -2816,8 +3019,15 @@
       "kannad_note": "Useful because it explains why the advisory goes quiet in December and January. Nothing is wrong; that is the phase where the correct action is mostly to keep supplying water and potassium and not interfere.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-HU-004",
@@ -2891,9 +3101,16 @@
       "kannad_note": "The fog rule says to spray until the crop is seven months old, which from a late May planting reaches December or January — exactly the winter fog period here. The published rule and the local calendar align, so it is a real trigger rather than a theoretical one.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-WS-004",
@@ -2964,9 +3181,16 @@
       "kannad_note": "Because the station is shared, its failure is a cluster-level event and the maintenance response has to be prioritised accordingly. A sub-node failure affects one farmer; a station failure affects everyone.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-RF-005",
@@ -3032,9 +3256,16 @@
       "kannad_note": "The 65 percent figure is an assumption rather than a measurement, and on cracked vertisol receiving concentrated rain the true figure may well be lower. Worth measuring against the percolation test result.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Fixed 65% yield penalty local validation शिवाय unsupported. Mechanism ठेवावा; numeric penalty काढून CONDITIONAL — Season 1 field data नंतर calibrate करावा."
+      }
     },
     {
       "rule_id": "D07-CC-003",
@@ -3098,9 +3329,16 @@
       "kannad_note": "Combined with the 55 percent statistic this is the reason the poor-year planning basis is the default rather than a pessimistic option.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-VP-001",
@@ -3177,9 +3415,16 @@
       "kannad_note": "The cluster weather station already logs temperature and humidity, so VPD is arithmetic on the master unit and needs no new hardware. This closes a real gap without any capital cost.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-VP-002",
@@ -3274,9 +3519,16 @@
       "kannad_note": "Marathwada's May pre-monsoon and December–February fog months hit both VPD extremes within the same season. Kannad's daytime maxima of 40+ C push VPD past 3.0 kPa, while pre-dawn winter fog drops it below 0.2 kPa. The two spray-failure windows are not exotic; they are the normal spring afternoon and the normal winter morning here.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-VP-003",
@@ -3365,9 +3617,16 @@
       "kannad_note": "Marathwada winter mornings are the local advantage for rhizome bulking mentioned in D07 key_innovations, but they are also when the second foliar disease season starts. VPD makes the dew half of that pattern measurable without waiting for a leaf wetness sensor purchase.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
+      }
     },
     {
       "rule_id": "D07-CY-WX-001",
@@ -3482,9 +3741,16 @@
       "kannad_note": "Kept separate from D07-CY-001 (the October-November calendar rule) so each can be validated and tuned independently. Severity is yellow while validation is pending; raise to red only after field validation confirms the thresholds locally.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "ONCE_UNTIL_RESOLVED",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
+      }
     }
   ],
   "open_items": [

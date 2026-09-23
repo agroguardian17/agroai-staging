@@ -275,9 +275,16 @@
       "kannad_note": "Marathwada tile 43QGD gets a cloud-clear Sentinel-2 scene roughly once every 5-6 days in Nov-Mar and every 15-20 days in Jul-Aug. The gate is not there to be strict; it is there because a bad scene teaches the engine wrong things about the plot.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "NDVI/EVI/SAVI computation is appropriate, but the 60% valid-pixel threshold is an operational quality threshold, not a universal scientific standard. Version and validate it."
+      }
     },
     {
       "rule_id": "D14-NV-002",
@@ -361,9 +368,16 @@
       "kannad_note": "Kannad Jul-Aug monsoon regularly pushes freshness past 15 days. Without this degradation an operator would get the same recommendation on day 3 and day 18 with identical confidence — dishonest and unsafe.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Confidence degradation with data age is appropriate. The exact linear 5–20 day formula is a product assumption and should be calibrated against observed anomaly persistence."
+      }
     },
     {
       "rule_id": "D14-NV-003",
@@ -468,9 +482,16 @@
       "kannad_note": "Kannad regional NDVI baseline for ginger is not published; the author-estimate model used here is coarse. Season-1 log will replace it with an empirical mean, at which point this rule's confidence bumps to 0.75. Do not sell this alert as a diagnosis; it is a call for a look, not a prescription.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "ONCE_UNTIL_RESOLVED"
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Baseline deviation is suitable for anomaly scouting, not treatment. The rule correctly requires soil/EC/scout cross-check; keep the no-chemical-intervention safeguard and calibrate the 0.10 threshold."
+      }
     },
     {
       "rule_id": "D14-NV-004",
@@ -575,9 +596,16 @@
       "kannad_note": "In Kannad Sep-Oct, a sharp NDVI drop coincides with post-monsoon waterlogging risk more often than with disease. Do not skip the scout request in favour of a chemical recommendation — the standing water is not visible without the ground check.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "ONCE_UNTIL_RESOLVED"
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "NDVI decline is a valid anomaly/scouting signal, but the fixed -0.15/10-day threshold is not locally validated. Keep the urgent scout action only as an anomaly alert and require ground/sensor confirmation before any treatment."
+      }
     },
     {
       "rule_id": "D14-NV-005",
@@ -667,9 +695,16 @@
       "kannad_note": "In Kannad the first commercial season likely has 5-10 farmer clusters; peer baselines mature by DAP 60. Do not fire before that day.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "ONCE_UNTIL_RESOLVED"
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Peer-cluster comparison is scientifically useful, but three peers and a 0.10 NDVI gap are operational thresholds requiring validation and careful matching of variety, soil, planting date and management."
+      }
     },
     {
       "rule_id": "D14-NV-006",
@@ -756,9 +791,16 @@
       "kannad_note": "In Kannad, May pre-monsoon showers commonly trigger a 2-week weed flush right before planting; farmers who plough late without spraying carry the flush into the crop period. This rule catches it while there is time to act.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Pre-plant NDVI can identify unexpected vegetation, but the 0.25 bare-soil threshold must be locally calibrated and distinguished from cover crops/residue."
+      }
     },
     {
       "rule_id": "D14-NV-007",
@@ -832,9 +874,16 @@
       "kannad_note": "Marathwada residue-burning enforcement is patchy but tightening under state pollution rules. Building the log now positions Agro-Guardian well when audit comes; misusing it as a farmer-facing accusation destroys trust.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "NBR is an accepted burn/residue indicator, but a fixed -0.20/10-day threshold needs local calibration and confirmation to avoid false positives from mulch/residue/harvest operations."
+      }
     },
     {
       "rule_id": "D14-NR-001",
@@ -911,9 +960,16 @@
       "kannad_note": "Ginger closes canopy around DAP 90; from that point NDRE becomes the useful nitrogen index rather than NDVI. Compute both anyway — they answer different questions.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Using Sentinel-2 red-edge bands to compute NDRE and store the trend is technically appropriate, subject to valid-scene and preprocessing controls."
+      }
     },
     {
       "rule_id": "D14-NR-002",
@@ -1000,9 +1056,16 @@
       "kannad_note": "In Kannad the pattern shows up around 8-10 weeks after planting on plots that skipped a first top-dressing or where the split doses got compressed by weather. Do not recommend urea from the sky; D04 does the honest budget.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "ONCE_UNTIL_RESOLVED"
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "NDVI/NDRE divergence can support nitrogen scouting, but the rule must remain a diagnostic flag and require D04 soil/tissue evidence before any N recommendation."
+      }
     },
     {
       "rule_id": "D14-NR-003",
@@ -1081,9 +1144,16 @@
       "kannad_note": "The regional NDRE baseline for Kannad ginger is another Phase-1 estimate; season-1 log elevates it. Rule fires but confidence stays around 0.7 until then.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "ONCE_UNTIL_RESOLVED"
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "NDRE is useful for chlorophyll/nitrogen sensitivity in dense canopies, but the fixed 0.10 regional-baseline gap requires local calibration and sensor/pipeline normalization."
+      }
     },
     {
       "rule_id": "D14-NM-001",
@@ -1151,9 +1221,16 @@
       "kannad_note": "In Kannad's dry Feb-May months NDMI runs low across all plots; use the delta not the absolute value for stress detection.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "The NDMI formula and use of valid B8/B11 data are technically appropriate; scene-quality and atmospheric preprocessing requirements must be enforced."
+      }
     },
     {
       "rule_id": "D14-NM-002",
@@ -1247,9 +1324,16 @@
       "kannad_note": "Drip clogging in Kannad basaltic soils is the most common culprit for this pattern in G3-G4. Farmers who irrigate more when the leaves droop make the drip problem worse — this rule catches it before that mistake.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "ONCE_UNTIL_RESOLVED"
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "NDMI decline with adequate root-zone moisture is a useful anomaly signal, but the -0.10/10-day threshold is not locally validated. Keep as investigation-only."
+      }
     },
     {
       "rule_id": "D14-NM-003",
@@ -1332,9 +1416,16 @@
       "kannad_note": "This is where satellite genuinely adds value — confirming what the sub-node already saw. The message stays with D03; the confidence bump is invisible to the farmer but shows up as a stronger recommendation.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "NDMI decline plus low ground moisture is a useful corroborating signal, but the -0.10 threshold requires calibration. Keep it as confidence augmentation to D03."
+      }
     },
     {
       "rule_id": "D14-SR-001",
@@ -1412,9 +1503,16 @@
       "kannad_note": "Kannad falls in Sentinel-1 relative orbits 92 (ascending) and 165 (descending); both give data. Do not mix the two in delta_vv or coherence — the look angles differ.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Standard Sentinel-1 preprocessing and same-relative-orbit comparisons are technically appropriate for a SAR pipeline, subject to implementation QA."
+      }
     },
     {
       "rule_id": "D14-SR-002",
@@ -1507,7 +1605,14 @@
       "automation": "assisted",
       "status": "AUTHOR_DRAFT",
       "immutable": false,
-      "delivery": "ONCE_UNTIL_RESOLVED"
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "non_compliant",
+        "comment_mr": "The -4 dB, >20 mm and 24-hour intolerance/yield-damage claims are not sufficiently validated for ginger. Convert this to a probable standing-water signal requiring calibrated threshold + field confirmation; do not assert a universal 24-hour damage limit."
+      }
     },
     {
       "rule_id": "D14-SR-003",
@@ -1599,9 +1704,16 @@
       "kannad_note": "Kannad ginger is harvested Jan-Feb; SAR coherence loss on a G4/G5 plot in that window is very likely the actual harvest and useful for the season-close reconciliation with the farmer's reported date.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Coherence change can indicate surface disturbance, but it is not specific to harvest. The 0.4 threshold and G4/G5 condition require calibration; keep as a low-priority confirmation prompt."
+      }
     },
     {
       "rule_id": "D14-SR-004",
@@ -1678,9 +1790,16 @@
       "kannad_note": "In Kannad's Sep-Oct cyclonic rain regime the station-to-plot mismatch is common; this rule turns the SAR into a cheap plot-level rain gauge check.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "SAR change can corroborate localized rainfall, but ±2 dB is an operational threshold requiring local station comparison. It should augment D07, not be treated as ground truth."
+      }
     },
     {
       "rule_id": "D14-SR-005",
@@ -1752,9 +1871,16 @@
       "kannad_note": "The Kannad ginger crop lives most of its high-stress period under monsoon cloud. Building the rule engine to work in SAR-only mode for weeks was a design goal, not an afterthought.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "SAR-only fallback is architecturally sensible when optical data are stale, but the 14/6/10-day thresholds need validation and SR rules must be clearly marked as the only active satellite family."
+      }
     },
     {
       "rule_id": "D14-LT-001",
@@ -1830,9 +1956,16 @@
       "kannad_note": "Kannad summer Landsat overpass ~10:30 IST is earlier than peak stress; the CWSI value under-detects afternoon stress. Interpret with this in mind; do not push the rule into replacing the sub-node.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Landsat surface temperature can support thermal stress analysis, but the CWSI calculation uses author-estimated wet/dry baselines. Keep as research/confirmation until local calibration."
+      }
     },
     {
       "rule_id": "D14-LT-002",
@@ -1917,9 +2050,16 @@
       "kannad_note": "In Kannad's summer peak, plot-scale CWSI often runs 0.5-0.7 for reasons of atmospheric noise more than plant stress; the sub-node check is not optional here.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "ONCE_UNTIL_RESOLVED"
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "CWSI can indicate plant water stress, and adequate soil moisture supports investigation of non-water causes. The >0.60 threshold and wet/dry baselines are author-estimated; calibrate locally before production severity escalation."
+      }
     },
     {
       "rule_id": "D14-LT-003",
@@ -1990,9 +2130,16 @@
       "kannad_note": "This rule silently strengthens D03 advisories without adding to farmer message count.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Thermal confirmation of low soil moisture is useful, but CWSI >0.60 and baseline calibration require local validation. Keep as confidence augmentation, not an independent irrigation trigger."
+      }
     },
     {
       "rule_id": "D14-PH-001",
@@ -2066,9 +2213,16 @@
       "kannad_note": "For Kannad's May-15 to Jun-15 planting window, PH-001 becomes ready by mid-August, exactly when farmers most need a stage-check.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Double-logistic phenology fitting is a valid remote-sensing method, but eight observations and the resulting stage transitions need local validation before overriding DAP-based stages."
+      }
     },
     {
       "rule_id": "D14-PH-002",
@@ -2135,9 +2289,16 @@
       "kannad_note": "Marathwada farmers occasionally report the day the rhizome was cut rather than the day it went into the soil, or vice versa; the two can differ by a week. Curve fit catches these.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "ONCE_UNTIL_RESOLVED"
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Cross-checking curve-derived phenology against DAP and asking the farmer to verify planting date is an appropriate data-quality safeguard."
+      }
     },
     {
       "rule_id": "D14-PH-003",
@@ -2221,9 +2382,16 @@
       "kannad_note": "Kannad's basaltic soils occasionally hide sodicity that expresses only as chronic low canopy — invisible until we compare against expectations. This rule surfaces it.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "ONCE_UNTIL_RESOLVED"
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Low peak NDVI can indicate weak canopy, but 0.60 is not a universal ginger biological threshold. Keep as a scouting trigger and calibrate by variety, soil and season."
+      }
     },
     {
       "rule_id": "D14-PH-004",
@@ -2305,9 +2473,16 @@
       "kannad_note": "The Kannad harvest window opens in Jan; an early senescence in Nov-Dec is worth catching before it becomes an unrecoverable wilt.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "ONCE_UNTIL_RESOLVED"
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Accelerating NDVI decline before 180 DAP is useful as an anomaly signal, but the exact timing and threshold need local phenology calibration. Route to D06/D03/D04 differential diagnosis."
+      }
     },
     {
       "rule_id": "D14-AN-001",
@@ -2374,9 +2549,16 @@
       "kannad_note": "The first Kannad commercial cluster starts with regional-only mode; peer mode kicks in around late June once 3+ plots have data.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Refusing to treat a peer baseline as reliable with fewer than three contributing plots is a sensible data-quality safeguard."
+      }
     },
     {
       "rule_id": "D14-AN-002",
@@ -2448,9 +2630,16 @@
       "kannad_note": "Small ginger plots are common in Kannad (0.1-0.25 acre); telling farmers honestly that satellite confidence is reduced is better than pretending it isn't.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Small-plot and high-heterogeneity flags are useful, but the exact area/SD thresholds must be documented and validated for the sensor/polygon extraction method."
+      }
     },
     {
       "rule_id": "D14-AN-003",
@@ -2527,9 +2716,16 @@
       "kannad_note": "Weed flush + young ginger together look identical to a super-vigorous crop from space. Suppressing the false positive is cheap; letting it through erodes trust.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Early-season NDVI rise after monsoon onset is useful context, but 'sharp rise' needs a defined numerical threshold and crop/land-cover interpretation."
+      }
     },
     {
       "rule_id": "D14-AN-004",
@@ -2604,9 +2800,16 @@
       "kannad_note": "The scout-report loop is the difference between an alert system and a working advisory system.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Linking a farmer scout report to an open satellite anomaly is a strong human-in-the-loop design."
+      }
     },
     {
       "rule_id": "D14-FU-001",
@@ -2688,9 +2891,16 @@
       "kannad_note": "Monsoon LoRa fade is the common cause of sub-node staleness in Kannad. This rule keeps the advisory alive without pretending we still have ground truth.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "ONCE_UNTIL_RESOLVED"
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Using satellite canopy stress to flag stale ground-moisture data is sensible, but the definition of 'stale' and escalation severity must be explicitly calibrated."
+      }
     },
     {
       "rule_id": "D14-FU-002",
@@ -2771,9 +2981,16 @@
       "kannad_note": "This is the case where satellite adds the most predictive value — sub-node says act, satellite says the canopy hasn't punished you yet, so acting now avoids the punishment.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Low soil moisture with healthy canopy can be an early-action window, but it must not override the ground sensor authority or create irrigation on satellite evidence alone."
+      }
     },
     {
       "rule_id": "D14-FU-003",
@@ -2852,9 +3069,16 @@
       "kannad_note": "In Kannad's furrow-planted ginger, blocked furrows accumulate surface water for days before it either drains or reaches the rhizome. Catching it at the surface stage is much cheaper.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "SAR standing-water signal plus adequate root-zone moisture can identify surface drainage problems. The SAR threshold and confirmation logic require calibration; advisory rather than urgent is appropriate."
+      }
     },
     {
       "rule_id": "D14-FU-004",
@@ -2938,9 +3162,16 @@
       "kannad_note": "Kannad basaltic soils are Zn-deficient in many pockets; D02 baseline test flags it if performed, but many plots skip micronutrient panels. This rule catches what D02 missed.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "ONCE_UNTIL_RESOLVED"
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Normal EC with low NDRE can indicate non-EC causes, but the differential diagnosis is not specific enough for a definitive nutrient conclusion. Route to D04/field sampling."
+      }
     },
     {
       "rule_id": "D14-FU-005",
@@ -3030,9 +3261,16 @@
       "kannad_note": "For Kannad market linkages this is the log that lets Agro-Guardian tell a buyer, honestly, that a plot has been under continuous good-health confirmation.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "A combined healthy flag is useful, but 'all indices in healthy band' needs versioned, crop-stage-specific bands. It should be a monitoring status, not a guarantee of crop health."
+      }
     },
     {
       "rule_id": "D14-PL-001",
@@ -3094,9 +3332,16 @@
       "kannad_note": "New farmer onboarding step. The Kannad app team owns polygon capture UX; polygon quality is the single biggest determinant of D14 usefulness.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Suspending satellite rules without a valid plot polygon is correct: the spatial extraction and baselines are otherwise unreliable."
+      }
     },
     {
       "rule_id": "D14-PL-002",
@@ -3172,9 +3417,16 @@
       "kannad_note": "Extremely rare in Kannad — even peak monsoon delivers a Sentinel-1 pass every 6-12 days. When it does happen, honesty is the only response.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "ONCE_UNTIL_RESOLVED"
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Failing closed when optical, SAR and field observations are all stale is appropriate; blind advisory is worse than an explicit data-gap message."
+      }
     },
     {
       "rule_id": "D14-PL-003",
@@ -3233,9 +3485,16 @@
       "kannad_note": "This is exactly the kind of gate the D07 station_data_age_hours pattern was designed to enforce — extend it to D14.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Recomputing trend indices after a satellite pipeline-version change is a strong data-integrity safeguard."
+      }
     },
     {
       "rule_id": "D14-PL-004",
@@ -3305,9 +3564,16 @@
       "kannad_note": "Kannad monsoon delivers many partial scenes; enforcing the 60% floor keeps season data clean.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Rejecting low-valid-pixel scenes is appropriate, but the fixed <60% cutoff should be treated as a validated pipeline threshold rather than an industry universal."
+      }
     },
     {
       "rule_id": "D14-POS-001",
@@ -3378,9 +3644,16 @@
       "kannad_note": "Kannad ginger buyers and farmers alike remember overpromises. Every one of these prohibited claims is a claim we could technically make and would regret.",
       "decision_type": "SENSOR_ALERT",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": true,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Blocking the claim that satellite directly detects underground ginger rhizome rot is scientifically appropriate. Satellite canopy signals are indirect and non-specific."
+      }
     },
     {
       "rule_id": "D14-POS-002",
@@ -3451,9 +3724,16 @@
       "kannad_note": "Kannad ginger buyers and farmers alike remember overpromises. Every one of these prohibited claims is a claim we could technically make and would regret.",
       "decision_type": "SENSOR_ALERT",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": true,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Blocking the claim that NDVI alone determines exact harvest timing is appropriate. Harvest requires variety maturity and field evidence."
+      }
     },
     {
       "rule_id": "D14-POS-003",
@@ -3524,9 +3804,16 @@
       "kannad_note": "Kannad ginger buyers and farmers alike remember overpromises. Every one of these prohibited claims is a claim we could technically make and would regret.",
       "decision_type": "SENSOR_ALERT",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": true,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Blocking the claim that yield is predicted from space alone is appropriate. Satellite can be one input to a validated multi-source yield model."
+      }
     },
     {
       "rule_id": "D14-POS-004",
@@ -3597,9 +3884,16 @@
       "kannad_note": "Kannad ginger buyers and farmers alike remember overpromises. Every one of these prohibited claims is a claim we could technically make and would regret.",
       "decision_type": "SENSOR_ALERT",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": true,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Blocking the claim of ordinary plant counting from Sentinel-2 10 m imagery is appropriate for individual ginger plants at field scale."
+      }
     },
     {
       "rule_id": "D14-POS-005",
@@ -3669,9 +3963,16 @@
       "kannad_note": "Kannad ginger buyers and farmers alike remember overpromises. Every one of these prohibited claims is a claim we could technically make and would regret.",
       "decision_type": "SENSOR_ALERT",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": true,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Blocking 'cloud is not a problem' is appropriate. Optical data have cloud limitations; SAR reduces but does not remove all data-quality limitations."
+      }
     },
     {
       "rule_id": "D14-POS-006",
@@ -3741,9 +4042,16 @@
       "kannad_note": "Kannad ginger buyers and farmers alike remember overpromises. Every one of these prohibited claims is a claim we could technically make and would regret.",
       "decision_type": "SENSOR_ALERT",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": true,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Blocking satellite-as-soil-sensor replacement is appropriate. Ground soil-moisture/EC measurements remain the field authority for those variables."
+      }
     },
     {
       "rule_id": "D14-POS-007",
@@ -3813,9 +4121,16 @@
       "kannad_note": "Kannad ginger buyers and farmers alike remember overpromises. Every one of these prohibited claims is a claim we could technically make and would regret.",
       "decision_type": "SENSOR_ALERT",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": true,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Blocking 'always up-to-date' is appropriate. Freshness must be calculated from actual acquisition and scene quality."
+      }
     },
     {
       "rule_id": "D14-DP-001",
@@ -3889,7 +4204,14 @@
       "automation": "automatic",
       "status": "AUTHOR_DRAFT",
       "immutable": true,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "legal_review_required",
+        "comment_mr": "This is a privacy/data-governance rule, not agronomy. The protective behavior is sensible, but final compliance wording must be reviewed against the current DPDP legal framework and system data flows."
+      }
     },
     {
       "rule_id": "D14-DP-002",
@@ -3960,9 +4282,16 @@
       "kannad_note": "Simple UI check; a template line satisfies the requirement, but the rule ensures the template is never omitted.",
       "decision_type": "AUTO_DECISION",
       "automation": "automatic",
-      "status": "AUTHOR_DRAFT",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Requiring satellite attribution on displayed products is appropriate data provenance practice."
+      }
     }
   ],
   "open_items": [

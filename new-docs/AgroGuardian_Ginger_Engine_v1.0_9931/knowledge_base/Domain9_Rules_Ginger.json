@@ -941,9 +941,16 @@
       "kannad_note": "This reframes the whole knowledge base. Domains 1 to 8 work on yield; this single observation says grade matters more, and grade is set by two labour-only operations in the last fortnight.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "WINDOW",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "A dated market-quality price spread can illustrate the value of grading, but a single-market single-day 2.7× spread must not be treated as a general expected premium. Keep as an example and show date/source."
+      }
     },
     {
       "rule_id": "D09-GD-002",
@@ -1007,9 +1014,16 @@
       "kannad_note": "Sorting is the single cheapest way to raise realised price. It requires no equipment and no input, only the decision to do it before loading rather than after.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "ONCE_UNTIL_RESOLVED",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Separating grades is agronomically/economically sensible, but the claim that mixed lots are always priced by their weakest fraction needs market evidence. Phrase as a market-dependent recommendation."
+      }
     },
     {
       "rule_id": "D09-GD-003",
@@ -1056,8 +1070,15 @@
       "kannad_note": "Formal grading standards from the Spices Board or APMC are an open item. Until they exist, the reasoned list is workable but should be presented as such rather than as an official specification.",
       "decision_type": "DIAGNOSTIC",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "The packet explicitly says no published grading standard was located. Therefore this must remain a local operational grading framework, not an official grading standard."
+      }
     },
     {
       "rule_id": "D09-MT-001",
@@ -1129,9 +1150,16 @@
       "kannad_note": "The simplest high-value test in the knowledge base. It needs a thumb, and it beats the calendar.",
       "decision_type": "DIAGNOSTIC",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "WINDOW",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Skin-scrape/corking is a useful maturity indicator, but the claim that it is always more reliable than DAP is too absolute. Use it together with variety maturity and field observations."
+      }
     },
     {
       "rule_id": "D09-MT-002",
@@ -1196,9 +1224,16 @@
       "kannad_note": "Calcareous yellowing is expected here rather than exceptional, so this block will fire often. That is correct — the alternative is a farmer harvesting a month early because the leaves looked ready.",
       "decision_type": "BLOCK",
       "automation": "refusal",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "SILENT_GUARD",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Correctly blocks premature harvest interpretation of yellowing and routes to differential diagnosis. The list of causes and the 200-DAP cutoff should remain variety/stage-specific."
+      }
     },
     {
       "rule_id": "D09-MT-003",
@@ -1263,9 +1298,16 @@
       "kannad_note": "The seed crop follows a different rule from the market crop and the two are often harvested together. If part of the field is destined for seed, that part waits.",
       "decision_type": "BLOCK",
       "automation": "refusal",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Seed rhizomes should be physiologically mature and suitable for storage. Replace absolute 'full maturity mandatory' with variety-specific maturity plus skin/corking and storage-quality checks."
+      }
     },
     {
       "rule_id": "D09-MT-004",
@@ -1308,8 +1350,15 @@
       "kannad_note": "This is an economic decision wearing agronomic clothes. The engine should present the numbers and not recommend, because the right answer depends on the farmer's cash position as much as on the price.",
       "decision_type": "HUMAN_DECISION",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "A 75%-maturity market option can be presented only as a documented market practice. It must not override crop maturity/storage-quality safeguards."
+      }
     },
     {
       "rule_id": "D09-WW-001",
@@ -1382,9 +1431,16 @@
       "kannad_note": "The percentage steps are fitted inside the sourced framework of one to two months gradual and one to two weeks stopped. Check them against the skin scrape test in season one and correct.",
       "decision_type": "SCHEDULED_REMINDER",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "WINDOW",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Gradual irrigation withdrawal before harvest is plausible, but the exact 80/60/30/stop schedule is not sufficiently supported as a universal ginger schedule. Make it variety/soil/weather dependent."
+      }
     },
     {
       "rule_id": "D09-WW-002",
@@ -1451,9 +1507,16 @@
       "kannad_note": "The word gradual appears in both sources and is not incidental. On this soil it is the operative instruction, and it is the difference between lifting clean rhizomes and prising them out of cracked clay.",
       "decision_type": "DIAGNOSTIC",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "SILENT_GUARD",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Slower withdrawal on heavy/Vertisol soil is a reasonable field-management principle. The exact taper must be determined from soil moisture, drainage and harvest conditions rather than a fixed schedule."
+      }
     },
     {
       "rule_id": "D09-HV-001",
@@ -1517,9 +1580,16 @@
       "kannad_note": "Digging from the side rather than from above is the practical detail that prevents most harvest injury. It costs nothing and is easily lost when the crew is working fast.",
       "decision_type": "DIAGNOSTIC",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "WINDOW",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Gentle lifting, washing, draining and grading are sound post-harvest practices. Exact sequence should follow the verified post-harvest package and local handling facilities."
+      }
     },
     {
       "rule_id": "D09-HV-002",
@@ -1562,8 +1632,15 @@
       "kannad_note": "The injury rule appears three times across the knowledge base — weeding, earthing up and now harvest. It is the same wound and the same pathogen every time, and it is free to avoid.",
       "decision_type": "DIAGNOSTIC",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Preventing mechanical injury during lifting is strongly aligned with post-harvest disease and storage-risk logic."
+      }
     },
     {
       "rule_id": "D09-HV-003",
@@ -1606,8 +1683,15 @@
       "kannad_note": "Easy to miss because washing feels like the last step. On a hot harvest day a heaped wet load can start heating within hours.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Draining washed rhizomes in a thin layer before bagging is sound post-harvest hygiene and moisture management."
+      }
     },
     {
       "rule_id": "D09-HV-004",
@@ -1669,9 +1753,16 @@
       "kannad_note": "Marked EST because no source addresses it. In February and March the mornings here are cool and the afternoons are not, so the practical gain is larger than in a milder belt.",
       "decision_type": "SENSOR_ALERT",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "EVENT"
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Early-morning harvest is a reasonable heat/labour management suggestion, but the packet explicitly labels its basis as reasoned rather than sourced. Keep as an optional operational recommendation, not a scientific rule."
+      }
     },
     {
       "rule_id": "D09-YD-001",
@@ -1739,9 +1830,16 @@
       "kannad_note": "One of the ten minimum records identified in Domain 12. Without it the whole first season produces advice but no learning.",
       "decision_type": "DATA_CAPTURE",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "ONCE_UNTIL_RESOLVED",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Recording actual yield, grade split and disease incidence is essential for closing the agronomic learning loop and correcting estimated model coefficients."
+      }
     },
     {
       "rule_id": "D09-YD-002",
@@ -1788,8 +1886,15 @@
       "kannad_note": "The comparison against the state average of 53 quintal matters for the product argument as much as for the farmer. That gap is management, and management is what the engine addresses.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Gap attribution is appropriate, but the 60/90/110 q/acre targets and state-average comparator must be versioned and sourced. Do not imply that the range is a validated biological target."
+      }
     },
     {
       "rule_id": "D09-YD-003",
@@ -1835,8 +1940,15 @@
       "kannad_note": "If dry ginger becomes the main route, Rejatha at 23 percent recovery becomes a serious candidate despite ranking third on fresh yield. The recovery figure is what settles that choice.",
       "decision_type": "DATA_CAPTURE",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Recording actual dry recovery is fully appropriate. The 19% planning value should be variety/method-specific rather than a universal constant."
+      }
     },
     {
       "rule_id": "D09-DR-001",
@@ -1882,8 +1994,15 @@
       "kannad_note": "A genuine local advantage. The same dryness that makes the crop difficult to grow here makes it easy to process, so the belt's weakness in cultivation is its strength in post-harvest.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "The simple sun-drying workflow is a reasonable low-cost option, but 7–8 days, 1–1.5 inch layer and 8–10% moisture should be treated as process targets dependent on weather and variety."
+      }
     },
     {
       "rule_id": "D09-DR-002",
@@ -1924,8 +2043,15 @@
       "kannad_note": "A tool-choice instruction that looks trivial and is not. Metal knives are faster and more available, and the loss they cause is invisible until the product is graded.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Shallow skin scraping is appropriate for quality retention. The exact bamboo-tool prescription should remain source-specific rather than a universal agronomic requirement."
+      }
     },
     {
       "rule_id": "D09-DR-003",
@@ -1966,8 +2092,15 @@
       "kannad_note": "Free, specific, and the kind of detail that only appears in a practitioner source. It is also exactly the sort of instruction a daily reminder handles well.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Protecting drying ginger from evening moisture/smoke is sensible. Keep the no-heap instruction because moisture accumulation is a real storage/drying risk."
+      }
     },
     {
       "rule_id": "D09-DR-004",
@@ -2032,9 +2165,16 @@
       "kannad_note": "The cost of building this option here is tarpaulin and space, because the February climate does the rest. That makes the insurance unusually cheap in this belt.",
       "decision_type": "SCHEDULED_REMINDER",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "WINDOW",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Preparing drying space before expected harvest is a sound operational recommendation and does not assert a biological threshold."
+      }
     },
     {
       "rule_id": "D09-PR-001",
@@ -2170,7 +2310,14 @@
       "status": "PHASE_1_RAW_UNVALIDATED",
       "delivery": "SILENT_GUARD",
       "immutable": true,
-      "immutable_reason": "SO2 residue limits are unverified. Until they are, this method is not first choice."
+      "immutable_reason": "SO2 residue limits are unverified. Until they are, this method is not first choice.",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "legal_food_safety_review_required",
+        "comment_mr": "The hazard warning is appropriate, but residue limits, FSSAI status and export-market acceptability require current regulatory verification before any processing recommendation."
+      }
     },
     {
       "rule_id": "D09-PR-003",
@@ -2213,8 +2360,15 @@
       "kannad_note": "The white colour that the chemical methods produce is a marketing attribute rather than a quality one. Until the premium is measured, accepting a burns hazard or a residue question to obtain it is not a rational trade.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Sun drying as a low-risk first option is reasonable. 'Completely safe' is too absolute; all processing has hygiene and quality risks. Chemical methods require regulatory/food-safety verification."
+      }
     },
     {
       "rule_id": "D09-PW-001",
@@ -2255,8 +2409,15 @@
       "kannad_note": "Ranked low because the prices for dry ginger and powder are both unknown. Processing more is not automatically earning more, and without the price data the ladder cannot be evaluated.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Powdering is a valid value-add route, but mesh size and processing specifications should be treated as product-process parameters, not agronomic standards."
+      }
     },
     {
       "rule_id": "D09-ST-001",
@@ -2300,8 +2461,15 @@
       "kannad_note": "Marked DERIVED because no source addresses green storage for ginger. It is a real gap — the crop is often held for days awaiting a price, and no guidance exists for that period.",
       "decision_type": "DIAGNOSTIC",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Cool, shaded, ventilated storage and removal of injured rhizomes are sensible. Exact temperature/humidity limits should be added before calling this a validated storage standard."
+      }
     },
     {
       "rule_id": "D09-ST-002",
@@ -2344,8 +2512,15 @@
       "kannad_note": "This is the single measurement that converts the storage strategy from guesswork into arithmetic, and it costs a set of scales and one weighing a month.",
       "decision_type": "DATA_CAPTURE",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Monthly sample weighing is an appropriate empirical method for estimating actual storage loss and improving the sell/hold model."
+      }
     },
     {
       "rule_id": "D09-ST-003",
@@ -2407,9 +2582,16 @@
       "kannad_note": "The hand-rubbing finish described in the source is the traditional test for this endpoint. A moisture meter would be more reliable and is inexpensive.",
       "decision_type": "BLOCK",
       "automation": "refusal",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "immutable": false,
-      "delivery": "SILENT_GUARD"
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "The 8–10% dry-ginger moisture endpoint is supported within the packet's cited drying guidance. Keep it as a storage-quality target, with actual moisture measurement."
+      }
     },
     {
       "rule_id": "D09-MK-001",
@@ -2452,8 +2634,15 @@
       "kannad_note": "This is the economic counterpart of the 55 percent rainfall rule in Domain 7. Both say the same thing — plan on the bad case, because the good case does not need planning.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Scenario testing at lower prices is good risk management. The specific Rs 6,000/q break-even stress price is economic, not agronomic, and must be current-market/configurable."
+      }
     },
     {
       "rule_id": "D09-MK-002",
@@ -2497,8 +2686,15 @@
       "kannad_note": "Transport cost has not been measured and it decides whether the split is worth making. Mumbai is roughly 350 km and Nagpur roughly 500 km from here, so the freight on a 10 tonne load is material.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Market splitting can be a useful strategy, but the fixed 20–30/50–60/10–20% allocation is a commercial heuristic, not an agronomic standard. Make it configurable from live arrivals/prices."
+      }
     },
     {
       "rule_id": "D09-MK-003",
@@ -2542,8 +2738,15 @@
       "kannad_note": "Market thinness is also why storage capacity matters here. In a thin market the ability to wait is the only real bargaining power a grower has.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Thin-market warning is useful, but market arrival figures are time-specific. Recalculate from current market data rather than hard-coding the historical ratios."
+      }
     },
     {
       "rule_id": "D09-MK-004",
@@ -2584,8 +2787,15 @@
       "kannad_note": "This is the only domain carrying a review_by date. The agronomy elsewhere is stable for years; these prices are stale within weeks.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Displaying observation date and avoiding stale prices being presented as current is essential and correct."
+      }
     },
     {
       "rule_id": "D09-SL-001",
@@ -2628,8 +2838,15 @@
       "kannad_note": "Four of the five inputs the decision model needs are still missing — dry ginger price, processing cost, monthly storage loss and a multi-year price series. The engine should present the framework and ask the farmer to supply the local numbers, which they can get from a trader more accurately than we can estimate.",
       "decision_type": "HUMAN_DECISION",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Presenting sell/hold/processing arithmetic without forecasting price or making the decision for the farmer is appropriate."
+      }
     },
     {
       "rule_id": "D09-SL-002",
@@ -2672,8 +2889,15 @@
       "kannad_note": "The dry ginger price is the missing number that makes this computable. A single enquiry with a local trader would supply it, and it is worth making before harvest rather than after.",
       "decision_type": "HUMAN_DECISION",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "The 20–25% fresh-to-dry recovery assumption is a planning range, not universal. Break-even arithmetic is valid only when actual recovery, processing cost and selling price are supplied."
+      }
     },
     {
       "rule_id": "D09-SL-003",
@@ -2717,8 +2941,15 @@
       "kannad_note": "This is a genuinely useful pairing of two findings — the grading spread and the processing economics. The bottom fraction of the crop has a better destination than the fresh market.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Processing can become rational at low fresh prices or lower grades, but the trigger must use actual recovery, processing cost, storage loss and current prices; it should not be an unconditional recommendation."
+      }
     },
     {
       "rule_id": "D09-SF-001",
@@ -2939,9 +3170,16 @@
       "kannad_note": "Washing is labour, and it is repaid in the price rather than in the weight. That makes it easy to skip when labour is short at harvest and expensive to have skipped when the lot is graded.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
+      "status": "AGRONOMIST_REVIEWED",
       "delivery": "ONCE_UNTIL_RESOLVED",
-      "immutable": false
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Cleaning/washing before sale can improve appearance, but washing should be followed by proper drainage/drying and must match the intended market and storage route."
+      }
     },
     {
       "rule_id": "D09-PH-002",
@@ -2989,8 +3227,15 @@
       "kannad_note": "Blocked entirely if the plot has a recorded rot or wilt history. In that case the seed comes from elsewhere regardless of the cost comparison.",
       "decision_type": "PLANNING_GUIDANCE",
       "automation": "advisory",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "conditional",
+        "comment_mr": "Separating healthy seed rhizomes before storage is appropriate, but treatment details must use the current verified seed-treatment recommendation and product label."
+      }
     },
     {
       "rule_id": "D09-YD-004",
@@ -3035,8 +3280,15 @@
       "kannad_note": "Transport cost in particular is unmeasured and it decides whether the market-splitting strategy is worth executing. It is a single number that unlocks a whole rule.",
       "decision_type": "DATA_CAPTURE",
       "automation": "assisted",
-      "status": "PHASE_1_RAW_UNVALIDATED",
-      "immutable": false
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "VIRAAI_AGRONOMY_REVIEW",
+        "date": "2026-09-22",
+        "outcome": "compliant",
+        "comment_mr": "Recording actual cost line-by-line is necessary for calibration of the economics model and is methodologically sound."
+      }
     }
   ],
   "open_items": [
