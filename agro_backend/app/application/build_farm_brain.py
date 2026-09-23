@@ -920,7 +920,9 @@ async def _populate_yield_prediction(
         water_source=_as_str(state.get("water_source_type")),
         agro_zone=_as_str(state.get("agro_climatic_zone")),
     )
-    si = resolve_site_index(si_config, soil_key=soil_key, water_key=water_key, climate_key=climate_key)
+    si = resolve_site_index(
+        si_config, soil_key=soil_key, water_key=water_key, climate_key=climate_key
+    )
     override = state.get("ceiling_quintal_per_acre")
     y_potential = float(override) if override is not None else vp.y_var_q_per_acre * si
 
@@ -944,7 +946,9 @@ async def _populate_yield_prediction(
                 )
             )
 
-    fc = predict_yield_full(y_potential=y_potential, factors=factors, missing_factors=missing, seed=0)
+    fc = predict_yield_full(
+        y_potential=y_potential, factors=factors, missing_factors=missing, seed=0
+    )
 
     gap = fc.y_potential - fc.y_process
     cumulative_loss_pct = (
@@ -953,7 +957,9 @@ async def _populate_yield_prediction(
     attributed_pct = round(100.0 - fc.unexplained_pct, 1) if gap > 1e-9 else None
     unexplained_pct = fc.unexplained_pct if gap > 1e-9 else None
     interval_pct = (
-        round((fc.y_high_90 - fc.y_low_90) / (2.0 * fc.y_point) * 100.0, 1) if fc.y_point > 0 else None
+        round((fc.y_high_90 - fc.y_low_90) / (2.0 * fc.y_point) * 100.0, 1)
+        if fc.y_point > 0
+        else None
     )
     applied = [f.rule_id for f in factors if f.rule_id]
     active_groups = sorted({g for f in factors for g in f.groups})
