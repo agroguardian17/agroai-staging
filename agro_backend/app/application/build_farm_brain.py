@@ -49,6 +49,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from app.application.ports.advisory_metrics_repo import AdvisoryMetricsRepo
+from app.application.ports.cluster_repo import ClusterRepo
 from app.application.ports.crop_scouting_repo import CropScoutingRepo, CropScoutingView
 from app.application.ports.crop_season_repo import CropSeasonRepo, CropSeasonView
 from app.application.ports.farm_repo import FarmFacts, FarmRepo
@@ -175,6 +176,10 @@ class FarmBrainDeps:
     # process-baseline predictor and fills the D11 prediction/attribution fields,
     # logging each prediction. None keeps them UNKNOWN.
     yield_model_repo: YieldModelRepo | None = None
+    # Optional D12 peer-cluster source. When present the builder fills the
+    # ``cluster_id`` field from the plot's stored assignment (the assignment
+    # itself runs at enrollment, not here). None keeps ``cluster_id`` UNKNOWN.
+    cluster_repo: ClusterRepo | None = None
     # The full ``kb_farm_brain_fields`` set. Injected so tests can pin a
     # subset; the daily job reads it from the database at startup.
     declared_fields: frozenset[str] = field(default_factory=frozenset)
@@ -350,6 +355,13 @@ async def build_farm_brain(
                 _set(state, "plot_ndvi_gap_peer", baseline_gap(o0.ndvi_mean, peer.ndvi_mean))
                 _set(state, "plot_ndre_baseline_regional", peer.ndre_mean)
                 _set(state, "plot_ndre_gap_regional", baseline_gap(o0.ndre_mean, peer.ndre_mean))
+
+    # ---- D12 peer cluster (id only; assignment happens at enrollment) --
+    # The cluster the plot was assigned to backs the D12 anonymised-cluster
+    # rules and the D14 peer baseline. We only read it here.
+    if deps.cluster_repo is not None:
+        cluster_id = await deps.cluster_repo.cluster_id_for_plot(plot_id)
+        _set(state, "cluster_id", cluster_id)
 
     # ---- Composite derivations (from fields filled above) --------------
     _derive_composite(state, today)
