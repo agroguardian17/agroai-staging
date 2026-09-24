@@ -44,5 +44,13 @@ class ErasureRequestRepo(Protocol):
         """The farmer's pending erasure request, if any."""
         ...
 
+    async def list_due(self, now: datetime, *, limit: int = 500) -> list[ErasureRequest]:
+        """Pending requests whose ``due_at`` has passed (for the purge job)."""
+        ...
+
+    async def mark_completed(self, request_id: uuid.UUID, *, completed_at: datetime) -> None:
+        """Mark a request fulfilled (status='completed')."""
+        ...
+
 
 __all__ = ["ErasureRequest", "ErasureRequestRepo"]

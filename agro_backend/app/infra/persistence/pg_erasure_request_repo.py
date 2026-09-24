@@ -32,6 +32,23 @@ _PENDING_SQL = text(
     """
 )
 
+_DUE_SQL = text(
+    """
+    SELECT id, farmer_id, requested_at, due_at, status, method, actor
+    FROM erasure_request
+    WHERE status = 'pending' AND due_at <= :now
+    ORDER BY due_at ASC LIMIT :limit
+    """
+)
+
+_COMPLETE_SQL = text(
+    """
+    UPDATE erasure_request
+    SET status = 'completed', completed_at = :completed_at
+    WHERE id = :id AND status = 'pending'
+    """
+)
+
 
 class PgErasureRequestRepo:
     def __init__(self, sessionmaker: async_sessionmaker[AsyncSession]) -> None:
@@ -58,15 +75,29 @@ class PgErasureRequestRepo:
         if row is None:
             return None
         r: Any = row
-        return ErasureRequest(
-            id=r.id,
-            farmer_id=r.farmer_id,
-            requested_at=r.requested_at,
-            due_at=r.due_at,
-            status=r.status,
-            method=r.method,
-            actor=r.actor,
-        )
+        return _to_request(r)
+
+    async def list_due(self, now: datetime, *, limit: int = 500) -> list[ErasureRequest]:
+        async with self._sm() as session:
+            rows = (await session.execute(_DUE_SQL, {"now": now, "limit": limit})).all()
+        return [_to_request(r) for r in rows]
+
+    async def mark_completed(self, request_id: uuid.UUID, *, completed_at: datetime) -> None:
+        async with self._sm() as session:
+            await session.execute(_COMPLETE_SQL, {"id": request_id, "completed_at": completed_at})
+            await session.commit()
+
+
+def _to_request(r: Any) -> ErasureRequest:
+    return ErasureRequest(
+        id=r.id,
+        farmer_id=r.farmer_id,
+        requested_at=r.requested_at,
+        due_at=r.due_at,
+        status=r.status,
+        method=r.method,
+        actor=r.actor,
+    )
 
 
 __all__ = ["PgErasureRequestRepo"]

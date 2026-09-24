@@ -68,5 +68,25 @@ class PgFarmerRepo:
             language_preference=r.language_preference,
         )
 
+    async def anonymise_identity(self, farmer_id: uuid.UUID) -> bool:
+        # Tombstone direct identifiers (NOT NULL cols → 'ERASED'; the rest NULL),
+        # deactivate the account, keep coarse location + non-PII for §8 aggregate.
+        stmt = text(
+            """
+            UPDATE farmers SET
+                full_name = 'ERASED', marathi_name = 'ERASED',
+                phone_primary = 'ERASED', whatsapp_number = 'ERASED',
+                phone_secondary = NULL, aadhar_number = NULL,
+                farmer_id_govt = NULL, pin_code = NULL, date_of_birth = NULL,
+                account_status = 'inactive'
+            WHERE farmer_id = :fid
+            RETURNING farmer_id
+            """
+        )
+        async with self._sm() as session:
+            row = (await session.execute(stmt, {"fid": farmer_id})).first()
+            await session.commit()
+        return row is not None
+
 
 __all__ = ["PgFarmerRepo"]
