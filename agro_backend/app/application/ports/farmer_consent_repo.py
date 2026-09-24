@@ -64,5 +64,21 @@ class FarmerConsentRepo(Protocol):
         """Append one immutable ``consent_event`` (given / withdrawn / updated)."""
         ...
 
+    async def set_scope(
+        self,
+        farmer_id: uuid.UUID,
+        scope: str,
+        *,
+        granted: bool,
+        withdrawn_at: datetime.datetime | None = None,
+    ) -> bool:
+        """Flip one consent scope (advisory/research/third_party). Returns False
+        if the farmer has no consent row. Sets ``withdrawn_at`` when withdrawing."""
+        ...
+
+    async def mark_deletion_requested(self, farmer_id: uuid.UUID, *, requested: bool) -> None:
+        """Set the ``deletion_requested`` flag (erasure workflow)."""
+        ...
+
 
 __all__ = ["ConsentCapture", "FarmerConsentRepo", "FarmerConsentView"]
