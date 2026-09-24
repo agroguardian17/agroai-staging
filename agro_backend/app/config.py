@@ -150,6 +150,13 @@ class Settings(BaseSettings):
     QA_DIGEST_DIR: str = "qa_digests"
     QA_DIGEST_TOP_FP_RULES: int = 10
 
+    # ---- DPDP erasure/retention worker (A4.3) ------------------------------
+    # Nightly sweep that fulfils due erasure requests (30-day SLA) by
+    # anonymising the farmer's identity in place. Off in tests/CI.
+    RETENTION_JOB_ENABLED: bool = True
+    RETENTION_JOB_HOUR: int = 2
+    RETENTION_JOB_MINUTE: int = 30
+
     # ---- Advisory subscriber (Round 13) -------------------------------------
     # Master switch for the alert->advisory subscriber (LISTEN agro_events ->
     # compose_advisory -> ai_suggestions). Off in tests/CI so no background

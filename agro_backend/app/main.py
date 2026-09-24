@@ -61,6 +61,10 @@ from app.jobs.qa_digest_scheduler import (
     build_and_start_qa_digest_scheduler,
     stop_qa_digest_scheduler,
 )
+from app.jobs.retention_scheduler import (
+    build_and_start_retention_scheduler,
+    stop_retention_scheduler,
+)
 from app.jobs.satellite_scheduler import (
     build_and_start_satellite_scheduler,
     stop_satellite_scheduler,
@@ -111,6 +115,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     landsat: LandsatSchedulerHandle | None = None
     learning: AsyncIOScheduler | None = None
     qa_digest: AsyncIOScheduler | None = None
+    retention: AsyncIOScheduler | None = None
     try:
         broker = await build_and_start_ingest(settings)
         scheduler = await build_and_start_scheduler(settings)
@@ -121,8 +126,11 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         landsat = await build_and_start_landsat_scheduler(settings)
         learning = await build_and_start_learning_scheduler(settings)
         qa_digest = await build_and_start_qa_digest_scheduler(settings)
+        retention = await build_and_start_retention_scheduler(settings)
         yield
     finally:
+        if retention is not None:
+            await stop_retention_scheduler(retention)
         if qa_digest is not None:
             await stop_qa_digest_scheduler(qa_digest)
         if learning is not None:

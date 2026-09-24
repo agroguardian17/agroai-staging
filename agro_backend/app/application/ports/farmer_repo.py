@@ -60,5 +60,12 @@ class FarmerRepo(Protocol):
         """District/taluka for one farmer, or None if unknown."""
         ...
 
+    async def anonymise_identity(self, farmer_id: uuid.UUID) -> bool:
+        """DPDP erasure (A4.3): tombstone the farmer's direct identifiers in
+        place — name, phone, whatsapp, DOB — keeping the row and non-PII data so
+        anonymised aggregate history and referential integrity survive (§8).
+        Returns False if the farmer does not exist."""
+        ...
+
 
 __all__ = ["FarmerIdentity", "FarmerLocation", "FarmerRepo"]
