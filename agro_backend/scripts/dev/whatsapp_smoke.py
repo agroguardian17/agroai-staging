@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Live smoke check for the WhatsApp advisory template (credential-gated).
 
-Sends ONE real ``agroguardian_advisory_v1`` template message to a phone number,
+Sends ONE real ``agroguardian_advisory_v2`` template message to a phone number,
 through the exact production path (``MetaCloudWhatsappSender.send_template``) the
 delivery subscriber uses -- but bypassing the DB and the subscriber, so it
 isolates one question: does the approved template + token + number deliver a
@@ -22,7 +22,7 @@ Env (required -- the same vars the app reads):
     META_WHATSAPP_PHONE_NUMBER_ID   the sender phone-number id
 Env (optional, defaulted):
     META_WHATSAPP_GRAPH_VERSION         (default v20.0)
-    META_WHATSAPP_ADVISORY_TEMPLATE_NAME (default agroguardian_advisory_v1)
+    META_WHATSAPP_ADVISORY_TEMPLATE_NAME (default agroguardian_advisory_v2)
 
 Options:
     --to     recipient number, international format, no '+' (e.g. 9198XXXXXXXX)
@@ -57,7 +57,7 @@ def main() -> int:
     parser.add_argument("--text", default=_SAMPLE_MR, help="Marathi body parameter ({{1}})")
     parser.add_argument(
         "--template",
-        default=os.environ.get("META_WHATSAPP_ADVISORY_TEMPLATE_NAME", "agroguardian_advisory_v1"),
+        default=os.environ.get("META_WHATSAPP_ADVISORY_TEMPLATE_NAME", "agroguardian_advisory_v2"),
     )
     parser.add_argument("--lang", default="mr", help="template language code (default mr)")
     args = parser.parse_args()

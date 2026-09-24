@@ -201,7 +201,7 @@ class Settings(BaseSettings):
     # verification is skipped; when set it is enforced.
     META_WHATSAPP_APP_SECRET: SecretStr = SecretStr("")
     META_WHATSAPP_OTP_TEMPLATE_NAME: str = "agroguardian_otp_v1"
-    META_WHATSAPP_ADVISORY_TEMPLATE_NAME: str = "agroguardian_advisory_v1"
+    META_WHATSAPP_ADVISORY_TEMPLATE_NAME: str = "agroguardian_advisory_v2"
     META_WHATSAPP_GRAPH_VERSION: str = "v20.0"
 
     # ---- FCM ----------------------------------------------------------------
