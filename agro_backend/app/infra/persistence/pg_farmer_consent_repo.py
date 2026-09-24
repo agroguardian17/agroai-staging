@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 import uuid
 from typing import Any
 
@@ -9,6 +10,13 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.application.ports.farmer_consent_repo import ConsentCapture, FarmerConsentView
+
+# Whitelist: consent scope -> column (guards the interpolated UPDATE below).
+_SCOPE_COLUMN = {
+    "advisory": "consent_advisory",
+    "research": "consent_research",
+    "third_party": "third_party_share_consent_given",
+}
 
 _COLS = (
     "farmer_id, consent_advisory, consent_research, consent_date, "
@@ -117,6 +125,41 @@ class PgFarmerConsentRepo:
         }
         async with self._sm() as session:
             await session.execute(_EVENT_SQL, params)
+            await session.commit()
+
+    async def set_scope(
+        self,
+        farmer_id: uuid.UUID,
+        scope: str,
+        *,
+        granted: bool,
+        withdrawn_at: datetime.datetime | None = None,
+    ) -> bool:
+        column = _SCOPE_COLUMN.get(scope)
+        if column is None:
+            raise ValueError(f"unknown consent scope: {scope!r}")
+        # ``column`` is from the _SCOPE_COLUMN whitelist, never user input.
+        stmt = text(
+            f"UPDATE farmer_consent SET {column} = :granted, "
+            "withdrawn_at = COALESCE(:withdrawn_at, withdrawn_at), updated_at = now() "
+            "WHERE farmer_id = :farmer_id RETURNING farmer_id"
+        )
+        async with self._sm() as session:
+            res = await session.execute(
+                stmt,
+                {"granted": granted, "withdrawn_at": withdrawn_at, "farmer_id": farmer_id},
+            )
+            row = res.first()
+            await session.commit()
+        return row is not None
+
+    async def mark_deletion_requested(self, farmer_id: uuid.UUID, *, requested: bool) -> None:
+        stmt = text(
+            "UPDATE farmer_consent SET deletion_requested = :requested, updated_at = now() "
+            "WHERE farmer_id = :farmer_id"
+        )
+        async with self._sm() as session:
+            await session.execute(stmt, {"requested": requested, "farmer_id": farmer_id})
             await session.commit()
 
 
