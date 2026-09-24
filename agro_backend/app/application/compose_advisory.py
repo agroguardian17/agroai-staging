@@ -25,6 +25,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
+from app.application.ports.advisory_audit_repo import AdvisoryAuditRepo, AdvisoryAuditRow
 from app.application.ports.ai_suggestion_repo import AiSuggestion, AiSuggestionRepo
 from app.application.ports.alert_repo import AlertFull, AlertRepo
 from app.application.ports.chat_model import ChatModel, ChatRequest
@@ -49,6 +50,8 @@ class ComposeAdvisoryDeps:
     # #21). A future ModelRole enum resolves this same string.
     chat_model_name: str
     max_tokens: int = 600
+    # Optional immutable advisory-audit sink (A4.2, §7.3).
+    advisory_audit_repo: AdvisoryAuditRepo | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -166,6 +169,21 @@ async def execute(
         crop_stage=season.current_growth_stage,
     )
     persisted_id = await deps.ai_suggestion_repo.create(suggestion)
+    # Immutable generation-audit row (A4.2, §7.3). The LLM alert path has no KB
+    # rule or gate evaluation, so those fields are null; the model version and
+    # link to the advisory are still recorded.
+    if deps.advisory_audit_repo is not None:
+        await deps.advisory_audit_repo.record(
+            AdvisoryAuditRow(
+                suggestion_id=persisted_id,
+                rule_id=None,
+                rule_version=None,
+                model_version=response.model,
+                confidence=None,
+                gate_results={},
+                inputs={"suggestion_type": "alert", "alert_id": str(alert.alert_id)},
+            )
+        )
     # Round-trip the server-assigned id (no-op when our uuid wins, but
     # the repo retains the right to override).
     persisted = AiSuggestion(
