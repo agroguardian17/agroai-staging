@@ -140,7 +140,7 @@ def _deps(
         ai_suggestion_repo=cast(Any, repo),
         farmer_repo=cast(Any, farmer_repo),
         sender=cast(Any, sender),
-        template_name="agroguardian_advisory_v1",
+        template_name="agroguardian_advisory_v2",
         require_review=require_review,
     )
 

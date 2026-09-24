@@ -101,7 +101,7 @@ async def test_send_template_posts_body_only_advisory_payload() -> None:
         sender = MetaCloudWhatsappSender(_settings(), client=client)
         out = await sender.send_template(
             phone="+918123456789",
-            template_name="agroguardian_advisory_v1",
+            template_name="agroguardian_advisory_v2",
             language_code="mr",
             body_params=["आज पाणी द्या."],
         )
@@ -110,7 +110,7 @@ async def test_send_template_posts_body_only_advisory_payload() -> None:
     assert out.provider_message_id == "wamid.ADV1"
 
     body = route.calls.last.request.read().decode()
-    assert "agroguardian_advisory_v1" in body
+    assert "agroguardian_advisory_v2" in body
     assert '"code": "mr"' in body or '"code":"mr"' in body
     # Body-only template: exactly one component, no button.
     assert '"type": "button"' not in body and '"type":"button"' not in body
@@ -126,7 +126,7 @@ async def test_send_template_sanitizes_newlines_in_body_param() -> None:
         sender = MetaCloudWhatsappSender(_settings(), client=client)
         await sender.send_template(
             phone="+918123456789",
-            template_name="agroguardian_advisory_v1",
+            template_name="agroguardian_advisory_v2",
             language_code="mr",
             body_params=["ओळ १\nओळ २\t\t  खूप   जागा"],
         )
@@ -158,7 +158,7 @@ async def test_log_only_sender_send_template_accepts() -> None:
 
     out = await LogOnlyWhatsappSender().send_template(
         phone="+918123456789",
-        template_name="agroguardian_advisory_v1",
+        template_name="agroguardian_advisory_v2",
         language_code="mr",
         body_params=["आज पाणी द्या."],
     )
