@@ -1603,7 +1603,7 @@
       "rule_id": "D02-LY-001",
       "category": "LY",
       "priority": 5,
-      "severity": "red",
+      "severity": "blocking",
       "stage": "G0",
       "trigger": {
         "english": "soil_type is vertisol AND has_drip is true AND planting_layout is not broad_ridge",
