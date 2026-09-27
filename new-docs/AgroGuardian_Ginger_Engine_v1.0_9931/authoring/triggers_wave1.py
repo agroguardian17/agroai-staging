@@ -57,12 +57,19 @@ TRIGGERS = {
 # ===========================================================================
 
 'D01-PW-001': {
-  'expr': "planting_date IS NULL AND MONTH IN [JUN, JUL] AND dap IS NULL",
-  'note': 'Planting window has closed and nothing is planted.',
+  'expr': "planting_doy > 158",
+  'note': 'v1.2: late-planting warning (DOY 158 = 7 June). Replaces the unplanted-window blocking trigger; planting_doy is mapper-derived from sowing_date (no DATE literal in the DSL).',
   'tests': [
-    ({'current_month':6}, T, 'जून, लागवड नाही — अडवा'),
-    ({'current_month':6,'planting_date':'2026-06-05','dap':40}, F, 'लागवड झाली आहे'),
-    ({'current_month':4}, F, 'एप्रिल — अजून वेळ आहे'),
+    ({'planting_doy':170}, T, '19 June - late planting'),
+    ({'planting_doy':150}, F, '30 May - on window'),
+  ]},
+
+'D06-BW-001': {
+  'expr': "field_history_wilt IS TRUE AND years_since_last_wilt < 5",
+  'note': 'v1.2 (B1.3): bacterial-wilt 5-year rotation gate. Dormant (UNKNOWN) until years_since_last_wilt (new farmer-app int, companion to the existing field_history_wilt boolean) is sourced.',
+  'tests': [
+    ({'field_history_wilt':True,'years_since_last_wilt':2}, T, '2 yr ago - block'),
+    ({'field_history_wilt':True,'years_since_last_wilt':5}, F, '5 yr - rotation ok'),
   ]},
 
 'D01-HW-001': {

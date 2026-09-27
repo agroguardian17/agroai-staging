@@ -538,6 +538,11 @@ def _populate_from_season(
         return
     dap = (today - season.sowing_date).days if season.sowing_date else None
     _set(state, "dap", dap)
+    # Day-of-year of sowing, for the late-planting window rule (D01-PW-001):
+    # the trigger DSL has no DATE literal, so the window cutoff is expressed as
+    # planting_doy > 158 (7 June in a non-leap year).
+    if season.sowing_date is not None:
+        _set(state, "planting_doy", season.sowing_date.timetuple().tm_yday)
     _set(state, "current_stage", season.current_growth_stage)
     # We stage by calendar (DAP), so declare the provenance the KB reads.
     _set(state, "stage_source", "calendar")
