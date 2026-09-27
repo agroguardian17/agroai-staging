@@ -56,6 +56,10 @@ WINDOW_OVERDUE_REMINDERS = 3
 
 
 DELIVERY = {
+ # --- Batch 1 (firing-intent ready rules, 27 Sep) ---
+ 'D01-PH-004': EVENT,               # flowering observed -> G4 rhizome-fill start
+ 'D02-DR-004': WINDOW,              # poor drainage under broad-ridge, DAP 0-14
+ 'D02-ST-002': ONCE_UNTIL_RESOLVED, # pre-plant percolation test prompt
 
  # --- silent guards: no message unless the prohibited action is attempted --
  'D08-WD-001': SILENT_GUARD,   # herbicide after emergence

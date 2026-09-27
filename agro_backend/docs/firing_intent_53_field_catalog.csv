@@ -1,0 +1,54 @@
+field_name,type,capture_source,nullable,default,notes,used_by_rules
+action_not_recorded_within_3days,boolean,derived,true,false,"Derived: TRUE when advisory_log row exists for plot older than 3 days without a matching farmer_action; recomputed daily",D12-AL-001
+actual_yield_recorded,boolean,farmer_app,true,false,"Farmer app post-harvest form; set TRUE when yield_actual row created for plot × season",D09-YD-002 D11-GA-001
+basal_planning_active,boolean,farmer_app,true,false,"Farmer app pre-planting nutrient-planning screen open; auto-set TRUE when screen entered pre-planting; FALSE on submit",D04-SN-001
+biological_input_date,date,farmer_app,true,null,"Farmer app nutrient-log form when biological input (Trichoderma / Pseudomonas / vermicompost tea) applied",D04-BI-002
+biological_seed_treatment_date,date,farmer_app,true,null,"Farmer app seed-treatment log when biological treatment (Trichoderma) applied",D06-ST-002
+chemical_option_about_to_be_shown,boolean,derived,true,false,"Silent-guard trigger from engine — TRUE when advisory composer is about to include a chemical D05 recommendation; auto-reset on decision emit",D05-CH-002
+chemical_recommendation_pending,boolean,derived,true,false,"Silent-guard from engine — TRUE while a chemical recommendation is in composer queue awaiting CIB&RC verification",D10-REG-001
+cibrc_verified,boolean,ops,true,false,"Ops-owned per-product boolean; agronomist confirms CIB&RC registration for ginger before letting chemical recommendations pass",D10-REG-001
+differs_from_standard_marathi,boolean,derived,true,false,"D12 vocab-loop: TRUE when farmer WhatsApp reply contains term not in glossary; auto-detected via Marathi glossary check",D12-VOC-002
+disease_event_recorded_in_season,boolean,farmer_app,true,false,"Farmer scouting form disease event; auto-set TRUE when D06 disease category recorded in season",D11-SC-003
+dry_ginger_in_storage,boolean,farmer_app,true,false,"Farmer app post-processing storage log; set TRUE when dry ginger moved to storage",D09-ST-002
+dry_ginger_produced,boolean,farmer_app,true,false,"Farmer app post-drying log; set TRUE when drying complete and dry weight measured",D09-YD-003
+drying_in_progress,boolean,farmer_app,true,false,"Farmer app drying-status flag; set TRUE while sun-drying active",D09-DR-003
+durable_fact_learned_in_conversation,boolean,derived,true,false,"D12 learning-loop: derived from Claude/agent conversation when a farmer-specific durable fact is confirmed",D12-LOG-002
+emergence_observed,enum,farmer_app,true,null,"Farmer app or scouting DAP-35 prompt; enum: 'full' / 'partial' / 'none' / null",D01-PH-005
+fresh_price_crashed,boolean,ops,true,false,"Ops-owned mandi-price monitor; TRUE when fresh-ginger APMC price falls below configured threshold for the season",D09-SL-003
+fresh_share_low,boolean,ops,true,false,"Ops-owned; TRUE when farmer's cluster fresh-market share drops below configured threshold",D09-SL-003
+fungicide_option_about_to_be_shown,boolean,derived,true,false,"Silent-guard from engine — TRUE when advisory composer about to include a D06 fungicide recommendation",D06-CH-002
+gap_attribution_complete,boolean,derived,true,false,"D11-pipeline output — TRUE when yield-gap attribution has run for the plot's actual yield",D11-GA-003
+hardware_upgrade_pending,boolean,ops,true,false,"Ops-owned; set TRUE by hardware team when firmware/sensor upgrade scheduled for the plot",D03-SB-004
+harvest_complete,boolean,farmer_app,true,false,"Farmer app harvest-log; set TRUE when harvest event recorded",D06-FH-001 D09-YD-004 D11-GA-001
+institutional_contact_made,boolean,farmer_app,true,false,"Farmer app or agronomist log; set TRUE when farmer contacts VNMKV/ICAR/KVK for advisory",D10-ACT-002
+local_experience_sought,boolean,farmer_app,true,false,"Farmer app or scouting; set TRUE when farmer explicitly requests local (VNMKV/KVK) experience input",D10-CROP-002
+local_hour,int,derived,true,null,"Derived at rule-eval time: hour-of-day 0-23 in Asia/Kolkata timezone; recomputed per rule evaluation",D09-DR-003
+local_terminology_used,boolean,derived,true,false,"D12 vocab-loop: TRUE when farmer reply contains non-standard Marathi term; paired with differs_from_standard_marathi",D12-VOC-002
+low_confidence_decision,boolean,derived,true,false,"Silent-guard: TRUE when engine's confidence <0.72 or source_class ∈ {EST FIELD}",D12-AL-002
+moisture_stress_period_started,boolean,derived,true,false,"Auto-derived from sub-node readings: TRUE when consecutive-day VWC-below-threshold pattern detected",D11-RC-002
+month,int,derived,true,null,"Derived at rule-eval: calendar month 1-12; used by seasonal WINDOW rules",D03-WS-002
+pest_count,int,farmer_app,true,null,"Farmer scouting or scout_report field; count of pest observations per scouting event",D05-SC-002
+pest_planning_active,boolean,farmer_app,true,false,"Farmer app pre-planting pest-planning screen open",D05-PC-001
+pest_recommendation_pending,boolean,derived,true,false,"Silent-guard from engine — TRUE when D05 pest recommendation in composer queue",D05-IP-001
+photo_submitted,boolean,farmer_app,true,false,"Farmer app photo-upload log; auto-set TRUE per farmer_photos row created",D12-IMG-001
+preseason_planning,boolean,farmer_app,true,false,"Farmer app pre-season planning screen active",D11-SC-001
+processing_route,enum,farmer_app,true,null,"Farmer app processing-choice: 'dry_ginger' / 'fresh_market' / 'value_addition' / null",D09-DR-001 D09-PW-001
+saturation_event_occurred,boolean,derived,true,false,"Auto-derived from sub-node readings: TRUE when VWC-at-or-above-saturation for ≥24 hours",D11-RC-002
+scheduled_operation_completed,boolean,farmer_app,true,false,"Farmer app operation-log per scheduled season operation; set TRUE per completion",D11-RC-003
+scheduled_operation_missed,boolean,derived,true,false,"Derived: TRUE when scheduled operation past due-date with no completion log",D11-RC-003
+scout_report_days_ago,int,derived,true,null,"Derived: days since last scouting_report row for plot; recomputed daily",D04-DG-002
+season_number,int,derived,true,null,"Derived from crop_seasons: seasons since farmer joined platform (1 2 3...)",D12-IMG-001
+season_omissions_recorded,boolean,derived,true,false,"D11 gap-attribution output: TRUE when season records show any operation-omissions",D11-SC-002
+season_starting,boolean,derived,true,false,"Auto-set TRUE when new crop_seasons row created; auto-reset when season_record_complete=TRUE",D11-GA-002
+seed_going_to_storage,boolean,farmer_app,true,false,"Farmer app post-harvest seed-selection log",D08-SS-001
+seed_treatment_planned,boolean,farmer_app,true,false,"Farmer app pre-planting seed-treatment planning screen active",D06-ST-001
+skin_removal_in_progress,boolean,farmer_app,true,false,"Farmer app processing-log for dry-ginger route",D09-DR-002
+soft_rot_confirmed_in_cluster,boolean,ops,true,false,"Ops-owned cluster-level flag: TRUE when soft-rot confirmed in ≥2 plots in same cluster within 14 days",D06-FH-002
+subsidy_application_pending,boolean,farmer_app,true,false,"Farmer app scheme-application screen active",D10-APP-001
+symptom_diagnosis_pending,boolean,derived,true,false,"Silent-guard: TRUE when farmer symptom-report awaits agronomist diagnosis",D12-AL-002
+threshold_source,enum,derived,true,null,"Derived: source of active pest ETL threshold — 'A' / 'B' / 'EST' / null",D05-SC-002
+unexpected_outcome,boolean,derived,true,false,"Silent-guard: TRUE when farmer-reported outcome differs materially from advisory prediction",D12-AL-002
+value_addition_being_considered,boolean,farmer_app,true,false,"Farmer app value-addition planning screen active",D09-PW-001
+water_supply_status,enum,farmer_app,true,null,"Farmer app water-source status: 'adequate' / 'marginal' / 'critical' / null",D03-WS-002
+years_since_last_wilt,int,farmer_app,true,null,"Farmer app wilt-history capture (paired with existing field_history_wilt boolean per KB memo D6); integer years since last bacterial-wilt occurrence",D06-BW-001
+yield_expectation_requested,boolean,farmer_app,true,false,"Farmer app pre-season yield-forecast screen active",D11-SC-001

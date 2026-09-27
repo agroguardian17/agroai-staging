@@ -1076,7 +1076,23 @@
       "stage": "G0",
       "trigger": {
         "english": "Pre-season planning AND percolation_time_hours is unknown",
-        "marathi": "हंगामापूर्व नियोजन, निचरा चाचणी झालेली नाही"
+        "marathi": "हंगामापूर्व नियोजन, निचरा चाचणी झालेली नाही",
+        "expr": "dap IS NULL AND percolation_time_hours IS NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {},
+            "expect": "TRUE",
+            "label": "लागवडीपूर्वी — percolation test बाकी"
+          },
+          {
+            "context": {
+              "percolation_time_hours": 6.5
+            },
+            "expect": "FALSE",
+            "label": "चाचणी झाली — resolved"
+          }
+        ]
       },
       "action": {
         "english": "Request the field percolation pit test. 30 cm deep and wide, fill and drain fully, refill and time the second drain. Record percolation_class.",
@@ -1118,7 +1134,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      },
+      "delivery": "ONCE_UNTIL_RESOLVED"
     },
     {
       "rule_id": "D02-TL-001",
@@ -2093,7 +2110,29 @@
       "stage": "G0",
       "trigger": {
         "english": "percolation_class is poor AND planting_layout is broad_ridge",
-        "marathi": "निचरा खराब आहे आणि रुंद वरंबा पद्धत निवडली आहे"
+        "marathi": "निचरा खराब आहे आणि रुंद वरंबा पद्धत निवडली आहे",
+        "expr": "percolation_class == 'poor' AND planting_layout == 'broad_ridge' AND dap < 15",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "percolation_class": "poor",
+              "planting_layout": "broad_ridge",
+              "dap": 10
+            },
+            "expect": "TRUE",
+            "label": "निचरा कमी — मुख्य चर तपासा"
+          },
+          {
+            "context": {
+              "percolation_class": "poor",
+              "planting_layout": "broad_ridge",
+              "dap": 20
+            },
+            "expect": "FALSE",
+            "label": "DAP 15 नंतर — window बंद"
+          }
+        ]
       },
       "action": {
         "english": "Increase bed height to the upper end of the range (30 cm) and widen furrows beyond 60 cm. Confirm the main drain has adequate fall to an outlet.",
@@ -2138,7 +2177,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "WINDOW"
     },
     {
       "rule_id": "D02-OM-004",
