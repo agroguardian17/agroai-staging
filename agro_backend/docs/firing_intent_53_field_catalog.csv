@@ -52,3 +52,4 @@ value_addition_being_considered,boolean,farmer_app,true,false,"Farmer app value-
 water_supply_status,enum,farmer_app,true,null,"Farmer app water-source status: 'adequate' / 'marginal' / 'critical' / null",D03-WS-002
 years_since_last_wilt,int,farmer_app,true,null,"Farmer app wilt-history capture (paired with existing field_history_wilt boolean per KB memo D6); integer years since last bacterial-wilt occurrence",D06-BW-001
 yield_expectation_requested,boolean,farmer_app,true,false,"Farmer app pre-season yield-forecast screen active",D11-SC-001
+previous_stage,enum,derived,true,null,"Mapper persists current-run current_stage as previous_stage at run-close for next-run diff; NULL on first-ever run for a plot",D03-SB-003

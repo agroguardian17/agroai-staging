@@ -160,7 +160,7 @@
     "status": "PHASE_1_RAW_UNVALIDATED",
     "agronomist_validated": false,
     "validation_note": "Compiled from published sources, primarily Agrowon / Dr. Jitendra Kadam, Halad Sanshodhan Yojana, Kasbe Digraj. Not yet reviewed by a practising agronomist and not yet tested against plot soil test results.",
-    "total_rules": 27,
+    "total_rules": 28,
     "rule_count_note": "26 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count.",
     "review_by": null,
     "review_note": "Soil science here is stable. Only the soil test panel availability and lab contacts need periodic recheck (Domain 10).",
@@ -1624,7 +1624,29 @@
       "stage": "G0",
       "trigger": {
         "english": "soil_type is vertisol AND has_drip is true AND planting_layout is not broad_ridge",
-        "marathi": "काळी जमीन, ठिबक आहे, पण रुंद वरंबा पद्धत निवडलेली नाही"
+        "marathi": "काळी जमीन, ठिबक आहे, पण रुंद वरंबा पद्धत निवडलेली नाही",
+        "expr": "soil_type == 'vertisol' AND has_drip IS TRUE AND planting_layout IS NOT NULL AND planting_layout != 'broad_ridge'",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "soil_type": "vertisol",
+              "has_drip": true,
+              "planting_layout": "flat"
+            },
+            "expect": "TRUE",
+            "label": "सपाट पद्धत — blocking"
+          },
+          {
+            "context": {
+              "soil_type": "vertisol",
+              "has_drip": true,
+              "planting_layout": "broad_ridge"
+            },
+            "expect": "FALSE",
+            "label": "broad-ridge — compliant"
+          }
+        ]
       },
       "action": {
         "english": "Require broad ridge layout. The official recommendation names this method specifically for black soils and for fields using drip or sprinkler, and records 15 to 20 percent higher yield than the alternatives.",
@@ -1668,7 +1690,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "ONCE_UNTIL_RESOLVED"
     },
     {
       "rule_id": "D02-LY-002",
@@ -1773,6 +1796,78 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Confidence 0.70 — architectural intent OK, पण source / local validation पूर्ण होईपर्यंत CONDITIONAL. Season 1 data नंतर confidence upgrade करावी."
+      }
+    },
+    {
+      "rule_id": "D02-LY-004",
+      "category": "LY",
+      "priority": 5,
+      "severity": "yellow",
+      "stage": "G0",
+      "trigger": {
+        "english": "soil_type is vertisol AND has_drip is true AND planting_layout not yet chosen (pre-planting)",
+        "marathi": "काळी जमीन, ठिबक आहे, पण लागवडीची पद्धत अजून निवडलेली नाही",
+        "expr": "soil_type == 'vertisol' AND has_drip IS TRUE AND planting_layout IS NULL AND dap IS NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "soil_type": "vertisol",
+              "has_drip": true
+            },
+            "expect": "TRUE",
+            "label": "पद्धत अजून निवडलेली नाही — विचारा"
+          },
+          {
+            "context": {
+              "soil_type": "vertisol",
+              "has_drip": true,
+              "planting_layout": "broad_ridge"
+            },
+            "expect": "FALSE",
+            "label": "पद्धत निवडली — resolved"
+          }
+        ]
+      },
+      "action": {
+        "english": "Prompt the farmer to choose a planting layout before planting. On black soil with drip, broad ridge (60 cm bed + 40 cm furrow) is the VNMKV recommendation; a flat layout chosen by default risks rhizome rot.",
+        "marathi": "काळी माती + ठिबक — लागवडीपूर्वी broad-ridge (60 सेमी बेड + 40 सेमी सरी) VNMKV शिफारस. Farmer app मध्ये लागवडीची पद्धत निवडा. सपाट (flat) लागवड निवडल्यास गड्डा-कूज धोका."
+      },
+      "reasoning": {
+        "agronomic_basis": "A layout not chosen before bed forming defaults to flat by omission, the worst option on vertisol. This prompt captures the decision in time to form broad ridges.",
+        "yield_impact": "Indirect — ensures the layout decision (see D02-LY-001) is made deliberately rather than by default.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "VNMKV Package of Practices — ginger on vertisol"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_8_operations"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "soil_type",
+        "has_drip",
+        "planting_layout"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-Q",
+      "kannad_note": "On Kannad vertisol the default-to-flat failure mode is common when the layout screen is skipped; this prompt closes that gap before bed forming.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-27",
+        "outcome": "conditional",
+        "comment_mr": "Batch-1 unset-layout prompt; split from D02-LY-001 per backend held-#2. Backend id-collision fix: D02-LY-002/003 taken, assigned D02-LY-004."
       }
     },
     {
@@ -2279,41 +2374,40 @@
     }
   ],
   "summary": {
-    "total_rules": 27,
+    "total_rules": 28,
     "by_category": {
-      "SL": 3,
+      "BF": 2,
       "CA": 2,
+      "CL": 2,
       "DR": 4,
+      "LY": 4,
+      "OM": 4,
+      "SL": 3,
+      "SN": 1,
       "ST": 2,
       "TL": 3,
-      "WD": 1,
-      "OM": 4,
-      "SN": 1,
-      "LY": 3,
-      "BF": 2,
-      "CL": 2
+      "WD": 1
     },
     "by_priority": {
-      "5": 14,
+      "3": 4,
       "4": 9,
-      "3": 4
+      "5": 15
     },
     "by_severity": {
       "red": 5,
-      "yellow": 15,
+      "yellow": 16,
       "blocking": 3,
       "info": 4
     },
     "by_source_tier": {
       "A": 22,
-      "B": 5,
-      "C": 0
+      "B": 6
     },
     "by_source_class": {
-      "SRC-D": 8,
-      "SRC-Q": 8,
       "DERIVED": 7,
-      "EST": 4
+      "EST": 4,
+      "SRC-D": 8,
+      "SRC-Q": 9
     },
     "confidence_range": {
       "min": 0.7,
@@ -2332,15 +2426,15 @@
     "highest_value_rule": "D02-LY-001",
     "blocking_open_items": 2,
     "by_decision_type": {
-      "PLANNING_GUIDANCE": 17,
-      "SENSOR_ALERT": 4,
       "BLOCK": 3,
       "DATA_CAPTURE": 2,
-      "SCHEDULED_REMINDER": 1
+      "PLANNING_GUIDANCE": 18,
+      "SCHEDULED_REMINDER": 1,
+      "SENSOR_ALERT": 4
     },
-    "reviewed_t1": 3,
-    "rules_with_trigger_expr": 8,
-    "rules_with_delivery_class": 8,
+    "reviewed_t1": 28,
+    "rules_with_trigger_expr": 12,
+    "rules_with_delivery_class": 12,
     "immutable_rules": 0
   },
   "next_steps": [

@@ -555,6 +555,20 @@
             "object": "D06-SW-003",
             "reason_en": "SAR-detected standing water after heavy rain triggers URGENT drainage advisory AND stages D06's post-monsoon saturation branch. The SR-002 alert acts immediately; D06-SW-003 handles the downstream rot-risk assessment.",
             "reason_mr": "SAR-वरून पाणी साचणे झपाट्याने URGENT निचरा सल्ला चालवते आणि D06 च्या post-monsoon saturation शाखेला क्रमाने तयार करते. SR-002 त्वरित कारवाई करते; D06-SW-003 पुढील कूज-जोखीम मूल्यांकन हाताळते."
+          },
+          {
+            "subject": "D02-LY-004",
+            "relation": "SEQUENCES",
+            "object": "D02-LY-001",
+            "reason_en": "The unset-layout prompt fires first (layout NULL); once the farmer records a non-compliant layout the blocking gate D02-LY-001 takes over. Ordering keeps the yellow prompt and the blocking gate from being conflated.",
+            "reason_mr": "आधी लागवड-पद्धत निवडण्याची सूचना (yellow); चुकीची पद्धत नोंदल्यास blocking gate D02-LY-001 लागू होतो."
+          },
+          {
+            "subject": "D02-ST-002",
+            "relation": "SEQUENCES",
+            "object": "D02-LY-001",
+            "reason_en": "The percolation-test result should inform the layout decision, so the pre-plant percolation prompt is sequenced before the layout gate.",
+            "reason_mr": "निचरा-चाचणीचा निकाल लागवड-पद्धतीच्या निर्णयासाठी वापरावा, म्हणून चाचणी-सूचना layout gate आधी."
           }
         ]
       },

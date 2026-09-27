@@ -44,7 +44,8 @@
         "pan_coefficient_kp": "number",
         "drip_efficiency_measured": "number",
         "drip_discharge_lph": "number — per-dripper discharge, needed to convert litres per acre into runtime minutes",
-        "drip_system_flow_lph": "number — total system flow at the plot, drippers times discharge"
+        "drip_system_flow_lph": "number — total system flow at the plot, drippers times discharge",
+        "previous_stage": "enum:[G0, G1, G2, G3, G4, G5]"
       },
       "constants": {
         "mm_to_litre_per_acre": 4000,
@@ -2605,8 +2606,35 @@
       "severity": "info",
       "stage": null,
       "trigger": {
-        "english": "Stage changes",
-        "marathi": "अवस्था बदलली"
+        "english": "current_stage differs from previous_stage (phenological transition)",
+        "marathi": "पिकाची अवस्था बदलली (मागील नोंदीच्या तुलनेत)",
+        "expr": "current_stage != previous_stage AND previous_stage IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "previous_stage": "G1",
+              "current_stage": "G2"
+            },
+            "expect": "TRUE",
+            "label": "G1 -> G2 transition"
+          },
+          {
+            "context": {
+              "previous_stage": "G2",
+              "current_stage": "G2"
+            },
+            "expect": "FALSE",
+            "label": "no transition"
+          },
+          {
+            "context": {
+              "current_stage": "G0"
+            },
+            "expect": "FALSE",
+            "label": "first-ever run — previous_stage NULL guard"
+          }
+        ]
       },
       "action": {
         "english": "Adjust sampling frequency: hourly in G1, G3 and G4, four-hourly in G2 and G5, daily in G0, and hourly at all stages during a rain alert.",
@@ -2630,7 +2658,8 @@
       },
       "farm_brain_schema": [
         "current_stage",
-        "soil_moisture_vwc"
+        "soil_moisture_vwc",
+        "previous_stage"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2646,7 +2675,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "EVENT"
     },
     {
       "rule_id": "D03-SB-004",

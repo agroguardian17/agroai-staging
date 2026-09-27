@@ -277,6 +277,15 @@ PRECEDENCE = [
  Relation('D14-SR-002', 'SEQUENCES', 'D06-SW-003',
    'SAR-detected standing water after heavy rain triggers URGENT drainage advisory AND stages D06 post-monsoon saturation branch. SR-002 acts immediately; D06-SW-003 handles downstream rot-risk.',
    'SAR-वरून पाणी साचणे URGENT निचरा सल्ला चालवते आणि D06 post-monsoon saturation branch ला क्रमाने तयार करते.'),
+
+ # --- Batch 1b (firing-intent, 27 Sep): layout prompt/gate + percolation ordering ---
+ Relation('D02-LY-004', 'SEQUENCES', 'D02-LY-001',
+   'The unset-layout prompt fires first (layout NULL); once the farmer records a non-compliant layout the blocking gate D02-LY-001 takes over. Keeps the yellow prompt and the blocking gate from being conflated.',
+   'आधी लागवड-पद्धत निवडण्याची सूचना (yellow); चुकीची पद्धत नोंदल्यास blocking gate D02-LY-001 लागू होतो.'),
+
+ Relation('D02-ST-002', 'SEQUENCES', 'D02-LY-001',
+   'The percolation-test result should inform the layout decision, so the pre-plant percolation prompt is sequenced before the layout gate.',
+   'निचरा-चाचणीचा निकाल लागवड-पद्धतीच्या निर्णयासाठी वापरावा, म्हणून चाचणी-सूचना layout gate आधी.'),
 ]
 
 
