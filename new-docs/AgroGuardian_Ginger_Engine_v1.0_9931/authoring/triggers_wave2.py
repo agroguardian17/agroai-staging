@@ -19,6 +19,18 @@ T, F, U = 'TRUE', 'FALSE', 'UNKNOWN'
 
 TRIGGERS_W2 = {
 
+'D02-LY-001': {
+  'expr': "soil_type == 'vertisol' AND has_drip IS TRUE AND planting_layout IS NOT NULL AND planting_layout != 'broad_ridge'",
+  'note': 'Batch 1b: #87 flat/bad-layout-on-vertisol BLOCKING gate, explicit DSL (fires when a non-broad-ridge layout is chosen).',
+  'tests': [({'soil_type':'vertisol','has_drip':True,'planting_layout':'flat'}, T, 'सपाट पद्धत — blocking'),
+            ({'soil_type':'vertisol','has_drip':True,'planting_layout':'broad_ridge'}, F, 'broad-ridge — compliant')]},
+
+'D02-LY-004': {
+  'expr': "soil_type == 'vertisol' AND has_drip IS TRUE AND planting_layout IS NULL AND dap IS NULL",
+  'note': 'Batch 1b: unset-layout pre-planting prompt (split from D02-LY-001; id-collision fix -> 004). SEQUENCES D02-LY-001.',
+  'tests': [({'soil_type':'vertisol','has_drip':True}, T, 'पद्धत अजून निवडलेली नाही — विचारा'),
+            ({'soil_type':'vertisol','has_drip':True,'planting_layout':'broad_ridge'}, F, 'पद्धत निवडली — resolved')]},
+
 'D02-DR-004': {
   'expr': "percolation_class == 'poor' AND planting_layout == 'broad_ridge' AND dap < 15",
   'note': 'Batch 1 (firing-intent): poor drainage even under broad-ridge — WINDOW reminder to check the main furrow within the DAP 0-14 establishment window.',

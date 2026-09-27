@@ -15,6 +15,13 @@ T, F, U = 'TRUE', 'FALSE', 'UNKNOWN'
 
 TRIGGERS_W3 = {
 
+'D03-SB-003': {
+  'expr': "current_stage != previous_stage AND previous_stage IS NOT NULL",
+  'note': 'Batch 1b: stage-transition EVENT; needs new derived field previous_stage (mapper persists last-run stage). Guard suppresses first-run false positive.',
+  'tests': [({'previous_stage':'G1','current_stage':'G2'}, T, 'G1 -> G2 transition'),
+            ({'previous_stage':'G2','current_stage':'G2'}, F, 'no transition'),
+            ({'current_stage':'G0'}, F, 'first-ever run — previous_stage NULL guard')]},
+
 'D01-PH-004': {
   'expr': "flowering_observed IS TRUE AND dap >= 150",
   'note': 'Batch 1 (firing-intent): flowering marks G4 rhizome-fill start; farmer-facing EVENT (stop N, finish earthing + K top-dress).',
