@@ -19,6 +19,19 @@ T, F, U = 'TRUE', 'FALSE', 'UNKNOWN'
 
 TRIGGERS_W2 = {
 
+'D02-DR-004': {
+  'expr': "percolation_class == 'poor' AND planting_layout == 'broad_ridge' AND dap < 15",
+  'note': 'Batch 1 (firing-intent): poor drainage even under broad-ridge — WINDOW reminder to check the main furrow within the DAP 0-14 establishment window.',
+  'tests': [({'percolation_class':'poor','planting_layout':'broad_ridge','dap':10}, T, 'निचरा कमी — मुख्य चर तपासा'),
+            ({'percolation_class':'poor','planting_layout':'broad_ridge','dap':20}, F, 'DAP 15 नंतर — window बंद')]},
+
+'D02-ST-002': {
+  'expr': "dap IS NULL AND percolation_time_hours IS NULL",
+  'note': 'Batch 1 (firing-intent): pre-planting one-time percolation test prompt; ONCE_UNTIL_RESOLVED until percolation_time_hours recorded.',
+  'tests': [({}, T, 'लागवडीपूर्वी — percolation test बाकी'),
+            ({'percolation_time_hours':6.5}, F, 'चाचणी झाली — resolved')]},
+
+
 # ===========================================================================
 # G0 — pre-season. 38 percent of controllable loss is decided before day zero.
 # ===========================================================================

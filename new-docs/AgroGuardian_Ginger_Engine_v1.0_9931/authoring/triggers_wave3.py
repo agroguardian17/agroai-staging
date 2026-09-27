@@ -15,6 +15,13 @@ T, F, U = 'TRUE', 'FALSE', 'UNKNOWN'
 
 TRIGGERS_W3 = {
 
+'D01-PH-004': {
+  'expr': "flowering_observed IS TRUE AND dap >= 150",
+  'note': 'Batch 1 (firing-intent): flowering marks G4 rhizome-fill start; farmer-facing EVENT (stop N, finish earthing + K top-dress).',
+  'tests': [({'flowering_observed':True,'dap':155}, T, 'फुलोरा — गड्डा भरण अवस्था सुरू'),
+            ({'flowering_observed':True,'dap':145}, F, 'अजून DAP 150 आधी — फायर नाही')]},
+
+
 # ===========================================================================
 # D01 — Lifecycle
 # ===========================================================================

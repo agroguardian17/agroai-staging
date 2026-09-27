@@ -1153,7 +1153,27 @@
       "stage": "G3",
       "trigger": {
         "english": "flowering_observed is true (हुरडे बांड)",
-        "marathi": "हुरडे बांड आले आहे"
+        "marathi": "हुरडे बांड आले आहे",
+        "expr": "flowering_observed IS TRUE AND dap >= 150",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "flowering_observed": true,
+              "dap": 155
+            },
+            "expect": "TRUE",
+            "label": "फुलोरा — गड्डा भरण अवस्था सुरू"
+          },
+          {
+            "context": {
+              "flowering_observed": true,
+              "dap": 145
+            },
+            "expect": "FALSE",
+            "label": "अजून DAP 150 आधी — फायर नाही"
+          }
+        ]
       },
       "action": {
         "english": "Re-anchor stage. Then CHECK earthing_up_date. If earthing-up has not been recorded, the window has closed — inform the farmer plainly that earthing-up cannot be recovered this season.",
@@ -1198,7 +1218,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Flowering can be a stage marker, but the fixed 12.5% yield penalty is unsupported as a universal value. Re-anchor stage and evaluate earthing-up status, but remove the fixed penalty unless locally validated. | rewrite (§2.2): removed the fixed 12.5% yield penalty; stage-marker logic kept; CONDITIONAL pending local calibration"
-      }
+      },
+      "delivery": "EVENT"
     },
     {
       "rule_id": "D01-PH-005",
