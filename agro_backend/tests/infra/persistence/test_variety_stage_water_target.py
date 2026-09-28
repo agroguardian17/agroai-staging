@@ -37,7 +37,8 @@ def test_mahima_stage_rows_seeded(sync_engine: Engine) -> None:
     # Lifecycle aggregate has no daily/per-event breakdown.
     assert float(by_stage["LIFECYCLE"].stage_target_l_high) == 250.0
     assert by_stage["LIFECYCLE"].per_event_l_high is None
-    assert all(r.source_tier == "L3" for r in rows)
+    # source_tier remapped L3 -> B (deployed A/B/C vocabulary) in migration 0056.
+    assert all(r.source_tier == "B" for r in rows)
 
 
 def test_three_varieties_seeded(sync_engine: Engine) -> None:
