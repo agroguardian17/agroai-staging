@@ -37,7 +37,8 @@
         "affected_plants_removed": "boolean",
         "biofumigation_done": "boolean",
         "hot_water_treatment_done": "boolean",
-        "fungicide_group_repeated": "boolean — the last two applications shared a mode-of-action group"
+        "fungicide_group_repeated": "boolean — the last two applications shared a mode-of-action group",
+        "years_since_last_wilt": "number"
       },
       "fungicide_emission_policy": {
         "bacterial_wilt": "NO fungicide may be emitted. Encoded as the deliberate absence of any bacterial_wilt entry in the fungicide table, so the constraint holds even if rule logic is bypassed.",
@@ -1491,7 +1492,28 @@
       "stage": "G0",
       "trigger": {
         "english": "field_history_wilt is true for this plot and the persistence window has not elapsed",
-        "marathi": "या प्लॉटवर मर रोगाची नोंद आहे आणि पुरेशी वर्षे उलटलेली नाहीत"
+        "marathi": "या प्लॉटवर मर रोगाची नोंद आहे आणि पुरेशी वर्षे उलटलेली नाहीत",
+        "expr": "field_history_wilt IS TRUE AND years_since_last_wilt < 5",
+        "expr_version": "dsl-1.0",
+        "expr_note": "v1.2 (B1.3): fires on known bacterial-wilt history within the last 5 years (VNMKV 5-year rotation). years_since_last_wilt is a new farmer-app int companion to the existing field_history_wilt boolean; dormant (UNKNOWN) until that capture lands.",
+        "golden_tests": [
+          {
+            "context": {
+              "field_history_wilt": true,
+              "years_since_last_wilt": 2
+            },
+            "expect": "TRUE",
+            "label": "2 yr ago - block"
+          },
+          {
+            "context": {
+              "field_history_wilt": true,
+              "years_since_last_wilt": 5
+            },
+            "expect": "FALSE",
+            "label": "5 yr - rotation ok"
+          }
+        ]
       },
       "action": {
         "english": "Warn clearly before replanting ginger or turmeric here. The bacterium persists in soil for many years. Recommend a different plot if one is available, and treat the standard three-year rotation as insufficient where wilt has actually been recorded.",
@@ -1516,7 +1538,8 @@
       },
       "farm_brain_schema": [
         "field_history_wilt",
-        "previous_crops_3yr"
+        "previous_crops_3yr",
+        "years_since_last_wilt"
       ],
       "u_value": 0.5,
       "recoverability": "none",
@@ -1532,7 +1555,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "ONCE_UNTIL_RESOLVED"
     },
     {
       "rule_id": "D06-BW-002",
@@ -2808,8 +2832,8 @@
       "DATA_CAPTURE": 1
     },
     "reviewed_t1": 6,
-    "rules_with_trigger_expr": 12,
-    "rules_with_delivery_class": 12,
+    "rules_with_trigger_expr": 13,
+    "rules_with_delivery_class": 13,
     "immutable_rules": 3
   },
   "next_steps": [

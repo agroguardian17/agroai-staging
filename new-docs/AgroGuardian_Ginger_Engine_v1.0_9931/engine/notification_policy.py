@@ -110,7 +110,8 @@ DELIVERY = {
  'D08-LY-001': ONCE_UNTIL_RESOLVED,
  'D07-RF-001': ONCE_UNTIL_RESOLVED,
  'D10-SUB-002': ONCE_UNTIL_RESOLVED,
- 'D01-PW-001': ONCE_UNTIL_RESOLVED,
+ 'D01-PW-001': EVENT,               # v1.2: late-planting warning (was blocking unplanted-window)
+ 'D06-BW-001': ONCE_UNTIL_RESOLVED, # v1.2: bacterial-wilt 5-yr rotation gate (dormant until years_since_last_wilt sourced)
  'D09-GD-002': ONCE_UNTIL_RESOLVED,
 
  # --- transient events: rising edge only ----------------------------------

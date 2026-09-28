@@ -124,7 +124,8 @@
       "sample_dig_120_done": "boolean",
       "sample_dig_180_done": "boolean",
       "yield_target_quintal_per_acre": "number",
-      "yield_prediction_interval_pct": "number"
+      "yield_prediction_interval_pct": "number",
+      "planting_doy": "integer, computed"
     },
     "geography_binding": {
       "taluka": "Kannad",
@@ -693,37 +694,28 @@
       "rule_id": "D01-PW-001",
       "category": "PW",
       "priority": 5,
-      "severity": "blocking",
+      "severity": "yellow",
       "stage": "G0",
       "trigger": {
-        "english": "Date is after 7 June AND planting has not yet occurred",
-        "marathi": "७ जून उलटला आहे आणि लागवड झालेली नाही",
-        "expr": "planting_date IS NULL AND MONTH IN [JUN, JUL] AND dap IS NULL",
+        "english": "planting_date is after the recommended window (day-of-year > 158, i.e. after ~7 June)",
+        "marathi": "लागवड शिफारशीच्या तारखेनंतर (७ जून नंतर) झाली आहे",
+        "expr": "planting_doy > 158",
         "expr_version": "dsl-1.0",
-        "expr_note": "Planting window has closed and nothing is planted.",
+        "expr_note": "planting_doy = day-of-year of sowing_date (mapper-derived). 158 = 7 June (non-leap). v1.2: replaces the DATE-literal cutoff (DSL has no DATE literal) and the prior unplanted-window blocking trigger; now a late-planting yellow warning per VNMKV cert 5.2.",
         "golden_tests": [
           {
             "context": {
-              "current_month": 6
+              "planting_doy": 170
             },
             "expect": "TRUE",
-            "label": "जून, लागवड नाही — अडवा"
+            "label": "19 June - late"
           },
           {
             "context": {
-              "current_month": 6,
-              "planting_date": "2026-06-05",
-              "dap": 40
+              "planting_doy": 150
             },
             "expect": "FALSE",
-            "label": "लागवड झाली आहे"
-          },
-          {
-            "context": {
-              "current_month": 4
-            },
-            "expect": "FALSE",
-            "label": "एप्रिल — अजून वेळ आहे"
+            "label": "30 May - on window"
           }
         ]
       },
@@ -749,8 +741,7 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "planting_date",
-        "dap"
+        "planting_doy"
       ],
       "u_value": 0.2,
       "recoverability": "none",
@@ -759,7 +750,7 @@
       "decision_type": "BLOCK",
       "automation": "refusal",
       "status": "AGRONOMIST_REVIEWED",
-      "delivery": "ONCE_UNTIL_RESOLVED",
+      "delivery": "EVENT",
       "immutable": false,
       "review": {
         "tier": "T1",
@@ -2310,10 +2301,10 @@
       "1": 0
     },
     "by_severity": {
-      "blocking": 2,
-      "red": 4,
-      "yellow": 9,
-      "info": 7
+      "yellow": 11,
+      "blocking": 1,
+      "info": 8,
+      "red": 2
     },
     "by_source_tier": {
       "A": 17,
@@ -2352,8 +2343,8 @@
       "HUMAN_DECISION": 1
     },
     "reviewed_t1": 3,
-    "rules_with_trigger_expr": 14,
-    "rules_with_delivery_class": 14,
+    "rules_with_trigger_expr": 15,
+    "rules_with_delivery_class": 15,
     "immutable_rules": 0
   },
   "next_steps": [
