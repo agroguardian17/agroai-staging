@@ -25,8 +25,9 @@ def test_variety_ceilings_seeded(sync_engine: Engine) -> None:
     assert float(by_variety["IISR-Mahima"].total_n_ceiling_kg_per_acre) == 61.0
     assert float(by_variety["IISR-Varada"].total_n_ceiling_kg_per_acre) == 55.0
     assert float(by_variety["Nadia-local"].total_n_ceiling_kg_per_acre) == 52.0
-    assert by_variety["IISR-Mahima"].source_tier == "L3"
-    assert by_variety["IISR-Varada"].source_tier == "L4"
+    # source_tier remapped to deployed A/B/C vocabulary in migration 0056.
+    assert by_variety["IISR-Mahima"].source_tier == "B"
+    assert by_variety["IISR-Varada"].source_tier == "C"
     # DAP-150 hard cutoff shared across varieties (D04-NS-003).
     assert all(r.late_stage_n_cutoff_dap == 150 for r in rows)
 
