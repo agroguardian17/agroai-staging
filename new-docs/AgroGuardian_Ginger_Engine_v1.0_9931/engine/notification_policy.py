@@ -112,6 +112,12 @@ DELIVERY = {
  'D10-SUB-002': ONCE_UNTIL_RESOLVED,
  'D01-PW-001': EVENT,               # v1.2: late-planting warning (was blocking unplanted-window)
  'D06-BW-001': ONCE_UNTIL_RESOLVED, # v1.2: bacterial-wilt 5-yr rotation gate (dormant until years_since_last_wilt sourced)
+ # --- Batch 2 (D06 disease guardrails, 28 Sep) ---
+ 'D06-CH-002': SILENT_GUARD,        # fungicide pre-check
+ 'D06-FH-001': EVENT,               # post-harvest disease-history capture
+ 'D06-FH-002': WINDOW,              # cluster soft-rot preventive window
+ 'D06-ST-001': WINDOW,              # pre-plant seed-treatment protocol
+ 'D06-ST-002': WINDOW,              # bio/chemical seed-treatment sequencing
  'D09-GD-002': ONCE_UNTIL_RESOLVED,
 
  # --- transient events: rising edge only ----------------------------------

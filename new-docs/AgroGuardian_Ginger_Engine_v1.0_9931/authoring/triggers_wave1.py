@@ -72,6 +72,39 @@ TRIGGERS = {
     ({'field_history_wilt':True,'years_since_last_wilt':5}, F, '5 yr - rotation ok'),
   ]},
 
+# --- Batch 2 (D06 disease guardrails, 28 Sep) — all dormant until their fields are sourced ---
+'D06-CH-002': {
+  'expr': "fungicide_option_about_to_be_shown IS TRUE",
+  'note': 'Silent pre-check before a fungicide is recommended (bacterial ruled out, FRAC rotation, PHI). Derived composer flag.',
+  'tests': [({'fungicide_option_about_to_be_shown':True}, T, 'run checks'),
+            ({'fungicide_option_about_to_be_shown':False}, F, 'no fungicide pending')]},
+
+'D06-FH-001': {
+  'expr': "harvest_complete IS TRUE",
+  'note': 'At harvest, prompt to log season disease history (feeds next-season wilt gate).',
+  'tests': [({'harvest_complete':True}, T, 'log disease history'),
+            ({'harvest_complete':False}, F, 'not harvested')]},
+
+'D06-FH-002': {
+  'expr': "soft_rot_confirmed_in_cluster IS TRUE",
+  'note': 'Cluster soft-rot -> 14-day preventive drenching window for neighbouring plots.',
+  'tests': [({'soft_rot_confirmed_in_cluster':True}, T, 'preventive window'),
+            ({'soft_rot_confirmed_in_cluster':False}, F, 'no cluster soft rot')]},
+
+'D06-ST-001': {
+  'expr': "seed_treatment_planned IS TRUE AND dap < 0",
+  'note': 'Pre-plant 3-step seed treatment protocol (hot water + Trichoderma + copper, sequenced).',
+  'tests': [({'seed_treatment_planned':True,'dap':-5}, T, 'pre-plant'),
+            ({'seed_treatment_planned':True,'dap':5}, F, 'past planting - too late'),
+            ({'seed_treatment_planned':False,'dap':-5}, F, 'not planned')]},
+
+'D06-ST-002': {
+  'expr': "biological_seed_treatment_date IS NOT NULL AND chemical_seed_treatment_date IS NOT NULL AND biological_seed_treatment_date == chemical_seed_treatment_date",
+  'note': 'Warn when bio + chemical seed treatments are planned the same day (chemical kills the biological). Sequence 24h apart.',
+  'tests': [({'biological_seed_treatment_date':'2026-06-01','chemical_seed_treatment_date':'2026-06-01'}, T, 'same day - warn'),
+            ({'biological_seed_treatment_date':'2026-06-01','chemical_seed_treatment_date':'2026-06-02'}, F, 'different days - ok'),
+            ({'chemical_seed_treatment_date':'2026-06-01'}, F, 'bio not planned')]},
+
 'D01-HW-001': {
   'expr': "moisture_probe_depth_cm > 20",
   'note': 'Probe outside the rhizome zone invalidates every moisture rule.',

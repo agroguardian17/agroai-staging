@@ -569,6 +569,27 @@
             "object": "D02-LY-001",
             "reason_en": "The percolation-test result should inform the layout decision, so the pre-plant percolation prompt is sequenced before the layout gate.",
             "reason_mr": "निचरा-चाचणीचा निकाल लागवड-पद्धतीच्या निर्णयासाठी वापरावा, म्हणून चाचणी-सूचना layout gate आधी."
+          },
+          {
+            "subject": "D06-FH-001",
+            "relation": "SEQUENCES",
+            "object": "D06-BW-001",
+            "reason_en": "This season's post-harvest disease log feeds next season's wilt-history gate (field_history_wilt / years_since_last_wilt).",
+            "reason_mr": "या हंगामाची disease नोंद पुढच्या हंगामाच्या wilt-gate ला feed होते."
+          },
+          {
+            "subject": "D06-FH-002",
+            "relation": "BUNDLES",
+            "object": "D06-CH-002",
+            "reason_en": "When the cluster soft-rot drench action proposes a fungicide, the silent guard checks FRAC rotation + PHI; deliver as one action message.",
+            "reason_mr": "cluster drenching fungicide सुचवताना silent guard FRAC + PHI तपासतो; एकत्र संदेश."
+          },
+          {
+            "subject": "D06-ST-001",
+            "relation": "SEQUENCES",
+            "object": "D06-ST-002",
+            "reason_en": "The seed-treatment protocol reminder fires first; the same-day bio+chemical sequencing warning follows.",
+            "reason_mr": "बेणे प्रक्रिया सूचना आधी; एकाच दिवशी bio+chemical चा warning नंतर."
           }
         ]
       },

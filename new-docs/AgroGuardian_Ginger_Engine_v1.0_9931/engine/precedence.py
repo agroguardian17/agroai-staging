@@ -286,6 +286,19 @@ PRECEDENCE = [
  Relation('D02-ST-002', 'SEQUENCES', 'D02-LY-001',
    'The percolation-test result should inform the layout decision, so the pre-plant percolation prompt is sequenced before the layout gate.',
    'निचरा-चाचणीचा निकाल लागवड-पद्धतीच्या निर्णयासाठी वापरावा, म्हणून चाचणी-सूचना layout gate आधी.'),
+
+ # --- Batch 2 (D06 disease guardrails, 28 Sep) ---
+ Relation('D06-FH-001', 'SEQUENCES', 'D06-BW-001',
+   "This season's post-harvest disease log feeds next season's wilt-history gate (field_history_wilt / years_since_last_wilt).",
+   'या हंगामाची disease नोंद पुढच्या हंगामाच्या wilt-gate ला feed होते.'),
+
+ Relation('D06-FH-002', 'BUNDLES', 'D06-CH-002',
+   'When the cluster soft-rot drench action proposes a fungicide, the silent guard checks FRAC rotation + PHI; deliver as one action message.',
+   'cluster drenching fungicide सुचवताना silent guard FRAC + PHI तपासतो; एकत्र संदेश.'),
+
+ Relation('D06-ST-001', 'SEQUENCES', 'D06-ST-002',
+   'The seed-treatment protocol reminder fires first; the same-day bio+chemical sequencing warning follows.',
+   'बेणे प्रक्रिया सूचना आधी; एकाच दिवशी bio+chemical चा warning नंतर.'),
 ]
 
 

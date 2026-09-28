@@ -38,7 +38,13 @@
         "biofumigation_done": "boolean",
         "hot_water_treatment_done": "boolean",
         "fungicide_group_repeated": "boolean — the last two applications shared a mode-of-action group",
-        "years_since_last_wilt": "number"
+        "years_since_last_wilt": "number",
+        "fungicide_option_about_to_be_shown": "boolean",
+        "harvest_complete": "boolean",
+        "soft_rot_confirmed_in_cluster": "boolean",
+        "seed_treatment_planned": "boolean",
+        "biological_seed_treatment_date": "date",
+        "chemical_seed_treatment_date": "date"
       },
       "fungicide_emission_policy": {
         "bacterial_wilt": "NO fungicide may be emitted. Encoded as the deliberate absence of any bacterial_wilt entry in the fungicide table, so the constraint holds even if rule logic is bypassed.",
@@ -1836,12 +1842,40 @@
       "severity": "yellow",
       "stage": "G0",
       "trigger": {
-        "english": "Seed treatment is being planned",
-        "marathi": "बेणे प्रक्रिया ठरवली जात आहे"
+        "english": "seed treatment planned in the pre-planting window",
+        "marathi": "बेणे प्रक्रिया नियोजित (लागवडीपूर्वी)",
+        "expr": "seed_treatment_planned IS TRUE AND dap < 0",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "seed_treatment_planned": true,
+              "dap": -5
+            },
+            "expect": "TRUE",
+            "label": "pre-plant - seed treatment protocol"
+          },
+          {
+            "context": {
+              "seed_treatment_planned": true,
+              "dap": 5
+            },
+            "expect": "FALSE",
+            "label": "past planting - too late"
+          },
+          {
+            "context": {
+              "seed_treatment_planned": false,
+              "dap": -5
+            },
+            "expect": "FALSE",
+            "label": "not planned"
+          }
+        ]
       },
       "action": {
-        "english": "Treat seed rhizome twice — once before storage and again before planting. Hot water at 51 C for 10 minutes followed by Trichoderma harzianum at 15 g per kg gave the best result among biological treatments. Then shade dry before any further biological step.",
-        "marathi": "बेणे प्रक्रिया दोन वेळा करा — साठवणीपूर्वी आणि लागवडीपूर्वी. ५१ अंश सेल्सिअस पाण्यात दहा मिनिटे, नंतर ट्रायकोडर्मा हार्जियानम प्रति किलो पंधरा ग्रॅम. मग सावलीत सुकवूनच पुढील जैविक प्रक्रिया करा."
+        "english": "Pre-planting: remind the farmer of the 3-step seed treatment (hot water 50C/10min, then Trichoderma, then copper oxychloride 24h apart).",
+        "marathi": "बेणे प्रक्रिया — 3 पायऱ्या: (1) उष्ण जल 50C 10 मिनिटे; (2) Trichoderma viride 10 ग्रॅम/लिटर 30 मिनिटे; (3) Copper oxychloride 50 WP 3 ग्रॅम/लिटर 30 मिनिटे. Trichoderma आणि copper एकाच दिवशी नको (copper आधी नको) — Trichoderma आधी, 24 तासांनी copper. उपचारित बेणे 24 तासांत लावा."
       },
       "reasoning": {
         "agronomic_basis": "Seed rhizome is the primary entry route for both soft rot and bacterial wilt, and once the pathogen is in the soil it cannot be removed. Recorded germination was 80 to 83 percent untreated against 93 to 98 percent treated. Treating only before planting does not address infection already established inside the rhizome during storage.",
@@ -1861,9 +1895,8 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "hot_water_treatment_done",
-        "trichoderma_kg_per_acre",
-        "establishment_pct"
+        "seed_treatment_planned",
+        "dap"
       ],
       "u_value": 0.135,
       "recoverability": "none",
@@ -1879,21 +1912,49 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      },
+      "delivery": "WINDOW"
     },
     {
       "rule_id": "D06-ST-002",
       "category": "ST",
       "priority": 5,
-      "severity": "red",
+      "severity": "yellow",
       "stage": "G0",
       "trigger": {
-        "english": "Biological seed treatment proposed on the same day as chemical treatment, or without drying in between",
-        "marathi": "रासायनिक आणि जैविक प्रक्रिया एकाच वेळी, किंवा मधे सुकवल्याशिवाय"
+        "english": "biological and chemical seed treatment planned on the same day",
+        "marathi": "जैविक व रासायनिक बेणे प्रक्रिया एकाच दिवशी",
+        "expr": "biological_seed_treatment_date IS NOT NULL AND chemical_seed_treatment_date IS NOT NULL AND biological_seed_treatment_date == chemical_seed_treatment_date",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "biological_seed_treatment_date": "2026-06-01",
+              "chemical_seed_treatment_date": "2026-06-01"
+            },
+            "expect": "TRUE",
+            "label": "same day - sequencing warning"
+          },
+          {
+            "context": {
+              "biological_seed_treatment_date": "2026-06-01",
+              "chemical_seed_treatment_date": "2026-06-02"
+            },
+            "expect": "FALSE",
+            "label": "different days - ok"
+          },
+          {
+            "context": {
+              "chemical_seed_treatment_date": "2026-06-01"
+            },
+            "expect": "FALSE",
+            "label": "bio not planned"
+          }
+        ]
       },
       "action": {
-        "english": "Enforce the sequence: chemical treatment, shade dry three to six hours, then biological treatment, then plant. Never simultaneously.",
-        "marathi": "क्रम पाळा — आधी रासायनिक प्रक्रिया, मग सावलीत तीन ते सहा तास सुकवणे, मग जैविक प्रक्रिया, मग लागवड. एकाच वेळी करू नये."
+        "english": "Warn when biological (Trichoderma) and chemical (copper/carbendazim) seed treatments are planned on the same day; chemical kills the biological. Sequence 24h apart.",
+        "marathi": "जैविक + रासायनिक बेणे प्रक्रिया एकाच दिवशी नको — रासायनिक (copper/carbendazim) Trichoderma मारेल. योग्य क्रम: पहिला दिवस Trichoderma, 24 तासांनी copper/carbendazim. एका treatment ची तारीख बदला."
       },
       "reasoning": {
         "agronomic_basis": "Fungicide kills Trichoderma and the other biological cultures. Applying them together makes the biological step useless and wastes the input, while appearing to have been done.",
@@ -1913,8 +1974,8 @@
         ]
       },
       "farm_brain_schema": [
-        "azospirillum_psb_done",
-        "last_fungicide_date"
+        "biological_seed_treatment_date",
+        "chemical_seed_treatment_date"
       ],
       "u_value": null,
       "recoverability": "none",
@@ -1930,7 +1991,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "WINDOW"
     },
     {
       "rule_id": "D06-MU-001",
@@ -2176,14 +2238,32 @@
       "rule_id": "D06-CH-002",
       "category": "CH",
       "priority": 5,
-      "severity": "yellow",
+      "severity": "info",
       "stage": null,
       "trigger": {
-        "english": "A fungicide option is about to be presented to the farmer",
-        "marathi": "बुरशीनाशकाचा पर्याय शेतकऱ्याला दाखवला जात आहे"
+        "english": "a fungicide recommendation is about to be shown",
+        "marathi": "बुरशीनाशक शिफारस दाखवण्यापूर्वी तपासणी",
+        "expr": "fungicide_option_about_to_be_shown IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "fungicide_option_about_to_be_shown": true
+            },
+            "expect": "TRUE",
+            "label": "fungicide about to show - run checks"
+          },
+          {
+            "context": {
+              "fungicide_option_about_to_be_shown": false
+            },
+            "expect": "FALSE",
+            "label": "no fungicide pending"
+          }
+        ]
       },
       "action": {
-        "english": "Emit molecule, group and source-reported dose, and append that CIB&RC label claim for ginger must be verified and label dose and pre-harvest interval followed. Show biological and cultural options above it.",
+        "english": "Silent pre-check before any fungicide is recommended: rule out bacterial disease, honour FRAC rotation, confirm PHI clears the stage; block the recommendation if any check fails.",
         "marathi": "रसायनाचे नाव, गट आणि स्रोतातील मात्रा दाखवा, आणि सोबत अनिवार्य शेरा — लेबलवर अद्रकासाठी नोंदणी असल्याची खात्री करा, मात्रा व प्रतीक्षा कालावधी लेबलनुसार. जैविक व सांस्कृतिक पर्याय नेहमी वर दाखवा."
       },
       "reasoning": {
@@ -2203,8 +2283,7 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "last_fungicide_group",
-        "last_fungicide_date"
+        "fungicide_option_about_to_be_shown"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2220,7 +2299,8 @@
         "date": "2026-09-22",
         "outcome": "legal_review_required",
         "comment_mr": "रासायनिक निविष्ठा नियमन (CIB&RC/FSSAI) — agronomy intent बरोबर आहे, पण production sign-off साठी current CIB label + FSSAI MRL verification अनिवार्य."
-      }
+      },
+      "delivery": "SILENT_GUARD"
     },
     {
       "rule_id": "D06-CH-003",
@@ -2610,12 +2690,30 @@
       "severity": "yellow",
       "stage": "G5",
       "trigger": {
-        "english": "Harvest is complete",
-        "marathi": "काढणी पूर्ण झाली"
+        "english": "harvest is complete",
+        "marathi": "काढणी झाली",
+        "expr": "harvest_complete IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "harvest_complete": true
+            },
+            "expect": "TRUE",
+            "label": "harvest done - log disease history"
+          },
+          {
+            "context": {
+              "harvest_complete": false
+            },
+            "expect": "FALSE",
+            "label": "not harvested"
+          }
+        ]
       },
       "action": {
-        "english": "Record actual rot and wilt incidence as percentages against this plot, permanently. This is a first-class input to next season planning and to Domain 11 gap attribution.",
-        "marathi": "काढणीनंतर कंदकूज व मर रोगाचे प्रत्यक्ष प्रमाण टक्केवारीत या प्लॉटविरुद्ध कायमस्वरूपी नोंदवा. ही नोंद पुढील हंगामाच्या नियोजनाचा आणि उत्पादन-दरी विश्लेषणाचा प्राथमिक आधार आहे."
+        "english": "At harvest completion, prompt the farmer to log the season disease history (bacterial wilt / soft rot / leaf spot / other) for next-season recommendations.",
+        "marathi": "काढणी झाली — पुढील हंगामासाठी disease history नोंदवा. App मध्ये या हंगामातील रोग नोंदवा: जिवाणू-मर (कंद कूज), soft rot, leaf spot, इतर. ही नोंद पुढच्या हंगामाच्या शिफारसीसाठी उपयोगी."
       },
       "reasoning": {
         "agronomic_basis": "Field history is a first-class input because inoculum persists across seasons and the wilt bacterium persists for many years. Without a recorded incidence figure, next season starts blind and the u-values cannot be corrected against reality.",
@@ -2635,10 +2733,7 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "rot_incidence_pct",
-        "wilt_incidence_pct",
-        "field_history_rot",
-        "field_history_wilt"
+        "harvest_complete"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2654,21 +2749,40 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      },
+      "delivery": "EVENT"
     },
     {
       "rule_id": "D06-FH-002",
       "category": "FH",
       "priority": 4,
-      "severity": "yellow",
+      "severity": "red",
       "stage": null,
       "trigger": {
-        "english": "Soft rot confirmed on any plot within the cluster",
-        "marathi": "cluster मधील कोणत्याही शेतात कंदकूज निश्चित झाली"
+        "english": "soft rot confirmed in the plot cluster",
+        "marathi": "आपल्या cluster मध्ये soft rot आढळला",
+        "expr": "soft_rot_confirmed_in_cluster IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "soft_rot_confirmed_in_cluster": true
+            },
+            "expect": "TRUE",
+            "label": "cluster soft rot - preventive window"
+          },
+          {
+            "context": {
+              "soft_rot_confirmed_in_cluster": false
+            },
+            "expect": "FALSE",
+            "label": "no cluster soft rot"
+          }
+        ]
       },
       "action": {
-        "english": "Issue an anonymised cluster-level advisory raising the disease pressure score for neighbouring plots. Do not name the affected farm.",
-        "marathi": "cluster मधील शेजारच्या शेतांना अनामीकृत इशारा द्या — या भागात कंदकुजीचा दाब वाढला आहे. बाधित शेताचे नाव सांगू नये."
+        "english": "When soft rot is confirmed in the cluster, open a 14-day preventive drenching window for neighbouring plots.",
+        "marathi": "आपल्या cluster मध्ये soft rot आढळला — preventive drenching गरजेचे. 15-20 दिवसांत CIB&RC-मान्य Metalaxyl-M product ने drenching (PHI तपासा); drainage तपासा; संशयित रोपे काढून जाळा; agronomist ला call करा."
       },
       "reasoning": {
         "agronomic_basis": "Because symptom appearance means the yield is already lost for the affected plant, a neighbouring plot warned before symptoms appear has a genuine preventive window that it would not otherwise have.",
@@ -2687,8 +2801,7 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "rot_incidence_pct",
-        "cluster_pest_alert_active"
+        "soft_rot_confirmed_in_cluster"
       ],
       "u_value": null,
       "recoverability": "partial",
@@ -2704,7 +2817,8 @@
         "date": "2026-09-22",
         "outcome": "legal_review_required",
         "comment_mr": "DPDP Act 2023 / privacy compliance — legal/privacy desk कडून consent wording, retention period व erasure statement verification झाल्यावर production release."
-      }
+      },
+      "delivery": "WINDOW"
     }
   ],
   "open_items": [
@@ -2791,8 +2905,8 @@
     "by_severity": {
       "red": 5,
       "blocking": 3,
-      "yellow": 15,
-      "info": 5
+      "yellow": 14,
+      "info": 6
     },
     "by_source_tier": {
       "A": 23,
@@ -2832,8 +2946,8 @@
       "DATA_CAPTURE": 1
     },
     "reviewed_t1": 6,
-    "rules_with_trigger_expr": 13,
-    "rules_with_delivery_class": 13,
+    "rules_with_trigger_expr": 18,
+    "rules_with_delivery_class": 18,
     "immutable_rules": 3
   },
   "next_steps": [
