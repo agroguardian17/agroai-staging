@@ -1781,3 +1781,112 @@ async def test_lab_without_particle_sizes_keeps_derived_texture() -> None:
     ).state
     assert state["soil_texture_class"] == "heavy"  # falls back to black->heavy
     assert state["soil_texture_class_source"] == "derived"
+
+
+# ---------------------------------------------------------------------------
+# Water-budget engine wiring (D03-WB / D03-ST-001 derived fields)
+# ---------------------------------------------------------------------------
+
+import dataclasses  # noqa: E402
+
+from app.domain.water_budget import VarietyStageTargets  # noqa: E402
+
+
+class _FakeWaterBudgetRepo:
+    def __init__(self, *, targets=None, lifecycle=None, flow=None, last_irr=None) -> None:
+        self._t = targets
+        self._l = lifecycle
+        self._f = flow
+        self._li = last_irr
+
+    async def targets_for_dap(self, variety, dap):
+        return self._t
+
+    async def lifecycle_high(self, variety):
+        return self._l
+
+    async def flow_litres_since(self, plot_id, since):
+        return self._f
+
+    async def last_irrigation_at(self, plot_id):
+        return self._li
+
+
+@pytest.mark.asyncio
+async def test_water_budget_fields_computed() -> None:
+    """The water-budget repo + geometry produce the D03-WB derived fields."""
+    season = dataclasses.replace(
+        _sample_season(),
+        plants_per_acre=24300,
+        vwc_saturation=Decimal("45"),
+        vwc_stress_threshold=Decimal("20"),
+        dripper_spacing_cm=Decimal("30"),
+        drippers_per_acre=24300,
+        rows_per_bed=2,
+    )
+    reading = dataclasses.replace(_sample_reading(), water_flow_lpm=Decimal("5"))
+    targets = VarietyStageTargets(
+        stage="G2",
+        dap_start=36,
+        dap_end=90,
+        stage_target_l_high=Decimal("70"),
+        per_event_l_low=Decimal("1.5"),
+        max_l_per_event=Decimal("3.0"),
+    )
+    declared = frozenset(
+        {
+            "dap",
+            "plot_plants_estimated",
+            "vwc_status",
+            "variety_min_per_event_l",
+            "variety_max_per_event_l",
+            "per_plant_water_stage_cumulative_l",
+            "stage_water_deficit_ratio",
+            "per_plant_cumulative_vs_lifecycle_ratio",
+            "days_since_last_irrigation",
+            "days_since_last_flow_reading",
+            "flow_telemetry_field_exists",
+            "planting_geometry_incomplete",
+        }
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(reading),
+        plot_repo=_FakePlotRepo(_sample_plot()),
+        crop_season_repo=_FakeSeasonRepo(season),
+        water_budget_repo=_FakeWaterBudgetRepo(
+            targets=targets,
+            lifecycle=Decimal("250"),
+            flow=Decimal("1020600"),  # /24300 plants = 42.0 L/plant
+            last_irr=datetime(2026, 7, 31, 6, 0, tzinfo=UTC),
+        ),
+        declared_fields=declared,
+    )
+    s = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)).state
+    assert s["plot_plants_estimated"] == 24300  # 1.0 acre x 24300
+    assert s["vwc_status"] == "ok"  # 42.15 between 20 and 45
+    assert s["variety_max_per_event_l"] == Decimal("3.0")
+    assert s["variety_min_per_event_l"] == Decimal("1.5")
+    assert s["per_plant_water_stage_cumulative_l"] == Decimal("42.00")
+    assert s["stage_water_deficit_ratio"] == Decimal("0.40")  # 1 - 42/70
+    assert s["per_plant_cumulative_vs_lifecycle_ratio"] == Decimal("0.168")  # 42/250
+    assert s["days_since_last_irrigation"] == 3  # 2026-08-03 - 2026-07-31
+    assert s["days_since_last_flow_reading"] == 0
+    assert s["flow_telemetry_field_exists"] is True
+    assert s["planting_geometry_incomplete"] is True  # planting_method unset
+
+
+@pytest.mark.asyncio
+async def test_water_budget_dormant_without_repo() -> None:
+    """No water_budget_repo -> derived fields stay UNKNOWN (rules dormant)."""
+    declared = frozenset(
+        {"stage_water_deficit_ratio", "variety_max_per_event_l", "plot_plants_estimated"}
+    )
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(_sample_reading()),
+        plot_repo=_FakePlotRepo(_sample_plot()),
+        crop_season_repo=_FakeSeasonRepo(_sample_season()),
+        declared_fields=declared,
+    )
+    s = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)).state
+    assert s["stage_water_deficit_ratio"] is None
+    assert s["variety_max_per_event_l"] is None

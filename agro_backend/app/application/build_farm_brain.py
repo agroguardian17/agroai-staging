@@ -44,7 +44,7 @@ from __future__ import annotations
 import calendar
 from contextlib import suppress
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
@@ -69,6 +69,7 @@ from app.application.ports.satellite_reading_repo import (
 )
 from app.application.ports.season_economics_repo import SeasonEconomicsRepo
 from app.application.ports.season_operations_repo import SeasonOperationsRepo
+from app.application.ports.water_budget_repo import WaterBudgetRepo
 from app.application.ports.weather_forecast_repo import ForecastRow, WeatherForecastRepo
 from app.application.ports.weather_station_reading_repo import WeatherStationReadingRepo
 from app.application.ports.yield_model_repo import YieldModelRepo, YieldPredictionLog
@@ -81,6 +82,7 @@ from app.application.reference.pesticide_registry import (
 from app.application.reference.pesticide_registry import (
     PHI_DAYS_BY_GROUP as _PHI_DAYS_BY_GROUP,
 )
+from app.domain import water_budget as wb
 from app.domain.plot import Plot
 from app.domain.satellite_metrics import (
     acre_to_hectare,
@@ -185,6 +187,10 @@ class FarmBrainDeps:
     # Optional D12 QA-counter source. When present the builder fills the
     # per-plot true/false-alarm and photo counts. None keeps them UNKNOWN.
     qa_counters_repo: QaCountersRepo | None = None
+    # Optional water-budget source (variety stage targets + cumulative drip
+    # flow). When present the builder derives the D03-WB / D03-ST-001 fields;
+    # None keeps them UNKNOWN and those rules stay dormant.
+    water_budget_repo: WaterBudgetRepo | None = None
     # The full ``kb_farm_brain_fields`` set. Injected so tests can pin a
     # subset; the daily job reads it from the database at startup.
     declared_fields: frozenset[str] = field(default_factory=frozenset)
@@ -386,6 +392,9 @@ async def build_farm_brain(
     if season is not None and deps.yield_model_repo is not None:
         await _populate_yield_prediction(state, deps.yield_model_repo, season, today)
 
+    # ---- Water-budget engine (D03-WB / D03-ST-001) ---------------------
+    await _populate_water_budget(state, deps, plot_id, plot, season, reading, today)
+
     # ---- Synthetic ------------------------------------------------------
     state["current_month"] = today.month
     # brand/capability/profit/price proposals are engine-side attempts,
@@ -408,6 +417,95 @@ async def build_farm_brain(
 # ---------------------------------------------------------------------------
 # Section fillers
 # ---------------------------------------------------------------------------
+
+
+def _wb_dt(d: date) -> datetime:
+    """Midnight-UTC datetime for a date (flow queries compare against timestamptz)."""
+    return datetime(d.year, d.month, d.day, tzinfo=UTC)
+
+
+async def _populate_water_budget(
+    state: dict[str, Any],
+    deps: FarmBrainDeps,
+    plot_id: str,
+    plot: Plot | None,
+    season: CropSeasonView | None,
+    reading: Reading | None,
+    today: date,
+) -> None:
+    """Derive the D03-WB / D03-ST-001 water-budget fields from live flow + geometry.
+
+    Each step degrades to leaving the field UNKNOWN when an input is missing, so
+    the dependent rules stay dormant rather than misfire.
+    """
+    plants: int | None = None
+    if plot is not None and season is not None:
+        plants = wb.estimate_plants(plot.area_acre, season.plants_per_acre)
+        _set(state, "plot_plants_estimated", plants)
+
+    if season is not None:
+        _set(
+            state,
+            "planting_geometry_incomplete",
+            wb.geometry_incomplete(
+                planting_method=state.get("planting_method"),
+                dripper_spacing_cm=season.dripper_spacing_cm,
+                drippers_per_acre=season.drippers_per_acre,
+                rows_per_bed=season.rows_per_bed,
+                plants_per_acre=season.plants_per_acre,
+            ),
+        )
+
+    if reading is not None and season is not None:
+        _set(
+            state,
+            "vwc_status",
+            wb.classify_vwc(
+                reading.soil_moisture_avg_pct, season.vwc_saturation, season.vwc_stress_threshold
+            ),
+        )
+
+    if reading is not None and reading.water_flow_lpm is not None:
+        _set(state, "flow_telemetry_field_exists", True)
+        _set(state, "days_since_last_flow_reading", (today - reading.recorded_at.date()).days)
+
+    repo = deps.water_budget_repo
+    if repo is None or season is None:
+        return
+    dap = state.get("dap")
+    variety = season.crop_variety
+    sowing = season.sowing_date
+    if dap is None or variety is None or sowing is None:
+        return
+
+    last_irr = await repo.last_irrigation_at(plot_id)
+    if last_irr is not None:
+        _set(state, "days_since_last_irrigation", (today - last_irr.date()).days)
+
+    targets = await repo.targets_for_dap(variety, dap)
+    if targets is not None:
+        _set(state, "variety_min_per_event_l", targets.per_event_l_low)
+        _set(state, "variety_max_per_event_l", targets.max_l_per_event)
+        if plants and targets.dap_start is not None:
+            stage_litres = await repo.flow_litres_since(
+                plot_id, _wb_dt(sowing + timedelta(days=targets.dap_start))
+            )
+            per_plant_cum = wb.per_plant_cumulative(stage_litres, plants)
+            _set(state, "per_plant_water_stage_cumulative_l", per_plant_cum)
+            _set(
+                state,
+                "stage_water_deficit_ratio",
+                wb.deficit_ratio(per_plant_cum, targets.stage_target_l_high),
+            )
+
+    if plants:
+        season_litres = await repo.flow_litres_since(plot_id, _wb_dt(sowing))
+        per_plant_life = wb.per_plant_cumulative(season_litres, plants)
+        _set(
+            state,
+            "per_plant_cumulative_vs_lifecycle_ratio",
+            wb.cumulative_vs_lifecycle_ratio(per_plant_life, await repo.lifecycle_high(variety)),
+        )
 
 
 def _populate_from_reading(state: dict[str, Any], r: Reading) -> None:

@@ -36,6 +36,7 @@ from app.infra.persistence.pg_reading_repo import PgReadingRepo
 from app.infra.persistence.pg_satellite_reading_repo import PgSatelliteReadingRepo
 from app.infra.persistence.pg_season_economics_repo import PgSeasonEconomicsRepo
 from app.infra.persistence.pg_season_operations_repo import PgSeasonOperationsRepo
+from app.infra.persistence.pg_water_budget_repo import PgWaterBudgetRepo
 from app.infra.persistence.pg_weather_forecast_repo import PgWeatherForecastRepo
 from app.infra.persistence.pg_weather_station_reading_repo import PgWeatherStationReadingRepo
 from app.infra.persistence.pg_yield_model_repo import PgYieldModelRepo
@@ -76,6 +77,7 @@ async def build_and_start_scheduler(settings: Settings) -> AsyncIOScheduler | No
         farmer_consent_repo=PgFarmerConsentRepo(sessionmaker),
         advisory_metrics_repo=PgAdvisoryMetricsRepo(sessionmaker),
         yield_model_repo=PgYieldModelRepo(sessionmaker),
+        water_budget_repo=PgWaterBudgetRepo(sessionmaker),
         cluster_repo=PgClusterRepo(sessionmaker),
         qa_counters_repo=PgQaCountersRepo(sessionmaker),
         advisory_audit_repo=PgAdvisoryAuditRepo(sessionmaker),
