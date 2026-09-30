@@ -678,6 +678,20 @@
             "object": "D03-MN-004",
             "reason_en": "Water-budget and VWC-low both point to irrigation - deliver one farmer message.",
             "reason_mr": "water-budget व VWC-कमी दोन्ही सिंचन सुचवतात — एकच संदेश."
+          },
+          {
+            "subject": "D06-BW-004",
+            "relation": "SEQUENCES",
+            "object": "D06-BW-001",
+            "reason_en": "The wilt-history capture prompt must be answered before the rotation gate is evaluated; once history is recorded true with years<5, D06-BW-001 then fires.",
+            "reason_mr": "जिवाणू-मर इतिहास नोंदवण्याचा प्रश्न आधी सोडवावा; इतिहास true व वर्षे<5 नोंदल्यावर मग D06-BW-001 चालतो."
+          },
+          {
+            "subject": "D03-SB-004",
+            "relation": "SUPPRESSES",
+            "object": "D03-MN-002",
+            "reason_en": "During a sub-node hardware-upgrade window the VWC probe is unreliable, so the probe-driven saturation veto must not drive irrigation advisory.",
+            "reason_mr": "sub-node hardware अपग्रेड चालू असताना VWC probe विश्वासार्ह नसतो, म्हणून probe-आधारित संपृक्तता veto सिंचन सल्ला ठरवू नये."
           }
         ]
       },

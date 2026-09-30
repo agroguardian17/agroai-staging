@@ -336,6 +336,17 @@ PRECEDENCE = [
  Relation('D03-WB-001', 'BUNDLES', 'D03-MN-004',
    'Water-budget and VWC-low both point to irrigation - deliver one farmer message.',
    'water-budget व VWC-कमी दोन्ही सिंचन सुचवतात — एकच संदेश.'),
+
+ # --- KB 7 Final Decisions (items 4 + 5) ---------------------------------
+ Relation('D06-BW-004', 'SEQUENCES', 'D06-BW-001',
+   'The wilt-history capture prompt must be answered before the rotation gate is '
+   'evaluated; once history is recorded true with years<5, D06-BW-001 then fires.',
+   'जिवाणू-मर इतिहास नोंदवण्याचा प्रश्न आधी सोडवावा; इतिहास true व वर्षे<5 नोंदल्यावर मग D06-BW-001 चालतो.'),
+
+ Relation('D03-SB-004', 'SUPPRESSES', 'D03-MN-002',
+   'During a sub-node hardware-upgrade window the VWC probe is unreliable, so the '
+   'probe-driven saturation veto must not drive irrigation advisory.',
+   'sub-node hardware अपग्रेड चालू असताना VWC probe विश्वासार्ह नसतो, म्हणून probe-आधारित संपृक्तता veto सिंचन सल्ला ठरवू नये.'),
 ]
 
 

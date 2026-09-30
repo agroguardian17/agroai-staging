@@ -289,6 +289,10 @@ DELIVERY = {
  'D14-NV-006': EVENT, 'D14-NV-007': EVENT,
  'D14-SR-003': EVENT,
  'D14-FU-003': EVENT,
+
+ # KB 7 Final Decisions (items 1 + 4): standing pre-planting prompts
+ 'D04-MC-005': ONCE_UNTIL_RESOLVED,   # basal ZnSO4 zone default until applied
+ 'D06-BW-004': ONCE_UNTIL_RESOLVED,   # wilt-history capture until recorded
 }
 
 DEFAULT_DELIVERY = WINDOW

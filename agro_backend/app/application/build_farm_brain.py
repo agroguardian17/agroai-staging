@@ -648,6 +648,15 @@ def _populate_from_season(
     _set(state, "current_stage", season.current_growth_stage)
     # We stage by calendar (DAP), so declare the provenance the KB reads.
     _set(state, "stage_source", "calendar")
+    # plot_status: lifecycle phase for the pre-planting prompts (D04-MC-005 basal
+    # zinc, D06-BW-004 wilt-history). Derived from the season dates — no farmer
+    # input needed; pre_planting until sowing, post_harvest after harvest.
+    if season.sowing_date is None or today < season.sowing_date:
+        _set(state, "plot_status", "pre_planting")
+    elif season.actual_harvest_date is not None and today >= season.actual_harvest_date:
+        _set(state, "plot_status", "post_harvest")
+    else:
+        _set(state, "plot_status", "growing")
     _set(state, "crop_name_english", season.crop_name_english)
     _set(state, "crop_name_marathi", season.crop_name_marathi)
     _set(state, "crop_variety", season.crop_variety)
