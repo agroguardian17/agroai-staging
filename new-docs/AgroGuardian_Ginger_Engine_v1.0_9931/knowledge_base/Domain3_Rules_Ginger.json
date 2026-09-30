@@ -13,7 +13,9 @@
         "MN": "monsoon and rainfall management",
         "WW": "water withdrawal before harvest",
         "MU": "mulch as water management",
-        "SB": "sensor binding and calibration"
+        "SB": "sensor binding and calibration",
+        "WB": "water budget engine (flow-derived deficit/dose advisories)",
+        "ST": "water-deficit stress log (silent D11 factor-7 feeder)"
       },
       "new_farm_brain_fields": {
         "water_source_type": "enum:[well, borewell, farm_pond, canal, mixed]",
@@ -47,7 +49,20 @@
         "drip_system_flow_lph": "number — total system flow at the plot, drippers times discharge",
         "previous_stage": "enum:[G0, G1, G2, G3, G4, G5]",
         "hardware_upgrade_pending": "boolean",
-        "water_supply_status": "enum:[adequate, marginal, critical]"
+        "water_supply_status": "enum:[adequate, marginal, critical]",
+        "water_flow_lpm": "number",
+        "vwc_status": "enum:[saturated, low, ok]",
+        "plot_plants_estimated": "number",
+        "stage_water_deficit_ratio": "number",
+        "per_plant_water_stage_cumulative_l": "number",
+        "per_plant_dose_l_last_event": "number",
+        "variety_max_per_event_l": "number",
+        "variety_min_per_event_l": "number",
+        "per_plant_cumulative_vs_lifecycle_ratio": "number",
+        "days_since_last_irrigation": "number",
+        "days_since_last_flow_reading": "number",
+        "flow_telemetry_field_exists": "boolean",
+        "planting_geometry_incomplete": "boolean"
       },
       "constants": {
         "mm_to_litre_per_acre": 4000,
@@ -165,7 +180,7 @@
     "status": "PHASE_1_RAW_UNVALIDATED",
     "agronomist_validated": false,
     "validation_note": "Month-wise water table is from a Maharashtra commercial irrigation source (Netafim) published via Agrowon. Runtime figures are computed from that table and independently match a second institutional source. Volumetric thresholds require plot calibration before sensor-driven irrigation is enabled.",
-    "total_rules": 31,
+    "total_rules": 40,
     "rule_count_note": "29 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count.",
     "review_by": null,
     "review_note": "Water physics is stable. The month-wise table is regional average and should be progressively replaced by station-derived evaporation once one season of data exists.",
@@ -2841,6 +2856,669 @@
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
       }
+    },
+    {
+      "rule_id": "D03-WB-001",
+      "category": "WB",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Moderate water-budget deficit: recommend a normal irrigation event.",
+        "marathi": "पाणी-अंदाजानुसार तूट आहे — सामान्य सिंचन द्या. (VWC संपृक्त असल्यास देऊ नका.)",
+        "expr": "stage_water_deficit_ratio > 0.25 AND days_since_last_irrigation >= 2 AND vwc_status != 'saturated'",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "stage_water_deficit_ratio": 0.3,
+              "days_since_last_irrigation": 3,
+              "vwc_status": "low"
+            },
+            "expect": "TRUE",
+            "label": "moderate deficit - irrigate"
+          },
+          {
+            "context": {
+              "stage_water_deficit_ratio": 0.3,
+              "days_since_last_irrigation": 3,
+              "vwc_status": "saturated"
+            },
+            "expect": "FALSE",
+            "label": "saturated - VWC veto"
+          }
+        ]
+      },
+      "action": {
+        "english": "Moderate water-budget deficit: recommend a normal irrigation event.",
+        "marathi": "पाणी-अंदाजानुसार तूट आहे — सामान्य सिंचन द्या. (VWC संपृक्त असल्यास देऊ नका.)"
+      },
+      "reasoning": {
+        "agronomic_basis": "Water-budget deficit above 25% of the stage target with a 2-day gap indicates a normal irrigation need; VWC saturation vetoes it (probe > budget).",
+        "yield_impact": "Advisory; not a standalone yield factor.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "AgroGuardian Water Budget Engine v1.3 (Kuldip, 25 Sep 2026)"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "stage_water_deficit_ratio",
+        "days_since_last_irrigation",
+        "vwc_status"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "Kannad Western Scarcity zone: G2-G4 ETc supports a ~2-day gap, tighter than the 4-5 days typical elsewhere.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "WINDOW",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-25",
+        "outcome": "conditional",
+        "comment_mr": "Water-budget engine rule (v1.3). DORMANT until compute_water_budget() populates the derived ratio/dose fields and planting geometry is captured. v1.2 discipline: no confidence-gate DSL (three-valued logic), no FEEDS, no push/urgency."
+      }
+    },
+    {
+      "rule_id": "D03-WB-002",
+      "category": "WB",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "Severe stage-specific water deficit (G3 >40%, G2/G4 >50%): urgent catch-up irrigation.",
+        "marathi": "गंभीर पाणी-तूट — तातडीने सिंचन द्या. गड्डा-भरणीच्या (G3) अवस्थेत तूट सर्वाधिक हा",
+        "expr": "((STAGE IN [G3] AND stage_water_deficit_ratio > 0.40) OR (STAGE IN [G2, G4] AND stage_water_deficit_ratio > 0.50)) AND vwc_status != 'saturated'",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "current_stage": "G3",
+              "stage_water_deficit_ratio": 0.45,
+              "vwc_status": "low"
+            },
+            "expect": "TRUE",
+            "label": "G3 severe deficit - RED"
+          },
+          {
+            "context": {
+              "current_stage": "G2",
+              "stage_water_deficit_ratio": 0.45,
+              "vwc_status": "low"
+            },
+            "expect": "FALSE",
+            "label": "G2 below 0.50 threshold"
+          }
+        ]
+      },
+      "action": {
+        "english": "Severe stage-specific water deficit (G3 >40%, G2/G4 >50%): urgent catch-up irrigation.",
+        "marathi": "गंभीर पाणी-तूट — तातडीने सिंचन द्या. गड्डा-भरणीच्या (G3) अवस्थेत तूट सर्वाधिक हानिकारक."
+      },
+      "reasoning": {
+        "agronomic_basis": "G3 rhizome initiation is the most water-sensitive window (VNMKV documents 15-25% yield loss at >=40% deficit); G2/G4 are buffered to 50%.",
+        "yield_impact": "Advisory; not a standalone yield factor.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "AgroGuardian Water Budget Engine v1.3 (Kuldip, 25 Sep 2026)"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "stage_water_deficit_ratio",
+        "vwc_status"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "Kannad G3 window (mid-Sep to mid-Nov) overlaps late-monsoon withdrawal; pond reserve is critical.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "WINDOW",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-25",
+        "outcome": "conditional",
+        "comment_mr": "Water-budget engine rule (v1.3). DORMANT until compute_water_budget() populates the derived ratio/dose fields and planting geometry is captured. v1.2 discipline: no confidence-gate DSL (three-valued logic), no FEEDS, no push/urgency."
+      }
+    },
+    {
+      "rule_id": "D03-WB-003",
+      "category": "WB",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Over-irrigation on the last event: recommend reducing the next dose (rhizome-rot risk on vertisol).",
+        "marathi": "मागील सिंचनात जास्त पाणी दिले — पुढच्या वेळी ~30% कमी करा. जास्त पाणी → गड्डा-कू",
+        "expr": "per_plant_dose_l_last_event > variety_max_per_event_l AND current_stage != 'G5'",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "per_plant_dose_l_last_event": 5.0,
+              "variety_max_per_event_l": 4.0,
+              "current_stage": "G3"
+            },
+            "expect": "TRUE",
+            "label": "over max per-event"
+          },
+          {
+            "context": {
+              "per_plant_dose_l_last_event": 3.5,
+              "variety_max_per_event_l": 4.0,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "within max"
+          }
+        ]
+      },
+      "action": {
+        "english": "Over-irrigation on the last event: recommend reducing the next dose (rhizome-rot risk on vertisol).",
+        "marathi": "मागील सिंचनात जास्त पाणी दिले — पुढच्या वेळी ~30% कमी करा. जास्त पाणी → गड्डा-कूज व जिवाणू-मर धोका (काळ्या मातीत)."
+      },
+      "reasoning": {
+        "agronomic_basis": "Per-event dose above the variety maximum raises Ralstonia and Pythium incidence on slow-draining vertisol (~10-15% loss risk).",
+        "yield_impact": "Advisory; not a standalone yield factor.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "AgroGuardian Water Budget Engine v1.3 (Kuldip, 25 Sep 2026)"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "per_plant_dose_l_last_event",
+        "variety_max_per_event_l",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "Vertisol drainage is slow (0.5-2 cm/hr); over-irrigation stays in the root zone longer than in lighter soils.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-25",
+        "outcome": "conditional",
+        "comment_mr": "Water-budget engine rule (v1.3). DORMANT until compute_water_budget() populates the derived ratio/dose fields and planting geometry is captured. v1.2 discipline: no confidence-gate DSL (three-valued logic), no FEEDS, no push/urgency."
+      }
+    },
+    {
+      "rule_id": "D03-WB-004",
+      "category": "WB",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Under-irrigation on the just-completed event in an active stage: recommend a supplementary dose.",
+        "marathi": "आजचे सिंचन कमी झाले — पुरवणी सिंचन आजच द्या. पाणी कमी असल्यास पंप-दाब/drippers त",
+        "expr": "per_plant_dose_l_last_event < variety_min_per_event_l AND days_since_last_irrigation <= 1 AND STAGE IN [G2, G3, G4] AND vwc_status != 'saturated'",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "per_plant_dose_l_last_event": 0.5,
+              "variety_min_per_event_l": 1.5,
+              "days_since_last_irrigation": 1,
+              "current_stage": "G3",
+              "vwc_status": "low"
+            },
+            "expect": "TRUE",
+            "label": "under-dose - supplement"
+          },
+          {
+            "context": {
+              "per_plant_dose_l_last_event": 2.0,
+              "variety_min_per_event_l": 1.5,
+              "days_since_last_irrigation": 1,
+              "current_stage": "G3",
+              "vwc_status": "low"
+            },
+            "expect": "FALSE",
+            "label": "adequate dose"
+          }
+        ]
+      },
+      "action": {
+        "english": "Under-irrigation on the just-completed event in an active stage: recommend a supplementary dose.",
+        "marathi": "आजचे सिंचन कमी झाले — पुरवणी सिंचन आजच द्या. पाणी कमी असल्यास पंप-दाब/drippers तपासा."
+      },
+      "reasoning": {
+        "agronomic_basis": "A dose below the variety minimum in active stages G2-G4 carries forward as cumulative deficit; correct it same-day.",
+        "yield_impact": "Advisory; not a standalone yield factor.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "AgroGuardian Water Budget Engine v1.3 (Kuldip, 25 Sep 2026)"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "per_plant_dose_l_last_event",
+        "variety_min_per_event_l",
+        "days_since_last_irrigation",
+        "vwc_status"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "Common Kannad cause is a low pond with farmer rationing; the flag lets the farmer plan a supplemental source.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-25",
+        "outcome": "conditional",
+        "comment_mr": "Water-budget engine rule (v1.3). DORMANT until compute_water_budget() populates the derived ratio/dose fields and planting geometry is captured. v1.2 discipline: no confidence-gate DSL (three-valued logic), no FEEDS, no push/urgency."
+      }
+    },
+    {
+      "rule_id": "D03-WB-005",
+      "category": "WB",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Silent daily aggregation of cumulative per-plant water; feeds the D11 yield model (no farmer message).",
+        "marathi": "silent — no farmer message",
+        "expr": "dap > 0 AND per_plant_water_stage_cumulative_l IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 100,
+              "per_plant_water_stage_cumulative_l": 150.0
+            },
+            "expect": "TRUE",
+            "label": "daily cumulative log (silent)"
+          },
+          {
+            "context": {
+              "dap": 100
+            },
+            "expect": "FALSE",
+            "label": "no cumulative yet"
+          }
+        ]
+      },
+      "action": {
+        "english": "Silent daily aggregation of cumulative per-plant water; feeds the D11 yield model (no farmer message).",
+        "marathi": "Silent guard — no farmer-facing message; feeds internal aggregation only."
+      },
+      "reasoning": {
+        "agronomic_basis": "Daily cumulative water per plant vs the variety demand curve is a silent D11 input; Season 1 data calibrates Season 2 U-values.",
+        "yield_impact": "Advisory; not a standalone yield factor.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "AgroGuardian Water Budget Engine v1.3 (Kuldip, 25 Sep 2026)"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "dap",
+        "per_plant_water_stage_cumulative_l"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "Kannad Season 1 baseline collection; this daily log becomes the calibration input for the water-deficit U-value.",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "advisory",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-25",
+        "outcome": "conditional",
+        "comment_mr": "Water-budget engine rule (v1.3). DORMANT until compute_water_budget() populates the derived ratio/dose fields and planting geometry is captured. v1.2 discipline: no confidence-gate DSL (three-valued logic), no FEEDS, no push/urgency."
+      }
+    },
+    {
+      "rule_id": "D03-WB-006",
+      "category": "WB",
+      "priority": 5,
+      "severity": "red",
+      "stage": null,
+      "trigger": {
+        "english": "Flow sensor stopped reporting (was working): pause quantitative dose recommendations; VWC advisory continues.",
+        "marathi": "Sensor गप्प आहे — पाण्याचा प्रवाह नोंदत नाही. शेतात जाऊन sensor/battery तपासा. त",
+        "expr": "days_since_last_flow_reading > 3 AND flow_telemetry_field_exists IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "days_since_last_flow_reading": 4,
+              "flow_telemetry_field_exists": true
+            },
+            "expect": "TRUE",
+            "label": "flow sensor silent"
+          },
+          {
+            "context": {
+              "days_since_last_flow_reading": 2,
+              "flow_telemetry_field_exists": true
+            },
+            "expect": "FALSE",
+            "label": "recent reading"
+          }
+        ]
+      },
+      "action": {
+        "english": "Flow sensor stopped reporting (was working): pause quantitative dose recommendations; VWC advisory continues.",
+        "marathi": "Sensor गप्प आहे — पाण्याचा प्रवाह नोंदत नाही. शेतात जाऊन sensor/battery तपासा. तोपर्यंत VWC-आधारित सल्ला सुरू राहील."
+      },
+      "reasoning": {
+        "agronomic_basis": "A working flow sensor going silent for over 3 days is a hardware-health regression; quantitative dose is paused until it recovers.",
+        "yield_impact": "Advisory; not a standalone yield factor.",
+        "confidence_score": 0.75,
+        "source_tier": "C",
+        "references": [
+          "AgroGuardian Water Budget Engine v1.3 (Kuldip, 25 Sep 2026)"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "days_since_last_flow_reading",
+        "flow_telemetry_field_exists"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "Kannad battery drain is worse in April-May heat; keep spare batteries stocked for the Main/Sub node.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "advisory",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "EVENT",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-25",
+        "outcome": "conditional",
+        "comment_mr": "Water-budget engine rule (v1.3). DORMANT until compute_water_budget() populates the derived ratio/dose fields and planting geometry is captured. v1.2 discipline: no confidence-gate DSL (three-valued logic), no FEEDS, no push/urgency."
+      }
+    },
+    {
+      "rule_id": "D03-WB-007",
+      "category": "WB",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Season-long over-irrigation (>120% of lifecycle target): investigate drainage/drip; reduce remaining doses; scout.",
+        "marathi": "हंगामभर जास्त पाणी दिले जात आहे — निचरा व drippers तपासा. पुढील शिफारसी कमी दोसे",
+        "expr": "per_plant_cumulative_vs_lifecycle_ratio > 1.20 AND dap >= 100",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "per_plant_cumulative_vs_lifecycle_ratio": 1.25,
+              "dap": 180
+            },
+            "expect": "TRUE",
+            "label": "season over-irrigation"
+          },
+          {
+            "context": {
+              "per_plant_cumulative_vs_lifecycle_ratio": 1.1,
+              "dap": 180
+            },
+            "expect": "FALSE",
+            "label": "within season budget"
+          }
+        ]
+      },
+      "action": {
+        "english": "Season-long over-irrigation (>120% of lifecycle target): investigate drainage/drip; reduce remaining doses; scout.",
+        "marathi": "हंगामभर जास्त पाणी दिले जात आहे — निचरा व drippers तपासा. पुढील शिफारसी कमी दोसेने येतील. Agronomist ला call करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Cumulative lifecycle water above 120% of the variety high-end correlates with increased Ralstonia incidence on vertisol.",
+        "yield_impact": "Advisory; not a standalone yield factor.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "AgroGuardian Water Budget Engine v1.3 (Kuldip, 25 Sep 2026)"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "per_plant_cumulative_vs_lifecycle_ratio",
+        "dap"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "Slow vertisol drainage means cumulative over-irrigation lingers; Kannad plots show higher wilt correlation.",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-25",
+        "outcome": "conditional",
+        "comment_mr": "Water-budget engine rule (v1.3). DORMANT until compute_water_budget() populates the derived ratio/dose fields and planting geometry is captured. v1.2 discipline: no confidence-gate DSL (three-valued logic), no FEEDS, no push/urgency."
+      }
+    },
+    {
+      "rule_id": "D03-WB-008",
+      "category": "WB",
+      "priority": 5,
+      "severity": "blocking",
+      "stage": "G0",
+      "trigger": {
+        "english": "Pre-planting gate: block pilot activation until planting geometry is captured (needed for the water-budget engine).",
+        "marathi": "शेताची माहिती पूर्ण करा — लागवडीची पद्धत, बेड/ड्रीपर अंतर, sensor स्थान app मध्य",
+        "expr": "dap < 0 AND planting_geometry_incomplete IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": -5,
+              "planting_geometry_incomplete": true
+            },
+            "expect": "TRUE",
+            "label": "geometry incomplete pre-plant"
+          },
+          {
+            "context": {
+              "dap": -5,
+              "planting_geometry_incomplete": false
+            },
+            "expect": "FALSE",
+            "label": "geometry complete"
+          }
+        ]
+      },
+      "action": {
+        "english": "Pre-planting gate: block pilot activation until planting geometry is captured (needed for the water-budget engine).",
+        "marathi": "शेताची माहिती पूर्ण करा — लागवडीची पद्धत, बेड/ड्रीपर अंतर, sensor स्थान app मध्ये भरा. ही माहिती भरल्यावरच सिंचन-शिफारसी सुरू होतील."
+      },
+      "reasoning": {
+        "agronomic_basis": "Complete planting geometry (method, spacings, pipe count, sensor position) is required to estimate plants and per-plant dose.",
+        "yield_impact": "Advisory; not a standalone yield factor.",
+        "confidence_score": 0.75,
+        "source_tier": "C",
+        "references": [
+          "AgroGuardian Water Budget Engine v1.3 (Kuldip, 25 Sep 2026)"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "dap",
+        "planting_geometry_incomplete"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "Kannad Season-1 pilot needs complete geometry for D11 yield-model validation.",
+      "decision_type": "BLOCK",
+      "automation": "advisory",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-25",
+        "outcome": "conditional",
+        "comment_mr": "Water-budget engine rule (v1.3). DORMANT until compute_water_budget() populates the derived ratio/dose fields and planting geometry is captured. v1.2 discipline: no confidence-gate DSL (three-valued logic), no FEEDS, no push/urgency."
+      }
+    },
+    {
+      "rule_id": "D03-ST-001",
+      "category": "ST",
+      "priority": 4,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Silent D11 factor-7 feeder: logs the G3-G4 water-deficit ratio (drought-during-rhizome-fill) for the yield model.",
+        "marathi": "silent — no farmer message",
+        "expr": "dap > 60 AND stage_water_deficit_ratio IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 100,
+              "stage_water_deficit_ratio": 0.3
+            },
+            "expect": "TRUE",
+            "label": "factor-7 deficit log (silent)"
+          },
+          {
+            "context": {
+              "dap": 40,
+              "stage_water_deficit_ratio": 0.3
+            },
+            "expect": "FALSE",
+            "label": "before DAP 60"
+          }
+        ]
+      },
+      "action": {
+        "english": "Silent D11 factor-7 feeder: logs the G3-G4 water-deficit ratio (drought-during-rhizome-fill) for the yield model.",
+        "marathi": "Silent guard — no farmer-facing message; feeds internal aggregation only."
+      },
+      "reasoning": {
+        "agronomic_basis": "Water-deficit ratio during rhizome fill (G3-G4) is the quantitative replacement for the qualitative drought factor-7 in the D11 yield model (FAO-56 water balance).",
+        "yield_impact": "Advisory; not a standalone yield factor.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "AgroGuardian Water Budget Engine v1.3 (Kuldip, 25 Sep 2026)"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_11_yield"
+        ],
+        "depends_on": [
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "dap",
+        "stage_water_deficit_ratio"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "DERIVED",
+      "kannad_note": "Kannad G3-G4 (DAP 90-210) overlaps late-monsoon withdrawal where drought stress hits hardest (15-25% documented impact).",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "advisory",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD",
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-25",
+        "outcome": "conditional",
+        "comment_mr": "Water-budget engine rule (v1.3). DORMANT until compute_water_budget() populates the derived ratio/dose fields and planting geometry is captured. v1.2 discipline: no confidence-gate DSL (three-valued logic), no FEEDS, no push/urgency."
+      }
     }
   ],
   "open_items": [
@@ -2897,7 +3575,7 @@
     }
   ],
   "summary": {
-    "total_rules": 31,
+    "total_rules": 40,
     "by_category": {
       "WS": 2,
       "DS": 3,
@@ -2907,18 +3585,20 @@
       "MN": 4,
       "WW": 2,
       "MU": 2,
-      "SB": 4
+      "SB": 4,
+      "WB": 8,
+      "ST": 1
     },
     "by_priority": {
-      "5": 13,
-      "4": 14,
+      "5": 16,
+      "4": 20,
       "3": 4
     },
     "by_severity": {
-      "blocking": 3,
-      "yellow": 10,
-      "red": 6,
-      "info": 12
+      "blocking": 4,
+      "yellow": 14,
+      "red": 8,
+      "info": 14
     },
     "by_source_tier": {
       "A": 16,
@@ -2954,8 +3634,8 @@
       "SENSOR_ALERT": 12
     },
     "reviewed_t1": 3,
-    "rules_with_trigger_expr": 30,
-    "rules_with_delivery_class": 30,
+    "rules_with_trigger_expr": 39,
+    "rules_with_delivery_class": 39,
     "immutable_rules": 0
   },
   "next_steps": [
