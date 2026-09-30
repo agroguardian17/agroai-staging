@@ -224,9 +224,7 @@ async def _run_one_plot(
     # Record this run's stage AFTER the mapper read the previous one, so the
     # next run can detect a transition (D03-SB-003). Idempotent on (plot, day).
     if deps.plot_stage_repo is not None and season.current_growth_stage is not None:
-        await deps.plot_stage_repo.record_stage(
-            season.plot_id, today, season.current_growth_stage
-        )
+        await deps.plot_stage_repo.record_stage(season.plot_id, today, season.current_growth_stage)
     log.debug(
         "ginger_daily.state_built",
         plot_id=season.plot_id,
