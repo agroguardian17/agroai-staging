@@ -67,6 +67,7 @@ from app.application.ports.farmer_repo import FarmerRepo
 from app.application.ports.farmer_schemes_repo import FarmerSchemesRepo
 from app.application.ports.lab_soil_test_repo import LabSoilTestRepo
 from app.application.ports.plot_repo import PlotRepo
+from app.application.ports.plot_stage_repo import PlotStageRepo
 from app.application.ports.qa_counters_repo import QaCountersRepo
 from app.application.ports.reading_repo import ReadingRepo
 from app.application.ports.satellite_reading_repo import SatelliteReadingRepo
@@ -133,6 +134,10 @@ class GingerDailyDeps:
     yield_model_repo: YieldModelRepo | None = None
     # Optional water-budget source (variety stage targets + cumulative drip flow).
     water_budget_repo: WaterBudgetRepo | None = None
+    # Optional per-plot growth-stage history. When present the mapper fills
+    # ``previous_stage`` from it and this job records each run's stage into it,
+    # so D03-SB-003 can detect a phenological transition on the next run.
+    plot_stage_repo: PlotStageRepo | None = None
     # Optional D12 peer-cluster source (fills the farm-brain ``cluster_id``).
     cluster_repo: ClusterRepo | None = None
     # Optional D12 QA-counter source (true/false-alarm + photo counts).
@@ -209,11 +214,19 @@ async def _run_one_plot(
         advisory_metrics_repo=deps.advisory_metrics_repo,
         yield_model_repo=deps.yield_model_repo,
         water_budget_repo=deps.water_budget_repo,
+        plot_stage_repo=deps.plot_stage_repo,
         cluster_repo=deps.cluster_repo,
         qa_counters_repo=deps.qa_counters_repo,
         declared_fields=declared_fields,
     )
     state = await build_farm_brain(plot_id=season.plot_id, today=today, deps=fb_deps)
+
+    # Record this run's stage AFTER the mapper read the previous one, so the
+    # next run can detect a transition (D03-SB-003). Idempotent on (plot, day).
+    if deps.plot_stage_repo is not None and season.current_growth_stage is not None:
+        await deps.plot_stage_repo.record_stage(
+            season.plot_id, today, season.current_growth_stage
+        )
     log.debug(
         "ginger_daily.state_built",
         plot_id=season.plot_id,
