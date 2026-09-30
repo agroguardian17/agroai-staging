@@ -25,8 +25,12 @@ try:
 except ImportError:
     _W4 = {}
 from triggers_wave5_d14 import TRIGGERS_W5 as _W5
+try:
+    from triggers_wave6_firing_intent import TRIGGERS_W6 as _W6
+except ImportError:
+    _W6 = {}
 
-ALL_TRIGGERS = {**_W1, **_W2, **_W3, **_W4, **_W5}
+ALL_TRIGGERS = {**_W1, **_W2, **_W3, **_W4, **_W5, **_W6}
 D14_TRIGGERS = _W5
 
 FILES = ['Domain1_Rules_Ginger_v2.json'] + [f'Domain{i}_Rules_Ginger.json' for i in range(2, 15)]

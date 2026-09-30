@@ -41,7 +41,16 @@
         "cluster_id": "string",
         "cluster_anonymised": "boolean",
         "false_alarm_count": "integer",
-        "true_alarm_count": "integer"
+        "true_alarm_count": "integer",
+        "action_not_recorded_within_3days": "boolean",
+        "low_confidence_decision": "boolean",
+        "unexpected_outcome": "boolean",
+        "symptom_diagnosis_pending": "boolean",
+        "season_number": "number",
+        "photo_submitted": "boolean",
+        "durable_fact_learned_in_conversation": "boolean",
+        "local_terminology_used": "boolean",
+        "differs_from_standard_marathi": "boolean"
       },
       "layer_model": {
         "layer_1_rules": {
@@ -1539,15 +1548,33 @@
       "rule_id": "D12-LOG-002",
       "category": "LOG",
       "priority": 5,
-      "severity": "yellow",
+      "severity": "info",
       "stage": null,
       "trigger": {
         "english": "A durable fact is learned during a conversation or a field visit",
-        "marathi": "संभाषणात किंवा शेत भेटीत टिकाऊ माहिती मिळाली"
+        "marathi": "संभाषणात किंवा शेत भेटीत टिकाऊ माहिती मिळाली",
+        "expr": "durable_fact_learned_in_conversation IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "durable_fact_learned_in_conversation": true
+            },
+            "expect": "TRUE",
+            "label": "append to profile"
+          },
+          {
+            "context": {
+              "durable_fact_learned_in_conversation": false
+            },
+            "expect": "FALSE",
+            "label": "none"
+          }
+        ]
       },
       "action": {
-        "english": "Record it against the plot at the time. Class B action records and class C observation records are manual and are the ones most often lost, and together they cover most of the register.",
-        "marathi": "ती त्याच वेळी प्लॉटविरुद्ध नोंदवा. कृती-नोंदी आणि निरीक्षण-नोंदी या हाताने कराव्या लागतात आणि त्याच सर्वात जास्त वेळा हरवतात — आणि त्या दोन मिळून नोंदवहीचा बहुतांश भाग व्यापतात."
+        "english": "Append a durable farmer-specific fact learned in conversation to the season records.",
+        "marathi": "आपल्या शेताविषयीची नवी माहिती नोंदवली — पुढच्या शिफारसीत लक्षात ठेवली जाईल."
       },
       "reasoning": {
         "agronomic_basis": "Machine records log themselves. Action and observation records depend on someone entering them, and they cover the operations that carry u-values of 0.125 to 0.20 each.",
@@ -1566,11 +1593,7 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "mulch_stage_1_done",
-        "earthing_up_date",
-        "micronutrient_spray_1_done",
-        "tillers_per_plant",
-        "season_record_complete"
+        "durable_fact_learned_in_conversation"
       ],
       "u_value": null,
       "recoverability": "none",
@@ -1586,7 +1609,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "EVENT"
     },
     {
       "rule_id": "D12-LOG-003",
@@ -1794,15 +1818,35 @@
       "rule_id": "D12-VOC-002",
       "category": "VOC",
       "priority": 4,
-      "severity": "yellow",
+      "severity": "info",
       "stage": null,
       "trigger": {
         "english": "Local terminology differs from standard Marathi",
-        "marathi": "स्थानिक शब्दप्रयोग प्रमाण मराठीपेक्षा वेगळा आहे"
+        "marathi": "स्थानिक शब्दप्रयोग प्रमाण मराठीपेक्षा वेगळा आहे",
+        "expr": "local_terminology_used IS TRUE AND differs_from_standard_marathi IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "local_terminology_used": true,
+              "differs_from_standard_marathi": true
+            },
+            "expect": "TRUE",
+            "label": "append to glossary"
+          },
+          {
+            "context": {
+              "local_terminology_used": true,
+              "differs_from_standard_marathi": false
+            },
+            "expect": "FALSE",
+            "label": "standard term"
+          }
+        ]
       },
       "action": {
-        "english": "Record the local variant alongside the standard term. The farmer uses the local word, so that is what must be recognised. Whether bharani and utalni are the same operation still needs confirming.",
-        "marathi": "प्रमाण संज्ञेसोबत स्थानिक शब्दही नोंदवा. शेतकरी स्थानिक शब्द वापरतो, म्हणून तोच ओळखता आला पाहिजे. 'भरणी' आणि 'उटाळणी' एकच काम आहे का, हे अजून निश्चित करायचे आहे."
+        "english": "Append a non-standard local Marathi term to the glossary for agronomist canonicalization.",
+        "marathi": "शेतकऱ्याने स्थानिक शब्द वापरला — glossary मध्ये add; agronomist review नंतर canonical."
       },
       "reasoning": {
         "agronomic_basis": "Standard Marathi and Kannad usage may differ, and the system has to match what is actually said rather than what is written in a bulletin. The bharani and utalni question is a live ambiguity in the sources.",
@@ -1820,8 +1864,8 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "advisory_language",
-        "asr_used"
+        "local_terminology_used",
+        "differs_from_standard_marathi"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -1837,7 +1881,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Confidence 0.70 — architectural intent OK, पण source / local validation पूर्ण होईपर्यंत CONDITIONAL. Season 1 data नंतर confidence upgrade करावी."
-      }
+      },
+      "delivery": "EVENT"
     },
     {
       "rule_id": "D12-MOD-001",
@@ -2048,15 +2093,35 @@
       "rule_id": "D12-IMG-001",
       "category": "IMG",
       "priority": 4,
-      "severity": "yellow",
+      "severity": "info",
       "stage": null,
       "trigger": {
         "english": "Season 1 or 2 AND a farmer submits a photograph",
-        "marathi": "पहिला किंवा दुसरा हंगाम, शेतकऱ्याने फोटो पाठवला"
+        "marathi": "पहिला किंवा दुसरा हंगाम, शेतकऱ्याने फोटो पाठवला",
+        "expr": "season_number <= 2 AND photo_submitted IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "season_number": 1,
+              "photo_submitted": true
+            },
+            "expect": "TRUE",
+            "label": "enqueue for labelling"
+          },
+          {
+            "context": {
+              "season_number": 3,
+              "photo_submitted": true
+            },
+            "expect": "FALSE",
+            "label": "past priority window"
+          }
+        ]
       },
       "action": {
-        "english": "Store it and have an expert label it. Do not attempt automatic classification. Photographs cannot be collected retrospectively, so collection must begin before any model exists.",
-        "marathi": "फोटो साठवा आणि तज्ज्ञाकडून लेबल लावून घ्या. आपोआप वर्गीकरणाचा प्रयत्न करू नका. फोटो मागे जाऊन जमवता येत नाहीत — म्हणून मॉडेल नसतानाही जमवायला आत्ताच सुरुवात करावी लागते."
+        "english": "Early-season photo submitted -> enqueue for D06 disease-image labelling (training data).",
+        "marathi": "फोटो सबमिट झाला — धन्यवाद. D06 disease-detection model training साठी वापरला जाईल."
       },
       "reasoning": {
         "agronomic_basis": "No public labelled image set exists for any of the eight candidate markers. Each class needs hundreds of images and they only appear when the condition actually occurs, so collection is opportunistic and slow.",
@@ -2072,9 +2137,8 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "photo_uploaded_count",
-        "photo_labelled_count",
-        "model_version"
+        "season_number",
+        "photo_submitted"
       ],
       "u_value": null,
       "recoverability": "none",
@@ -2090,7 +2154,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "EVENT"
     },
     {
       "rule_id": "D12-IMG-002",
@@ -2306,11 +2371,29 @@
       "stage": null,
       "trigger": {
         "english": "A recommended action is not recorded within 3 days of its deadline",
-        "marathi": "सुचवलेले काम मुदतीनंतर तीन दिवसांत नोंदवले गेले नाही"
+        "marathi": "सुचवलेले काम मुदतीनंतर तीन दिवसांत नोंदवले गेले नाही",
+        "expr": "action_not_recorded_within_3days IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "action_not_recorded_within_3days": true
+            },
+            "expect": "TRUE",
+            "label": "ask why no action"
+          },
+          {
+            "context": {
+              "action_not_recorded_within_3days": false
+            },
+            "expect": "FALSE",
+            "label": "recorded"
+          }
+        ]
       },
       "action": {
-        "english": "Ask one question with fixed options — was it done, and if not what got in the way? Labour, time, cost, did not seem necessary, other.",
-        "marathi": "एकच प्रश्न, ठराविक पर्यायांसह — काम झाले का, आणि नसेल तर काय अडचण आली? मजूर, वेळ, खर्च, गरज वाटली नाही, इतर."
+        "english": "No action recorded within 3 days of an advisory: ask the reason (done-not-logged / could-not / disagreed) to improve agronomy.",
+        "marathi": "3 दिवसांत advisory ची कारवाई-नोंद आली नाही — कारण विचारा: केली पण नोंदवली नाही? / करू शकलो नाही (हवामान/मजूर/इनपुट)? / चुकीचे वाटले? आपला input agronomy साठी उपयोगी."
       },
       "reasoning": {
         "agronomic_basis": "If the engine recommended something and it was not done, either the message failed or the recommendation was wrong for local conditions. Both are learnable. And implementation barriers are invisible to every sensor — a moisture probe cannot detect that labour was unavailable.",
@@ -2331,10 +2414,7 @@
         ]
       },
       "farm_brain_schema": [
-        "non_compliance_reason",
-        "advisory_issued_count",
-        "advisory_completed_count",
-        "action_compliance_rate"
+        "action_not_recorded_within_3days"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2350,7 +2430,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "ONCE_UNTIL_RESOLVED"
     },
     {
       "rule_id": "D12-AL-002",
@@ -2360,10 +2441,30 @@
       "stage": null,
       "trigger": {
         "english": "A low-confidence decision, an unexpected outcome or a symptom outside the decision tree occurs",
-        "marathi": "कमी विश्वासार्हतेचा निर्णय, अनपेक्षित निकाल, किंवा निर्णय-वृक्षात न बसणारे लक्षण"
+        "marathi": "कमी विश्वासार्हतेचा निर्णय, अनपेक्षित निकाल, किंवा निर्णय-वृक्षात न बसणारे लक्षण",
+        "expr": "low_confidence_decision IS TRUE OR unexpected_outcome IS TRUE OR symptom_diagnosis_pending IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "low_confidence_decision": true
+            },
+            "expect": "TRUE",
+            "label": "escalate to agronomist"
+          },
+          {
+            "context": {
+              "low_confidence_decision": false,
+              "unexpected_outcome": false,
+              "symptom_diagnosis_pending": false
+            },
+            "expect": "FALSE",
+            "label": "none"
+          }
+        ]
       },
       "action": {
-        "english": "Queue it for expert review with the full context. Include the rule that fired, the inputs it used, and the outcome if known.",
+        "english": "Silent: escalate low-confidence / unexpected-outcome / pending-diagnosis cases to the human agronomist queue.",
         "marathi": "संपूर्ण संदर्भासह तज्ज्ञ तपासणीसाठी रांगेत ठेवा — कोणता नियम लागू झाला, त्याला कोणती माहिती मिळाली, आणि निकाल माहीत असल्यास तोही."
       },
       "reasoning": {
@@ -2382,9 +2483,9 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "u_value_source_class",
-        "gap_unexplained_pct",
-        "model_version"
+        "low_confidence_decision",
+        "unexpected_outcome",
+        "symptom_diagnosis_pending"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2400,7 +2501,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "SILENT_GUARD"
     },
     {
       "rule_id": "D12-CLU-001",
@@ -3269,9 +3371,9 @@
     },
     "by_severity": {
       "blocking": 4,
-      "info": 18,
+      "info": 21,
       "red": 4,
-      "yellow": 10
+      "yellow": 7
     },
     "by_source_tier": {
       "A": 14,
@@ -3308,8 +3410,8 @@
       "PLANNING_GUIDANCE": 2
     },
     "reviewed_t1": 5,
-    "rules_with_trigger_expr": 5,
-    "rules_with_delivery_class": 5,
+    "rules_with_trigger_expr": 10,
+    "rules_with_delivery_class": 10,
     "immutable_rules": 5
   },
   "next_steps": [

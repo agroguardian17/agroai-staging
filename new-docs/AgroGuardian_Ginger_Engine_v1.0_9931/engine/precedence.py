@@ -299,6 +299,26 @@ PRECEDENCE = [
  Relation('D06-ST-001', 'SEQUENCES', 'D06-ST-002',
    'The seed-treatment protocol reminder fires first; the same-day bio+chemical sequencing warning follows.',
    'बेणे प्रक्रिया सूचना आधी; एकाच दिवशी bio+chemical चा warning नंतर.'),
+
+ # --- Batches 3-9 (firing-intent, 28 Sep) ---
+ Relation('D04-SN-001', 'SEQUENCES', 'D04-NS-003',
+   'Basal nutrient plan is set first; the late-N excess gate applies later.',
+   'मूळ खत नियोजन आधी; उशिरा-N gate नंतर.'),
+ Relation('D05-CH-002', 'SEQUENCES', 'D10-REG-001',
+   'A chemical option triggers the CIB&RC regulatory verification gate before it can be shown.',
+   'रासायनिक पर्याय → CIB&RC verification gate आधी.'),
+ Relation('D08-WD-001', 'BUNDLES', 'D10-REG-001',
+   'The herbicide gate and the CIB&RC verification gate resolve together as one pre-check.',
+   'तणनाशक gate + CIB&RC gate एकत्र pre-check.'),
+ Relation('D09-YD-002', 'SEQUENCES', 'D11-GA-001',
+   'Actual-yield recording precedes the gap-attribution trigger.',
+   'प्रत्यक्ष उत्पन्न नोंद → gap-attribution आधी.'),
+ Relation('D09-YD-004', 'SEQUENCES', 'D11-GA-001',
+   'Fresh-yield logging at harvest precedes gap-attribution.',
+   'fresh-yield नोंद → gap-attribution आधी.'),
+ Relation('D11-GA-001', 'SEQUENCES', 'D11-GA-003',
+   'Gap-attribution runs before the unexplained-gap escalation check.',
+   'gap-attribution आधी → unexplained escalation नंतर.'),
 ]
 
 

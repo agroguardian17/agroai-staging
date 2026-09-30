@@ -29,7 +29,18 @@
         "gap_unexplained_pct": "number",
         "season_record_complete": "boolean",
         "u_value_source_class": "enum:[SRC-Q, SRC-D, EST, FIELD]",
-        "interdependence_group": "string"
+        "interdependence_group": "string",
+        "actual_yield_recorded": "boolean",
+        "season_starting": "boolean",
+        "gap_attribution_complete": "boolean",
+        "saturation_event_occurred": "boolean",
+        "moisture_stress_period_started": "boolean",
+        "scheduled_operation_completed": "boolean",
+        "scheduled_operation_missed": "boolean",
+        "preseason_planning": "boolean",
+        "yield_expectation_requested": "boolean",
+        "season_omissions_recorded": "boolean",
+        "disease_event_recorded_in_season": "boolean"
       },
       "sub_additive_formula": {
         "expression": "total_loss = 1 - PRODUCT(1 - u_i)",
@@ -590,6 +601,48 @@
             "object": "D06-ST-002",
             "reason_en": "The seed-treatment protocol reminder fires first; the same-day bio+chemical sequencing warning follows.",
             "reason_mr": "बेणे प्रक्रिया सूचना आधी; एकाच दिवशी bio+chemical चा warning नंतर."
+          },
+          {
+            "subject": "D04-SN-001",
+            "relation": "SEQUENCES",
+            "object": "D04-NS-003",
+            "reason_en": "Basal nutrient plan is set first; the late-N excess gate applies later.",
+            "reason_mr": "मूळ खत नियोजन आधी; उशिरा-N gate नंतर."
+          },
+          {
+            "subject": "D05-CH-002",
+            "relation": "SEQUENCES",
+            "object": "D10-REG-001",
+            "reason_en": "A chemical option triggers the CIB&RC regulatory verification gate before it can be shown.",
+            "reason_mr": "रासायनिक पर्याय → CIB&RC verification gate आधी."
+          },
+          {
+            "subject": "D08-WD-001",
+            "relation": "BUNDLES",
+            "object": "D10-REG-001",
+            "reason_en": "The herbicide gate and the CIB&RC verification gate resolve together as one pre-check.",
+            "reason_mr": "तणनाशक gate + CIB&RC gate एकत्र pre-check."
+          },
+          {
+            "subject": "D09-YD-002",
+            "relation": "SEQUENCES",
+            "object": "D11-GA-001",
+            "reason_en": "Actual-yield recording precedes the gap-attribution trigger.",
+            "reason_mr": "प्रत्यक्ष उत्पन्न नोंद → gap-attribution आधी."
+          },
+          {
+            "subject": "D09-YD-004",
+            "relation": "SEQUENCES",
+            "object": "D11-GA-001",
+            "reason_en": "Fresh-yield logging at harvest precedes gap-attribution.",
+            "reason_mr": "fresh-yield नोंद → gap-attribution आधी."
+          },
+          {
+            "subject": "D11-GA-001",
+            "relation": "SEQUENCES",
+            "object": "D11-GA-003",
+            "reason_en": "Gap-attribution runs before the unexplained-gap escalation check.",
+            "reason_mr": "gap-attribution आधी → unexplained escalation नंतर."
           }
         ]
       },
@@ -2164,15 +2217,35 @@
       "rule_id": "D11-SC-001",
       "category": "SC",
       "priority": 4,
-      "severity": "info",
+      "severity": "yellow",
       "stage": "G0",
       "trigger": {
         "english": "Pre-season planning AND a yield expectation is requested",
-        "marathi": "हंगामापूर्व नियोजन आणि उत्पादनाची अपेक्षा विचारली"
+        "marathi": "हंगामापूर्व नियोजन आणि उत्पादनाची अपेक्षा विचारली",
+        "expr": "preseason_planning IS TRUE AND yield_expectation_requested IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "preseason_planning": true,
+              "yield_expectation_requested": true
+            },
+            "expect": "TRUE",
+            "label": "yield expectation"
+          },
+          {
+            "context": {
+              "preseason_planning": true,
+              "yield_expectation_requested": false
+            },
+            "expect": "FALSE",
+            "label": "not requested"
+          }
+        ]
       },
       "action": {
-        "english": "Present the scenarios rather than a single number. Excellent management gives about 102 quintal, good management with some slips about 86, typical management about 50, and a disease event on good management about 34.",
-        "marathi": "एक आकडा न देता परिस्थिती मांडा. उत्कृष्ट व्यवस्थापन सुमारे १०२ क्विंटल, चांगले व्यवस्थापन काही चुकांसह सुमारे ८६, सामान्य व्यवस्थापन सुमारे ५०, आणि चांगल्या व्यवस्थापनावर रोगाचा फटका बसल्यास सुमारे ३४."
+        "english": "Pre-season yield expectation = variety_potential x site_index (Kannad Western-Scarcity ~0.75-0.85); present as a range.",
+        "marathi": "यील्ड-अपेक्षा: variety potential x Kannad site-index (0.75-0.85) = अंदाजे range टन/एकर. वास्तविक weather/operations वर अवलंबून."
       },
       "reasoning": {
         "agronomic_basis": "The scenarios make the consequences of specific omissions visible rather than abstract. The gap between B at 86 and C at 50 is five common management omissions, which is a concrete and actionable comparison.",
@@ -2190,9 +2263,8 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "predicted_yield_quintal_per_acre",
-        "yield_target_quintal_per_acre",
-        "prediction_interval_pct"
+        "preseason_planning",
+        "yield_expectation_requested"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2208,21 +2280,40 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "WINDOW"
     },
     {
       "rule_id": "D11-SC-002",
       "category": "SC",
       "priority": 4,
-      "severity": "yellow",
+      "severity": "info",
       "stage": null,
       "trigger": {
         "english": "Recorded omissions during the season are being turned into a revised expectation",
-        "marathi": "हंगामातील नोंदवलेल्या चुकांवरून सुधारित अपेक्षा काढली जात आहे"
+        "marathi": "हंगामातील नोंदवलेल्या चुकांवरून सुधारित अपेक्षा काढली जात आहे",
+        "expr": "season_omissions_recorded IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "season_omissions_recorded": true
+            },
+            "expect": "TRUE",
+            "label": "project omission loss"
+          },
+          {
+            "context": {
+              "season_omissions_recorded": false
+            },
+            "expect": "FALSE",
+            "label": "none"
+          }
+        ]
       },
       "action": {
-        "english": "Recompute the expectation from the ceiling and the recorded factors, applying the grouping rules. Show which factors caused which part of the reduction.",
-        "marathi": "कमाल मर्यादेपासून सुरुवात करून नोंदवलेल्या घटकांवरून अपेक्षा पुन्हा मोजा, गटबद्ध करण्याचे नियम पाळून. कोणत्या घटकामुळे किती घट झाली ते दाखवा."
+        "english": "Project the yield impact of recorded season omissions via u-value x intensity.",
+        "marathi": "हंगामातील चुकां/omissions चा projected परिणाम — u-value x intensity ने अंदाजे कमी उत्पादनाची शक्यता."
       },
       "reasoning": {
         "agronomic_basis": "A revised expectation that shows its working is actionable in a way that a bare number is not. If earthing up was late and that accounts for 12.5 percent, the farmer learns something for next season even though this season cannot be recovered.",
@@ -2241,10 +2332,7 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "cumulative_loss_pct",
-        "u_values_applied",
-        "predicted_yield_quintal_per_acre",
-        "interdependence_group"
+        "season_omissions_recorded"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2260,7 +2348,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "EVENT"
     },
     {
       "rule_id": "D11-PR-001",
@@ -2475,15 +2564,35 @@
       "rule_id": "D11-GA-001",
       "category": "GA",
       "priority": 5,
-      "severity": "yellow",
+      "severity": "info",
       "stage": "G5",
       "trigger": {
         "english": "Harvest complete AND actual yield recorded",
-        "marathi": "काढणी पूर्ण आणि प्रत्यक्ष उत्पादन नोंदवले"
+        "marathi": "काढणी पूर्ण आणि प्रत्यक्ष उत्पादन नोंदवले",
+        "expr": "harvest_complete IS TRUE AND actual_yield_recorded IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "harvest_complete": true,
+              "actual_yield_recorded": true
+            },
+            "expect": "TRUE",
+            "label": "kick off gap-attribution"
+          },
+          {
+            "context": {
+              "harvest_complete": true,
+              "actual_yield_recorded": false
+            },
+            "expect": "FALSE",
+            "label": "yield not recorded"
+          }
+        ]
       },
       "action": {
-        "english": "Run the gap attribution. Start from the ceiling, apply the u-value of every recorded omission or event with grouping applied, compute the expected loss, compare against actual, and record the unexplained residual.",
-        "marathi": "दरी-विश्लेषण चालवा. कमाल मर्यादेपासून सुरुवात करा, नोंदवलेल्या प्रत्येक चुकीचे किंवा घटनेचे u मूल्य गटबद्ध करून लावा, अपेक्षित घट काढा, प्रत्यक्ष उत्पादनाशी तुलना करा, आणि न समजलेला उर्वरित भाग नोंदवा."
+        "english": "On harvest + actual yield recorded, start the gap-attribution pipeline (observed vs potential vs actual).",
+        "marathi": "काढणी + प्रत्यक्ष उत्पन्न नोंदवले — Gap-attribution विश्लेषण सुरू. उत्पादन-अपेक्षा vs प्रत्यक्ष चे कारण-विश्लेषण 24 तासांत."
       },
       "reasoning": {
         "agronomic_basis": "The residual is the informative part. A large unexplained gap means either a factor is missing from the register or a u-value is wrong, and both are findings worth having.",
@@ -2504,11 +2613,8 @@
         ]
       },
       "farm_brain_schema": [
-        "yield_quintal_per_acre_actual",
-        "gap_attributed_pct",
-        "gap_unexplained_pct",
-        "u_values_applied",
-        "ceiling_quintal_per_acre"
+        "harvest_complete",
+        "actual_yield_recorded"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2524,7 +2630,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      },
+      "delivery": "EVENT"
     },
     {
       "rule_id": "D11-GA-002",
@@ -2534,11 +2641,31 @@
       "stage": "G0",
       "trigger": {
         "english": "Season beginning AND season_record_complete is false",
-        "marathi": "हंगाम सुरू होत आहे आणि नोंदवही तयार नाही"
+        "marathi": "हंगाम सुरू होत आहे आणि नोंदवही तयार नाही",
+        "expr": "season_starting IS TRUE AND season_record_complete IS FALSE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "season_starting": true,
+              "season_record_complete": false
+            },
+            "expect": "TRUE",
+            "label": "prior season incomplete"
+          },
+          {
+            "context": {
+              "season_starting": true,
+              "season_record_complete": true
+            },
+            "expect": "FALSE",
+            "label": "prior season complete"
+          }
+        ]
       },
       "action": {
-        "english": "Set up the twelve required records at the start. Without them the gap attribution at harvest cannot run, and the whole season produces advice but no learning.",
-        "marathi": "हंगामाच्या सुरुवातीलाच बारा आवश्यक नोंदी ठरवून घ्या. त्यांशिवाय काढणीच्या वेळी दरी-विश्लेषण चालवता येत नाही, आणि संपूर्ण हंगाम सल्ला देतो पण शिकवत काहीच नाही."
+        "english": "New season starting while the prior season record is incomplete; prompt to fill the data gap before activating the new season.",
+        "marathi": "नवीन हंगाम सुरू — मागील हंगामाची नोंद अपूर्ण. डेटा गॅप भरा (उत्पादन, disease events, operations), नंतर नवीन हंगाम activate होईल."
       },
       "reasoning": {
         "agronomic_basis": "Each required record maps to specific factors in the register. Missing records mean those factors cannot be attributed, and the residual absorbs them, which makes the residual uninformative.",
@@ -2557,9 +2684,8 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "season_record_complete",
-        "u_values_applied",
-        "gap_unexplained_pct"
+        "season_starting",
+        "season_record_complete"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2575,21 +2701,42 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      },
+      "delivery": "WINDOW"
     },
     {
       "rule_id": "D11-GA-003",
       "category": "GA",
       "priority": 4,
-      "severity": "info",
+      "severity": "yellow",
       "stage": "G5",
       "trigger": {
         "english": "Gap attribution complete AND gap_unexplained_pct is large",
-        "marathi": "दरी-विश्लेषण झाले आणि न समजलेला भाग मोठा आहे"
+        "marathi": "दरी-विश्लेषण झाले आणि न समजलेला भाग मोठा आहे",
+        "expr": "gap_attribution_complete IS TRUE AND gap_unexplained_pct > 25",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "gap_attribution_complete": true,
+              "gap_unexplained_pct": 30
+            },
+            "expect": "TRUE",
+            "label": ">25% unexplained - escalate"
+          },
+          {
+            "context": {
+              "gap_attribution_complete": true,
+              "gap_unexplained_pct": 15
+            },
+            "expect": "FALSE",
+            "label": "within tolerance"
+          }
+        ]
       },
       "action": {
-        "english": "Treat it as a finding, not a failure. Investigate whether a factor is missing from the register or whether one of the applied u-values is wrong. Record the hypothesis for the next season.",
-        "marathi": "हा अपयश नाही, निष्कर्ष आहे. नोंदवहीतून एखादा घटक सुटला आहे का, की लावलेले एखादे u मूल्य चुकीचे आहे — हे तपासा. पुढील हंगामासाठी गृहीतक नोंदवा."
+        "english": "When >25% of the yield gap is unexplained after attribution, escalate for agronomist review (unlogged ops / sensor gaps / new factor).",
+        "marathi": "उत्पादन-गॅप विश्लेषणात 25% पेक्षा जास्त unexplained — agronomist review गरजेचे. App मध्ये review request करा."
       },
       "reasoning": {
         "agronomic_basis": "The register has thirty-five factors and twenty-two of them are estimates, so a large residual is expected in the first season. Its size and direction indicate where the register is weakest.",
@@ -2607,9 +2754,8 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "gap_unexplained_pct",
-        "gap_attributed_pct",
-        "u_value_source_class"
+        "gap_attribution_complete",
+        "gap_unexplained_pct"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2625,7 +2771,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "ONCE_UNTIL_RESOLVED"
     },
     {
       "rule_id": "D11-EC-001",
@@ -3055,15 +3202,34 @@
       "rule_id": "D11-RC-002",
       "category": "RC",
       "priority": 5,
-      "severity": "yellow",
+      "severity": "info",
       "stage": null,
       "trigger": {
         "english": "A saturation event or moisture stress period occurs",
-        "marathi": "पाणी साचण्याची किंवा ओलाव्याच्या ताणाची घटना घडली"
+        "marathi": "पाणी साचण्याची किंवा ओलाव्याच्या ताणाची घटना घडली",
+        "expr": "saturation_event_occurred IS TRUE OR moisture_stress_period_started IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "saturation_event_occurred": true
+            },
+            "expect": "TRUE",
+            "label": "log water event"
+          },
+          {
+            "context": {
+              "saturation_event_occurred": false,
+              "moisture_stress_period_started": false
+            },
+            "expect": "FALSE",
+            "label": "no event"
+          }
+        ]
       },
       "action": {
-        "english": "Record it in hours or days with the stage it occurred in. These events carry the largest u-values in the register and they leave no trace afterwards unless recorded at the time.",
-        "marathi": "ती घटना तासांत किंवा दिवसांत, कोणत्या अवस्थेत घडली यासह नोंदवा. या घटनांची u मूल्ये नोंदवहीतील सर्वात मोठी आहेत, आणि त्या वेळी नोंदवल्या नाहीत तर नंतर त्यांचा मागमूसही उरत नाही."
+        "english": "Append a saturation/moisture-stress event to the season log; it feeds the D11 yield-model u-values.",
+        "marathi": "पाणी-event नोंदवली — season log update. यील्ड-मॉडेल correction साठी वापर होईल."
       },
       "reasoning": {
         "agronomic_basis": "Saturation at G2 or G3 carries 0.35, water exhaustion in G4 carries 0.30, and critical window stress carries 0.20. All three are sensor-detectable at the time and invisible afterwards, which makes them the events most likely to be lost from the attribution.",
@@ -3084,10 +3250,8 @@
         ]
       },
       "farm_brain_schema": [
-        "saturation_hours",
-        "dry_spell_days",
-        "current_stage",
-        "u_values_applied"
+        "saturation_event_occurred",
+        "moisture_stress_period_started"
       ],
       "u_value": null,
       "recoverability": "none",
@@ -3103,7 +3267,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      },
+      "delivery": "EVENT"
     },
     {
       "rule_id": "D11-RC-003",
@@ -3113,11 +3278,30 @@
       "stage": null,
       "trigger": {
         "english": "A scheduled operation is completed or missed",
-        "marathi": "ठरलेले काम झाले किंवा राहून गेले"
+        "marathi": "ठरलेले काम झाले किंवा राहून गेले",
+        "expr": "scheduled_operation_completed IS TRUE OR scheduled_operation_missed IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "scheduled_operation_completed": true
+            },
+            "expect": "TRUE",
+            "label": "log op status"
+          },
+          {
+            "context": {
+              "scheduled_operation_completed": false,
+              "scheduled_operation_missed": false
+            },
+            "expect": "FALSE",
+            "label": "no status"
+          }
+        ]
       },
       "action": {
-        "english": "Record the date if done and the reason if not. Seventeen of thirty-five factors are record-detectable rather than sensor or observation detectable, so the operation log is the largest single input to attribution.",
-        "marathi": "झाले असल्यास तारीख नोंदवा, नसल्यास कारण नोंदवा. पस्तीसपैकी सतरा घटक फक्त नोंदीवरून कळतात — sensor किंवा निरीक्षणावरून नाही. म्हणून कामाची नोंदवही हा दरी-विश्लेषणाचा सर्वात मोठा एकच स्रोत आहे."
+        "english": "Record a scheduled-operation completion/miss; update the compliance rate and feed the yield model.",
+        "marathi": "Operation status नोंदवला. Compliance-rate update; season-end review साठी संग्रहित."
       },
       "reasoning": {
         "agronomic_basis": "Mulch stages, earthing up, fertiliser splits, micronutrient sprays and layout choice are all invisible at harvest. Only the record shows whether they happened, and the reason for an omission is what reveals implementation barriers.",
@@ -3138,13 +3322,8 @@
         ]
       },
       "farm_brain_schema": [
-        "earthing_up_date",
-        "mulch_stage_1_done",
-        "mulch_stage_2_done",
-        "mulch_stage_3_done",
-        "micronutrient_spray_1_done",
-        "k_late_split_1_date",
-        "season_record_complete"
+        "scheduled_operation_completed",
+        "scheduled_operation_missed"
       ],
       "u_value": null,
       "recoverability": "partial",
@@ -3160,7 +3339,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      },
+      "delivery": "EVENT"
     },
     {
       "rule_id": "D11-UV-004",
@@ -3222,11 +3402,29 @@
       "stage": null,
       "trigger": {
         "english": "A disease event is recorded during the season",
-        "marathi": "हंगामात रोगाची घटना नोंदवली गेली"
+        "marathi": "हंगामात रोगाची घटना नोंदवली गेली",
+        "expr": "disease_event_recorded_in_season IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "disease_event_recorded_in_season": true
+            },
+            "expect": "TRUE",
+            "label": "update forecast"
+          },
+          {
+            "context": {
+              "disease_event_recorded_in_season": false
+            },
+            "expect": "FALSE",
+            "label": "none"
+          }
+        ]
       },
       "action": {
-        "english": "Recompute immediately and show the economic consequence. Scenario D shows that a 60 percent rot event on otherwise good management leaves about 34 quintal, at which the net return is approximately zero.",
-        "marathi": "लगेच पुन्हा गणित करा आणि आर्थिक परिणाम दाखवा. परिस्थिती D नुसार चांगल्या व्यवस्थापनावर ६०% कूज आल्यास सुमारे ३४ क्विंटल उरतात, आणि त्यावर निव्वळ परतावा जवळपास शून्य होतो."
+        "english": "A recorded disease event updates the u-value yield forecast; adjusted expectation available next day.",
+        "marathi": "रोग event नोंदवला — u-value forecast update होत आहे. Adjusted yield expectation पुढील 24 तासांत app मध्ये."
       },
       "reasoning": {
         "agronomic_basis": "Soft rot has by far the largest u-value in the register and it can occur on a well-managed crop. Showing the arithmetic makes the case for the prevention stack concrete rather than theoretical.",
@@ -3248,10 +3446,7 @@
         ]
       },
       "farm_brain_schema": [
-        "rot_incidence_pct",
-        "predicted_yield_quintal_per_acre",
-        "cumulative_loss_pct",
-        "harvest_route"
+        "disease_event_recorded_in_season"
       ],
       "u_value": null,
       "recoverability": "none",
@@ -3267,7 +3462,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      },
+      "delivery": "WINDOW"
     },
     {
       "rule_id": "D11-FM-004",
@@ -3398,8 +3594,8 @@
       "3": 1
     },
     "by_severity": {
-      "info": 19,
-      "yellow": 13,
+      "info": 20,
+      "yellow": 12,
       "red": 2
     },
     "by_source_tier": {

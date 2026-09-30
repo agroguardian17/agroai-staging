@@ -46,7 +46,11 @@
         "soil_s_ppm": "number",
         "soil_mg_ppm": "number",
         "soil_ca_ppm": "number",
-        "leaf_yellowing_pattern": "enum:[uniform_old, interveinal_new, interveinal_old, small_new_leaves, margin_scorch, with_soft_stem, sudden_green_wilt, none]"
+        "leaf_yellowing_pattern": "enum:[interveinal_new, interveinal_old, uniform, marginal]",
+        "biological_input_date": "date",
+        "chemical_input_date": "date",
+        "scout_report_days_ago": "number",
+        "basal_planning_active": "boolean"
       },
       "constants": {
         "kg_per_ha_to_kg_per_acre": 0.4047,
@@ -1705,15 +1709,34 @@
       "rule_id": "D04-SN-001",
       "category": "SN",
       "priority": 3,
-      "severity": "info",
+      "severity": "yellow",
       "stage": "G0",
       "trigger": {
         "english": "Basal application being planned",
-        "marathi": "पायाभूत मात्रा ठरवली जात आहे"
+        "marathi": "पायाभूत मात्रा ठरवली जात आहे",
+        "expr": "basal_planning_active IS TRUE AND dap IS NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "basal_planning_active": true
+            },
+            "expect": "TRUE",
+            "label": "pre-plant basal planning"
+          },
+          {
+            "context": {
+              "basal_planning_active": true,
+              "dap": 5
+            },
+            "expect": "FALSE",
+            "label": "planting past"
+          }
+        ]
       },
       "action": {
-        "english": "Include magnesium sulphate about 25 kg per acre at basal, and continue about 2.4 kg per acre weekly through fertigation where drip is used.",
-        "marathi": "पायाभूत मात्रेत मॅग्नेशिअम सल्फेट एकरी सुमारे २५ किलो द्या, आणि ठिबक असल्यास आठवड्याला सुमारे २.४ किलो चालू ठेवा."
+        "english": "Basal nutrient plan: 60% N + full P + 50% K basal; rest of N + K in two top-dresses (45 + 120 DAP). Check variety_n_ceiling.",
+        "marathi": "मूळ खत नियोजन (basal) — 60% N + पूर्ण P + 50% K basal; उर्वरित N + K दोन top-dress मध्ये (45 + 120 DAP). Variety-ceiling तपासा."
       },
       "reasoning": {
         "agronomic_basis": "Calcium, magnesium and sulphur are all taken up in larger quantities than phosphorus, yet receive far less attention. SSP already supplies sulphur and calcium as a side benefit.",
@@ -1730,9 +1753,8 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "soil_mg_ppm",
-        "soil_s_ppm",
-        "fertigation_active"
+        "basal_planning_active",
+        "dap"
       ],
       "u_value": null,
       "recoverability": "partial",
@@ -1748,7 +1770,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "ONCE_UNTIL_RESOLVED"
     },
     {
       "rule_id": "D04-SN-002",
@@ -1992,15 +2015,35 @@
       "rule_id": "D04-BI-002",
       "category": "BI",
       "priority": 5,
-      "severity": "red",
+      "severity": "yellow",
       "stage": "G0",
       "trigger": {
         "english": "Biological treatment proposed AND chemical treatment same day or seed not dried",
-        "marathi": "जैविक प्रक्रिया करायची आहे पण रासायनिक प्रक्रिया त्याच वेळी आहे किंवा बेणे सुकवलेले नाही"
+        "marathi": "जैविक प्रक्रिया करायची आहे पण रासायनिक प्रक्रिया त्याच वेळी आहे किंवा बेणे सुकवलेले नाही",
+        "expr": "biological_input_date IS NOT NULL AND chemical_input_date IS NOT NULL AND biological_input_date == chemical_input_date",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "biological_input_date": "2026-06-10",
+              "chemical_input_date": "2026-06-10"
+            },
+            "expect": "TRUE",
+            "label": "same day - warn"
+          },
+          {
+            "context": {
+              "biological_input_date": "2026-06-10",
+              "chemical_input_date": "2026-06-12"
+            },
+            "expect": "FALSE",
+            "label": "different days - ok"
+          }
+        ]
       },
       "action": {
-        "english": "Enforce the sequence: chemical treatment, then shade dry 3 to 6 hours, then biological treatment, then plant. Never simultaneously.",
-        "marathi": "क्रम पाळा — आधी रासायनिक प्रक्रिया, मग सावलीत ३ ते ६ तास सुकवणे, मग जैविक प्रक्रिया, मग लागवड. एकाच वेळी करू नये."
+        "english": "Warn when biological and chemical inputs are applied the same day (chemical kills the biological); space them a day apart.",
+        "marathi": "जैविक + रासायनिक इनपुट एकाच दिवशी नको — रासायनिक जैविक जिवाणू मारतो. एका दिवसाचे अंतर ठेवा."
       },
       "reasoning": {
         "agronomic_basis": "Fungicide kills Trichoderma and other biological cultures. Applying them together makes the biological step useless and wastes the input.",
@@ -2019,9 +2062,8 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "azospirillum_psb_done",
-        "trichoderma_kg_per_acre",
-        "last_fungicide_date"
+        "biological_input_date",
+        "chemical_input_date"
       ],
       "u_value": null,
       "recoverability": "none",
@@ -2037,7 +2079,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "WINDOW"
     },
     {
       "rule_id": "D04-FG-001",
@@ -2332,11 +2375,31 @@
       "stage": null,
       "trigger": {
         "english": "leaf_yellowing_pattern is interveinal_new",
-        "marathi": "नव्या पानांत शिरांमधील पिवळेपणा, शिरा हिरव्या"
+        "marathi": "नव्या पानांत शिरांमधील पिवळेपणा, शिरा हिरव्या",
+        "expr": "leaf_yellowing_pattern == 'interveinal_new' AND scout_report_days_ago <= 3",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "leaf_yellowing_pattern": "interveinal_new",
+              "scout_report_days_ago": 2
+            },
+            "expect": "TRUE",
+            "label": "interveinal new - Fe/Zn"
+          },
+          {
+            "context": {
+              "leaf_yellowing_pattern": "uniform",
+              "scout_report_days_ago": 2
+            },
+            "expect": "FALSE",
+            "label": "uniform - not micronutrient"
+          }
+        ]
       },
       "action": {
-        "english": "Diagnose as iron or zinc lock-up, not nitrogen deficiency. Recommend foliar micronutrient spray. Do NOT apply urea.",
-        "marathi": "हे लोह किंवा जस्ताच्या अनुपलब्धतेचे लक्षण आहे, नत्राच्या कमतरतेचे नाही. सूक्ष्म अन्नद्रव्यांची फवारणी करा. युरिया देऊ नका — त्याने काहीही होणार नाही, फक्त खर्च वाढेल आणि पाला माजेल."
+        "english": "Interveinal yellowing on new leaves signals Fe/Zn deficiency; recommend a micronutrient foliar based on a recent scout report.",
+        "marathi": "नव्या पानांच्या शिरांमधील पिवळेपणा — लोह (Fe)/जस्त (Zn) कमतरतेचा signal. Scout report च्या आधारे micronutrient foliar spray शिफारस."
       },
       "reasoning": {
         "agronomic_basis": "Iron and zinc are immobile in the plant, so deficiency appears in new growth first. Nitrogen is mobile and is withdrawn from old leaves first, so nitrogen deficiency appears in old growth. Leaf age is therefore a reliable discriminator.",
@@ -2358,10 +2421,7 @@
       },
       "farm_brain_schema": [
         "leaf_yellowing_pattern",
-        "soil_free_lime_pct",
-        "soil_zn_ppm",
-        "soil_fe_ppm",
-        "micronutrient_spray_1_done"
+        "scout_report_days_ago"
       ],
       "u_value": 0.11,
       "recoverability": "partial",
@@ -2377,7 +2437,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "WINDOW"
     },
     {
       "rule_id": "D04-DG-003",
@@ -3005,9 +3066,9 @@
       "2": 1
     },
     "by_severity": {
-      "info": 10,
-      "yellow": 17,
-      "red": 7
+      "info": 9,
+      "yellow": 19,
+      "red": 6
     },
     "by_source_tier": {
       "A": 24,
@@ -3044,8 +3105,8 @@
       "DIAGNOSTIC": 1
     },
     "reviewed_t1": 4,
-    "rules_with_trigger_expr": 20,
-    "rules_with_delivery_class": 20,
+    "rules_with_trigger_expr": 23,
+    "rules_with_delivery_class": 23,
     "immutable_rules": 0
   },
   "next_steps": [

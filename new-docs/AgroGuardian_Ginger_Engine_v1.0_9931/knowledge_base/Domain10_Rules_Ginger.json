@@ -42,7 +42,12 @@
         "kvk_contacted": "boolean",
         "seed_supplier_identified": "boolean",
         "cibrc_list_checked_date": "date",
-        "data_review_due": "date"
+        "data_review_due": "date",
+        "institutional_contact_made": "boolean",
+        "subsidy_application_pending": "boolean",
+        "local_experience_sought": "boolean",
+        "chemical_recommendation_pending": "boolean",
+        "cibrc_verified": "boolean"
       },
       "data_freshness_policy": {
         "principle": "This is the only domain whose content expires. Agronomy in Domains 1 to 9 holds for years; subsidy rates, scheme eligibility and contacts here change annually by government resolution.",
@@ -1329,14 +1334,34 @@
       "rule_id": "D10-APP-001",
       "category": "APP",
       "priority": 5,
-      "severity": "yellow",
+      "severity": "info",
       "stage": "G0",
       "trigger": {
         "english": "Subsidy application about to be filed AND subsidy_documents_ready is false",
-        "marathi": "अनुदान अर्ज करायचा आहे पण कागदपत्रे तयार नाहीत"
+        "marathi": "अनुदान अर्ज करायचा आहे पण कागदपत्रे तयार नाहीत",
+        "expr": "subsidy_application_pending IS TRUE AND subsidy_documents_ready IS FALSE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "subsidy_application_pending": true,
+              "subsidy_documents_ready": false
+            },
+            "expect": "TRUE",
+            "label": "activate doc checklist"
+          },
+          {
+            "context": {
+              "subsidy_application_pending": true,
+              "subsidy_documents_ready": true
+            },
+            "expect": "FALSE",
+            "label": "docs ready"
+          }
+        ]
       },
       "action": {
-        "english": "Assemble the documents first: Aadhaar, 7/12 extract, 8-A extract, passport photograph, Aadhaar-linked bank passbook, and caste certificate where applicable. Apply on mahadbt.maharashtra.gov.in.",
+        "english": "Silent: drive an in-app subsidy-document checklist (7/12, Aadhaar, bank, pre-sanction) before the application proceeds.",
         "marathi": "आधी कागदपत्रे जमवा — आधार कार्ड, ७/१२ उतारा, ८-अ उतारा, पासपोर्ट फोटो, आधार-लिंक बँक पासबुक, आणि लागू असल्यास जात प्रमाणपत्र. अर्ज mahadbt.maharashtra.gov.in वर."
       },
       "reasoning": {
@@ -1353,9 +1378,8 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "subsidy_documents_ready",
-        "subsidy_applied_date",
-        "farmer_id"
+        "subsidy_application_pending",
+        "subsidy_documents_ready"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -1371,7 +1395,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "SILENT_GUARD"
     },
     {
       "rule_id": "D10-APP-002",
@@ -1679,15 +1704,33 @@
       "rule_id": "D10-CROP-002",
       "category": "CROP",
       "priority": 3,
-      "severity": "info",
+      "severity": "yellow",
       "stage": "G0",
       "trigger": {
         "english": "Local experience is being sought",
-        "marathi": "स्थानिक अनुभवाची चौकशी"
+        "marathi": "स्थानिक अनुभवाची चौकशी",
+        "expr": "local_experience_sought IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "local_experience_sought": true
+            },
+            "expect": "TRUE",
+            "label": "connect VNMKV/KVK"
+          },
+          {
+            "context": {
+              "local_experience_sought": false
+            },
+            "expect": "FALSE",
+            "label": "not sought"
+          }
+        ]
       },
       "action": {
-        "english": "Ask older growers and seed sellers in the district. Aurangabad appears as a ginger district in two of three published lists and a landrace called Aurangabadi is separately recorded, so local tradition is probably deeper than assumed.",
-        "marathi": "जिल्ह्यातील जुन्या शेतकऱ्यांकडे आणि बेणे विक्रेत्यांकडे चौकशी करा. तीनपैकी दोन यादींमध्ये औरंगाबाद अद्रक जिल्हा म्हणून नोंदवलेला आहे, आणि 'औरंगाबादी' नावाची स्थानिक जातही स्वतंत्रपणे नोंदवलेली आहे — म्हणजे इथली परंपरा वाटते त्यापेक्षा जुनी असावी."
+        "english": "Point the farmer to VNMKV Parbhani agromet cell + KVK Aurangabad; offer an agronomist-mediated intro.",
+        "marathi": "स्थानिक अनुभवासाठी VNMKV Parbhani + KVK Aurangabad शी संपर्क करा. Contact info app च्या Help & Resources मध्ये; agronomist-mediated intro शक्य असल्यास request करा."
       },
       "reasoning": {
         "agronomic_basis": "Two independent signals point the same way. A place-named landrace usually indicates sustained local cultivation over a long period, and that means adapted material and accumulated practical knowledge may exist locally.",
@@ -1707,9 +1750,7 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "seed_supplier_identified",
-        "variety",
-        "district"
+        "local_experience_sought"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -1725,7 +1766,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Confidence 0.65 — architectural intent OK, पण source / local validation पूर्ण होईपर्यंत CONDITIONAL. Season 1 data नंतर confidence upgrade करावी."
-      }
+      },
+      "delivery": "WINDOW"
     },
     {
       "rule_id": "D10-VAR-001",
@@ -2121,14 +2163,34 @@
       "rule_id": "D10-REG-001",
       "category": "REG",
       "priority": 5,
-      "severity": "yellow",
+      "severity": "info",
       "stage": null,
       "trigger": {
         "english": "Any chemical recommendation is about to be emitted AND cibrc_list_checked_date is empty or stale",
-        "marathi": "कोणतीही रासायनिक शिफारस दिली जात आहे आणि CIB&RC यादी तपासलेली नाही किंवा जुनी आहे"
+        "marathi": "कोणतीही रासायनिक शिफारस दिली जात आहे आणि CIB&RC यादी तपासलेली नाही किंवा जुनी आहे",
+        "expr": "chemical_recommendation_pending IS TRUE AND cibrc_verified IS FALSE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "chemical_recommendation_pending": true,
+              "cibrc_verified": false
+            },
+            "expect": "TRUE",
+            "label": "block until CIBRC verified"
+          },
+          {
+            "context": {
+              "chemical_recommendation_pending": true,
+              "cibrc_verified": true
+            },
+            "expect": "FALSE",
+            "label": "permitted"
+          }
+        ]
       },
       "action": {
-        "english": "Apply the standing behaviour: biological and cultural options first, name the molecule and group, state the source dose as reference only, defer the actual dose to the label, and append that CIB&RC label claim for ginger must be verified. Where the pre-harvest interval is unknown, block spraying within 30 days of harvest.",
+        "english": "Silent regulatory gate: block a chemical recommendation until CIB&RC registration for ginger is verified; escalate to ops queue (Insecticides Act 1968).",
         "marathi": "ठरलेले वर्तन पाळा — जैविक व सांस्कृतिक पर्याय प्रथम, रसायनाचे नाव व गट सांगा, स्रोतातील मात्रा फक्त संदर्भ म्हणून द्या, प्रत्यक्ष मात्रा लेबलनुसार, आणि अद्रकासाठी CIB&RC नोंदणी तपासण्याचा शेरा जोडा. प्रतीक्षा कालावधी माहीत नसल्यास काढणीपूर्वी ३० दिवस फवारणी अडवा."
       },
       "reasoning": {
@@ -2150,10 +2212,8 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "cibrc_list_checked_date",
-        "last_insecticide_group",
-        "last_fungicide_group",
-        "phi_days_remaining"
+        "chemical_recommendation_pending",
+        "cibrc_verified"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2169,7 +2229,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      },
+      "delivery": "SILENT_GUARD"
     },
     {
       "rule_id": "D10-REG-002",
@@ -2832,11 +2893,29 @@
       "stage": "G0",
       "trigger": {
         "english": "An institutional contact has been made and information received",
-        "marathi": "संस्थात्मक संपर्क झाला आणि माहिती मिळाली"
+        "marathi": "संस्थात्मक संपर्क झाला आणि माहिती मिळाली",
+        "expr": "institutional_contact_made IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "institutional_contact_made": true
+            },
+            "expect": "TRUE",
+            "label": "log institutional contact"
+          },
+          {
+            "context": {
+              "institutional_contact_made": false
+            },
+            "expect": "FALSE",
+            "label": "no contact"
+          }
+        ]
       },
       "action": {
-        "english": "Record the answer against the specific open item it resolves, with the date and the source. Several open items across Domains 1 to 9 are waiting on single institutional answers.",
-        "marathi": "मिळालेले उत्तर ज्या मोकळ्या जागेचे निराकरण करते तिच्याविरुद्ध, तारीख आणि स्रोतासह नोंदवा. Domain १ ते ९ मधील अनेक मोकळ्या जागा एकाच संस्थात्मक उत्तरावर थांबलेल्या आहेत."
+        "english": "Log the details of a VNMKV/ICAR/KVK contact for the next agronomist review.",
+        "marathi": "VNMKV / ICAR / KVK शी संपर्क नोंदवला. तपशील app मध्ये log करा — पुढच्या agronomist review साठी उपयोगी."
       },
       "reasoning": {
         "agronomic_basis": "The broad ridge trial question alone unblocks the Domain 11 yield ceiling, which every u-value computation depends on. Recording answers against items rather than as loose notes is what converts a phone call into a resolved dependency.",
@@ -2856,10 +2935,7 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "research_centre_contacted",
-        "kvk_contacted",
-        "cibrc_list_checked_date",
-        "data_review_due"
+        "institutional_contact_made"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2875,7 +2951,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "EVENT"
     },
     {
       "rule_id": "D10-SUB-006",
@@ -3059,9 +3136,9 @@
       "3": 10
     },
     "by_severity": {
-      "yellow": 14,
+      "yellow": 13,
       "blocking": 1,
-      "info": 19,
+      "info": 20,
       "red": 1
     },
     "by_source_tier": {
@@ -3102,8 +3179,8 @@
       "POLICY": 1
     },
     "reviewed_t1": 2,
-    "rules_with_trigger_expr": 4,
-    "rules_with_delivery_class": 4,
+    "rules_with_trigger_expr": 8,
+    "rules_with_delivery_class": 8,
     "immutable_rules": 0
   },
   "next_steps": [
