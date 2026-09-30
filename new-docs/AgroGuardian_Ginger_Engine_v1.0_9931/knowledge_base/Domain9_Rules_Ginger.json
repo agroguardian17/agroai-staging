@@ -43,7 +43,16 @@
         "transport_cost_per_quintal": "number",
         "storage_loss_monthly_pct": "number",
         "processing_trained_operator": "boolean",
-        "ppe_available": "boolean"
+        "ppe_available": "boolean",
+        "processing_route": "enum:[dry_ginger, fresh_market, value_addition]",
+        "skin_removal_in_progress": "boolean",
+        "drying_in_progress": "boolean",
+        "local_hour": "number",
+        "value_addition_being_considered": "boolean",
+        "fresh_price_crashed": "boolean",
+        "fresh_share_low": "boolean",
+        "dry_ginger_in_storage": "boolean",
+        "dry_ginger_produced": "boolean"
       },
       "constants": {
         "grading_price_spread_multiple": 2.7,
@@ -1849,11 +1858,29 @@
       "stage": "G5",
       "trigger": {
         "english": "Actual yield recorded",
-        "marathi": "प्रत्यक्ष उत्पादन नोंदवले"
+        "marathi": "प्रत्यक्ष उत्पादन नोंदवले",
+        "expr": "actual_yield_recorded IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "actual_yield_recorded": true
+            },
+            "expect": "TRUE",
+            "label": "attribution trigger"
+          },
+          {
+            "context": {
+              "actual_yield_recorded": false
+            },
+            "expect": "FALSE",
+            "label": "not recorded"
+          }
+        ]
       },
       "action": {
-        "english": "Compare against the target range of 60, 90 and 110 quintal per acre and against the state average of 53. Run the gap attribution using the season's operation record.",
-        "marathi": "लक्ष्य श्रेणीशी तुलना करा — किमान ६०, लक्ष्य ९०, ताणून ११० क्विंटल प्रति एकर, आणि राज्य सरासरी ५३. हंगामातील कृती नोंदींवरून दरी-विश्लेषण चालवा."
+        "english": "Actual yield recorded -> start gap-attribution (D11-GA pipeline).",
+        "marathi": "प्रत्यक्ष उत्पन्न नोंदवले — Gap-attribution analysis सुरू (D11-GA pipeline)."
       },
       "reasoning": {
         "agronomic_basis": "The gap between the ceiling and the actual yield is attributable to recorded events and omissions. Running that attribution is what turns a season's records into corrected coefficients.",
@@ -1874,11 +1901,7 @@
         ]
       },
       "farm_brain_schema": [
-        "yield_quintal_per_acre_actual",
-        "yield_target_quintal_per_acre",
-        "earthing_up_date",
-        "mulch_stage_1_done",
-        "rot_incidence_pct"
+        "actual_yield_recorded"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -1894,21 +1917,40 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Gap attribution is appropriate, but the 60/90/110 q/acre targets and state-average comparator must be versioned and sourced. Do not imply that the range is a validated biological target."
-      }
+      },
+      "delivery": "EVENT"
     },
     {
       "rule_id": "D09-YD-003",
       "category": "YD",
       "priority": 3,
-      "severity": "info",
+      "severity": "yellow",
       "stage": "G5",
       "trigger": {
         "english": "Dry ginger has been produced",
-        "marathi": "सुंठ तयार झाली"
+        "marathi": "सुंठ तयार झाली",
+        "expr": "dry_ginger_produced IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "dry_ginger_produced": true
+            },
+            "expect": "TRUE",
+            "label": "record dry ratio"
+          },
+          {
+            "context": {
+              "dry_ginger_produced": false
+            },
+            "expect": "FALSE",
+            "label": "not produced"
+          }
+        ]
       },
       "action": {
-        "english": "Record the actual dry recovery percentage. Planning uses 19 percent; published ranges run from 15 to 25 and vary by variety.",
-        "marathi": "प्रत्यक्ष सुंठ उतारा नोंदवा. नियोजनात १९% वापरला आहे; प्रकाशित श्रेणी १५ ते २५% आहे आणि ती जातीनुसार बदलते."
+        "english": "Record dry ratio (fresh:dry) + total dry weight. Typical Mahima 4-5:1; low ratio -> skin/moisture issue.",
+        "marathi": "सुंठ तयार — dry ratio (fresh:dry) + total dry weight नोंदवा. Typical Mahima 4-5:1. कमी ratio → skin/moisture issue."
       },
       "reasoning": {
         "agronomic_basis": "Recovery varies by variety from 18.7 to 23 percent among the four main options, and drying method affects it too. The actual figure for this variety under this method on this plot is not knowable from publications.",
@@ -1929,10 +1971,7 @@
         ]
       },
       "farm_brain_schema": [
-        "dry_recovery_pct_actual",
-        "variety",
-        "drying_method",
-        "moisture_pct_final"
+        "dry_ginger_produced"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -1948,21 +1987,40 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Recording actual dry recovery is fully appropriate. The 19% planning value should be variety/method-specific rather than a universal constant."
-      }
+      },
+      "delivery": "WINDOW"
     },
     {
       "rule_id": "D09-DR-001",
       "category": "DR",
       "priority": 5,
-      "severity": "info",
+      "severity": "yellow",
       "stage": "G5",
       "trigger": {
         "english": "Dry ginger route selected",
-        "marathi": "सुंठ हा मार्ग निवडला"
+        "marathi": "सुंठ हा मार्ग निवडला",
+        "expr": "processing_route == 'dry_ginger'",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "processing_route": "dry_ginger"
+            },
+            "expect": "TRUE",
+            "label": "dry-ginger route"
+          },
+          {
+            "context": {
+              "processing_route": "fresh_market"
+            },
+            "expect": "FALSE",
+            "label": "fresh market"
+          }
+        ]
       },
       "action": {
-        "english": "Use simple sun drying as the first option. Wash, remove roots, soak overnight, scrape the skin with a bamboo edge, wash again, then sun dry 7 to 8 days in a layer no thicker than 1 to 1.5 inches on clean plastic or tarpaulin, turning frequently, until moisture reaches 8 to 10 percent.",
-        "marathi": "साधी वाळवणी पद्धत प्रथम वापरा. धुवा, मुळे काढा, रात्रभर भिजवा, बांबूच्या कडेने साल खरडून काढा, पुन्हा धुवा, मग स्वच्छ प्लॅस्टिक किंवा ताडपत्रीवर १ ते १.५ इंचापेक्षा जाड नाही अशा थरात ७ ते ८ दिवस उन्हात वाळवा, वरचेवर हात घालत रहा, पाण्याचा अंश ८ ते १०% येईपर्यंत."
+        "english": "Dry-ginger route: (1) full skin removal, (2) sun-dry, (3) moisture <10%, (4) grade + package (Spices Board standards).",
+        "marathi": "सुंठ processing: (1) skin removal (सर्व साल जावी), (2) sun-drying, (3) moisture <10% पर्यंत, (4) grading + packaging."
       },
       "reasoning": {
         "agronomic_basis": "This method uses no chemicals, needs no equipment beyond tarpaulin, and gives 20 to 25 percent recovery. The February and March climate here — 2 to 3 mm rainfall, dry semi-arid sun, low humidity — is close to ideal for it, which is not true of Kerala at harvest time.",
@@ -1983,10 +2041,7 @@
         ]
       },
       "farm_brain_schema": [
-        "drying_method",
-        "moisture_pct_final",
-        "dry_recovery_pct_actual",
-        "drying_space_ready"
+        "processing_route"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2002,7 +2057,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "The simple sun-drying workflow is a reasonable low-cost option, but 7–8 days, 1–1.5 inch layer and 8–10% moisture should be treated as process targets dependent on weather and variety."
-      }
+      },
+      "delivery": "WINDOW"
     },
     {
       "rule_id": "D09-DR-002",
@@ -2012,11 +2068,29 @@
       "stage": "G5",
       "trigger": {
         "english": "Skin removal in progress for drying",
-        "marathi": "सुंठेसाठी साल काढली जात आहे"
+        "marathi": "सुंठेसाठी साल काढली जात आहे",
+        "expr": "skin_removal_in_progress IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "skin_removal_in_progress": true
+            },
+            "expect": "TRUE",
+            "label": "skin removal QC"
+          },
+          {
+            "context": {
+              "skin_removal_in_progress": false
+            },
+            "expect": "FALSE",
+            "label": "not in progress"
+          }
+        ]
       },
       "action": {
-        "english": "Scrape the skin, do not peel it deeply, and use a sharpened bamboo edge rather than a metal knife. The oil and aroma compounds sit immediately below the skin.",
-        "marathi": "साल फक्त खरडून काढा, खोल काढू नका, आणि धातूच्या सुरीऐवजी बांबूची टोकदार कड वापरा. तेल आणि सुगंधी घटक सालीच्या अगदी खाली असतात — खोल साल काढल्यास वजन आणि प्रत दोन्ही जाते."
+        "english": "Skin removal QC: remove all skin (incomplete removal -> storage fungal risk); use water-scrape + hand-peel; check each lot.",
+        "marathi": "साल काढणी — पूर्ण साल जावी. अपूर्ण skin-removal → storage मध्ये fungal risk. Water-scrape + hand-peel; प्रत्येक lot ला quality check."
       },
       "reasoning": {
         "agronomic_basis": "The source specifies bamboo rather than metal. Bamboo is softer and does not cut deep, which preserves the sub-surface oil layer that carries the aroma. Aroma is the main quality determinant for dry ginger and oil.",
@@ -2034,8 +2108,7 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "drying_method",
-        "dry_recovery_pct_actual"
+        "skin_removal_in_progress"
       ],
       "u_value": null,
       "recoverability": "none",
@@ -2051,7 +2124,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Shallow skin scraping is appropriate for quality retention. The exact bamboo-tool prescription should remain source-specific rather than a universal agronomic requirement."
-      }
+      },
+      "delivery": "EVENT"
     },
     {
       "rule_id": "D09-DR-003",
@@ -2061,11 +2135,31 @@
       "stage": "G5",
       "trigger": {
         "english": "Ginger is spread out for sun drying and evening approaches",
-        "marathi": "सुंठ वाळत घातली आहे आणि संध्याकाळ होत आहे"
+        "marathi": "सुंठ वाळत घातली आहे आणि संध्याकाळ होत आहे",
+        "expr": "drying_in_progress IS TRUE AND local_hour >= 16",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "drying_in_progress": true,
+              "local_hour": 17
+            },
+            "expect": "TRUE",
+            "label": "evening - cover"
+          },
+          {
+            "context": {
+              "drying_in_progress": true,
+              "local_hour": 10
+            },
+            "expect": "FALSE",
+            "label": "mid-morning"
+          }
+        ]
       },
       "action": {
-        "english": "Cover with tarpaulin in the evening WITHOUT gathering the produce into a heap. Cooking smoke darkens the produce and darkened ginger drops a grade.",
-        "marathi": "सायंकाळी पसरलेले आले गोळा न करता ताडपत्रीने झाकून घ्या. गावात संध्याकाळी चुली पेटतात आणि धुराने माल काळपट पडतो — आणि काळपट पडलेली सुंठ खालच्या प्रतीत जाते."
+        "english": "Evening during drying: bring ginger in or cover with tarpaulin; night dew re-raises moisture and adds fungal risk.",
+        "marathi": "संध्याकाळ — सुंठ आत घ्या किंवा तारपॉलिनने झाका. रात्रीचा दव → moisture परत वाढते + fungal risk. सकाळी परत उन्हात."
       },
       "reasoning": {
         "agronomic_basis": "The source gives this instruction explicitly with the reason. Rural evenings mean cooking smoke, and it discolours drying produce. Gathering the produce would also trap moisture and slow drying.",
@@ -2083,8 +2177,8 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "drying_method",
-        "grade_a_pct"
+        "drying_in_progress",
+        "local_hour"
       ],
       "u_value": null,
       "recoverability": "none",
@@ -2100,7 +2194,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Protecting drying ginger from evening moisture/smoke is sensible. Keep the no-heap instruction because moisture accumulation is a real storage/drying risk."
-      }
+      },
+      "delivery": "EVENT"
     },
     {
       "rule_id": "D09-DR-004",
@@ -2374,15 +2469,35 @@
       "rule_id": "D09-PW-001",
       "category": "PW",
       "priority": 2,
-      "severity": "info",
+      "severity": "yellow",
       "stage": "G5",
       "trigger": {
         "english": "Further value addition is being considered beyond dry ginger",
-        "marathi": "सुंठेच्या पुढे मूल्यवर्धनाचा विचार"
+        "marathi": "सुंठेच्या पुढे मूल्यवर्धनाचा विचार",
+        "expr": "value_addition_being_considered IS TRUE AND processing_route == 'dry_ginger'",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "value_addition_being_considered": true,
+              "processing_route": "dry_ginger"
+            },
+            "expect": "TRUE",
+            "label": "value addition"
+          },
+          {
+            "context": {
+              "value_addition_being_considered": true,
+              "processing_route": "fresh_market"
+            },
+            "expect": "FALSE",
+            "label": "fresh route"
+          }
+        ]
       },
       "action": {
-        "english": "Powder is the next step — grind well-dried ginger, sieve through 50 to 60 mesh, pack airtight. Note that every step up the ladder raises value per kilo and reduces total weight, so the price multiple has to be checked at each step.",
-        "marathi": "पुढील टप्पा पावडर — चांगली वाळलेली सुंठ दळून ५० ते ६० मेशच्या चाळणीतून चाळा आणि हवाबंद पिशवीत भरा. प्रत्येक टप्प्यावर प्रति किलो मूल्य वाढते पण एकूण वजन घटते, म्हणून प्रत्येक पायरीवर भावाचा पट तपासावा लागतो."
+        "english": "Value-addition options: ginger powder / oleoresin / essential oil; processed margin ~40-60% higher. Check cost + market.",
+        "marathi": "Value-addition: (1) powder, (2) oleoresin, (3) essential oil. Processed margin ~40-60% जास्त. Cost + market तपासा."
       },
       "reasoning": {
         "agronomic_basis": "Powder is used for oleoresin extraction and spice products. The value chain runs fresh, dry, powder, oleoresin, with value rising and weight falling at each stage.",
@@ -2400,8 +2515,8 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "drying_method",
-        "sale_price_per_quintal"
+        "value_addition_being_considered",
+        "processing_route"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2417,7 +2532,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Powdering is a valid value-add route, but mesh size and processing specifications should be treated as product-process parameters, not agronomic standards."
-      }
+      },
+      "delivery": "WINDOW"
     },
     {
       "rule_id": "D09-ST-001",
@@ -2475,15 +2591,34 @@
       "rule_id": "D09-ST-002",
       "category": "ST",
       "priority": 5,
-      "severity": "yellow",
+      "severity": "info",
       "stage": "G5",
       "trigger": {
         "english": "Dry ginger is being stored AND storage_loss_monthly_pct is unknown",
-        "marathi": "सुंठ साठवली जात आहे पण मासिक घट माहीत नाही"
+        "marathi": "सुंठ साठवली जात आहे पण मासिक घट माहीत नाही",
+        "expr": "dry_ginger_in_storage IS TRUE AND storage_loss_monthly_pct IS NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "dry_ginger_in_storage": true
+            },
+            "expect": "TRUE",
+            "label": "log monthly loss"
+          },
+          {
+            "context": {
+              "dry_ginger_in_storage": true,
+              "storage_loss_monthly_pct": 1.5
+            },
+            "expect": "FALSE",
+            "label": "logged"
+          }
+        ]
       },
       "action": {
-        "english": "Weigh a sample each month and record the loss. Without this figure the hold-or-sell decision cannot be computed at all — net return equals expected price times one minus cumulative loss, minus storage cost.",
-        "marathi": "दर महिन्याला नमुना वजन करून घट नोंदवा. हा आकडा नसेल तर विकावे की थांबावे हा निर्णय मोजताच येत नाही — निव्वळ परतावा म्हणजे अपेक्षित भाव गुणिले (एक वजा संचित घट) उणे साठवण खर्च."
+        "english": "Dry ginger in storage: weigh monthly and log loss %; target <2%/month; higher -> check moisture uptake or pests.",
+        "marathi": "सुंठ साठवण — दर महिन्याला वजन तपासा + monthly loss % नोंदवा. Target <2%/महिना; जास्त → moisture/pest तपासा."
       },
       "reasoning": {
         "agronomic_basis": "The storage decision model requires the loss rate as an input and no source supplies it for dry ginger. Two weighings a month apart begin to answer it, and a season of them answers it properly.",
@@ -2502,9 +2637,8 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "storage_loss_monthly_pct",
-        "moisture_pct_final",
-        "drying_method"
+        "dry_ginger_in_storage",
+        "storage_loss_monthly_pct"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2520,7 +2654,8 @@
         "date": "2026-09-22",
         "outcome": "compliant",
         "comment_mr": "Monthly sample weighing is an appropriate empirical method for estimating actual storage loss and improving the sell/hold model."
-      }
+      },
+      "delivery": "ONCE_UNTIL_RESOLVED"
     },
     {
       "rule_id": "D09-ST-003",
@@ -2903,15 +3038,34 @@
       "rule_id": "D09-SL-003",
       "category": "SL",
       "priority": 4,
-      "severity": "info",
+      "severity": "yellow",
       "stage": "G5",
       "trigger": {
         "english": "Fresh price has crashed OR a substantial share of the produce is lower grade",
-        "marathi": "ओल्या आल्याचा भाव कोसळला आहे किंवा मालाचा मोठा भाग खालच्या प्रतीचा आहे"
+        "marathi": "ओल्या आल्याचा भाव कोसळला आहे किंवा मालाचा मोठा भाग खालच्या प्रतीचा आहे",
+        "expr": "fresh_price_crashed IS TRUE OR fresh_share_low IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "fresh_price_crashed": true
+            },
+            "expect": "TRUE",
+            "label": "price crash - consider dry"
+          },
+          {
+            "context": {
+              "fresh_price_crashed": false,
+              "fresh_share_low": false
+            },
+            "expect": "FALSE",
+            "label": "no signal"
+          }
+        ]
       },
       "action": {
-        "english": "This is when processing becomes rational. At a crashed price, storing dry ginger buys time. For lower grade produce, appearance matters less once dried, so processing captures value that the fresh market would discount.",
-        "marathi": "आता प्रक्रिया तर्कसंगत ठरते. भाव कोसळला असल्यास सुंठ करून साठवल्यास वेळ मिळतो. आणि खालच्या प्रतीच्या मालाची सुंठ केल्यास दिसण्याचे महत्व कमी होते — म्हणजे ओल्या बाजारात कमी भाव मिळणारा माल इथे मूल्य मिळवतो."
+        "english": "On a fresh-price crash / low fresh share, consider converting to dry ginger (longer storage, better off-season price).",
+        "marathi": "Fresh-market भाव पडला — सुंठ बनवण्याचा विचार करा. Storage life जास्त, off-season भाव चांगला. Processing capacity तपासा."
       },
       "reasoning": {
         "agronomic_basis": "Grade discounts apply to visual attributes that largely disappear in the dried product. So the produce that suffers most in the fresh market is the produce that gains most from processing.",
@@ -2930,10 +3084,8 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "grade_c_pct",
-        "sale_price_per_quintal",
-        "harvest_route",
-        "drying_space_ready"
+        "fresh_price_crashed",
+        "fresh_share_low"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2949,7 +3101,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Processing can become rational at low fresh prices or lower grades, but the trigger must use actual recovery, processing cost, storage loss and current prices; it should not be an unconditional recommendation."
-      }
+      },
+      "delivery": "ONCE_UNTIL_RESOLVED"
     },
     {
       "rule_id": "D09-SF-001",
@@ -3241,15 +3394,33 @@
       "rule_id": "D09-YD-004",
       "category": "YD",
       "priority": 4,
-      "severity": "info",
+      "severity": "yellow",
       "stage": "G5",
       "trigger": {
         "english": "Harvest complete",
-        "marathi": "काढणी पूर्ण झाली"
+        "marathi": "काढणी पूर्ण झाली",
+        "expr": "harvest_complete IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "harvest_complete": true
+            },
+            "expect": "TRUE",
+            "label": "log fresh yield"
+          },
+          {
+            "context": {
+              "harvest_complete": false
+            },
+            "expect": "FALSE",
+            "label": "not harvested"
+          }
+        ]
       },
       "action": {
-        "english": "Record the actual cost incurred line by line — seed, land preparation, mulch, fertiliser, plant protection, labour, harvest and transport. The Domain 13 model currently runs on estimates for several of these.",
-        "marathi": "प्रत्यक्ष खर्च बाबनिहाय नोंदवा — बेणे, पूर्वमशागत, आच्छादन, खते, कीड-रोग नियंत्रण, मजुरी, काढणी आणि वाहतूक. सध्याचे आर्थिक गणित यांपैकी अनेक बाबींवर अंदाजाने चालते."
+        "english": "On harvest, prompt fresh-yield (t/acre) logging within 3 days (delayed logging lowers yield-model accuracy).",
+        "marathi": "काढणी झाली — पुढील 3 दिवसांत fresh yield (टन/एकर) app मध्ये नोंदवा. Delayed logging → yield-model accuracy कमी."
       },
       "reasoning": {
         "agronomic_basis": "The Kannad cost estimate of about Rs 1,45,000 per acre adds mulch, drainage and micronutrient lines that the standard published sheet omits, and several figures are estimates. Only recorded actuals can correct them.",
@@ -3269,10 +3440,7 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "yield_quintal_per_acre_actual",
-        "transport_cost_per_quintal",
-        "sale_price_per_quintal",
-        "seed_at_planting_kg"
+        "harvest_complete"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -3288,7 +3456,8 @@
         "date": "2026-09-22",
         "outcome": "compliant",
         "comment_mr": "Recording actual cost line-by-line is necessary for calibration of the economics model and is methodologically sound."
-      }
+      },
+      "delivery": "EVENT"
     }
   ],
   "open_items": [
@@ -3393,8 +3562,8 @@
       "2": 1
     },
     "by_severity": {
-      "yellow": 16,
-      "info": 17,
+      "yellow": 20,
+      "info": 13,
       "red": 3,
       "blocking": 3
     },
@@ -3438,8 +3607,8 @@
       "DATA_CAPTURE": 4
     },
     "reviewed_t1": 3,
-    "rules_with_trigger_expr": 17,
-    "rules_with_delivery_class": 17,
+    "rules_with_trigger_expr": 26,
+    "rules_with_delivery_class": 26,
     "immutable_rules": 4
   },
   "next_steps": [

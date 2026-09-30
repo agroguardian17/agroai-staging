@@ -45,7 +45,13 @@
         "blocklist_source_ref": "text",
         "farmer_alert_type": "text",
         "cluster_pest_alert_active": "boolean",
-        "insecticide_group_repeated": "boolean — the last two applications shared a mode-of-action group"
+        "insecticide_group_repeated": "boolean — the last two applications shared a mode-of-action group",
+        "chemical_option_about_to_be_shown": "boolean",
+        "pest_recommendation_pending": "boolean",
+        "pest_planning_active": "boolean",
+        "pest_count": "number",
+        "threshold_source": "enum:[A, B, EST]",
+        "provisional_threshold": "number"
       },
       "chemical_blocklist": {
         "note": "These molecules appear in older online extension and government pages for this crop. They must NEVER be emitted by the engine.",
@@ -824,15 +830,35 @@
       "rule_id": "D05-PC-001",
       "category": "PC",
       "priority": 5,
-      "severity": "info",
+      "severity": "yellow",
       "stage": "G0",
       "trigger": {
         "english": "Pest management planning initiated",
-        "marathi": "कीड व्यवस्थापन नियोजन सुरू"
+        "marathi": "कीड व्यवस्थापन नियोजन सुरू",
+        "expr": "pest_planning_active IS TRUE AND dap < 0",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "pest_planning_active": true,
+              "dap": -10
+            },
+            "expect": "TRUE",
+            "label": "pre-plant pest calendar"
+          },
+          {
+            "context": {
+              "pest_planning_active": true,
+              "dap": 10
+            },
+            "expect": "FALSE",
+            "label": "past pre-plant window"
+          }
+        ]
       },
       "action": {
-        "english": "Frame pest control as wound prevention rather than insect killing. Measure success by rot incidence at harvest, not by pest counts.",
-        "marathi": "अद्रकात कीड नियंत्रण म्हणजे गड्ड्याला जखम होऊ न देणे. यश किडीच्या संख्येने नव्हे, काढणीच्या वेळी कंदकुजीच्या प्रमाणाने मोजावे."
+        "english": "Pre-plant: add a pest calendar (shoot borer Jul-Aug, rhizome fly Sep-Oct, leaf spot Sep-Nov, soft rot monsoon) and set scouting frequency.",
+        "marathi": "लागवडीच्या नियोजनात pest calendar जोडा: shoot borer (जुलै-ऑगस्ट), rhizome fly (सप्टें-ऑक्टो), leaf spot (सप्टें-नोव्हें), soft rot (मान्सून). Scouting frequency ठरवा."
       },
       "reasoning": {
         "agronomic_basis": "Rhizome fly larvae entering the rhizome are followed by pathogenic fungi and nematodes. Nematode wounds are a documented entry route for rot fungi. Shoot borer and white grub both create wounds. The same wounds are created without any pest by careless weeding.",
@@ -851,8 +877,8 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "field_history_rot",
-        "nematode_suspected"
+        "pest_planning_active",
+        "dap"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -868,7 +894,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      },
+      "delivery": "WINDOW"
     },
     {
       "rule_id": "D05-PC-002",
@@ -1908,10 +1935,28 @@
       "stage": null,
       "trigger": {
         "english": "Any pest control recommendation about to be issued",
-        "marathi": "कोणतीही कीड नियंत्रण शिफारस देण्यापूर्वी"
+        "marathi": "कोणतीही कीड नियंत्रण शिफारस देण्यापूर्वी",
+        "expr": "pest_recommendation_pending IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "pest_recommendation_pending": true
+            },
+            "expect": "TRUE",
+            "label": "inject IPM priority"
+          },
+          {
+            "context": {
+              "pest_recommendation_pending": false
+            },
+            "expect": "FALSE",
+            "label": "no pest rec pending"
+          }
+        ]
       },
       "action": {
-        "english": "Present options in order: cultural, mechanical, biological, chemical. Do not surface a chemical option without recording why the preceding tiers are insufficient.",
+        "english": "Silent: enforce IPM priority order (biological/cultural first, selective chemical last) on any pest recommendation.",
         "marathi": "उपाय याच क्रमाने द्या — सांस्कृतिक, यांत्रिक, जैविक, मग रासायनिक. आधीचे टप्पे का अपुरे आहेत हे नोंदवल्याशिवाय रासायनिक पर्याय दाखवू नये."
       },
       "reasoning": {
@@ -1931,8 +1976,7 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "last_insecticide_date",
-        "last_insecticide_group"
+        "pest_recommendation_pending"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -1948,7 +1992,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      },
+      "delivery": "SILENT_GUARD"
     },
     {
       "rule_id": "D05-IP-002",
@@ -2085,14 +2130,32 @@
       "rule_id": "D05-CH-002",
       "category": "CH",
       "priority": 5,
-      "severity": "yellow",
+      "severity": "info",
       "stage": null,
       "trigger": {
         "english": "A chemical option is about to be presented",
-        "marathi": "रासायनिक पर्याय दाखवला जात आहे"
+        "marathi": "रासायनिक पर्याय दाखवला जात आहे",
+        "expr": "chemical_option_about_to_be_shown IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "chemical_option_about_to_be_shown": true
+            },
+            "expect": "TRUE",
+            "label": "run IPM+diagnosis+CIBRC checks"
+          },
+          {
+            "context": {
+              "chemical_option_about_to_be_shown": false
+            },
+            "expect": "FALSE",
+            "label": "no chemical pending"
+          }
+        ]
       },
       "action": {
-        "english": "Emit the molecule name, group and source-reported dose, and append that CIB&RC label claim for ginger must be verified and label dose and pre-harvest interval followed. Always show biological and cultural options above it.",
+        "english": "Silent: before a chemical pest option is shown, confirm IPM alternatives were evaluated, diagnosis is confirmed, and trigger the CIB&RC check (D10-REG-001).",
         "marathi": "रसायनाचे नाव, गट आणि स्रोतातील मात्रा दाखवा, आणि सोबत अनिवार्य शेरा — लेबलवर अद्रकासाठी नोंदणी असल्याची खात्री करा, मात्रा व प्रतीक्षा कालावधी लेबलनुसार. जैविक व सांस्कृतिक पर्याय नेहमी वर दाखवा."
       },
       "reasoning": {
@@ -2112,9 +2175,7 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "last_insecticide_date",
-        "last_insecticide_group",
-        "phi_days_remaining"
+        "chemical_option_about_to_be_shown"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2130,7 +2191,8 @@
         "date": "2026-09-22",
         "outcome": "legal_review_required",
         "comment_mr": "रासायनिक निविष्ठा नियमन (CIB&RC/FSSAI) — agronomy intent बरोबर आहे, पण production sign-off साठी current CIB label + FSSAI MRL verification अनिवार्य."
-      }
+      },
+      "delivery": "SILENT_GUARD"
     },
     {
       "rule_id": "D05-CH-003",
@@ -2564,15 +2626,36 @@
       "rule_id": "D05-SC-002",
       "category": "SC",
       "priority": 3,
-      "severity": "info",
+      "severity": "yellow",
       "stage": null,
       "trigger": {
         "english": "Provisional threshold exceeded",
-        "marathi": "तात्पुरती सहनशीलता पातळी ओलांडली"
+        "marathi": "तात्पुरती सहनशीलता पातळी ओलांडली",
+        "expr": "pest_count > provisional_threshold AND threshold_source == 'EST'",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "pest_count": 15,
+              "provisional_threshold": 10,
+              "threshold_source": "EST"
+            },
+            "expect": "TRUE",
+            "label": "over provisional ETL"
+          },
+          {
+            "context": {
+              "pest_count": 15,
+              "threshold_source": "A"
+            },
+            "expect": "FALSE",
+            "label": "calibrated source - no warning"
+          }
+        ]
       },
       "action": {
-        "english": "Present the threshold as provisional and estimated, not as an established economic threshold level. State that no published ETL exists for ginger pests.",
-        "marathi": "ही सहनशीलता पातळी तात्पुरती व अंदाजित आहे. अद्रकाच्या किडींसाठी प्रकाशित आर्थिक नुकसान पातळी उपलब्ध नाही."
+        "english": "Pest count exceeds a provisional (EST) ETL whose Kannad calibration is pending; ask for scout confirmation before control.",
+        "marathi": "Pest count तात्पुरत्या ETL वर आहे, पण या ETL ची Kannad-specific calibration अजून बाकी. आत्ता scout confirmation घ्या; Season 1 नंतर threshold refine होईल."
       },
       "reasoning": {
         "agronomic_basis": "No published economic threshold levels for ginger pests were located across the sources consulted. Presenting an estimate as an established threshold would be a false precision claim.",
@@ -2590,8 +2673,9 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "shoot_borer_incidence_pct",
-        "leaf_roller_incidence_pct"
+        "pest_count",
+        "provisional_threshold",
+        "threshold_source"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2607,7 +2691,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "WINDOW"
     },
     {
       "rule_id": "D05-CH-008",
@@ -3042,9 +3127,9 @@
       "3": 6
     },
     "by_severity": {
-      "info": 12,
-      "yellow": 16,
+      "yellow": 17,
       "red": 4,
+      "info": 11,
       "blocking": 2
     },
     "by_source_tier": {
@@ -3083,8 +3168,8 @@
       "SENSOR_ALERT": 3
     },
     "reviewed_t1": 3,
-    "rules_with_trigger_expr": 17,
-    "rules_with_delivery_class": 17,
+    "rules_with_trigger_expr": 21,
+    "rules_with_delivery_class": 21,
     "immutable_rules": 2
   },
   "next_steps": [

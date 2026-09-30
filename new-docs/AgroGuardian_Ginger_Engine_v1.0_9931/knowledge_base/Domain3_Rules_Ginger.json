@@ -45,7 +45,9 @@
         "drip_efficiency_measured": "number",
         "drip_discharge_lph": "number — per-dripper discharge, needed to convert litres per acre into runtime minutes",
         "drip_system_flow_lph": "number — total system flow at the plot, drippers times discharge",
-        "previous_stage": "enum:[G0, G1, G2, G3, G4, G5]"
+        "previous_stage": "enum:[G0, G1, G2, G3, G4, G5]",
+        "hardware_upgrade_pending": "boolean",
+        "water_supply_status": "enum:[adequate, marginal, critical]"
       },
       "constants": {
         "mm_to_litre_per_acre": 4000,
@@ -596,11 +598,31 @@
       "stage": "G0",
       "trigger": {
         "english": "Water supply assessed as marginal",
-        "marathi": "पाण्याची उपलब्धता जेमतेम आहे"
+        "marathi": "पाण्याची उपलब्धता जेमतेम आहे",
+        "expr": "water_supply_status == 'marginal' AND month IN [MAR, APR, MAY]",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "water_supply_status": "marginal",
+              "current_month": 4
+            },
+            "expect": "TRUE",
+            "label": "summer marginal water"
+          },
+          {
+            "context": {
+              "water_supply_status": "marginal",
+              "current_month": 1
+            },
+            "expect": "FALSE",
+            "label": "outside summer"
+          }
+        ]
       },
       "action": {
-        "english": "Recommend a lined farm pond to capture monsoon runoff for the October to February period. This stores the water that the drainage channels are already carrying away.",
-        "marathi": "शेततळे विचारात घ्या. मान्सूनमध्ये जे पाणी निचरा चरातून वाहून जाते तेच साठवून ऑक्टोबरनंतर वापरता येईल — म्हणजे एकाच रचनेतून दोन्ही समस्या सुटतात."
+        "english": "Summer marginal water supply: plan backup (pond level, tanker booking, deficit irrigation G3-first); agronomist call.",
+        "marathi": "उन्हाळ्यात पाणी-पुरवठा marginal — backup नियोजन: pond level तपासा, tanker booking, deficit irrigation (G3 first, G1/G5 defer). Agronomist ला call करा."
       },
       "reasoning": {
         "agronomic_basis": "Monsoon water must be removed from the root zone to prevent soft rot, and the same water is short four months later. Storage converts a disposal problem into a supply solution.",
@@ -621,8 +643,7 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "water_source_type",
-        "water_available_oct_feb_litres"
+        "water_supply_status"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -638,7 +659,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      },
+      "delivery": "WINDOW"
     },
     {
       "rule_id": "D03-DS-001",
@@ -2686,11 +2708,29 @@
       "stage": null,
       "trigger": {
         "english": "Hardware upgrade under consideration",
-        "marathi": "hardware सुधारणेचा विचार"
+        "marathi": "hardware सुधारणेचा विचार",
+        "expr": "hardware_upgrade_pending IS TRUE",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "hardware_upgrade_pending": true
+            },
+            "expect": "TRUE",
+            "label": "suspend moisture advisory"
+          },
+          {
+            "context": {
+              "hardware_upgrade_pending": false
+            },
+            "expect": "FALSE",
+            "label": "no upgrade"
+          }
+        ]
       },
       "action": {
-        "english": "Record the three-depth measurement requirement in the capability gap register: 10 cm for the rhizome zone, 20 cm for root base stress, 30 cm for drainage. One point at 10 cm is adequate for season one.",
-        "marathi": "तीन खोलींवर मोजमाप हवे — १० सेंमी गड्डा क्षेत्र, २० सेंमी मुळांचा तळ, ३० सेंमी निचरा. पहिल्या हंगामासाठी १० सेंमीचा एक बिंदू पुरेसा."
+        "english": "Silent: during a scheduled sub-node hardware upgrade, suspend VWC/moisture advisory for ~2 days; auto-resume after.",
+        "marathi": "Sub-node hardware upgrade सुरू — साधारण 2 दिवस moisture advisory थांबेल. Battery replacement + firmware update; upgrade नंतर automatic resume."
       },
       "reasoning": {
         "agronomic_basis": "A reading at 30 cm showing saturation while 10 cm does not indicates water rising from below, meaning drainage is blocked. That is detectable before anything is visible at the surface.",
@@ -2708,8 +2748,7 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "moisture_probe_depth_cm",
-        "soil_moisture_vwc"
+        "hardware_upgrade_pending"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2725,7 +2764,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "Confidence 0.70 — architectural intent OK, पण source / local validation पूर्ण होईपर्यंत CONDITIONAL. Season 1 data नंतर confidence upgrade करावी."
-      }
+      },
+      "delivery": "SILENT_GUARD"
     },
     {
       "rule_id": "D03-WR-004",
@@ -2914,8 +2954,8 @@
       "SENSOR_ALERT": 12
     },
     "reviewed_t1": 3,
-    "rules_with_trigger_expr": 27,
-    "rules_with_delivery_class": 27,
+    "rules_with_trigger_expr": 30,
+    "rules_with_delivery_class": 30,
     "immutable_rules": 0
   },
   "next_steps": [

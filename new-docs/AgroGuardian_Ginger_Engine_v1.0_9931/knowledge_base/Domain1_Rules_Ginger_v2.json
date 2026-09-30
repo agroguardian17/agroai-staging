@@ -125,7 +125,8 @@
       "sample_dig_180_done": "boolean",
       "yield_target_quintal_per_acre": "number",
       "yield_prediction_interval_pct": "number",
-      "planting_doy": "integer, computed"
+      "planting_doy": "integer, computed",
+      "emergence_observed": "enum:[full, partial, none]"
     },
     "geography_binding": {
       "taluka": "Kannad",
@@ -1220,11 +1221,30 @@
       "stage": "G1",
       "trigger": {
         "english": "dap equals 35",
-        "marathi": "लागवडीला ३५ दिवस झाले"
+        "marathi": "लागवडीला ३५ दिवस झाले",
+        "expr": "dap == 35 AND emergence_observed IS NULL",
+        "expr_version": "dsl-1.0",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 35
+            },
+            "expect": "TRUE",
+            "label": "DAP 35 - prompt emergence"
+          },
+          {
+            "context": {
+              "dap": 35,
+              "emergence_observed": "full"
+            },
+            "expect": "FALSE",
+            "label": "recorded"
+          }
+        ]
       },
       "action": {
-        "english": "Request establishment count per running metre and record establishment_pct. This number sets the ceiling for the whole season.",
-        "marathi": "उगवण मोजा — प्रति चालू मीटर किती रोपे उगवली. हा आकडा पुढील संपूर्ण उत्पादनाची कमाल मर्यादा ठरवतो. ८५% पेक्षा जास्त उत्तम; ७०% पेक्षा कमी असल्यास कारण शोधावे."
+        "english": "At DAP 35, prompt emergence observation (full/partial/none); partial/none -> gap-filling or resowing + agronomist consult.",
+        "marathi": "DAP 35 पूर्ण — उगवण नोंदवा: पूर्ण (>80%) / अंशतः (30-80%) / नाही (<30%). अंशतः/नाही → gap-filling किंवा resowing; agronomist consultation."
       },
       "reasoning": {
         "agronomic_basis": "Ginger has no ratoon and gap filling produces plants that never catch up. Establishment is therefore a hard ceiling, not a starting point.",
@@ -1246,9 +1266,8 @@
         ]
       },
       "farm_brain_schema": [
-        "establishment_pct",
         "dap",
-        "yield_target_quintal_per_acre"
+        "emergence_observed"
       ],
       "u_value": null,
       "recoverability": "none",
@@ -1264,7 +1283,8 @@
         "date": "2026-09-22",
         "outcome": "conditional",
         "comment_mr": "An establishment count around 35 DAP can be useful, but the rule must define sampling method, sample size and acceptable stand range from a validated planting-density standard."
-      }
+      },
+      "delivery": "ONCE_UNTIL_RESOLVED"
     },
     {
       "rule_id": "D01-PH-006",
@@ -2343,8 +2363,8 @@
       "HUMAN_DECISION": 1
     },
     "reviewed_t1": 3,
-    "rules_with_trigger_expr": 15,
-    "rules_with_delivery_class": 15,
+    "rules_with_trigger_expr": 16,
+    "rules_with_delivery_class": 16,
     "immutable_rules": 0
   },
   "next_steps": [
