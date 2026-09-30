@@ -444,11 +444,15 @@ async def _populate_water_budget(
         _set(state, "plot_plants_estimated", plants)
 
     if season is not None:
+        _set(state, "sensor_pipe_position", season.sensor_pipe_position)
         _set(
             state,
             "planting_geometry_incomplete",
             wb.geometry_incomplete(
-                planting_method=state.get("planting_method"),
+                # planting_layout IS the plot's planting method (flat_bed /
+                # ridge_furrow / broad_ridge) — the geometry gate only needs it
+                # present, so reuse the captured column rather than a duplicate.
+                planting_method=season.planting_layout,
                 dripper_spacing_cm=season.dripper_spacing_cm,
                 drippers_per_acre=season.drippers_per_acre,
                 rows_per_bed=season.rows_per_bed,

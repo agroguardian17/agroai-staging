@@ -1872,7 +1872,7 @@ async def test_water_budget_fields_computed() -> None:
     assert s["days_since_last_irrigation"] == 3  # 2026-08-03 - 2026-07-31
     assert s["days_since_last_flow_reading"] == 0
     assert s["flow_telemetry_field_exists"] is True
-    assert s["planting_geometry_incomplete"] is True  # planting_method unset
+    assert s["planting_geometry_incomplete"] is True  # planting_layout unset
 
 
 @pytest.mark.asyncio
@@ -1890,3 +1890,27 @@ async def test_water_budget_dormant_without_repo() -> None:
     s = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)).state
     assert s["stage_water_deficit_ratio"] is None
     assert s["variety_max_per_event_l"] is None
+
+
+@pytest.mark.asyncio
+async def test_water_budget_geometry_complete_when_layout_captured() -> None:
+    """planting_layout present + the other geometry fields -> gate clears."""
+    season = dataclasses.replace(
+        _sample_season(),
+        planting_layout="ridge_furrow",
+        sensor_pipe_position="middle",
+        plants_per_acre=24300,
+        dripper_spacing_cm=Decimal("30"),
+        drippers_per_acre=24300,
+        rows_per_bed=2,
+    )
+    declared = frozenset({"planting_geometry_incomplete", "sensor_pipe_position"})
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(_sample_reading()),
+        plot_repo=_FakePlotRepo(_sample_plot()),
+        crop_season_repo=_FakeSeasonRepo(season),
+        declared_fields=declared,
+    )
+    s = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)).state
+    assert s["planting_geometry_incomplete"] is False
+    assert s["sensor_pipe_position"] == "middle"
