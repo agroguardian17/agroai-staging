@@ -643,6 +643,41 @@
             "object": "D11-GA-003",
             "reason_en": "Gap-attribution runs before the unexplained-gap escalation check.",
             "reason_mr": "gap-attribution आधी → unexplained escalation नंतर."
+          },
+          {
+            "subject": "D03-MN-002",
+            "relation": "SUPPRESSES",
+            "object": "D03-WB-001",
+            "reason_en": "VWC probe saturation vetoes the water-budget irrigation recommendation (probe > budget).",
+            "reason_mr": "VWC संपृक्त असल्यास water-budget सिंचन-सूचना रद्द (probe > budget)."
+          },
+          {
+            "subject": "D03-MN-002",
+            "relation": "SUPPRESSES",
+            "object": "D03-WB-002",
+            "reason_en": "VWC saturation vetoes even the red water-budget trigger.",
+            "reason_mr": "VWC संपृक्त असल्यास लाल water-budget सूचनाही रद्द."
+          },
+          {
+            "subject": "D03-MN-002",
+            "relation": "SUPPRESSES",
+            "object": "D03-WB-004",
+            "reason_en": "VWC saturation vetoes the supplementary-irrigation trigger.",
+            "reason_mr": "VWC संपृक्त असल्यास पुरवणी-सिंचन सूचना रद्द."
+          },
+          {
+            "subject": "D03-WB-002",
+            "relation": "ESCALATES",
+            "object": "D03-WB-001",
+            "reason_en": "Severe deficit overrides the moderate one — deliver a single red message, not both.",
+            "reason_mr": "गंभीर तूट सामान्य तुटीवर प्राधान्य — एकच लाल संदेश."
+          },
+          {
+            "subject": "D03-WB-001",
+            "relation": "BUNDLES",
+            "object": "D03-MN-004",
+            "reason_en": "Water-budget and VWC-low both point to irrigation - deliver one farmer message.",
+            "reason_mr": "water-budget व VWC-कमी दोन्ही सिंचन सुचवतात — एकच संदेश."
           }
         ]
       },

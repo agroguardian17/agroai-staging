@@ -319,6 +319,23 @@ PRECEDENCE = [
  Relation('D11-GA-001', 'SEQUENCES', 'D11-GA-003',
    'Gap-attribution runs before the unexplained-gap escalation check.',
    'gap-attribution आधी → unexplained escalation नंतर.'),
+
+ # --- Water Budget engine (wave 7) ---
+ Relation('D03-MN-002', 'SUPPRESSES', 'D03-WB-001',
+   'VWC probe saturation vetoes the water-budget irrigation recommendation (probe > budget).',
+   'VWC संपृक्त असल्यास water-budget सिंचन-सूचना रद्द (probe > budget).'),
+ Relation('D03-MN-002', 'SUPPRESSES', 'D03-WB-002',
+   'VWC saturation vetoes even the red water-budget trigger.',
+   'VWC संपृक्त असल्यास लाल water-budget सूचनाही रद्द.'),
+ Relation('D03-MN-002', 'SUPPRESSES', 'D03-WB-004',
+   'VWC saturation vetoes the supplementary-irrigation trigger.',
+   'VWC संपृक्त असल्यास पुरवणी-सिंचन सूचना रद्द.'),
+ Relation('D03-WB-002', 'ESCALATES', 'D03-WB-001',
+   'Severe deficit overrides the moderate one — deliver a single red message, not both.',
+   'गंभीर तूट सामान्य तुटीवर प्राधान्य — एकच लाल संदेश.'),
+ Relation('D03-WB-001', 'BUNDLES', 'D03-MN-004',
+   'Water-budget and VWC-low both point to irrigation - deliver one farmer message.',
+   'water-budget व VWC-कमी दोन्ही सिंचन सुचवतात — एकच संदेश.'),
 ]
 
 

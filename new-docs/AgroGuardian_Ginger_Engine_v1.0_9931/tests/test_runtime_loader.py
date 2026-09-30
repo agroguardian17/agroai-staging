@@ -35,7 +35,11 @@ try:
     from triggers_wave6_firing_intent import TRIGGERS_W6 as W6
 except ImportError:
     W6 = {}
-T = {**W1, **W2, **W3, **W4, **W5, **W6}
+try:
+    from triggers_wave7_water_budget import TRIGGERS_W7 as W7
+except ImportError:
+    W7 = {}
+T = {**W1, **W2, **W3, **W4, **W5, **W6, **W7}
 mismatch = [k for k, v in T.items() if data['triggers'].get(k) != v['expr']]
 check("trigger expressions जुळतात", not mismatch, f"{len(mismatch)}: {mismatch[:5]}")
 check("संख्या जुळते", len(T) == len(data['triggers']),

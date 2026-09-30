@@ -119,6 +119,16 @@ DELIVERY = {
  'D06-ST-001': WINDOW,              # pre-plant seed-treatment protocol
  'D06-ST-002': WINDOW,              # bio/chemical seed-treatment sequencing
  # --- Batches 3-9 (firing-intent, 28 Sep) ---
+ # --- Water Budget engine (wave 7) ---
+ 'D03-WB-001': WINDOW,
+ 'D03-WB-002': WINDOW,
+ 'D03-WB-003': EVENT,
+ 'D03-WB-004': EVENT,
+ 'D03-WB-005': SILENT_GUARD,
+ 'D03-WB-006': EVENT,
+ 'D03-WB-007': ONCE_UNTIL_RESOLVED,
+ 'D03-WB-008': ONCE_UNTIL_RESOLVED,
+ 'D03-ST-001': SILENT_GUARD,
  'D04-BI-002': WINDOW,
  'D04-DG-002': WINDOW,
  'D04-SN-001': ONCE_UNTIL_RESOLVED,
