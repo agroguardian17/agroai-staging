@@ -72,6 +72,7 @@ from app.application.ports.reading_repo import ReadingRepo
 from app.application.ports.satellite_reading_repo import SatelliteReadingRepo
 from app.application.ports.season_economics_repo import SeasonEconomicsRepo
 from app.application.ports.season_operations_repo import SeasonOperationsRepo
+from app.application.ports.water_budget_repo import WaterBudgetRepo
 from app.application.ports.weather_forecast_repo import WeatherForecastRepo
 from app.application.ports.weather_station_reading_repo import WeatherStationReadingRepo
 from app.application.ports.yield_model_repo import YieldModelRepo
@@ -130,6 +131,8 @@ class GingerDailyDeps:
     advisory_metrics_repo: AdvisoryMetricsRepo | None = None
     # Optional Domain 11 yield-model source (U-value register + prediction log).
     yield_model_repo: YieldModelRepo | None = None
+    # Optional water-budget source (variety stage targets + cumulative drip flow).
+    water_budget_repo: WaterBudgetRepo | None = None
     # Optional D12 peer-cluster source (fills the farm-brain ``cluster_id``).
     cluster_repo: ClusterRepo | None = None
     # Optional D12 QA-counter source (true/false-alarm + photo counts).
@@ -205,6 +208,7 @@ async def _run_one_plot(
         farmer_consent_repo=deps.farmer_consent_repo,
         advisory_metrics_repo=deps.advisory_metrics_repo,
         yield_model_repo=deps.yield_model_repo,
+        water_budget_repo=deps.water_budget_repo,
         cluster_repo=deps.cluster_repo,
         qa_counters_repo=deps.qa_counters_repo,
         declared_fields=declared_fields,

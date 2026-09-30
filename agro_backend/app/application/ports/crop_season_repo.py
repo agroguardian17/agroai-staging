@@ -131,6 +131,8 @@ class CropSeasonView:
     water_withdrawal_pct: Decimal | None = None
     water_withdrawal_start_date: datetime.date | None = None
     water_withdrawal_started: bool | None = None
+    # Water-budget flow-sensor pipe location (migration 0061).
+    sensor_pipe_position: str | None = None
 
 
 @runtime_checkable
