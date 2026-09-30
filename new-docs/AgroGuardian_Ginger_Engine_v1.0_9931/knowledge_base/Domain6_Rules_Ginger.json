@@ -2881,7 +2881,7 @@
         "field_history_wilt"
       ],
       "u_value": null,
-      "recoverability": "same_season",
+      "recoverability": "partial",
       "source_class": "SRC-D",
       "kannad_note": "Vertisol persistence of Ralstonia makes wilt-history capture especially critical for Marathwada plots; yellow prompt keeps the planting flow moving while surfacing the data gap (Kuldip, 30 Sep).",
       "decision_type": "DATA_CAPTURE",

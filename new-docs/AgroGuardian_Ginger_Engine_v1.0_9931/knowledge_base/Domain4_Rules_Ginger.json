@@ -3064,7 +3064,7 @@
         "basal_znso4_applied_kg_acre"
       ],
       "u_value": null,
-      "recoverability": "same_season",
+      "recoverability": "partial",
       "source_class": "SRC-D",
       "kannad_note": "Zone-default zinc recommendation grounded in Kannad-specific soil-survey data; deliberately not extended to other Marathwada zones without their own survey basis (Kuldip, 30 Sep).",
       "decision_type": "PLANNING_GUIDANCE",
