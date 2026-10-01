@@ -1,0 +1,4105 @@
+{
+  "metadata": {
+    "domain": 14,
+    "domain_name": "Satellite & Remote Sensing Intelligence",
+    "domain_name_mr": "उपग्रह व दूरसंवेदन बुद्धिमत्ता",
+    "crop": "ginger",
+    "crop_mr": "आले",
+    "region": "Kannad, Chhatrapati Sambhajinagar, Marathwada",
+    "author": "kb_author",
+    "version": "draft-1.0",
+    "date": "2026-09-17",
+    "status": "PHASE_1_RAW_UNVALIDATED",
+    "raw_master_source": "Domain14_Satellite_RemoteSensing_RAW_MASTER.docx (17 Sep 2026)",
+    "total_rules": 47,
+    "rule_count_note": "Phase-1 authoring: additive-only into the ginger KB; zero touches to D01–D13. Precedence relations added to D11 in a separate patch.",
+    "review_log": {
+      "tier_1_review_date": null,
+      "rules_reviewed": 0,
+      "rules_total": 47,
+      "note": "Phase-1 raw. Tier-1 review pending; season-1 field data will elevate SRC-EST rules to SRC-Q.",
+      "change_log": [
+        {
+          "date": "2026-09-17",
+          "author": "kb_author",
+          "change": "Domain 14 initial authoring",
+          "detail": "All rules created from RAW MASTER Phase 1 document. Category codes: NV, NR, NM, SR, LT, PH, AN, FU, PL, POS, DP."
+        }
+      ]
+    }
+  },
+  "_schema": {
+    "additions": {
+      "rule_categories_domain_14": {
+        "NV": "NDVI and vegetation index rules — canopy vigour and biomass tracking",
+        "NR": "NDRE and red-edge rules — chlorophyll / nitrogen sensitive canopy state",
+        "NM": "NDMI and canopy moisture rules — leaf water content proxy",
+        "SR": "SAR (Sentinel-1) rules — cloud-independent soil moisture, standing water, tillage, harvest change detection",
+        "LT": "Land Surface Temperature and CWSI rules — canopy transpiration and water stress",
+        "PH": "Phenology and stage detection rules — NDVI curve fit and stage-transition confirmation",
+        "AN": "Anomaly and baseline rules — regional, peer, and self-plot deviation detection",
+        "FU": "Fusion and conflict-resolution rules between satellite and ground-truth IoT sensors",
+        "PL": "Pipeline and freshness guard rules — data quality gates, plot polygon checks, fallback modes",
+        "POS": "Positioning and prohibited-claim rules — immutable customer-facing claim restrictions",
+        "DP": "DPDP and licensing compliance rules for satellite-derived plot data"
+      },
+      "new_farm_brain_fields": {
+        "plot_polygon_wkt": "text — plot boundary as Well-Known Text; the geometry every satellite extract runs against",
+        "plot_area_ha": "number — plot area in hectares, derived from plot_polygon_wkt",
+        "ndvi_mean": "number — mean NDVI over valid pixels in the most recent cloud-clear Sentinel-2 scene",
+        "ndvi_std": "number — standard deviation of NDVI across the plot; high value in a supposedly uniform plot means confounder",
+        "ndvi_smoothed": "number — Whittaker-smoothed NDVI interpolated to today's date between scenes",
+        "ndvi_delta_10d": "number — NDVI change over the last 10 days (positive means greening, negative means decline)",
+        "ndre_mean": "number — mean NDRE red-edge chlorophyll index",
+        "ndre_slope_5d": "number — NDRE trend over last 5 days (per day)",
+        "ndmi_mean": "number — mean NDMI canopy moisture index",
+        "ndmi_delta_10d": "number — NDMI change over the last 10 days",
+        "evi_mean": "number — enhanced vegetation index; used where NDVI saturates",
+        "savi_mean": "number — soil-adjusted NDVI; used in G0 and early G1 when soil dominates the pixel",
+        "nbr_mean": "number — normalized burn ratio; residue burning detection",
+        "nbr_delta_10d": "number — NBR change over the last 10 days",
+        "sar_vv_db": "number — Sentinel-1 sigma-nought VV in dB",
+        "sar_vh_db": "number — Sentinel-1 sigma-nought VH in dB",
+        "sar_vv_delta_db": "number — change in VV between last two acquisitions from the same relative orbit",
+        "sar_rvi": "number — radar vegetation index, 4*VH/(VV+VH)",
+        "sar_coherence": "number — InSAR coherence between last two same-orbit acquisitions, 0 to 1",
+        "lst_c": "number — Land Surface Temperature in Celsius from most recent Landsat overpass",
+        "cwsi": "number — Crop Water Stress Index in [0,1] from LST minus air temperature",
+        "plot_cloud_pct": "number — cloud percentage over the plot polygon in the most recent Sentinel-2 scene",
+        "scene_valid_pixel_pct": "number — percentage of plot pixels that are neither cloud nor shadow nor water nor saturated",
+        "optical_gap_days": "integer — days since the last cloud-clear Sentinel-2 scene at the plot",
+        "sar_gap_days": "integer — days since the last Sentinel-1 acquisition at the plot",
+        "ndvi_freshness_days": "integer — age of ndvi_mean in days; used to degrade advisory confidence linearly",
+        "sat_pipeline_version": "text — version tag of the processing chain that produced the current indices",
+        "sat_source": "text — enum: sentinel-2, sentinel-1, landsat-8, landsat-9, planet, other",
+        "plot_ndvi_baseline_regional": "number — regional expected NDVI for the current stage; Phase-1 uses author model",
+        "plot_ndvi_baseline_peer": "number — mean peer NDVI in the cluster at the same DAP; available season 1 once 3+ plots enrolled",
+        "plot_ndvi_baseline_self": "number — this plot's NDVI at the same DAP in the previous season; available season 2+",
+        "plot_ndre_baseline_regional": "number — regional expected NDRE for the current stage",
+        "plot_ndvi_gap_regional": "number — signed difference plot NDVI minus regional baseline",
+        "plot_ndvi_gap_peer": "number — signed difference plot NDVI minus peer mean",
+        "scout_request_pending": "boolean — a scouting task has been dispatched to the farmer but no report received yet",
+        "farmer_scout_report_days_ago": "integer — days since farmer submitted the last scout report",
+        "sat_advisory_confidence": "number — confidence in [0,1] the current satellite advisory should carry; set by pipeline",
+        "sat_public_display_context": "text — enum: own_plot, cluster_aggregate, third_party — governs DPDP display rules",
+        "sat_attribution_shown": "boolean — true when the required source attribution line has been rendered to the farmer app for the current satellite product",
+        "third_party_share_consent_given": "boolean — DPDP purpose-limited consent for sharing plot-level indices with an insurer, buyer, or government scheme",
+        "sub_node_moisture_status": "text — enum: adequate, low, saturated, stale — resolved from D03 sub-node data",
+        "sub_node_ec_status": "text — enum: normal, high, low, stale — resolved from D04 sub-node data",
+        "monsoon_days_since_onset": "integer — days since IMD-declared monsoon onset for Marathwada (or, if unavailable, since first significant rain of the season). Used by AN-003 weed-flush guard.",
+        "claim_type": "text — enum tagging POS-rule dispatch: pos_001 through pos_007",
+        "outgoing_message_contains_claim": "boolean — set by the outbound-message QA layer before a message is delivered; POS rules gate on this",
+        "plot_advisory_class": "text — enum: normal, informational_only — set by AN-002 for small/heterogeneous plots",
+        "rainfall_last_48h_mm": "number — cumulative rainfall in the last 48 hours in mm from the cluster station (D07-authoritative). D14 rules read this to reason about standing water and drying events.",
+        "days_to_planting": "integer — days from today to the plot's planned planting date (positive before, negative after). Populated in G0 stage from D01 planting schedule; NV-006 uses this to gate the pre-plant weed check window.",
+        "plot_ndre_gap_regional": "number — signed difference plot NDRE minus regional NDRE baseline; parallel to plot_ndvi_gap_regional"
+      },
+      "constants": {
+        "ndvi_drop_10d_urgent_scout": 0.15,
+        "ndvi_regional_deviation_medium": 0.1,
+        "ndvi_peer_deviation_medium": 0.1,
+        "ndre_flat_slope_threshold_per_day": 0.005,
+        "ndmi_delta_10d_stress_threshold": -0.1,
+        "sar_vv_delta_wetting_drying_db": 2.0,
+        "sar_coherence_change_threshold": 0.4,
+        "cwsi_mild_stress_low": 0.2,
+        "cwsi_moderate_stress_low": 0.4,
+        "cwsi_severe_stress_low": 0.6,
+        "cwsi_extreme_stress_low": 0.8,
+        "plot_cloud_pct_max_trusted": 15,
+        "scene_valid_pixel_pct_min": 60,
+        "optical_gap_days_downgrade": 10,
+        "optical_gap_days_switch_to_sar_only": 14,
+        "optical_gap_days_max_advisory": 21,
+        "ndvi_freshness_confidence_full_days": 5,
+        "ndvi_freshness_confidence_zero_days": 20,
+        "plot_area_ha_min_normal_confidence": 0.1,
+        "plot_area_ha_informational_only_below": 0.05,
+        "peer_baseline_min_plots_required": 3,
+        "nbr_drop_burning_threshold": -0.2,
+        "pre_plant_ndvi_weed_flush_threshold": 0.25,
+        "peak_ndvi_g3_minimum_healthy": 0.6,
+        "peak_ndvi_g3_saturation_start": 0.75
+      }
+    }
+  },
+  "reference_data": {
+    "cardinal_principle": {
+      "en": "Ground-truth sensor at the plot beats satellite pixel over the plot whenever they conflict. Satellite is a spatial-context provider and an early anomaly detector; it is not a decision authority over an in-field sensor.",
+      "mr": "शेतावरील ग्राउंड-ट्रुथ सेन्सर हा शेतावरील उपग्रह-पिक्सेलपेक्षा नेहमी वरचढ. उपग्रह हा अवकाशीय संदर्भ पुरवठादार व लवकर विसंगती शोधणारा आहे; शेतावरील सेन्सरवर निर्णय-अधिकार नाही."
+    },
+    "underground_rhizome_blind_spot": {
+      "en": "Ginger's sale product — the rhizome — is buried under 15 to 25 cm of soil and mulch. No optical, radar, or thermal satellite can see it directly. A partially rot-infected crop can look healthy from space for two to three weeks before the canopy shows a definite response. Satellite is therefore a LATE indicator for rhizome rot, not an early one. The early indicator is sub-node soil moisture and EC (Domain 6).",
+      "mr": "आल्याचा विक्री-भाग म्हणजे भूमिगत गड्डा — १५-२५ सें.मी. माती व आच्छादनाखाली. कोणतीही optical, radar किंवा थर्मल उपग्रह हे थेट पाहू शकत नाही. अंशतः कूज लागलेले पीक २-३ आठवडे वरून हिरवेगार दिसते. म्हणून उपग्रह हा कूजासाठी उशिराचा निर्देशक आहे, लवकरचा नाही. लवकरचा निर्देशक sub-node मृदा-ओलावा व EC (Domain 6)."
+    },
+    "revisit_and_cloud": {
+      "en": "Sentinel-2 nominal revisit is 5 days combined A+B. Effective revisit over Kannad tile 43QGD varies from 5-6 days (Nov-Mar) to 15-20 days (Jul-Aug) after cloud filtering. Sentinel-1 revisit stays 6-12 days year-round and is monsoon-critical.",
+      "mr": "Sentinel-2 चा नियोजित पुनरागमन ५ दिवस. Kannad tile 43QGD वर वापरण्यायोग्य पुनरागमन नोव्ह-मार्च ५-६ दिवस, जुलै-ऑगस्ट १५-२० दिवस. Sentinel-1 वर्षभर ६-१२ दिवस — मान्सूनमध्ये अत्यावश्यक."
+    },
+    "confidence_degradation": {
+      "en": "Satellite advisory confidence degrades linearly from 1.0 at 0 days freshness to 0.0 at 20 days freshness. Rules that fire on satellite input MUST multiply their base confidence by sat_advisory_confidence before delivery. This is the same pattern as D07 station_data_age_hours downgrade.",
+      "mr": "उपग्रह सल्ल्याचा विश्वास ० दिवसांच्या ताजेपणावर १.०, २० दिवसांवर ०.० अशा रेषीय पद्धतीने कमी होतो. उपग्रह इनपुटवर चालणाऱ्या नियमांनी sat_advisory_confidence ने त्यांच्या मूळ विश्वासाला गुणले पाहिजे. हा D07 च्या station_data_age_hours downgrade पॅटर्नसारखाच आहे."
+    },
+    "prohibited_claims_synopsis": [
+      "Satellite detects ginger rhizome rot",
+      "NDVI tells you when to harvest",
+      "We predict yield from space",
+      "AI counts ginger plants from orbit",
+      "Cloud is not a problem for us",
+      "We replace your soil sensor with satellite",
+      "Our satellite is always up-to-date"
+    ],
+    "domain_authority_matrix": [
+      {
+        "topic": "root-zone moisture",
+        "authority": "D03 sub-node",
+        "d14_role": "spatial context and drainage-failure surface signal only"
+      },
+      {
+        "topic": "disease diagnosis",
+        "authority": "D06 differential",
+        "d14_role": "late canopy signal only; never diagnostic"
+      },
+      {
+        "topic": "weather at plot",
+        "authority": "D07 cluster station",
+        "d14_role": "none — satellite-derived rainfall feeds D07, not D14"
+      },
+      {
+        "topic": "lifecycle stage",
+        "authority": "D01 DAP + rules",
+        "d14_role": "cross-check via NDVI curve fit; never overrides DAP"
+      },
+      {
+        "topic": "harvest timing",
+        "authority": "D09 harvest rules",
+        "d14_role": "senescence detection informs but does not decide"
+      },
+      {
+        "topic": "yield estimate",
+        "authority": "D12 prohibited",
+        "d14_role": "prohibited to customer; internal analytics only"
+      }
+    ]
+  },
+  "rules": [
+    {
+      "rule_id": "D14-NV-001",
+      "category": "NV",
+      "priority": 4,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "A cloud-clear Sentinel-2 scene is received for the plot AND scene_valid_pixel_pct is at least 60",
+        "marathi": "प्लॉटवर ढगमुक्त Sentinel-2 दृश्य प्राप्त झाले आणि scene_valid_pixel_pct किमान ६० आहे",
+        "expr": "sat_source == 'sentinel-2' AND scene_valid_pixel_pct >= 60 AND plot_cloud_pct <= 15",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Computation trigger. Populates ndvi_mean, ndvi_std, evi_mean, savi_mean, ndvi_freshness_days, plot_ndvi_gap_regional. Emits nothing to the farmer. Every downstream NV/AN/PH rule depends on this.",
+        "golden_tests": [
+          {
+            "context": {
+              "sat_source": "sentinel-2",
+              "scene_valid_pixel_pct": 72,
+              "plot_cloud_pct": 8
+            },
+            "expect": "TRUE",
+            "label": "clear scene — compute indices"
+          },
+          {
+            "context": {
+              "sat_source": "sentinel-2",
+              "scene_valid_pixel_pct": 45,
+              "plot_cloud_pct": 8
+            },
+            "expect": "FALSE",
+            "label": "not enough valid pixels — skip"
+          },
+          {
+            "context": {
+              "sat_source": "sentinel-2",
+              "scene_valid_pixel_pct": 72,
+              "plot_cloud_pct": 25
+            },
+            "expect": "FALSE",
+            "label": "too much cloud over plot — skip"
+          },
+          {
+            "context": {
+              "sat_source": null,
+              "scene_valid_pixel_pct": 72,
+              "plot_cloud_pct": 8
+            },
+            "expect": "UNKNOWN",
+            "label": "unknown source — do not silently pass"
+          }
+        ]
+      },
+      "action": {
+        "english": "Compute and store ndvi_mean, ndvi_std, evi_mean, savi_mean using the standard Sentinel-2 L2A band arithmetic (NDVI = (B8-B4)/(B8+B4)). Log scene id and pipeline version. Do not emit anything to the farmer app; this rule is a pipeline hook, not a message.",
+        "marathi": "ndvi_mean, ndvi_std, evi_mean, savi_mean यांची गणना करून नोंदवा. दृश्याचा id व pipeline version log करा. शेतकऱ्याला कोणतीही सूचना पाठवू नका — हा फक्त pipeline hook आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Cloud-clear valid-pixel gating is required before any index is trustworthy. Values below 60% valid pixels give a plot mean dominated by mask edges; above 60% is the industry consensus for smallholder analysis. See RAW MASTER §4 and §12.4.",
+        "yield_impact": "None directly. Enables every downstream NV, AN, and PH rule.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "ESA Sentinel-2 L2A product specification",
+          "Rouse et al. 1974 (NDVI)",
+          "RAW MASTER Domain 14 §4"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_3_water",
+          "domain_4_nutrient",
+          "domain_6_disease"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "sat_source",
+        "scene_valid_pixel_pct",
+        "plot_cloud_pct",
+        "ndvi_mean",
+        "ndvi_std",
+        "evi_mean",
+        "savi_mean",
+        "ndvi_freshness_days",
+        "sat_pipeline_version"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Marathwada tile 43QGD gets a cloud-clear Sentinel-2 scene roughly once every 5-6 days in Nov-Mar and every 15-20 days in Jul-Aug. The gate is not there to be strict; it is there because a bad scene teaches the engine wrong things about the plot.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-NV-002",
+      "category": "NV",
+      "priority": 3,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "ndvi_freshness_days exceeds the confidence-full threshold — degrade advisory confidence",
+        "marathi": "ndvi_freshness_days confidence-full मर्यादेपेक्षा जास्त — सल्ल्याचा विश्वास कमी करा",
+        "expr": "ndvi_freshness_days > 5 AND ndvi_freshness_days <= 20",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Confidence degradation rule — sets sat_advisory_confidence for downstream consumers. Linear ramp from 1.0 at day 5 to 0.0 at day 20. SILENT_GUARD; no message emitted, but every downstream rule reads sat_advisory_confidence before firing.",
+        "golden_tests": [
+          {
+            "context": {
+              "ndvi_freshness_days": 3
+            },
+            "expect": "FALSE",
+            "label": "very fresh — full confidence"
+          },
+          {
+            "context": {
+              "ndvi_freshness_days": 8
+            },
+            "expect": "TRUE",
+            "label": "moderately fresh — degrade"
+          },
+          {
+            "context": {
+              "ndvi_freshness_days": 17
+            },
+            "expect": "TRUE",
+            "label": "stale — heavy degrade"
+          },
+          {
+            "context": {
+              "ndvi_freshness_days": 22
+            },
+            "expect": "FALSE",
+            "label": "too stale — separate rule PL-002 handles"
+          },
+          {
+            "context": {
+              "ndvi_freshness_days": null
+            },
+            "expect": "UNKNOWN",
+            "label": "no freshness known"
+          }
+        ]
+      },
+      "action": {
+        "english": "Compute sat_advisory_confidence = max(0, 1 - (ndvi_freshness_days - 5) / 15). Downstream NV/NR/NM/AN rules multiply their base confidence by this scalar before delivery. This is the same pattern as D07 station_data_age_hours degradation.",
+        "marathi": "sat_advisory_confidence = max(0, 1 - (ndvi_freshness_days - 5) / 15) या सूत्राने गणना करा. NV/NR/NM/AN नियम delivery पूर्वी त्यांचा base confidence याने गुणतील. D07 station_data_age_hours degradation प्रमाणे."
+      },
+      "reasoning": {
+        "agronomic_basis": "A plot state that was valid 3 days ago is still probably valid; a state valid 15 days ago is not. Linear degradation is the honest simplification.",
+        "yield_impact": "None directly. Protects downstream advisory quality.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "RAW MASTER §3.4 working definitions",
+          "D07 station_data_age_hours pattern"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_14_satellite"
+        ],
+        "depends_on": [
+          "domain_14_satellite"
+        ]
+      },
+      "farm_brain_schema": [
+        "ndvi_freshness_days",
+        "sat_advisory_confidence"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Kannad Jul-Aug monsoon regularly pushes freshness past 15 days. Without this degradation an operator would get the same recommendation on day 3 and day 18 with identical confidence — dishonest and unsafe.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-NV-003",
+      "category": "NV",
+      "priority": 3,
+      "severity": "yellow",
+      "stage": "G2",
+      "trigger": {
+        "english": "Plot NDVI is more than 0.10 below the regional baseline for the current stage AND scene is trusted AND advisory confidence is at least 0.5",
+        "marathi": "प्लॉट NDVI सध्याच्या अवस्थेसाठी अपेक्षित regional baseline पेक्षा ०.१० पेक्षा जास्त कमी आहे",
+        "expr": "plot_ndvi_gap_regional < -0.10 AND scene_valid_pixel_pct >= 60 AND sat_advisory_confidence >= 0.5 AND STAGE IN [G2, G3, G4]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Regional baseline anomaly. Confidence is medium because the regional model is a Phase-1 author estimate. Requires the double-signal principle from §8.4 to reach a farmer message — this rule alone opens an investigation, not a treatment.",
+        "golden_tests": [
+          {
+            "context": {
+              "plot_ndvi_gap_regional": -0.14,
+              "scene_valid_pixel_pct": 72,
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "TRUE",
+            "label": "clear anomaly — investigate"
+          },
+          {
+            "context": {
+              "plot_ndvi_gap_regional": -0.07,
+              "scene_valid_pixel_pct": 72,
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "small deviation — noise band"
+          },
+          {
+            "context": {
+              "plot_ndvi_gap_regional": -0.14,
+              "scene_valid_pixel_pct": 45,
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "scene not trusted"
+          },
+          {
+            "context": {
+              "plot_ndvi_gap_regional": -0.14,
+              "scene_valid_pixel_pct": 72,
+              "sat_advisory_confidence": 0.3,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "confidence too low"
+          },
+          {
+            "context": {
+              "plot_ndvi_gap_regional": -0.14,
+              "scene_valid_pixel_pct": 72,
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G1"
+            },
+            "expect": "FALSE",
+            "label": "wrong stage — G1 handled by pre-plant/emergence rules"
+          }
+        ]
+      },
+      "action": {
+        "english": "Open an investigation task for this plot: check sub-node moisture and EC over the last 7 days, and schedule a farmer scout report. Do NOT recommend any chemical intervention on this signal alone. If the sub-node shows a matching anomaly, escalate through the appropriate domain (D03 water, D04 nutrient, or D06 disease). If sub-node shows nothing, request the scout and hold.",
+        "marathi": "या प्लॉटसाठी तपासणी task उघडा — सर्व सब-नोड मृदा-ओलावा व EC मागील ७ दिवसांची तपासा आणि शेतकऱ्याला scout अहवाल पाठवण्याची विनंती करा. फक्त या सिग्नलवर कोणतीही रासायनिक शिफारस करू नका. सब-नोडवर तीच अनियमितता आढळल्यास योग्य डोमेनमार्फत (D03/D04/D06) escalate करा; काहीच नसल्यास scout अहवालाची वाट पहा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Regional-baseline deviation is a coarse signal; the underlying model is Phase-1 author-estimated. Requires cross-check by §8.4 double-signal principle.",
+        "yield_impact": "Grouped under investigation_dispatched — not counted separately from downstream domain-specific u-values.",
+        "confidence_score": 0.55,
+        "source_tier": "B",
+        "references": [
+          "RAW MASTER §8, §9",
+          "Domain 6 double-signal principle"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_4_nutrient",
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_14_satellite"
+        ]
+      },
+      "farm_brain_schema": [
+        "plot_ndvi_gap_regional",
+        "scene_valid_pixel_pct",
+        "sat_advisory_confidence",
+        "current_stage",
+        "ndvi_mean",
+        "plot_ndvi_baseline_regional"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "EST",
+      "kannad_note": "Kannad regional NDVI baseline for ginger is not published; the author-estimate model used here is coarse. Season-1 log will replace it with an empirical mean, at which point this rule's confidence bumps to 0.75. Do not sell this alert as a diagnosis; it is a call for a look, not a prescription.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D14-NV-004",
+      "category": "NV",
+      "priority": 5,
+      "severity": "red",
+      "stage": "G3",
+      "trigger": {
+        "english": "Plot NDVI has dropped by 0.15 or more over the last 10 days AND scene is trusted",
+        "marathi": "प्लॉट NDVI मागील १० दिवसांत ०.१५ किंवा अधिक कमी झाले आहे",
+        "expr": "ndvi_delta_10d <= -0.15 AND scene_valid_pixel_pct >= 60 AND sat_advisory_confidence >= 0.5 AND STAGE IN [G2, G3, G4]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Rapid decline detection. High-priority scout request. Does NOT diagnose disease — a NDVI drop can also be hail damage, waterlogging, herbicide drift, or an intercrop harvest. The farmer scout, plus the sub-node context, decide the actual cause.",
+        "golden_tests": [
+          {
+            "context": {
+              "ndvi_delta_10d": -0.18,
+              "scene_valid_pixel_pct": 72,
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "TRUE",
+            "label": "sharp drop — urgent scout"
+          },
+          {
+            "context": {
+              "ndvi_delta_10d": -0.08,
+              "scene_valid_pixel_pct": 72,
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "gradual — not urgent"
+          },
+          {
+            "context": {
+              "ndvi_delta_10d": -0.25,
+              "scene_valid_pixel_pct": 50,
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "scene not trusted"
+          },
+          {
+            "context": {
+              "ndvi_delta_10d": -0.18,
+              "scene_valid_pixel_pct": 72,
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G5"
+            },
+            "expect": "FALSE",
+            "label": "senescence — natural drop expected"
+          },
+          {
+            "context": {
+              "ndvi_delta_10d": null,
+              "scene_valid_pixel_pct": 72,
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "UNKNOWN",
+            "label": "delta not computed yet"
+          }
+        ]
+      },
+      "action": {
+        "english": "Send an URGENT scout request to the farmer today. Message: canopy has declined sharply on satellite view; check for waterlogging, disease, pest, hail damage, or herbicide drift, and report back with a photo. Simultaneously, pull last 7 days of sub-node soil moisture, EC, and rainfall for automatic cross-check and stage this for the D06 differential branch.",
+        "marathi": "शेतकऱ्याला आजच URGENT scout विनंती पाठवा. संदेश: उपग्रह दृश्यात पिकाचा हिरवेपणा झपाट्याने कमी झाला आहे; पाणी साचणे, रोग, कीड, गारपीट, तणनाशक drift पैकी काय झाले ते फोटोसह कळवा. एकाच वेळी सब-नोडचे मागील ७ दिवसांचे मृदा-ओलावा, EC व पाऊस स्वयंचलितपणे ओढून D06 differential शाखेसाठी तयारी करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "A 15-point NDVI drop in 10 days is well outside the normal senescence trajectory in G2-G4 and reflects a real change. The signal itself is trustworthy; the CAUSE requires the ground check and D06 differential.",
+        "yield_impact": "Counted under investigation_dispatched; the yield-impact number is assigned by the confirmed downstream domain (D06 disease, D03 water, etc.), not by this rule.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "RAW MASTER §8.3, §9.2",
+          "Domain 6 differential-diagnosis rules",
+          "Zhu & Woodcock 2014"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_6_disease",
+          "domain_8_operations"
+        ],
+        "depends_on": [
+          "domain_14_satellite"
+        ]
+      },
+      "farm_brain_schema": [
+        "ndvi_delta_10d",
+        "scene_valid_pixel_pct",
+        "sat_advisory_confidence",
+        "current_stage",
+        "ndvi_mean"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "DERIVED",
+      "kannad_note": "In Kannad Sep-Oct, a sharp NDVI drop coincides with post-monsoon waterlogging risk more often than with disease. Do not skip the scout request in favour of a chemical recommendation — the standing water is not visible without the ground check.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D14-NV-005",
+      "category": "NV",
+      "priority": 3,
+      "severity": "yellow",
+      "stage": "G3",
+      "trigger": {
+        "english": "Plot NDVI is more than 0.10 below the peer cluster mean at the same DAP AND at least 3 peer plots contribute AND DAP is at least 60",
+        "marathi": "प्लॉट NDVI त्याच DAP वरील peer cluster mean पेक्षा ०.१० पेक्षा जास्त कमी आहे, किमान ३ peer plots मध्ये आहेत",
+        "expr": "plot_ndvi_gap_peer < -0.10 AND dap >= 60 AND sat_advisory_confidence >= 0.5",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Peer-cluster drift — this plot is behind its cluster. The peer baseline is stronger than the regional model because it controls for weather, soil zone, and variety. When only 1-2 peer plots contribute, PL rules suppress this signal.",
+        "golden_tests": [
+          {
+            "context": {
+              "plot_ndvi_gap_peer": -0.14,
+              "dap": 80,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "TRUE",
+            "label": "clear peer gap"
+          },
+          {
+            "context": {
+              "plot_ndvi_gap_peer": -0.06,
+              "dap": 80,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "FALSE",
+            "label": "small gap — noise"
+          },
+          {
+            "context": {
+              "plot_ndvi_gap_peer": -0.14,
+              "dap": 40,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "FALSE",
+            "label": "too early — peers not yet differentiated"
+          },
+          {
+            "context": {
+              "plot_ndvi_gap_peer": null,
+              "dap": 80,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "UNKNOWN",
+            "label": "peer baseline not built"
+          }
+        ]
+      },
+      "action": {
+        "english": "Open a plot-specific investigation. This plot is developing slower than its cluster peers. Likely causes in order of frequency: nitrogen shortfall (D04), waterlogging on this plot (D03), variety difference (D01), planting-date mismatch (D01). Cross-check the last farmer-reported input dates.",
+        "marathi": "प्लॉट-विशिष्ट तपासणी उघडा. हा प्लॉट cluster peers पेक्षा हळू विकसित होत आहे. वारंवारतेने: नत्र कमतरता (D04), पाणी साचणे (D03), वाणातील फरक (D01), लागवडीच्या तारखेतील फरक (D01). शेतकऱ्याने नोंदवलेल्या शेवटच्या तारखांची तपासणी करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Peer-cluster comparison neutralises weather, soil zone, and market-level variety effects. It isolates plot-specific management differences.",
+        "yield_impact": "Investigation_dispatched grouping.",
+        "confidence_score": 0.72,
+        "source_tier": "B",
+        "references": [
+          "RAW MASTER §9.1 baseline construction",
+          "Precision agriculture peer-benchmarking studies"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle",
+          "domain_3_water",
+          "domain_4_nutrient"
+        ],
+        "depends_on": [
+          "domain_14_satellite"
+        ]
+      },
+      "farm_brain_schema": [
+        "plot_ndvi_gap_peer",
+        "dap",
+        "sat_advisory_confidence",
+        "ndvi_mean",
+        "plot_ndvi_baseline_peer"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "DERIVED",
+      "kannad_note": "In Kannad the first commercial season likely has 5-10 farmer clusters; peer baselines mature by DAP 60. Do not fire before that day.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D14-NV-006",
+      "category": "NV",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G0",
+      "trigger": {
+        "english": "It is 5 to 30 days before planned planting AND plot NDVI exceeds the pre-plant bare-soil threshold",
+        "marathi": "नियोजित लागवडीच्या ५-३० दिवस आधी आणि प्लॉट NDVI pre-plant bare-soil मर्यादेपेक्षा जास्त आहे",
+        "expr": "days_to_planting BETWEEN 5 AND 30 AND ndvi_mean > 0.25 AND scene_valid_pixel_pct >= 60",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Pre-plant weed / residue check. A ginger G0 plot should be near bare soil. Green pixels mean a weed flush or uncleared previous-crop residue that will interfere with planting quality.",
+        "golden_tests": [
+          {
+            "context": {
+              "days_to_planting": 15,
+              "ndvi_mean": 0.32,
+              "scene_valid_pixel_pct": 72
+            },
+            "expect": "TRUE",
+            "label": "weed / residue flush before planting"
+          },
+          {
+            "context": {
+              "days_to_planting": 15,
+              "ndvi_mean": 0.18,
+              "scene_valid_pixel_pct": 72
+            },
+            "expect": "FALSE",
+            "label": "clean field — as expected"
+          },
+          {
+            "context": {
+              "days_to_planting": 45,
+              "ndvi_mean": 0.32,
+              "scene_valid_pixel_pct": 72
+            },
+            "expect": "FALSE",
+            "label": "too early to act"
+          },
+          {
+            "context": {
+              "days_to_planting": 15,
+              "ndvi_mean": 0.32,
+              "scene_valid_pixel_pct": 45
+            },
+            "expect": "FALSE",
+            "label": "scene not trusted"
+          }
+        ]
+      },
+      "action": {
+        "english": "Send an ADVISORY (not alarm) to the farmer: satellite view shows green vegetation on the plot 15-30 days before your planned planting. Verify — this is likely weed flush or uncleared residue. Land preparation instructions from D02 apply. If it is inter-crop cover (green manure being incorporated), no action is needed — reply to close the advisory.",
+        "marathi": "शेतकऱ्याला सूचना पाठवा (धोक्याची घंटा नाही): नियोजित लागवडीच्या १५-३० दिवस आधी उपग्रह दृश्यात प्लॉटवर हिरवी वनस्पती दिसते. तपासा — बहुधा तण किंवा मागील पिकाचे कचरे. D02 चे भूमी-तयारीचे सल्ले लागू. हिरवळीचे खत (green manure) मुद्दाम पेरले असेल तर कारवाईची गरज नाही — reply देऊन सूचना बंद करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Bare-soil NDVI in Kannad basaltic soils is 0.10-0.20. Anything above 0.25 in a supposedly bare plot has active vegetation.",
+        "yield_impact": "Land-preparation quality — grouped under D02 preparation compliance.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "RAW MASTER §4.2, §4.5",
+          "ISRO NRSC bare-soil reference"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil",
+          "domain_8_operations"
+        ],
+        "depends_on": [
+          "domain_14_satellite"
+        ]
+      },
+      "farm_brain_schema": [
+        "days_to_planting",
+        "ndvi_mean",
+        "scene_valid_pixel_pct"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "EST",
+      "kannad_note": "In Kannad, May pre-monsoon showers commonly trigger a 2-week weed flush right before planting; farmers who plough late without spraying carry the flush into the crop period. This rule catches it while there is time to act.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D14-NV-007",
+      "category": "NV",
+      "priority": 3,
+      "severity": "yellow",
+      "stage": "ALL",
+      "trigger": {
+        "english": "Plot NBR has dropped by 0.20 or more over the last 10 days AND scene is trusted",
+        "marathi": "प्लॉट NBR मागील १० दिवसांत ०.२० किंवा अधिक कमी झाले आहे",
+        "expr": "nbr_delta_10d <= -0.20 AND scene_valid_pixel_pct >= 60",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Residue burning detection. Ginger cultivation practice in Marathwada increasingly discourages residue burning; regulators may audit. A sudden NBR drop with a SWIR spike is the marker.",
+        "golden_tests": [
+          {
+            "context": {
+              "nbr_delta_10d": -0.25,
+              "scene_valid_pixel_pct": 72
+            },
+            "expect": "TRUE",
+            "label": "burn scar"
+          },
+          {
+            "context": {
+              "nbr_delta_10d": -0.1,
+              "scene_valid_pixel_pct": 72
+            },
+            "expect": "FALSE",
+            "label": "no burn"
+          },
+          {
+            "context": {
+              "nbr_delta_10d": -0.25,
+              "scene_valid_pixel_pct": 45
+            },
+            "expect": "FALSE",
+            "label": "scene not trusted"
+          }
+        ]
+      },
+      "action": {
+        "english": "Log a residue-burning-candidate event on the plot. Notify the operations team for verification. Do not display any punitive message to the farmer; this is compliance intelligence, not an accusation. False positives include intentional black plastic mulching, which needs a farmer confirmation reply.",
+        "marathi": "प्लॉटवर residue-burning-candidate घटना नोंदवा. संचालन टीमला पडताळणीसाठी कळवा. शेतकऱ्याला दंडात्मक संदेश दाखवू नका — ही अनुपालन-गुप्तवार्ता आहे, आरोप नाही. काळी पॉलिथिन आच्छादन असल्यास खोटा इशारा असू शकतो — शेतकऱ्याच्या पुष्टीने बंद करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Burnt residue reflects strongly in SWIR (B12) and weakly in NIR (B8), collapsing NBR. The signal is unambiguous for a real burn.",
+        "yield_impact": "Compliance-only. No direct yield mapping.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "Key & Benson 2006 NBR",
+          "RAW MASTER §4.1"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_14_satellite"
+        ]
+      },
+      "farm_brain_schema": [
+        "nbr_delta_10d",
+        "scene_valid_pixel_pct",
+        "nbr_mean"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Marathwada residue-burning enforcement is patchy but tightening under state pollution rules. Building the log now positions Agro-Guardian well when audit comes; misusing it as a farmer-facing accusation destroys trust.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D14-NR-001",
+      "category": "NR",
+      "priority": 4,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "A cloud-clear Sentinel-2 scene is received AND red-edge bands B5, B6, B7 are valid",
+        "marathi": "ढगमुक्त Sentinel-2 दृश्य आणि लाल-किनार बँड्स वैध",
+        "expr": "sat_source == 'sentinel-2' AND scene_valid_pixel_pct >= 60 AND plot_cloud_pct <= 15",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Computation trigger for NDRE and its 5-day slope. Populates ndre_mean and ndre_slope_5d. SILENT_GUARD — no message.",
+        "golden_tests": [
+          {
+            "context": {
+              "sat_source": "sentinel-2",
+              "scene_valid_pixel_pct": 72,
+              "plot_cloud_pct": 8
+            },
+            "expect": "TRUE",
+            "label": "compute NDRE"
+          },
+          {
+            "context": {
+              "sat_source": "sentinel-2",
+              "scene_valid_pixel_pct": 45,
+              "plot_cloud_pct": 8
+            },
+            "expect": "FALSE",
+            "label": "insufficient valid pixels"
+          },
+          {
+            "context": {
+              "sat_source": "sentinel-1",
+              "scene_valid_pixel_pct": 72,
+              "plot_cloud_pct": 8
+            },
+            "expect": "FALSE",
+            "label": "SAR doesn't produce NDRE"
+          }
+        ]
+      },
+      "action": {
+        "english": "Compute ndre_mean = (B8 - B5) / (B8 + B5) over valid pixels. Compute ndre_slope_5d as the slope of the last 5 days of NDRE values. Store both.",
+        "marathi": "ndre_mean = (B8 - B5) / (B8 + B5) वैध पिक्सेल्सवर मोजा. मागील ५ दिवसांतील NDRE मूल्यांवरून ndre_slope_5d मोजा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Red-edge stays sensitive to canopy chlorophyll well past the saturation point of NDVI (LAI ~ 3.5). Necessary for closed-canopy nitrogen work.",
+        "yield_impact": "Enables NR-002/003.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Gitelson & Merzlyak 1996",
+          "RAW MASTER §4"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "sat_source",
+        "scene_valid_pixel_pct",
+        "plot_cloud_pct",
+        "ndre_mean",
+        "ndre_slope_5d"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Ginger closes canopy around DAP 90; from that point NDRE becomes the useful nitrogen index rather than NDVI. Compute both anyway — they answer different questions.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-NR-002",
+      "category": "NR",
+      "priority": 3,
+      "severity": "yellow",
+      "stage": "G2",
+      "trigger": {
+        "english": "NDVI is rising in early G2 but NDRE slope is near-flat AND advisory confidence is at least 0.5",
+        "marathi": "लवकर G2 मध्ये NDVI वाढते आहे पण NDRE जवळजवळ सपाट आहे",
+        "expr": "current_stage == 'G2' AND dap BETWEEN 40 AND 80 AND ndvi_delta_10d > 0.05 AND ndre_slope_5d < 0.005 AND sat_advisory_confidence >= 0.5",
+        "expr_version": "dsl-1.0",
+        "expr_note": "The classic 'volume without quality' pattern — canopy expanding but chlorophyll thin. Suggests nitrogen shortfall being masked by increasing leaf area. Not a diagnosis; a flag for D04 to check.",
+        "golden_tests": [
+          {
+            "context": {
+              "current_stage": "G2",
+              "dap": 55,
+              "ndvi_delta_10d": 0.08,
+              "ndre_slope_5d": 0.002,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "TRUE",
+            "label": "N stress pattern"
+          },
+          {
+            "context": {
+              "current_stage": "G2",
+              "dap": 55,
+              "ndvi_delta_10d": 0.08,
+              "ndre_slope_5d": 0.012,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "FALSE",
+            "label": "both rising — healthy"
+          },
+          {
+            "context": {
+              "current_stage": "G3",
+              "dap": 100,
+              "ndvi_delta_10d": 0.08,
+              "ndre_slope_5d": 0.002,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "FALSE",
+            "label": "wrong stage"
+          }
+        ]
+      },
+      "action": {
+        "english": "Route to D04 nitrogen check. Do NOT prescribe a nitrogen top-dressing on satellite signal alone; D04 must confirm from soil-test-derived N budget and leaf tissue proxy. If confirmed, D04's own top-dressing rule fires.",
+        "marathi": "D04 नत्र तपासणीकडे पाठवा. फक्त उपग्रह सिग्नलवर वरखत शिफारस करू नका; D04 ने माती-परीक्षणावर आधारित N अर्थसंकल्प व पर्ण-ऊतक प्रतिनिधीने पुष्टी करावी. पुष्टी झाल्यास D04 चा स्वतःचा top-dressing नियम कार्यरत होतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "Ginger's canopy expansion in early G2 can outrun N supply, giving a large but thin canopy. NDVI/NDRE divergence is the recognised satellite signature.",
+        "yield_impact": "Under D04 nitrogen u-value grouping.",
+        "confidence_score": 0.7,
+        "source_tier": "B",
+        "references": [
+          "ICAR-IISS Bhopal red-edge nitrogen studies",
+          "RAW MASTER §4.4, §8.3"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient"
+        ],
+        "depends_on": [
+          "domain_14_satellite"
+        ]
+      },
+      "farm_brain_schema": [
+        "current_stage",
+        "dap",
+        "ndvi_delta_10d",
+        "ndre_slope_5d",
+        "sat_advisory_confidence",
+        "ndre_mean",
+        "ndvi_mean"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "EST",
+      "kannad_note": "In Kannad the pattern shows up around 8-10 weeks after planting on plots that skipped a first top-dressing or where the split doses got compressed by weather. Do not recommend urea from the sky; D04 does the honest budget.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D14-NR-003",
+      "category": "NR",
+      "priority": 3,
+      "severity": "yellow",
+      "stage": "G3",
+      "trigger": {
+        "english": "NDRE is 0.10 or more below the regional baseline in closed-canopy stage AND advisory confidence is at least 0.5",
+        "marathi": "बंद पर्णसमूह अवस्थेत NDRE regional baseline पेक्षा ०.१० किंवा अधिक कमी",
+        "expr": "current_stage IN [G3, G4] AND plot_ndre_gap_regional < -0.10 AND sat_advisory_confidence >= 0.5",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Closed-canopy NDRE gap. When NDVI has saturated, NDRE is the cleaner nitrogen signal. This rule fires after NV rules stop being sensitive.",
+        "golden_tests": [
+          {
+            "context": {
+              "current_stage": "G3",
+              "sat_advisory_confidence": 0.85,
+              "plot_ndre_gap_regional": -0.13
+            },
+            "expect": "TRUE",
+            "label": "clear closed-canopy NDRE gap"
+          },
+          {
+            "context": {
+              "current_stage": "G3",
+              "sat_advisory_confidence": 0.85,
+              "plot_ndre_gap_regional": -0.05
+            },
+            "expect": "FALSE",
+            "label": "small gap"
+          },
+          {
+            "context": {
+              "current_stage": "G2",
+              "sat_advisory_confidence": 0.85,
+              "plot_ndre_gap_regional": -0.12
+            },
+            "expect": "FALSE",
+            "label": "early stage — different rule NR-002"
+          }
+        ]
+      },
+      "action": {
+        "english": "Route to D04 nitrogen check with 'closed-canopy NDRE gap' as the reason code. Same D04-authoritative discipline as NR-002.",
+        "marathi": "D04 नत्र तपासणीकडे 'closed-canopy NDRE gap' कारणासह पाठवा. NR-002 प्रमाणेच D04 प्राधिकरण."
+      },
+      "reasoning": {
+        "agronomic_basis": "Once LAI passes ~3.5 the NDVI saturation floor makes NDRE the only satellite channel with meaningful nitrogen sensitivity.",
+        "yield_impact": "Under D04 nitrogen u-value grouping.",
+        "confidence_score": 0.68,
+        "source_tier": "B",
+        "references": [
+          "Fitzgerald et al. 2010",
+          "ICAR-IISS Bhopal red-edge studies"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient"
+        ],
+        "depends_on": [
+          "domain_14_satellite"
+        ]
+      },
+      "farm_brain_schema": [
+        "current_stage",
+        "plot_ndre_baseline_regional",
+        "ndre_mean",
+        "sat_advisory_confidence",
+        "plot_ndre_gap_regional"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "EST",
+      "kannad_note": "The regional NDRE baseline for Kannad ginger is another Phase-1 estimate; season-1 log elevates it. Rule fires but confidence stays around 0.7 until then.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D14-NM-001",
+      "category": "NM",
+      "priority": 4,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "A cloud-clear Sentinel-2 scene is received AND B11 SWIR is valid",
+        "marathi": "ढगमुक्त Sentinel-2 दृश्य आणि B11 SWIR बँड वैध",
+        "expr": "sat_source == 'sentinel-2' AND scene_valid_pixel_pct >= 60 AND plot_cloud_pct <= 15",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Computation trigger for NDMI and its 10-day delta. SILENT_GUARD.",
+        "golden_tests": [
+          {
+            "context": {
+              "sat_source": "sentinel-2",
+              "scene_valid_pixel_pct": 72,
+              "plot_cloud_pct": 8
+            },
+            "expect": "TRUE",
+            "label": "compute NDMI"
+          },
+          {
+            "context": {
+              "sat_source": "sentinel-2",
+              "scene_valid_pixel_pct": 45,
+              "plot_cloud_pct": 8
+            },
+            "expect": "FALSE",
+            "label": "insufficient"
+          }
+        ]
+      },
+      "action": {
+        "english": "Compute ndmi_mean = (B8 - B11) / (B8 + B11). Compute ndmi_delta_10d against value from ten days ago.",
+        "marathi": "ndmi_mean = (B8 - B11) / (B8 + B11) मोजा. १० दिवसांपूर्वीच्या मूल्याच्या तुलनेत ndmi_delta_10d नोंदवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "NDMI is the reflectance-side canopy moisture indicator and is available every cloud-clear Sentinel-2 scene, unlike CWSI which needs Landsat thermal timing.",
+        "yield_impact": "Enables NM-002/003.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "Gao 1996",
+          "RAW MASTER §4.1, §7.5"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "sat_source",
+        "scene_valid_pixel_pct",
+        "plot_cloud_pct",
+        "ndmi_mean",
+        "ndmi_delta_10d"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "In Kannad's dry Feb-May months NDMI runs low across all plots; use the delta not the absolute value for stress detection.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-NM-002",
+      "category": "NM",
+      "priority": 3,
+      "severity": "yellow",
+      "stage": "G3",
+      "trigger": {
+        "english": "NDMI has dropped 0.10 or more over 10 days AND sub-node moisture reads adequate AND advisory confidence is at least 0.5",
+        "marathi": "NDMI १० दिवसांत ०.१० किंवा अधिक कमी झाले परंतु सब-नोड मृदा-ओलावा पुरेसा दाखवत आहे",
+        "expr": "ndmi_delta_10d <= -0.10 AND sub_node_moisture_status == 'adequate' AND sat_advisory_confidence >= 0.5 AND STAGE IN [G2, G3, G4]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "The canonical non-water stress signal — leaves are drying while soil is wet. Suggests non-water problem: pest, root damage, drip system clogged so leaves signal stress the sub-node doesn't see. Investigation, not treatment.",
+        "golden_tests": [
+          {
+            "context": {
+              "ndmi_delta_10d": -0.12,
+              "sub_node_moisture_status": "adequate",
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "TRUE",
+            "label": "leaves dry, soil wet — non-water stress"
+          },
+          {
+            "context": {
+              "ndmi_delta_10d": -0.12,
+              "sub_node_moisture_status": "low",
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "normal water stress — different rule"
+          },
+          {
+            "context": {
+              "ndmi_delta_10d": -0.05,
+              "sub_node_moisture_status": "adequate",
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "small change"
+          },
+          {
+            "context": {
+              "ndmi_delta_10d": -0.12,
+              "sub_node_moisture_status": "stale",
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "sub-node stale — different rule FU-004"
+          }
+        ]
+      },
+      "action": {
+        "english": "Open a plot-specific investigation. Likely non-water causes: (1) drip line partly blocked or emitter uneven — check flow at 3 points; (2) pest — check root and stem base; (3) root damage from tillage. Do NOT increase irrigation on this signal alone.",
+        "marathi": "प्लॉट-विशिष्ट तपासणी उघडा. संभाव्य पाणी-नसलेली कारणे: (१) ठिबक अंशतः बंद किंवा emitter असमान — ३ ठिकाणी flow तपासा; (२) कीड — मूळ व खोड-आधार तपासा; (३) मशागतीमुळे मूळ इजा. फक्त या सिग्नलवर सिंचन वाढवू नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "NDMI drop with adequate root-zone moisture is definitionally not a water shortage. The signal is real but the cause is something else — Section 10 case A.",
+        "yield_impact": "Investigation_dispatched.",
+        "confidence_score": 0.72,
+        "source_tier": "B",
+        "references": [
+          "RAW MASTER §7.5, §10.2 case A"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_5_pest",
+          "domain_8_operations"
+        ],
+        "depends_on": [
+          "domain_14_satellite",
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "ndmi_delta_10d",
+        "sub_node_moisture_status",
+        "sat_advisory_confidence",
+        "current_stage",
+        "ndmi_mean"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "DERIVED",
+      "kannad_note": "Drip clogging in Kannad basaltic soils is the most common culprit for this pattern in G3-G4. Farmers who irrigate more when the leaves droop make the drip problem worse — this rule catches it before that mistake.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D14-NM-003",
+      "category": "NM",
+      "priority": 2,
+      "severity": "info",
+      "stage": "G3",
+      "trigger": {
+        "english": "NDMI has dropped 0.10 or more over 10 days AND sub-node moisture reads low AND advisory confidence is at least 0.5",
+        "marathi": "NDMI १० दिवसांत ०.१० किंवा अधिक कमी आणि सब-नोड मृदा-ओलावा कमी",
+        "expr": "ndmi_delta_10d <= -0.10 AND sub_node_moisture_status == 'low' AND sat_advisory_confidence >= 0.5 AND STAGE IN [G2, G3, G4]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "High-confidence water stress: both satellite and sub-node agree. Adds evidence to the D03 irrigation decision. BUNDLES with the D03 rule already in force — one message, not two.",
+        "golden_tests": [
+          {
+            "context": {
+              "ndmi_delta_10d": -0.12,
+              "sub_node_moisture_status": "low",
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "TRUE",
+            "label": "double signal — water stress"
+          },
+          {
+            "context": {
+              "ndmi_delta_10d": -0.12,
+              "sub_node_moisture_status": "adequate",
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "handled by NM-002"
+          },
+          {
+            "context": {
+              "ndmi_delta_10d": -0.05,
+              "sub_node_moisture_status": "low",
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "small NDMI change"
+          }
+        ]
+      },
+      "action": {
+        "english": "Do not emit a separate message. Contribute a confidence-tag ('canopy_moisture_confirms') to whichever D03 irrigation rule is currently active for this plot. This upgrades D03's own alert from moderate to strong confidence. If no D03 rule is currently active, log a tag for the next one that fires.",
+        "marathi": "स्वतंत्र संदेश देऊ नका. सध्या सक्रिय असलेल्या D03 सिंचन नियमाला 'canopy_moisture_confirms' हा confidence-tag जोडा. D03 चा सल्ला मध्यम पासून प्रबळ विश्वासाला वाढवा. D03 चा कोणताही नियम सध्या सक्रिय नसल्यास पुढच्यासाठी tag नोंदवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Section 10 case C — both signals agree. The canonical high-confidence green flag for the sub-node's water shortage story.",
+        "yield_impact": "Confidence increment on existing D03 rule; no separate u-value.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "RAW MASTER §10.2 case C",
+          "Domain 3 irrigation rules"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water"
+        ],
+        "depends_on": [
+          "domain_14_satellite",
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "ndmi_delta_10d",
+        "sub_node_moisture_status",
+        "sat_advisory_confidence",
+        "current_stage",
+        "ndmi_mean"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "DERIVED",
+      "kannad_note": "This is where satellite genuinely adds value — confirming what the sub-node already saw. The message stays with D03; the confidence bump is invisible to the farmer but shows up as a stronger recommendation.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-SR-001",
+      "category": "SR",
+      "priority": 4,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "A Sentinel-1 GRD scene is received for the plot polygon",
+        "marathi": "प्लॉट polygon साठी Sentinel-1 GRD दृश्य प्राप्त",
+        "expr": "sat_source == 'sentinel-1' AND sar_gap_days IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Computation trigger. Populates sar_vv_db, sar_vh_db, sar_rvi, sar_vv_delta_db, sar_coherence.",
+        "golden_tests": [
+          {
+            "context": {
+              "sat_source": "sentinel-1",
+              "sar_gap_days": 3
+            },
+            "expect": "TRUE",
+            "label": "SAR scene arrived"
+          },
+          {
+            "context": {
+              "sat_source": "sentinel-2",
+              "sar_gap_days": 3
+            },
+            "expect": "FALSE",
+            "label": "optical scene — different pipeline"
+          },
+          {
+            "context": {
+              "sat_source": "sentinel-1",
+              "sar_gap_days": null
+            },
+            "expect": "FALSE",
+            "label": "gap unknown"
+          }
+        ]
+      },
+      "action": {
+        "english": "Run the standard SNAP or Sentinel-Hub chain (orbit, noise removal, calibration, terrain flattening, speckle filter, terrain correction, multi-look over polygon). Store sigma-nought values, compute RVI, delta_vv, and coherence against the last acquisition from the same relative orbit.",
+        "marathi": "मानक SNAP किंवा Sentinel-Hub साखळी चालवा. सिग्मा-नॉट मूल्ये साठवा; RVI, delta_vv, आणि coherence त्याच relative orbit च्या मागील acquisition विरुद्ध मोजा."
+      },
+      "reasoning": {
+        "agronomic_basis": "SAR is monsoon-primary for Kannad ginger — it is the only satellite signal available with reasonable frequency in Jul-Aug when optical is blinded.",
+        "yield_impact": "Enables all SR rules and the monsoon SAR-only mode PL-001.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "ESA Sentinel-1 handbook",
+          "RAW MASTER §6"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_6_disease",
+          "domain_9_harvest"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "sat_source",
+        "sar_gap_days",
+        "sar_vv_db",
+        "sar_vh_db",
+        "sar_rvi",
+        "sar_vv_delta_db",
+        "sar_coherence"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Kannad falls in Sentinel-1 relative orbits 92 (ascending) and 165 (descending); both give data. Do not mix the two in delta_vv or coherence — the look angles differ.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-SR-002",
+      "category": "SR",
+      "priority": 5,
+      "severity": "red",
+      "stage": "ALL",
+      "trigger": {
+        "english": "SAR VV has dropped by more than 4 dB against the previous same-orbit acquisition AND rainfall event exists in the last 48 hours",
+        "marathi": "SAR VV त्याच orbit च्या मागील acquisition विरुद्ध ४ dB पेक्षा जास्त घसरले आणि मागील ४८ तासांत पाऊस झाला",
+        "expr": "sar_vv_delta_db < -4.0 AND rainfall_last_48h_mm > 20 AND sar_gap_days <= 12",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Standing water signature. VV drops sharply over water because it becomes specular. Combined with a recent heavy rainfall event, this points at drainage failure. Optical-independent — this rule works in monsoon cloud cover.",
+        "golden_tests": [
+          {
+            "context": {
+              "sar_vv_delta_db": -5.5,
+              "rainfall_last_48h_mm": 45,
+              "sar_gap_days": 6
+            },
+            "expect": "TRUE",
+            "label": "drainage failure suspected"
+          },
+          {
+            "context": {
+              "sar_vv_delta_db": -5.5,
+              "rainfall_last_48h_mm": 5,
+              "sar_gap_days": 6
+            },
+            "expect": "FALSE",
+            "label": "VV drop without rain — likely other cause"
+          },
+          {
+            "context": {
+              "sar_vv_delta_db": -2.0,
+              "rainfall_last_48h_mm": 45,
+              "sar_gap_days": 6
+            },
+            "expect": "FALSE",
+            "label": "VV drop within noise band"
+          },
+          {
+            "context": {
+              "sar_vv_delta_db": -5.5,
+              "rainfall_last_48h_mm": 45,
+              "sar_gap_days": 20
+            },
+            "expect": "FALSE",
+            "label": "SAR too stale for reliable delta"
+          }
+        ]
+      },
+      "action": {
+        "english": "Send an URGENT alert to the farmer: satellite radar shows probable standing water on the plot after the recent rain. Inspect drainage channels and remove blockages today. Ginger cannot tolerate more than 24 hours of waterlogging without rhizome damage. If sub-node is available, it will confirm; if it is not (monsoon LoRa fade common), do not wait for confirmation to act.",
+        "marathi": "शेतकऱ्याला URGENT इशारा पाठवा: नुकत्याच झालेल्या पावसानंतर उपग्रह रडार दाखवत आहे प्लॉटवर पाणी साचले आहे. आजच निचरा नाल्यांची तपासणी करा व अडथळे काढा. आले २४ तासांपेक्षा जास्त पाण्यात राहू शकत नाही — गड्ड्याला इजा होते. सब-नोड उपलब्ध असल्यास पुष्टी देईल; नसल्यास (मान्सूनमध्ये LoRa fade सामान्य) पुष्टीची वाट पाहू नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "Water is specular at C-band, causing near-total backscatter loss. A 4 dB drop is well outside speckle noise. See RAW MASTER §6.6 caveats.",
+        "yield_impact": "Waterlogging in G2-G4 for 48+ hours cuts yield 10-25% depending on stage; D06 has the drainage-failure branch.",
+        "confidence_score": 0.78,
+        "source_tier": "A",
+        "references": [
+          "Torres et al. 2012 Sentinel-1 mission",
+          "Small 2011",
+          "ICAR-CRIDA drainage studies",
+          "RAW MASTER §6.3, §6.6"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_14_satellite",
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "sar_vv_delta_db",
+        "rainfall_last_48h_mm",
+        "sar_gap_days",
+        "sar_vv_db"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "DERIVED",
+      "kannad_note": "Kannad's Sep-Oct cyclonic rainfall events are the most common trigger of this rule. Farmers often assume the field 'drained overnight' because the surface looks dry; the SAR sees standing water hidden in furrows for 2-3 days. This is one of the highest-value satellite signals for this crop.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D14-SR-003",
+      "category": "SR",
+      "priority": 3,
+      "severity": "info",
+      "stage": "G4",
+      "trigger": {
+        "english": "SAR coherence between the last two same-orbit acquisitions has dropped below 0.4 AND stage is G4 or later AND rainfall in the last 48 hours is under 20 mm",
+        "marathi": "मागील दोन SAR acquisitions मधील coherence ०.४ पेक्षा कमी झाले आणि अवस्था G4 पुढे व अलीकडे मोठा पाऊस नाही",
+        "expr": "sar_coherence < 0.4 AND STAGE IN [G4, G5] AND rainfall_last_48h_mm < 20 AND sar_gap_days <= 12",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Coherence loss in late stages without a rain event points at either harvest activity or major mechanical disturbance. Purely informational — the farmer knows if they are harvesting; the platform is logging.",
+        "golden_tests": [
+          {
+            "context": {
+              "sar_coherence": 0.25,
+              "current_stage": "G5",
+              "rainfall_last_48h_mm": 5,
+              "sar_gap_days": 6
+            },
+            "expect": "TRUE",
+            "label": "probable harvest activity"
+          },
+          {
+            "context": {
+              "sar_coherence": 0.25,
+              "current_stage": "G3",
+              "rainfall_last_48h_mm": 5,
+              "sar_gap_days": 6
+            },
+            "expect": "FALSE",
+            "label": "wrong stage"
+          },
+          {
+            "context": {
+              "sar_coherence": 0.25,
+              "current_stage": "G5",
+              "rainfall_last_48h_mm": 45,
+              "sar_gap_days": 6
+            },
+            "expect": "FALSE",
+            "label": "rain explains it"
+          },
+          {
+            "context": {
+              "sar_coherence": 0.75,
+              "current_stage": "G5",
+              "rainfall_last_48h_mm": 5,
+              "sar_gap_days": 6
+            },
+            "expect": "FALSE",
+            "label": "high coherence — no change"
+          }
+        ]
+      },
+      "action": {
+        "english": "Log a probable-harvest event on the plot. Prompt the farmer (LOW priority, EVENT delivery) to confirm the harvest date and record yield if actually harvested. If not harvesting, ask what mechanical activity happened — the operations team may want to know.",
+        "marathi": "प्लॉटवर संभाव्य काढणी घटना नोंदवा. शेतकऱ्याला LOW priority ने विचारा — काढणी सुरू आहे का, तारीख व उत्पन्न नोंदवा. काढणी नसेल तर काय यांत्रिक क्रिया झाली विचारा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Coherence between two same-orbit acquisitions falls when the scattering surface changes. Harvest of a ginger plot is one such change; so is deep tillage or heavy foot traffic.",
+        "yield_impact": "Compliance and yield-tracking data collection. No direct treatment.",
+        "confidence_score": 0.68,
+        "source_tier": "B",
+        "references": [
+          "Bamler & Hartl 1998 InSAR coherence",
+          "RAW MASTER §6.5"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_9_harvest",
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_14_satellite"
+        ]
+      },
+      "farm_brain_schema": [
+        "sar_coherence",
+        "current_stage",
+        "rainfall_last_48h_mm",
+        "sar_gap_days"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Kannad ginger is harvested Jan-Feb; SAR coherence loss on a G4/G5 plot in that window is very likely the actual harvest and useful for the season-close reconciliation with the farmer's reported date.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D14-SR-004",
+      "category": "SR",
+      "priority": 2,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "SAR VV delta exceeds ±2 dB between two consecutive same-orbit acquisitions AND rainfall in the same window is at least 10 mm",
+        "marathi": "दोन एकाच orbit च्या SAR acquisitions मध्ये VV बदल २ dB पेक्षा जास्त आणि त्याच काळात पाऊस १० mm पेक्षा जास्त",
+        "expr": "(sar_vv_delta_db > 2.0 OR sar_vv_delta_db < -2.0) AND rainfall_last_48h_mm >= 10 AND sar_gap_days <= 12",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Rainfall-on-plot confirmation, useful when the cluster station missed the event. SILENT_GUARD — just annotates rainfall_last_48h_mm with a 'confirmed_by_sar' tag.",
+        "golden_tests": [
+          {
+            "context": {
+              "sar_vv_delta_db": 3.5,
+              "rainfall_last_48h_mm": 25,
+              "sar_gap_days": 6
+            },
+            "expect": "TRUE",
+            "label": "clear wetting event"
+          },
+          {
+            "context": {
+              "sar_vv_delta_db": -3.0,
+              "rainfall_last_48h_mm": 15,
+              "sar_gap_days": 6
+            },
+            "expect": "TRUE",
+            "label": "drying event after rain"
+          },
+          {
+            "context": {
+              "sar_vv_delta_db": 1.5,
+              "rainfall_last_48h_mm": 25,
+              "sar_gap_days": 6
+            },
+            "expect": "FALSE",
+            "label": "within noise"
+          }
+        ]
+      },
+      "action": {
+        "english": "Tag rainfall_last_48h_mm with confidence flag 'confirmed_by_sar'. No message. This upgrades D07's forecast bias record with an in-situ confirmation, useful for BC series over time.",
+        "marathi": "rainfall_last_48h_mm ला 'confirmed_by_sar' विश्वास ध्वज जोडा. संदेश नाही. D07 चा forecast bias रेकॉर्ड यामुळे अधिक अचूक बनतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "The cluster weather station covers ~1-2 km reliably; convective monsoon cells can land on one plot and miss the station.",
+        "yield_impact": "Bias-correction data quality; indirect.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "RAW MASTER §6.3",
+          "Domain 7 BC series"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_7_weather"
+        ],
+        "depends_on": [
+          "domain_14_satellite"
+        ]
+      },
+      "farm_brain_schema": [
+        "sar_vv_delta_db",
+        "rainfall_last_48h_mm",
+        "sar_gap_days"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "In Kannad's Sep-Oct cyclonic rain regime the station-to-plot mismatch is common; this rule turns the SAR into a cheap plot-level rain gauge check.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-SR-005",
+      "category": "SR",
+      "priority": 3,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "Optical gap has exceeded 14 days AND a Sentinel-1 acquisition is fresh (sar_gap_days at most 6)",
+        "marathi": "optical_gap_days १४ पेक्षा जास्त आणि Sentinel-1 acquisition ताजे (sar_gap_days जास्तीत जास्त ६)",
+        "expr": "optical_gap_days > 14 AND sar_gap_days <= 6",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Switch the plot into SAR-only advisory mode. NV/NR/NM/AN rules that depend on optical indices downgrade or suspend; SR rules become the primary satellite input.",
+        "golden_tests": [
+          {
+            "context": {
+              "optical_gap_days": 18,
+              "sar_gap_days": 5
+            },
+            "expect": "TRUE",
+            "label": "monsoon SAR-only mode"
+          },
+          {
+            "context": {
+              "optical_gap_days": 8,
+              "sar_gap_days": 5
+            },
+            "expect": "FALSE",
+            "label": "optical still fresh enough"
+          },
+          {
+            "context": {
+              "optical_gap_days": 18,
+              "sar_gap_days": 15
+            },
+            "expect": "FALSE",
+            "label": "both stale — different rule PL-002"
+          }
+        ]
+      },
+      "action": {
+        "english": "Set operating mode to SAR_ONLY for this plot. Suppress NV-003/004/005, NR-002/003, NM-002/003 for the duration. Continue SR-001 through SR-004. Reset when optical_gap_days drops below 10.",
+        "marathi": "प्लॉटला SAR_ONLY मोडमध्ये ठेवा. NV-003/004/005, NR-002/003, NM-002/003 तात्पुरते बंद करा. SR-001 ते SR-004 चालू ठेवा. optical_gap_days १० पेक्षा कमी झाल्यावर सामान्य मोडवर परत या."
+      },
+      "reasoning": {
+        "agronomic_basis": "Kannad Jul-Aug delivers exactly this pattern for weeks at a time; ignoring it produces stale-optical false alarms.",
+        "yield_impact": "Prevents false-alarm-driven interventions.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "RAW MASTER §3.2, §12.4"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_14_satellite"
+        ],
+        "depends_on": [
+          "domain_14_satellite"
+        ]
+      },
+      "farm_brain_schema": [
+        "optical_gap_days",
+        "sar_gap_days"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "The Kannad ginger crop lives most of its high-stress period under monsoon cloud. Building the rule engine to work in SAR-only mode for weeks was a design goal, not an afterthought.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-LT-001",
+      "category": "LT",
+      "priority": 4,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "A Landsat-8 or Landsat-9 Collection-2 Level-2 ST band scene is received AND cluster air temperature is present",
+        "marathi": "Landsat-8/9 ST band scene प्राप्त आणि क्लस्टर हवा तापमान उपलब्ध",
+        "expr": "sat_source IN ['landsat-8', 'landsat-9'] AND air_temp_max_c IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Compute LST and CWSI. LST is directly available in Collection-2 Level-2. CWSI needs T_canopy − T_air normalisation with VPD-dependent baselines; use literature bands per Section 7 until Kannad-calibrated values exist.",
+        "golden_tests": [
+          {
+            "context": {
+              "sat_source": "landsat-9",
+              "air_temp_max_c": 32
+            },
+            "expect": "TRUE",
+            "label": "compute LST + CWSI"
+          },
+          {
+            "context": {
+              "sat_source": "sentinel-2",
+              "air_temp_max_c": 32
+            },
+            "expect": "FALSE",
+            "label": "wrong sensor"
+          },
+          {
+            "context": {
+              "sat_source": "landsat-9",
+              "air_temp_max_c": null
+            },
+            "expect": "FALSE",
+            "label": "missing air temperature"
+          }
+        ]
+      },
+      "action": {
+        "english": "Store lst_c from the ST band. Compute CWSI using Idso formulation with author-estimated wet/dry baselines. Log baseline set version. CWSI values above 1.0 or below 0 are clipped to [0,1].",
+        "marathi": "ST band वरून lst_c साठवा. Idso सूत्राने CWSI मोजा — Phase-1 च्या तात्पुरत्या baselines सह. baseline सेट आवृत्ती log करा. [०,१] बाहेरील मूल्ये clip करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Landsat is currently the only free thermal at 100 m; MODIS at 1 km is too coarse. The 8-day combined revisit is thin but acceptable as confirmation channel.",
+        "yield_impact": "Enables LT-002/003.",
+        "confidence_score": 0.75,
+        "source_tier": "A",
+        "references": [
+          "USGS Landsat Collection-2 Level-2 documentation",
+          "Idso et al. 1981",
+          "RAW MASTER §7"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "sat_source",
+        "air_temp_max_c",
+        "lst_c",
+        "cwsi"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Kannad summer Landsat overpass ~10:30 IST is earlier than peak stress; the CWSI value under-detects afternoon stress. Interpret with this in mind; do not push the rule into replacing the sub-node.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-LT-002",
+      "category": "LT",
+      "priority": 3,
+      "severity": "yellow",
+      "stage": "G3",
+      "trigger": {
+        "english": "CWSI is above 0.60 AND sub-node moisture reads adequate AND advisory confidence is at least 0.5",
+        "marathi": "CWSI ०.६० पेक्षा जास्त आणि सब-नोड मृदा-ओलावा पुरेसा",
+        "expr": "cwsi > 0.60 AND sub_node_moisture_status == 'adequate' AND sat_advisory_confidence >= 0.5 AND STAGE IN [G2, G3, G4]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Severe canopy transpiration stress with wet soil — same non-water diagnostic branch as NM-002 but confirmed thermally. Opens the same investigation.",
+        "golden_tests": [
+          {
+            "context": {
+              "cwsi": 0.72,
+              "sub_node_moisture_status": "adequate",
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "TRUE",
+            "label": "thermal non-water stress"
+          },
+          {
+            "context": {
+              "cwsi": 0.72,
+              "sub_node_moisture_status": "low",
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "confirms water stress — LT-003"
+          },
+          {
+            "context": {
+              "cwsi": 0.35,
+              "sub_node_moisture_status": "adequate",
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "mild stress only"
+          }
+        ]
+      },
+      "action": {
+        "english": "Open non-water investigation, same branch as NM-002. If NM-002 has already opened one for this plot in the last 5 days, do NOT open a second — link the CWSI evidence to the existing task.",
+        "marathi": "NM-002 प्रमाणेच पाणी-नसलेली तपासणी उघडा. मागील ५ दिवसांत NM-002 ने आधीच task उघडलेला असल्यास नवीन उघडू नका — CWSI पुरावा त्या विद्यमान task ला जोडा."
+      },
+      "reasoning": {
+        "agronomic_basis": "CWSI > 0.6 with wet soil is thermodynamically strong evidence of non-water stress. Section 10 case A confirmed thermally.",
+        "yield_impact": "Under NM-002 investigation grouping.",
+        "confidence_score": 0.72,
+        "source_tier": "B",
+        "references": [
+          "Idso et al. 1981",
+          "RAW MASTER §7.3, §7.5, §10.2 case A"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_5_pest",
+          "domain_8_operations"
+        ],
+        "depends_on": [
+          "domain_14_satellite",
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "cwsi",
+        "sub_node_moisture_status",
+        "sat_advisory_confidence",
+        "current_stage",
+        "lst_c"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "EST",
+      "kannad_note": "In Kannad's summer peak, plot-scale CWSI often runs 0.5-0.7 for reasons of atmospheric noise more than plant stress; the sub-node check is not optional here.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D14-LT-003",
+      "category": "LT",
+      "priority": 2,
+      "severity": "info",
+      "stage": "G3",
+      "trigger": {
+        "english": "CWSI is above 0.60 AND sub-node moisture reads low AND advisory confidence is at least 0.5",
+        "marathi": "CWSI ०.६० पेक्षा जास्त आणि सब-नोड मृदा-ओलावा कमी",
+        "expr": "cwsi > 0.60 AND sub_node_moisture_status == 'low' AND sat_advisory_confidence >= 0.5 AND STAGE IN [G2, G3, G4]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Thermal confirmation of water stress. BUNDLES with the D03 irrigation rule; contributes a confidence tag rather than a separate message.",
+        "golden_tests": [
+          {
+            "context": {
+              "cwsi": 0.72,
+              "sub_node_moisture_status": "low",
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "TRUE",
+            "label": "thermal confirms water stress"
+          },
+          {
+            "context": {
+              "cwsi": 0.35,
+              "sub_node_moisture_status": "low",
+              "sat_advisory_confidence": 0.85,
+              "current_stage": "G3"
+            },
+            "expect": "FALSE",
+            "label": "mild thermal"
+          }
+        ]
+      },
+      "action": {
+        "english": "Tag active D03 irrigation rule with 'thermal_confirms'. Do not emit separate message.",
+        "marathi": "सक्रिय D03 सिंचन नियमाला 'thermal_confirms' tag जोडा. वेगळा संदेश देऊ नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "Section 10 case C confirmed thermally. Both sub-node moisture and canopy transpiration signal the same water shortage; thermal confirmation raises D03's own irrigation rule from moderate to strong confidence. This is the archetypal high-confidence green flag for a real water stress episode.",
+        "yield_impact": "Confidence increment.",
+        "confidence_score": 0.78,
+        "source_tier": "B",
+        "references": [
+          "RAW MASTER §10.2 case C"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water"
+        ],
+        "depends_on": [
+          "domain_14_satellite",
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "cwsi",
+        "sub_node_moisture_status",
+        "sat_advisory_confidence",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "DERIVED",
+      "kannad_note": "This rule silently strengthens D03 advisories without adding to farmer message count.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-PH-001",
+      "category": "PH",
+      "priority": 3,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "The plot has at least 8 NDVI observations across the season AND DAP is at least 60",
+        "marathi": "प्लॉटवर हंगामात किमान ८ NDVI निरीक्षणे उपलब्ध व DAP किमान ६०",
+        "expr": "dap >= 60 AND ndvi_freshness_days <= 20",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Curve-fit trigger. Fits double-logistic (Zhang et al. 2003) to the plot's NDVI time series and stores estimated stage-transition dates.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 75,
+              "ndvi_freshness_days": 6
+            },
+            "expect": "TRUE",
+            "label": "sufficient observations — fit"
+          },
+          {
+            "context": {
+              "dap": 40,
+              "ndvi_freshness_days": 6
+            },
+            "expect": "FALSE",
+            "label": "too early"
+          },
+          {
+            "context": {
+              "dap": 75,
+              "ndvi_freshness_days": 25
+            },
+            "expect": "FALSE",
+            "label": "too stale to fit"
+          }
+        ]
+      },
+      "action": {
+        "english": "Fit double-logistic to NDVI series with 4 parameters (greenup mid, senescence mid, amplitude, background). Store fitted stage-transition dates for cross-check against DAP-driven stage.",
+        "marathi": "NDVI मालिकेवर ४-पॅरामीटर double-logistic fit करा (greenup mid, senescence mid, amplitude, background). DAP-आधारित अवस्थेच्या तुलनेसाठी fit केलेल्या अवस्था-संक्रमण तारखा साठवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Curve fit gives a phenology view independent of farmer-reported planting date; catches planting-date misreports.",
+        "yield_impact": "Enables PH-002.",
+        "confidence_score": 0.75,
+        "source_tier": "A",
+        "references": [
+          "Zhang et al. 2003",
+          "RAW MASTER §8.2"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle"
+        ],
+        "depends_on": [
+          "domain_14_satellite"
+        ]
+      },
+      "farm_brain_schema": [
+        "dap",
+        "ndvi_freshness_days",
+        "ndvi_mean"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "For Kannad's May-15 to Jun-15 planting window, PH-001 becomes ready by mid-August, exactly when farmers most need a stage-check.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-PH-002",
+      "category": "PH",
+      "priority": 3,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "Curve-fit-estimated stage differs from DAP-derived stage by at least one step",
+        "marathi": "curve-fit वरून काढलेली अवस्था DAP वरून काढलेल्या अवस्थेपेक्षा किमान एक step ने वेगळी आहे",
+        "expr": "dap >= 60 AND ndvi_freshness_days <= 20",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Stage cross-check. If the satellite says G2 but DAP says G3, the planting date on record may be wrong, OR the crop is genuinely behind. Both cases require verification.",
+        "golden_tests": [
+          {
+            "context": {
+              "dap": 100,
+              "ndvi_freshness_days": 6
+            },
+            "expect": "TRUE",
+            "label": "cross-check due"
+          },
+          {
+            "context": {
+              "dap": 50,
+              "ndvi_freshness_days": 6
+            },
+            "expect": "FALSE",
+            "label": "too early"
+          }
+        ]
+      },
+      "action": {
+        "english": "Compare fitted stage vs DAP-derived stage. If they differ by one or more steps, dispatch a verification ask to the farmer: 'Please confirm the planting date on record is correct.' D01 records the response and, if planting date changes, rebuilds the stage series.",
+        "marathi": "fit केलेली अवस्था व DAP-आधारित अवस्थेची तुलना करा. एक किंवा अधिक step ने वेगळ्या असल्यास शेतकऱ्याला पडताळणी विनंती पाठवा: 'नोंदवलेली लागवडीची तारीख बरोबर आहे का याची पुष्टी द्या.' D01 उत्तर नोंदवते आणि गरजेनुसार stage series पुन्हा बांधते."
+      },
+      "reasoning": {
+        "agronomic_basis": "Wrong planting date breaks every stage-conditioned rule downstream; catching it early saves an entire season of miscalibrated advisories.",
+        "yield_impact": "Prevents downstream u_value miscount rather than adding a new one.",
+        "confidence_score": 0.72,
+        "source_tier": "B",
+        "references": [
+          "Sakamoto et al. 2010",
+          "RAW MASTER §8.2, §8.4"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_1_lifecycle"
+        ],
+        "depends_on": [
+          "domain_14_satellite",
+          "domain_1_lifecycle"
+        ]
+      },
+      "farm_brain_schema": [
+        "dap",
+        "ndvi_freshness_days",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "DERIVED",
+      "kannad_note": "Marathwada farmers occasionally report the day the rhizome was cut rather than the day it went into the soil, or vice versa; the two can differ by a week. Curve fit catches these.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D14-PH-003",
+      "category": "PH",
+      "priority": 3,
+      "severity": "yellow",
+      "stage": "G3",
+      "trigger": {
+        "english": "Peak NDVI in G3 is below 0.60 AND scenes are trusted AND advisory confidence is at least 0.5",
+        "marathi": "G3 अवस्थेत peak NDVI ०.६० पेक्षा कमी आणि scenes विश्वसनीय",
+        "expr": "current_stage == 'G3' AND ndvi_mean < 0.60 AND scene_valid_pixel_pct >= 60 AND sat_advisory_confidence >= 0.5",
+        "expr_version": "dsl-1.0",
+        "expr_note": "A healthy Kannad ginger G3 canopy reaches 0.60-0.80 NDVI. Below 0.60 for a plot deep in G3 indicates a genuine problem: nitrogen, salinity, waterlogging history, or seed vigour. Investigation-only.",
+        "golden_tests": [
+          {
+            "context": {
+              "current_stage": "G3",
+              "ndvi_mean": 0.52,
+              "scene_valid_pixel_pct": 72,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "TRUE",
+            "label": "below healthy band"
+          },
+          {
+            "context": {
+              "current_stage": "G3",
+              "ndvi_mean": 0.68,
+              "scene_valid_pixel_pct": 72,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "FALSE",
+            "label": "in band"
+          },
+          {
+            "context": {
+              "current_stage": "G2",
+              "ndvi_mean": 0.52,
+              "scene_valid_pixel_pct": 72,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "FALSE",
+            "label": "wrong stage — G2 expected lower"
+          }
+        ]
+      },
+      "action": {
+        "english": "Dispatch a differential investigation: (a) D04 nitrogen check, (b) D02 salinity check, (c) sub-node saturation-hours history for hidden waterlogging, (d) farmer report on early emergence issues that might indicate seed vigour. This is one of the few satellite signals worth firing across four domains in parallel.",
+        "marathi": "differential तपासणी सुरू करा: (अ) D04 नत्र तपासणी, (आ) D02 क्षारता तपासणी, (इ) लपलेल्या पाणी साचण्यासाठी सब-नोड saturation-hours इतिहास, (ई) बियाणे शक्तीचे संकेत लवकर उगवणीच्या नोंदींतून. हा उपग्रह सिग्नल चार डोमेनवर एकाच वेळी चालवण्यायोग्य आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "Peak canopy that undershoots a full stage window carries a strong integrated signal.",
+        "yield_impact": "Investigation branch — yield mapping through confirmed downstream domain.",
+        "confidence_score": 0.72,
+        "source_tier": "B",
+        "references": [
+          "RAW MASTER §8.3",
+          "Domain 6 differential-diagnosis architecture"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_2_soil",
+          "domain_3_water",
+          "domain_4_nutrient",
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_14_satellite"
+        ]
+      },
+      "farm_brain_schema": [
+        "current_stage",
+        "ndvi_mean",
+        "scene_valid_pixel_pct",
+        "sat_advisory_confidence"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "EST",
+      "kannad_note": "Kannad's basaltic soils occasionally hide sodicity that expresses only as chronic low canopy — invisible until we compare against expectations. This rule surfaces it.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D14-PH-004",
+      "category": "PH",
+      "priority": 3,
+      "severity": "yellow",
+      "stage": "G4",
+      "trigger": {
+        "english": "NDVI shows accelerating decline before DAP 180 AND stage is G3 or G4 AND advisory confidence is at least 0.5",
+        "marathi": "DAP १८० आधीच NDVI मध्ये वेगवान घसरण, अवस्था G3 किंवा G4",
+        "expr": "current_stage IN [G3, G4] AND dap < 180 AND ndvi_delta_10d <= -0.12 AND sat_advisory_confidence >= 0.5",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Early senescence — the plant is dry-down starting earlier than expected. Water stress, wilt, or an early-lifting attempt.",
+        "golden_tests": [
+          {
+            "context": {
+              "current_stage": "G4",
+              "dap": 160,
+              "ndvi_delta_10d": -0.14,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "TRUE",
+            "label": "early senescence"
+          },
+          {
+            "context": {
+              "current_stage": "G5",
+              "dap": 210,
+              "ndvi_delta_10d": -0.14,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "FALSE",
+            "label": "normal senescence stage"
+          },
+          {
+            "context": {
+              "current_stage": "G4",
+              "dap": 160,
+              "ndvi_delta_10d": -0.05,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "FALSE",
+            "label": "not a sharp decline"
+          }
+        ]
+      },
+      "action": {
+        "english": "Dispatch to D06 wilt differential and D03 water branch. If a farmer has started lifting early, close the investigation with the lifting confirmation.",
+        "marathi": "D06 wilt differential व D03 पाणी शाखेकडे पाठवा. शेतकऱ्याने लवकर काढणी सुरू केली असल्यास त्यांच्या पुष्टीने तपासणी बंद करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The senescence curve shape is stage-informative; an early decline is diagnostic across three families of causes.",
+        "yield_impact": "Under D06/D03 confirmed diagnosis.",
+        "confidence_score": 0.68,
+        "source_tier": "B",
+        "references": [
+          "RAW MASTER §8.1, §8.3"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_6_disease",
+          "domain_9_harvest"
+        ],
+        "depends_on": [
+          "domain_14_satellite"
+        ]
+      },
+      "farm_brain_schema": [
+        "current_stage",
+        "dap",
+        "ndvi_delta_10d",
+        "sat_advisory_confidence"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "DERIVED",
+      "kannad_note": "The Kannad harvest window opens in Jan; an early senescence in Nov-Dec is worth catching before it becomes an unrecoverable wilt.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D14-AN-001",
+      "category": "AN",
+      "priority": 3,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "Regional baseline is available AND peer baseline has fewer than 3 contributing plots",
+        "marathi": "Regional baseline उपलब्ध पण peer baseline मध्ये ३ पेक्षा कमी plots",
+        "expr": "plot_ndvi_baseline_regional IS NOT NULL AND (plot_ndvi_baseline_peer IS NULL OR plot_area_ha >= 0.10)",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Baseline selection routing. When peer baseline is thin (season 1 early days), regional baseline is used; anomaly rules that require peer baseline (NV-005) do not fire.",
+        "golden_tests": [
+          {
+            "context": {
+              "plot_ndvi_baseline_regional": 0.55,
+              "plot_ndvi_baseline_peer": null,
+              "plot_area_ha": 0.5
+            },
+            "expect": "TRUE",
+            "label": "regional-only mode"
+          },
+          {
+            "context": {
+              "plot_ndvi_baseline_regional": 0.55,
+              "plot_ndvi_baseline_peer": 0.6,
+              "plot_area_ha": 0.5
+            },
+            "expect": "TRUE",
+            "label": "both available"
+          }
+        ]
+      },
+      "action": {
+        "english": "Set anomaly-mode = REGIONAL or REGIONAL+PEER. NV-003 always fires when in scope; NV-005 fires only when peer baseline is populated with 3 or more plots.",
+        "marathi": "anomaly-mode = REGIONAL किंवा REGIONAL+PEER निर्धारित करा. NV-003 नेहमी लागू; NV-005 फक्त peer baseline मध्ये ३+ plots असल्यास."
+      },
+      "reasoning": {
+        "agronomic_basis": "Cluster-peer baselines mature in season 1; before that regional is all we have.",
+        "yield_impact": "Routing rule, no direct yield.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "RAW MASTER §9.1"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_14_satellite"
+        ],
+        "depends_on": [
+          "domain_14_satellite"
+        ]
+      },
+      "farm_brain_schema": [
+        "plot_ndvi_baseline_regional",
+        "plot_ndvi_baseline_peer",
+        "plot_area_ha"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "The first Kannad commercial cluster starts with regional-only mode; peer mode kicks in around late June once 3+ plots have data.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-AN-002",
+      "category": "AN",
+      "priority": 2,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "Plot area is below the informational-only threshold OR NDVI standard deviation across plot exceeds 0.15",
+        "marathi": "प्लॉट क्षेत्रफळ फार लहान किंवा प्लॉटवरील NDVI मध्ये फार जास्त विचरण",
+        "expr": "plot_area_ha < 0.05 OR ndvi_std > 0.15",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Plot-quality downgrade. Very small plots have too few valid pixels; heterogeneous plots have mixed pixels that swing the mean. Downgrade every satellite-driven message to informational only.",
+        "golden_tests": [
+          {
+            "context": {
+              "plot_area_ha": 0.03,
+              "ndvi_std": 0.08
+            },
+            "expect": "TRUE",
+            "label": "too small"
+          },
+          {
+            "context": {
+              "plot_area_ha": 0.3,
+              "ndvi_std": 0.2
+            },
+            "expect": "TRUE",
+            "label": "too heterogeneous"
+          },
+          {
+            "context": {
+              "plot_area_ha": 0.5,
+              "ndvi_std": 0.06
+            },
+            "expect": "FALSE",
+            "label": "normal-confidence plot"
+          }
+        ]
+      },
+      "action": {
+        "english": "Set plot_advisory_class = INFORMATIONAL_ONLY. NV/NR/NM/LT rules can still fire but their delivery downgrades to EVENT with 'informational' severity. Farmer app labels the message with a plot-size note explaining the reduced confidence.",
+        "marathi": "plot_advisory_class = INFORMATIONAL_ONLY. NV/NR/NM/LT नियम चालू शकतात पण delivery EVENT + 'informational' severity ला उतरते. शेतकऱ्याच्या app मध्ये लहान प्लॉटमुळे कमी विश्वास असल्याची स्पष्ट नोंद दिसते."
+      },
+      "reasoning": {
+        "agronomic_basis": "A 4-6 pixel plot has more edge than interior; a mean is dominated by mixed pixels.",
+        "yield_impact": "Prevents low-quality advisory from driving action.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "RAW MASTER §11.1"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_14_satellite"
+        ],
+        "depends_on": [
+          "domain_14_satellite"
+        ]
+      },
+      "farm_brain_schema": [
+        "plot_area_ha",
+        "ndvi_std"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Small ginger plots are common in Kannad (0.1-0.25 acre); telling farmers honestly that satellite confidence is reduced is better than pretending it isn't.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-AN-003",
+      "category": "AN",
+      "priority": 2,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "It is within the first 20 days after monsoon onset AND NDVI has risen sharply",
+        "marathi": "मान्सून सुरू झाल्यावर पहिल्या २० दिवसांत NDVI झपाट्याने वाढले",
+        "expr": "monsoon_days_since_onset BETWEEN 0 AND 20 AND ndvi_delta_10d > 0.15 AND STAGE IN [G0, G1, G2]",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Monsoon weed-flush guard. Suppresses false-positive high-NDVI anomalies in the two-week weed flush window right after monsoon onset. This is a suppression flag consumed by AN rules, not a stand-alone alert.",
+        "golden_tests": [
+          {
+            "context": {
+              "monsoon_days_since_onset": 8,
+              "ndvi_delta_10d": 0.2,
+              "current_stage": "G1"
+            },
+            "expect": "TRUE",
+            "label": "weed flush window — suppress"
+          },
+          {
+            "context": {
+              "monsoon_days_since_onset": 30,
+              "ndvi_delta_10d": 0.2,
+              "current_stage": "G2"
+            },
+            "expect": "FALSE",
+            "label": "past flush window"
+          },
+          {
+            "context": {
+              "monsoon_days_since_onset": 8,
+              "ndvi_delta_10d": 0.05,
+              "current_stage": "G1"
+            },
+            "expect": "FALSE",
+            "label": "no flush"
+          }
+        ]
+      },
+      "action": {
+        "english": "Set an internal flag: recent_ndvi_rise_may_be_weeds = TRUE. Any AN rule that would treat NDVI rise as a positive-anomaly signal checks this flag and stays silent for the flush window.",
+        "marathi": "अंतर्गत ध्वज नोंदवा — recent_ndvi_rise_may_be_weeds = TRUE. NDVI वाढ चांगली अनियमितता म्हणून हाताळणारे AN नियम हा ध्वज तपासतील आणि weed-flush खिडकीत शांत राहतील."
+      },
+      "reasoning": {
+        "agronomic_basis": "Post-monsoon weed emergence in Marathwada is intense in the two weeks after onset. Historically documented.",
+        "yield_impact": "False-alarm prevention; indirect.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "RAW MASTER §4.5, §9.3",
+          "Marathwada agronomy field notes"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_14_satellite"
+        ],
+        "depends_on": [
+          "domain_7_weather"
+        ]
+      },
+      "farm_brain_schema": [
+        "monsoon_days_since_onset",
+        "ndvi_delta_10d",
+        "current_stage"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Weed flush + young ginger together look identical to a super-vigorous crop from space. Suppressing the false positive is cheap; letting it through erodes trust.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-AN-004",
+      "category": "AN",
+      "priority": 2,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "A farmer scout report has arrived on a plot where a satellite anomaly is open",
+        "marathi": "उपग्रह अनियमितता उघडलेल्या प्लॉटवर शेतकऱ्याचा scout अहवाल आला",
+        "expr": "scout_request_pending IS FALSE AND farmer_scout_report_days_ago IS NOT NULL AND farmer_scout_report_days_ago <= 3",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Anomaly closure hook. When a scout report is received while a satellite anomaly is open, resolve or escalate based on the report content. This ties satellite alerts back into the D06 differential-diagnosis flow.",
+        "golden_tests": [
+          {
+            "context": {
+              "scout_request_pending": false,
+              "farmer_scout_report_days_ago": 1
+            },
+            "expect": "TRUE",
+            "label": "recent scout — process"
+          },
+          {
+            "context": {
+              "scout_request_pending": true,
+              "farmer_scout_report_days_ago": null
+            },
+            "expect": "FALSE",
+            "label": "still waiting"
+          },
+          {
+            "context": {
+              "scout_request_pending": false,
+              "farmer_scout_report_days_ago": 10
+            },
+            "expect": "FALSE",
+            "label": "too old to link"
+          }
+        ]
+      },
+      "action": {
+        "english": "Read the scout report. If it confirms a specific cause, escalate that cause through its home domain (D03/D04/D06). If it clears the plot, close the satellite anomaly. Log the resolution against the anomaly rule that opened it.",
+        "marathi": "scout अहवाल वाचा. विशिष्ट कारण पुष्टी झाल्यास त्याच्या मूळ डोमेनमार्फत (D03/D04/D06) escalate करा. प्लॉट मोकळा असल्याची पुष्टी झाल्यास उपग्रह अनियमितता बंद करा. निराकरण मूळ नियमाशी जोडून log करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Section 8.4 double-signal principle. Satellite opens an investigation; ground truth closes it.",
+        "yield_impact": "Closure tracking; indirect.",
+        "confidence_score": 0.85,
+        "source_tier": "A",
+        "references": [
+          "RAW MASTER §8.4",
+          "Domain 6 differential architecture"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_4_nutrient",
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_14_satellite"
+        ]
+      },
+      "farm_brain_schema": [
+        "scout_request_pending",
+        "farmer_scout_report_days_ago"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "DERIVED",
+      "kannad_note": "The scout-report loop is the difference between an alert system and a working advisory system.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-FU-001",
+      "category": "FU",
+      "priority": 4,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "Sub-node moisture is stale AND satellite indicates canopy stress",
+        "marathi": "सब-नोड शिळा आणि उपग्रह पर्णसमूह ताण दाखवत आहे",
+        "expr": "sub_node_moisture_status == 'stale' AND (ndmi_delta_10d <= -0.10 OR cwsi > 0.60) AND sat_advisory_confidence >= 0.5",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Section 10 case E — sub-node stale, satellite stress. Satellite becomes primary but with reduced confidence. Investigative advisory only; no automated action.",
+        "golden_tests": [
+          {
+            "context": {
+              "sub_node_moisture_status": "stale",
+              "ndmi_delta_10d": -0.12,
+              "cwsi": 0.3,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "TRUE",
+            "label": "satellite steps in"
+          },
+          {
+            "context": {
+              "sub_node_moisture_status": "adequate",
+              "ndmi_delta_10d": -0.12,
+              "cwsi": 0.3,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "FALSE",
+            "label": "handled by NM-002"
+          },
+          {
+            "context": {
+              "sub_node_moisture_status": "stale",
+              "ndmi_delta_10d": -0.02,
+              "cwsi": 0.3,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "FALSE",
+            "label": "no clear satellite stress"
+          }
+        ]
+      },
+      "action": {
+        "english": "Send an INVESTIGATIVE advisory: 'Sub-node reading not received recently. Satellite view shows canopy stress. Please visit the plot and check moisture manually.' Priority: high; delivery: ONCE_UNTIL_RESOLVED. Do NOT auto-schedule irrigation.",
+        "marathi": "तपासणी सल्ला पाठवा: 'सब-नोडची अलीकडची नोंद मिळाली नाही. उपग्रह दृश्यात पर्णसमूह ताण दिसतो. कृपया प्लॉटवर जाऊन हाताने ओलावा तपासा.' प्राधान्य: उच्च; delivery: ONCE_UNTIL_RESOLVED. स्वयंचलित सिंचन ठरवू नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "Section 10 case E — one input silent, the other present. The living response is to have a human look, not to guess.",
+        "yield_impact": "Under D03/D06 confirmed downstream.",
+        "confidence_score": 0.68,
+        "source_tier": "B",
+        "references": [
+          "RAW MASTER §10.2 case E"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_6_disease"
+        ],
+        "depends_on": [
+          "domain_14_satellite",
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "sub_node_moisture_status",
+        "ndmi_delta_10d",
+        "cwsi",
+        "sat_advisory_confidence"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "DERIVED",
+      "kannad_note": "Monsoon LoRa fade is the common cause of sub-node staleness in Kannad. This rule keeps the advisory alive without pretending we still have ground truth.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D14-FU-002",
+      "category": "FU",
+      "priority": 3,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "Sub-node moisture reads low AND satellite canopy looks healthy AND advisory confidence at least 0.5",
+        "marathi": "सब-नोड मृदा-ओलावा कमी पण उपग्रहावर पर्णसमूह निरोगी दिसतो",
+        "expr": "sub_node_moisture_status == 'low' AND ndmi_delta_10d > -0.05 AND cwsi < 0.40 AND sat_advisory_confidence >= 0.5",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Section 10 case B — sub-node low, canopy still healthy. This is the early-action window: the canopy hasn't shown stress yet, but the root zone is drying. Contribute a leading-indicator tag to D03.",
+        "golden_tests": [
+          {
+            "context": {
+              "sub_node_moisture_status": "low",
+              "ndmi_delta_10d": -0.02,
+              "cwsi": 0.3,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "TRUE",
+            "label": "early-action window"
+          },
+          {
+            "context": {
+              "sub_node_moisture_status": "low",
+              "ndmi_delta_10d": -0.12,
+              "cwsi": 0.3,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "FALSE",
+            "label": "canopy already stressed — NM-003"
+          },
+          {
+            "context": {
+              "sub_node_moisture_status": "adequate",
+              "ndmi_delta_10d": -0.02,
+              "cwsi": 0.3,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "FALSE",
+            "label": "sub-node not calling"
+          }
+        ]
+      },
+      "action": {
+        "english": "Tag D03 irrigation rule with 'early_action_window'. Do NOT emit a separate message. D03's own irrigation rule fires with its own message and takes credit for the action; this rule contributes a leading-indicator confidence increment.",
+        "marathi": "D03 सिंचन नियमाला 'early_action_window' tag जोडा. वेगळा संदेश देऊ नका. D03 चा स्वतःचा सिंचन नियम त्याच्या संदेशासह चालतो; हा नियम फक्त leading-indicator विश्वास वाढवतो."
+      },
+      "reasoning": {
+        "agronomic_basis": "Section 10 case B — the sub-node is the authority, and the satellite is a leading confidence indicator.",
+        "yield_impact": "Under D03.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "RAW MASTER §10.2 case B"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water"
+        ],
+        "depends_on": [
+          "domain_14_satellite",
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "sub_node_moisture_status",
+        "ndmi_delta_10d",
+        "cwsi",
+        "sat_advisory_confidence"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "DERIVED",
+      "kannad_note": "This is the case where satellite adds the most predictive value — sub-node says act, satellite says the canopy hasn't punished you yet, so acting now avoids the punishment.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-FU-003",
+      "category": "FU",
+      "priority": 3,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "SAR indicates surface standing water AND sub-node moisture reads adequate",
+        "marathi": "SAR वरून प्लॉटवर पाणी साचल्याचे दिसते पण सब-नोड मृदा-ओलावा पुरेसा दाखवतो",
+        "expr": "sar_vv_delta_db < -3.0 AND sub_node_moisture_status == 'adequate' AND sar_gap_days <= 12",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Section 10 case F — root zone is fine, but the surface has trapped water. Drainage failure, likely at the level of furrow blockage or plot edge. Distinct from waterlogging that reaches the root zone.",
+        "golden_tests": [
+          {
+            "context": {
+              "sar_vv_delta_db": -4.5,
+              "sub_node_moisture_status": "adequate",
+              "sar_gap_days": 6
+            },
+            "expect": "TRUE",
+            "label": "surface waterlogging"
+          },
+          {
+            "context": {
+              "sar_vv_delta_db": -4.5,
+              "sub_node_moisture_status": "saturated",
+              "sar_gap_days": 6
+            },
+            "expect": "FALSE",
+            "label": "root zone also flooded — SR-002 branch"
+          },
+          {
+            "context": {
+              "sar_vv_delta_db": -1.5,
+              "sub_node_moisture_status": "adequate",
+              "sar_gap_days": 6
+            },
+            "expect": "FALSE",
+            "label": "within noise"
+          }
+        ]
+      },
+      "action": {
+        "english": "Send an ADVISORY (not URGENT): 'Satellite shows standing water on part of your plot. Root-zone moisture is still normal. Check surface drainage — likely a blocked furrow or edge that needs clearing before the next rain.' Delivery: EVENT.",
+        "marathi": "सल्ला पाठवा (URGENT नाही): 'उपग्रहावर तुमच्या प्लॉटच्या भागावर पाणी साचलेले दिसते. रूट-झोन ओलावा अजून सामान्य आहे. पुढच्या पावसाआधी बंद पडलेला वाफा किंवा कडा साफ करा.' Delivery: EVENT."
+      },
+      "reasoning": {
+        "agronomic_basis": "Section 10 case F — sub-node monitors depth, satellite monitors surface. Both true, different problems.",
+        "yield_impact": "Preventive; averts full waterlogging.",
+        "confidence_score": 0.72,
+        "source_tier": "B",
+        "references": [
+          "RAW MASTER §10.2 case F",
+          "ICAR-CRIDA drainage studies"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_3_water",
+          "domain_8_operations"
+        ],
+        "depends_on": [
+          "domain_14_satellite",
+          "domain_3_water"
+        ]
+      },
+      "farm_brain_schema": [
+        "sar_vv_delta_db",
+        "sub_node_moisture_status",
+        "sar_gap_days"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "DERIVED",
+      "kannad_note": "In Kannad's furrow-planted ginger, blocked furrows accumulate surface water for days before it either drains or reaches the rhizome. Catching it at the surface stage is much cheaper.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "EVENT"
+    },
+    {
+      "rule_id": "D14-FU-004",
+      "category": "FU",
+      "priority": 3,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "Sub-node EC reads normal AND satellite NDRE is below expected in closed canopy",
+        "marathi": "सब-नोड EC सामान्य पण बंद पर्णसमूह अवस्थेत NDRE अपेक्षेपेक्षा कमी",
+        "expr": "sub_node_ec_status == 'normal' AND current_stage IN [G3, G4] AND plot_ndre_gap_regional < -0.10 AND sat_advisory_confidence >= 0.5",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Section 10 case G — EC ok, NDRE low. Likely a localised micro-nutrient issue not caught by bulk EC. Zinc and iron deficiencies are the usual culprits in Marathwada basaltic soils.",
+        "golden_tests": [
+          {
+            "context": {
+              "sub_node_ec_status": "normal",
+              "current_stage": "G3",
+              "sat_advisory_confidence": 0.85,
+              "plot_ndre_gap_regional": -0.13
+            },
+            "expect": "TRUE",
+            "label": "micro-nutrient suspected"
+          },
+          {
+            "context": {
+              "sub_node_ec_status": "normal",
+              "current_stage": "G2",
+              "sat_advisory_confidence": 0.85,
+              "plot_ndre_gap_regional": -0.12
+            },
+            "expect": "FALSE",
+            "label": "wrong stage"
+          },
+          {
+            "context": {
+              "sub_node_ec_status": "high",
+              "current_stage": "G3",
+              "sat_advisory_confidence": 0.85,
+              "plot_ndre_gap_regional": -0.13
+            },
+            "expect": "FALSE",
+            "label": "EC also suggests issue — different branch"
+          }
+        ]
+      },
+      "action": {
+        "english": "Dispatch D04 leaf-tissue test scheduling. Do not recommend a specific micro-nutrient without the test.",
+        "marathi": "D04 पर्ण-ऊतक चाचणी नियोजनाकडे पाठवा. चाचणीशिवाय विशिष्ट सूक्ष्म-अन्नद्रव्य शिफारस करू नका."
+      },
+      "reasoning": {
+        "agronomic_basis": "Bulk EC misses localised deficiencies of Zn, Fe, Mn — which the leaf-side NDRE picks up.",
+        "yield_impact": "Under D04.",
+        "confidence_score": 0.65,
+        "source_tier": "B",
+        "references": [
+          "RAW MASTER §10.2 case G",
+          "Marathwada Zn deficiency literature"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_4_nutrient"
+        ],
+        "depends_on": [
+          "domain_14_satellite",
+          "domain_4_nutrient"
+        ]
+      },
+      "farm_brain_schema": [
+        "sub_node_ec_status",
+        "current_stage",
+        "plot_ndre_baseline_regional",
+        "ndre_mean",
+        "sat_advisory_confidence",
+        "plot_ndre_gap_regional"
+      ],
+      "u_value": null,
+      "recoverability": "same_season",
+      "source_class": "EST",
+      "kannad_note": "Kannad basaltic soils are Zn-deficient in many pockets; D02 baseline test flags it if performed, but many plots skip micronutrient panels. This rule catches what D02 missed.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D14-FU-005",
+      "category": "FU",
+      "priority": 2,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "Sub-node moisture adequate AND EC normal AND all satellite indices in healthy band",
+        "marathi": "सब-नोड ओलावा व EC सामान्य आणि सर्व उपग्रह निर्देशांक निरोगी पल्ल्यात",
+        "expr": "sub_node_moisture_status == 'adequate' AND sub_node_ec_status == 'normal' AND ndvi_mean >= 0.45 AND ndmi_delta_10d > -0.05 AND cwsi < 0.40 AND sat_advisory_confidence >= 0.5",
+        "expr_version": "dsl-1.0",
+        "expr_note": "The green-flag case. Every signal agrees the plot is fine. SILENT_GUARD — no farmer message, but a log entry supports season-review reporting and buyer/insurer attestation.",
+        "golden_tests": [
+          {
+            "context": {
+              "sub_node_moisture_status": "adequate",
+              "sub_node_ec_status": "normal",
+              "ndvi_mean": 0.65,
+              "ndmi_delta_10d": -0.02,
+              "cwsi": 0.3,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "TRUE",
+            "label": "all green"
+          },
+          {
+            "context": {
+              "sub_node_moisture_status": "low",
+              "sub_node_ec_status": "normal",
+              "ndvi_mean": 0.65,
+              "ndmi_delta_10d": -0.02,
+              "cwsi": 0.3,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "FALSE",
+            "label": "sub-node calling"
+          },
+          {
+            "context": {
+              "sub_node_moisture_status": "adequate",
+              "sub_node_ec_status": "normal",
+              "ndvi_mean": 0.35,
+              "ndmi_delta_10d": -0.02,
+              "cwsi": 0.3,
+              "sat_advisory_confidence": 0.85
+            },
+            "expect": "FALSE",
+            "label": "NDVI too low"
+          }
+        ]
+      },
+      "action": {
+        "english": "Log a plot_health_green_flag entry with timestamp and contributing evidence. No farmer message. Used by season-review, buyer attestation, and DPDP consent-limited third-party sharing.",
+        "marathi": "plot_health_green_flag नोंद वेळेसह व पुराव्यासह log करा. शेतकऱ्याला संदेश नाही. हंगाम-आढावा, खरेदीदार-प्रमाणीकरण व DPDP-अनुमत तृतीय-पक्ष सामायिकीकरणासाठी वापर."
+      },
+      "reasoning": {
+        "agronomic_basis": "Section 10 case H. High-confidence positive attestation is a business asset.",
+        "yield_impact": "Indirect — attestation value.",
+        "confidence_score": 0.82,
+        "source_tier": "A",
+        "references": [
+          "RAW MASTER §10.2 case H"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_13_economics"
+        ],
+        "depends_on": [
+          "domain_14_satellite",
+          "domain_3_water",
+          "domain_4_nutrient"
+        ]
+      },
+      "farm_brain_schema": [
+        "sub_node_moisture_status",
+        "sub_node_ec_status",
+        "ndvi_mean",
+        "ndmi_delta_10d",
+        "cwsi",
+        "sat_advisory_confidence"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "For Kannad market linkages this is the log that lets Agro-Guardian tell a buyer, honestly, that a plot has been under continuous good-health confirmation.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-PL-001",
+      "category": "PL",
+      "priority": 4,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "Plot polygon geometry is missing or fails validation",
+        "marathi": "प्लॉट polygon भूगोलनोंद उपलब्ध नाही किंवा वैधता चाचणी अपयशी",
+        "expr": "plot_polygon_wkt IS NULL OR plot_area_ha IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "No polygon means no plot extract means no D14 advisory for the plot. Prompt the farmer app to (re)capture the polygon.",
+        "golden_tests": [
+          {
+            "context": {
+              "plot_polygon_wkt": null,
+              "plot_area_ha": null
+            },
+            "expect": "TRUE",
+            "label": "no polygon"
+          },
+          {
+            "context": {
+              "plot_polygon_wkt": "POLYGON((...))",
+              "plot_area_ha": 0.5
+            },
+            "expect": "FALSE",
+            "label": "polygon present"
+          }
+        ]
+      },
+      "action": {
+        "english": "Suspend all D14 rules for this plot. Send a low-priority prompt to the farmer app requesting plot boundary capture. Restore when polygon is provided.",
+        "marathi": "या प्लॉटवरील सर्व D14 नियम स्थगित करा. शेतकऱ्याच्या app वर कमी-प्राधान्य विनंती पाठवा — प्लॉट सीमा नोंदवा. Polygon दिल्यावर पुन्हा सक्रिय."
+      },
+      "reasoning": {
+        "agronomic_basis": "Precondition rule. Every satellite advisory rule in Domain 14 requires a valid plot polygon; without one the pixel extract, all indices, all baselines and all anomaly detections are meaningless. Failing closed with a farmer-side prompt is the honest response.",
+        "yield_impact": "None; enables all downstream.",
+        "confidence_score": 0.95,
+        "source_tier": "A",
+        "references": [
+          "RAW MASTER §12.4"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_14_satellite"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "plot_polygon_wkt",
+        "plot_area_ha"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "New farmer onboarding step. The Kannad app team owns polygon capture UX; polygon quality is the single biggest determinant of D14 usefulness.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-PL-002",
+      "category": "PL",
+      "priority": 3,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "Both optical and SAR are stale beyond the maximum advisory freshness AND scout report is also older than 5 days",
+        "marathi": "optical व SAR दोन्ही maximum ताजेपणापेक्षा शिळे आणि scout अहवाल ५ पेक्षा जास्त दिवसांचा",
+        "expr": "optical_gap_days > 21 AND sar_gap_days > 12 AND (farmer_scout_report_days_ago IS NULL OR farmer_scout_report_days_ago > 5)",
+        "expr_version": "dsl-1.0",
+        "expr_note": "The blind-plot case. No satellite input trusted, no recent ground eyes. Suspend all D14 advisory generation and prompt for a farmer visit.",
+        "golden_tests": [
+          {
+            "context": {
+              "optical_gap_days": 25,
+              "sar_gap_days": 15,
+              "farmer_scout_report_days_ago": 10
+            },
+            "expect": "TRUE",
+            "label": "fully blind"
+          },
+          {
+            "context": {
+              "optical_gap_days": 25,
+              "sar_gap_days": 5,
+              "farmer_scout_report_days_ago": 10
+            },
+            "expect": "FALSE",
+            "label": "SAR still fresh"
+          },
+          {
+            "context": {
+              "optical_gap_days": 25,
+              "sar_gap_days": 15,
+              "farmer_scout_report_days_ago": 2
+            },
+            "expect": "FALSE",
+            "label": "scout fresh"
+          }
+        ]
+      },
+      "action": {
+        "english": "Set operating mode to BLIND_PLOT. Suspend NV/NR/NM/AN/FU rules. Send a high-priority prompt: 'We have not seen your plot from any source for over 3 weeks. Please visit and send a photo.' Reset when any source comes back.",
+        "marathi": "operating mode = BLIND_PLOT. NV/NR/NM/AN/FU स्थगित. उच्च-प्राधान्य विनंती पाठवा: '३ आठवड्यांहून अधिक काळ आम्हाला तुमचा प्लॉट कोणत्याही स्रोतातून दिसलेला नाही. कृपया भेट देऊन फोटो पाठवा.' कोणताही स्रोत परत आल्यावर सामान्य मोड."
+      },
+      "reasoning": {
+        "agronomic_basis": "Advisory in blindness is worse than no advisory.",
+        "yield_impact": "Prevents low-confidence action.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "RAW MASTER §12.4"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_14_satellite"
+        ],
+        "depends_on": [
+          "domain_14_satellite"
+        ]
+      },
+      "farm_brain_schema": [
+        "optical_gap_days",
+        "sar_gap_days",
+        "farmer_scout_report_days_ago"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Extremely rare in Kannad — even peak monsoon delivers a Sentinel-1 pass every 6-12 days. When it does happen, honesty is the only response.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "assisted",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "ONCE_UNTIL_RESOLVED"
+    },
+    {
+      "rule_id": "D14-PL-003",
+      "category": "PL",
+      "priority": 2,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "Pipeline version has changed since the last stored indices",
+        "marathi": "मागील साठवलेल्या निर्देशांकांच्या तुलनेत pipeline आवृत्ती बदलली आहे",
+        "expr": "sat_pipeline_version IS NOT NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Pipeline-drift guard. When the processing chain changes, previously stored indices may not be directly comparable. Flag the plot for baseline recomputation before any trend rule fires.",
+        "golden_tests": [
+          {
+            "context": {
+              "sat_pipeline_version": "pipeline-1.2.0"
+            },
+            "expect": "TRUE",
+            "label": "log version"
+          },
+          {
+            "context": {
+              "sat_pipeline_version": null
+            },
+            "expect": "FALSE",
+            "label": "pipeline unknown — different rule fires"
+          }
+        ]
+      },
+      "action": {
+        "english": "Compare sat_pipeline_version to last stored version for the plot. If different, run baseline recomputation of ndvi_delta_10d, ndmi_delta_10d, ndre_slope_5d against the same pipeline version before any AN or PH rule fires. Log the migration event.",
+        "marathi": "sat_pipeline_version प्लॉटवरील मागील साठवलेल्या आवृत्तीशी तुलना करा. वेगळी असल्यास AN किंवा PH नियम चालण्यापूर्वी त्याच आवृत्तीत ndvi_delta_10d, ndmi_delta_10d, ndre_slope_5d ची पुनर्गणना करा. migration घटना log करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Trend analysis across pipeline versions is a known source of false anomalies in satellite pipelines.",
+        "yield_impact": "None; protects downstream.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "RAW MASTER §12.4"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_14_satellite"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "sat_pipeline_version"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "This is exactly the kind of gate the D07 station_data_age_hours pattern was designed to enforce — extend it to D14.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-PL-004",
+      "category": "PL",
+      "priority": 3,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "Scene valid pixel percentage is below the minimum trusted threshold",
+        "marathi": "scene_valid_pixel_pct विश्वसनीय minimum पेक्षा कमी",
+        "expr": "scene_valid_pixel_pct < 60 AND sat_source == 'sentinel-2'",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Refuse to compute NDVI, NDRE, NDMI or their statistics from a scene where over 40% of plot pixels are cloud, shadow, water, snow or saturated. Fail closed.",
+        "golden_tests": [
+          {
+            "context": {
+              "scene_valid_pixel_pct": 45,
+              "sat_source": "sentinel-2"
+            },
+            "expect": "TRUE",
+            "label": "reject scene"
+          },
+          {
+            "context": {
+              "scene_valid_pixel_pct": 72,
+              "sat_source": "sentinel-2"
+            },
+            "expect": "FALSE",
+            "label": "accept"
+          },
+          {
+            "context": {
+              "scene_valid_pixel_pct": 45,
+              "sat_source": "sentinel-1"
+            },
+            "expect": "FALSE",
+            "label": "SAR not gated this way"
+          }
+        ]
+      },
+      "action": {
+        "english": "Skip index computation for the scene. Log 'scene_rejected_low_valid_pixel'. Do not update ndvi_freshness_days from this scene — treat as if the scene did not arrive.",
+        "marathi": "दृश्यासाठी निर्देशांक गणना वगळा. 'scene_rejected_low_valid_pixel' log करा. या दृश्यावरून ndvi_freshness_days अद्ययावत करू नका — दृश्य आले नाही असे मानून पुढे जा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Bad scenes generate false anomalies; fail closed rather than fail loud.",
+        "yield_impact": "None; false alarm prevention.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "RAW MASTER §9.3"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_14_satellite"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "scene_valid_pixel_pct",
+        "sat_source"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "DERIVED",
+      "kannad_note": "Kannad monsoon delivers many partial scenes; enforcing the 60% floor keeps season data clean.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-POS-001",
+      "category": "POS",
+      "priority": 5,
+      "severity": "red",
+      "stage": "ALL",
+      "trigger": {
+        "english": "An outgoing customer message or marketing artefact contains a claim that 'the satellite detects ginger rhizome rot'",
+        "marathi": "बाहेर जाणाऱ्या ग्राहक संदेशात किंवा विपणन मजकुरात 'उपग्रह आल्यातील गड्डा कूज ओळखतो' असा दावा आहे",
+        "expr": "outgoing_message_contains_claim IS TRUE AND claim_type == 'pos_001'",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Immutable prohibited-claim rule. SILENT_GUARD blocks the outgoing message before it is sent to the farmer, buyer, insurer or marketing channel.",
+        "golden_tests": [
+          {
+            "context": {
+              "outgoing_message_contains_claim": true,
+              "claim_type": "pos_001"
+            },
+            "expect": "TRUE",
+            "label": "block"
+          },
+          {
+            "context": {
+              "outgoing_message_contains_claim": false,
+              "claim_type": "pos_001"
+            },
+            "expect": "FALSE",
+            "label": "no claim in message"
+          },
+          {
+            "context": {
+              "outgoing_message_contains_claim": true,
+              "claim_type": "other_pos"
+            },
+            "expect": "FALSE",
+            "label": "different POS rule"
+          }
+        ]
+      },
+      "action": {
+        "english": "Block the outgoing message. Log the attempted claim, the source (rule id, template, human author), and the block event. The underground rhizome is invisible to every current satellite; canopy signal is late and shared with several other causes. See RAW MASTER §5.",
+        "marathi": "बाहेर जाणारा संदेश थांबवा. प्रयत्न केलेला दावा, स्रोत (नियम id, template, लेखक) व block घटना log करा. भूमिगत गड्डा कोणत्याही उपग्रहाला दिसत नाही; पर्णसमूह-सिग्नल उशीरचा व अनेक कारणांचा common आहे. RAW MASTER §5 पहा."
+      },
+      "reasoning": {
+        "agronomic_basis": "The underground rhizome is invisible to every current satellite; canopy signal is late and shared with several other causes. See RAW MASTER §5.",
+        "yield_impact": "Reputation and truthfulness protection.",
+        "confidence_score": 0.95,
+        "source_tier": "A",
+        "references": [
+          "RAW MASTER §5",
+          "Domain 6 rhizome-canopy decoupling architecture note"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "outgoing_message_contains_claim",
+        "claim_type"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Kannad ginger buyers and farmers alike remember overpromises. Every one of these prohibited claims is a claim we could technically make and would regret.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": true,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-POS-002",
+      "category": "POS",
+      "priority": 5,
+      "severity": "red",
+      "stage": "ALL",
+      "trigger": {
+        "english": "An outgoing customer message or marketing artefact contains a claim that 'NDVI tells you when to harvest'",
+        "marathi": "बाहेर जाणाऱ्या ग्राहक संदेशात किंवा विपणन मजकुरात 'NDVI काढणीची अचूक वेळ सांगते' असा दावा आहे",
+        "expr": "outgoing_message_contains_claim IS TRUE AND claim_type == 'pos_002'",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Immutable prohibited-claim rule. SILENT_GUARD blocks the outgoing message before it is sent to the farmer, buyer, insurer or marketing channel.",
+        "golden_tests": [
+          {
+            "context": {
+              "outgoing_message_contains_claim": true,
+              "claim_type": "pos_002"
+            },
+            "expect": "TRUE",
+            "label": "block"
+          },
+          {
+            "context": {
+              "outgoing_message_contains_claim": false,
+              "claim_type": "pos_002"
+            },
+            "expect": "FALSE",
+            "label": "no claim in message"
+          },
+          {
+            "context": {
+              "outgoing_message_contains_claim": true,
+              "claim_type": "other_pos"
+            },
+            "expect": "FALSE",
+            "label": "different POS rule"
+          }
+        ]
+      },
+      "action": {
+        "english": "Block the outgoing message. Log the attempted claim, the source (rule id, template, human author), and the block event. Canopy senescence signals a stage window, not maturity precision. Harvest timing is a D09 rule with sub-node + DAP inputs.",
+        "marathi": "बाहेर जाणारा संदेश थांबवा. प्रयत्न केलेला दावा, स्रोत (नियम id, template, लेखक) व block घटना log करा. पर्णसमूह senescence अवस्थेची खिडकी सांगते, माग्युरिटीची अचूक वेळ नाही. काढणीचा निर्णय D09 चा सब-नोड + DAP आधारित नियम."
+      },
+      "reasoning": {
+        "agronomic_basis": "Canopy senescence signals a stage window, not maturity precision. Harvest timing is a D09 rule with sub-node + DAP inputs.",
+        "yield_impact": "Reputation and truthfulness protection.",
+        "confidence_score": 0.95,
+        "source_tier": "A",
+        "references": [
+          "RAW MASTER §16.1",
+          "Domain 9 harvest rules"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "outgoing_message_contains_claim",
+        "claim_type"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Kannad ginger buyers and farmers alike remember overpromises. Every one of these prohibited claims is a claim we could technically make and would regret.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": true,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-POS-003",
+      "category": "POS",
+      "priority": 5,
+      "severity": "red",
+      "stage": "ALL",
+      "trigger": {
+        "english": "An outgoing customer message or marketing artefact contains a claim that 'we predict your yield from space'",
+        "marathi": "बाहेर जाणाऱ्या ग्राहक संदेशात किंवा विपणन मजकुरात 'आम्ही अवकाशातून तुमचे उत्पन्न सांगतो' असा दावा आहे",
+        "expr": "outgoing_message_contains_claim IS TRUE AND claim_type == 'pos_003'",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Immutable prohibited-claim rule. SILENT_GUARD blocks the outgoing message before it is sent to the farmer, buyer, insurer or marketing channel.",
+        "golden_tests": [
+          {
+            "context": {
+              "outgoing_message_contains_claim": true,
+              "claim_type": "pos_003"
+            },
+            "expect": "TRUE",
+            "label": "block"
+          },
+          {
+            "context": {
+              "outgoing_message_contains_claim": false,
+              "claim_type": "pos_003"
+            },
+            "expect": "FALSE",
+            "label": "no claim in message"
+          },
+          {
+            "context": {
+              "outgoing_message_contains_claim": true,
+              "claim_type": "other_pos"
+            },
+            "expect": "FALSE",
+            "label": "different POS rule"
+          }
+        ]
+      },
+      "action": {
+        "english": "Block the outgoing message. Log the attempted claim, the source (rule id, template, human author), and the block event. Domain 12 already prohibits yield prediction as a customer claim; satellite-derived estimates carry the same prohibition.",
+        "marathi": "बाहेर जाणारा संदेश थांबवा. प्रयत्न केलेला दावा, स्रोत (नियम id, template, लेखक) व block घटना log करा. Domain 12 आधीच उत्पन्न-भविष्यवाणी ग्राहक-दाव्यासाठी प्रतिबंधित करते; उपग्रह-आधारित अंदाजांना तीच बंदी."
+      },
+      "reasoning": {
+        "agronomic_basis": "Domain 12 already prohibits yield prediction as a customer claim; satellite-derived estimates carry the same prohibition.",
+        "yield_impact": "Reputation and truthfulness protection.",
+        "confidence_score": 0.95,
+        "source_tier": "A",
+        "references": [
+          "RAW MASTER §16.1",
+          "Domain 12 prohibited claims"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "outgoing_message_contains_claim",
+        "claim_type"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Kannad ginger buyers and farmers alike remember overpromises. Every one of these prohibited claims is a claim we could technically make and would regret.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": true,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-POS-004",
+      "category": "POS",
+      "priority": 5,
+      "severity": "red",
+      "stage": "ALL",
+      "trigger": {
+        "english": "An outgoing customer message or marketing artefact contains a claim that 'our AI counts your ginger plants from orbit'",
+        "marathi": "बाहेर जाणाऱ्या ग्राहक संदेशात किंवा विपणन मजकुरात 'आमचा AI कक्षेतून तुमच्या आल्याची झाडे मोजतो' असा दावा आहे",
+        "expr": "outgoing_message_contains_claim IS TRUE AND claim_type == 'pos_004'",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Immutable prohibited-claim rule. SILENT_GUARD blocks the outgoing message before it is sent to the farmer, buyer, insurer or marketing channel.",
+        "golden_tests": [
+          {
+            "context": {
+              "outgoing_message_contains_claim": true,
+              "claim_type": "pos_004"
+            },
+            "expect": "TRUE",
+            "label": "block"
+          },
+          {
+            "context": {
+              "outgoing_message_contains_claim": false,
+              "claim_type": "pos_004"
+            },
+            "expect": "FALSE",
+            "label": "no claim in message"
+          },
+          {
+            "context": {
+              "outgoing_message_contains_claim": true,
+              "claim_type": "other_pos"
+            },
+            "expect": "FALSE",
+            "label": "different POS rule"
+          }
+        ]
+      },
+      "action": {
+        "english": "Block the outgoing message. Log the attempted claim, the source (rule id, template, human author), and the block event. Plant count from 10 m Sentinel-2 pixels is not physically possible. Sub-metre commercial imagery is prohibitively expensive per farmer.",
+        "marathi": "बाहेर जाणारा संदेश थांबवा. प्रयत्न केलेला दावा, स्रोत (नियम id, template, लेखक) व block घटना log करा. १० मी Sentinel-2 पिक्सेल्सवरून झाडांची गणना भौतिकदृष्ट्या शक्य नाही. Sub-metre व्यावसायिक imagery प्रति शेतकरी अत्यंत महाग."
+      },
+      "reasoning": {
+        "agronomic_basis": "Plant count from 10 m Sentinel-2 pixels is not physically possible. Sub-metre commercial imagery is prohibitively expensive per farmer.",
+        "yield_impact": "Reputation and truthfulness protection.",
+        "confidence_score": 0.95,
+        "source_tier": "A",
+        "references": [
+          "RAW MASTER §16.1",
+          "ESA Sentinel-2 resolution specification"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "outgoing_message_contains_claim",
+        "claim_type"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Kannad ginger buyers and farmers alike remember overpromises. Every one of these prohibited claims is a claim we could technically make and would regret.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": true,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-POS-005",
+      "category": "POS",
+      "priority": 5,
+      "severity": "red",
+      "stage": "ALL",
+      "trigger": {
+        "english": "An outgoing customer message or marketing artefact contains a claim that 'cloud is not a problem for us'",
+        "marathi": "बाहेर जाणाऱ्या ग्राहक संदेशात किंवा विपणन मजकुरात 'ढग आमच्यासाठी अडचण नाहीत' असा दावा आहे",
+        "expr": "outgoing_message_contains_claim IS TRUE AND claim_type == 'pos_005'",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Immutable prohibited-claim rule. SILENT_GUARD blocks the outgoing message before it is sent to the farmer, buyer, insurer or marketing channel.",
+        "golden_tests": [
+          {
+            "context": {
+              "outgoing_message_contains_claim": true,
+              "claim_type": "pos_005"
+            },
+            "expect": "TRUE",
+            "label": "block"
+          },
+          {
+            "context": {
+              "outgoing_message_contains_claim": false,
+              "claim_type": "pos_005"
+            },
+            "expect": "FALSE",
+            "label": "no claim in message"
+          },
+          {
+            "context": {
+              "outgoing_message_contains_claim": true,
+              "claim_type": "other_pos"
+            },
+            "expect": "FALSE",
+            "label": "different POS rule"
+          }
+        ]
+      },
+      "action": {
+        "english": "Block the outgoing message. Log the attempted claim, the source (rule id, template, human author), and the block event. Cloud is a real problem; SAR reduces but does not eliminate the gap; be honest.",
+        "marathi": "बाहेर जाणारा संदेश थांबवा. प्रयत्न केलेला दावा, स्रोत (नियम id, template, लेखक) व block घटना log करा. ढग खरे अडथळे आहेत; SAR ते कमी करते पण संपवत नाही; प्रामाणिक रहा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Cloud is a real problem; SAR reduces but does not eliminate the gap; be honest.",
+        "yield_impact": "Reputation and truthfulness protection.",
+        "confidence_score": 0.95,
+        "source_tier": "A",
+        "references": [
+          "RAW MASTER §3, §16.1"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "outgoing_message_contains_claim",
+        "claim_type"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Kannad ginger buyers and farmers alike remember overpromises. Every one of these prohibited claims is a claim we could technically make and would regret.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": true,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-POS-006",
+      "category": "POS",
+      "priority": 5,
+      "severity": "red",
+      "stage": "ALL",
+      "trigger": {
+        "english": "An outgoing customer message or marketing artefact contains a claim that 'we replace your soil sensor with satellite'",
+        "marathi": "बाहेर जाणाऱ्या ग्राहक संदेशात किंवा विपणन मजकुरात 'आम्ही तुमच्या मृदा सेन्सरची जागा उपग्रहाने घेतो' असा दावा आहे",
+        "expr": "outgoing_message_contains_claim IS TRUE AND claim_type == 'pos_006'",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Immutable prohibited-claim rule. SILENT_GUARD blocks the outgoing message before it is sent to the farmer, buyer, insurer or marketing channel.",
+        "golden_tests": [
+          {
+            "context": {
+              "outgoing_message_contains_claim": true,
+              "claim_type": "pos_006"
+            },
+            "expect": "TRUE",
+            "label": "block"
+          },
+          {
+            "context": {
+              "outgoing_message_contains_claim": false,
+              "claim_type": "pos_006"
+            },
+            "expect": "FALSE",
+            "label": "no claim in message"
+          },
+          {
+            "context": {
+              "outgoing_message_contains_claim": true,
+              "claim_type": "other_pos"
+            },
+            "expect": "FALSE",
+            "label": "different POS rule"
+          }
+        ]
+      },
+      "action": {
+        "english": "Block the outgoing message. Log the attempted claim, the source (rule id, template, human author), and the block event. Sub-node soil moisture and EC are the authorities in their domains; satellite provides context, never replaces them.",
+        "marathi": "बाहेर जाणारा संदेश थांबवा. प्रयत्न केलेला दावा, स्रोत (नियम id, template, लेखक) व block घटना log करा. सब-नोड मृदा-ओलावा व EC त्यांच्या डोमेनवर अधिकारी आहेत; उपग्रह संदर्भ देतो, त्यांची जागा घेत नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Sub-node soil moisture and EC are the authorities in their domains; satellite provides context, never replaces them.",
+        "yield_impact": "Reputation and truthfulness protection.",
+        "confidence_score": 0.95,
+        "source_tier": "A",
+        "references": [
+          "RAW MASTER §1.4, §16.1"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "outgoing_message_contains_claim",
+        "claim_type"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Kannad ginger buyers and farmers alike remember overpromises. Every one of these prohibited claims is a claim we could technically make and would regret.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": true,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-POS-007",
+      "category": "POS",
+      "priority": 5,
+      "severity": "red",
+      "stage": "ALL",
+      "trigger": {
+        "english": "An outgoing customer message or marketing artefact contains a claim that 'our satellite view is always up-to-date'",
+        "marathi": "बाहेर जाणाऱ्या ग्राहक संदेशात किंवा विपणन मजकुरात 'आमचे उपग्रह दृश्य नेहमी ताजे असते' असा दावा आहे",
+        "expr": "outgoing_message_contains_claim IS TRUE AND claim_type == 'pos_007'",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Immutable prohibited-claim rule. SILENT_GUARD blocks the outgoing message before it is sent to the farmer, buyer, insurer or marketing channel.",
+        "golden_tests": [
+          {
+            "context": {
+              "outgoing_message_contains_claim": true,
+              "claim_type": "pos_007"
+            },
+            "expect": "TRUE",
+            "label": "block"
+          },
+          {
+            "context": {
+              "outgoing_message_contains_claim": false,
+              "claim_type": "pos_007"
+            },
+            "expect": "FALSE",
+            "label": "no claim in message"
+          },
+          {
+            "context": {
+              "outgoing_message_contains_claim": true,
+              "claim_type": "other_pos"
+            },
+            "expect": "FALSE",
+            "label": "different POS rule"
+          }
+        ]
+      },
+      "action": {
+        "english": "Block the outgoing message. Log the attempted claim, the source (rule id, template, human author), and the block event. Revisit is 5-20 days depending on cloud. Freshness varies and must be shown, not hidden.",
+        "marathi": "बाहेर जाणारा संदेश थांबवा. प्रयत्न केलेला दावा, स्रोत (नियम id, template, लेखक) व block घटना log करा. पुनरागमन ढगांवर अवलंबून ५-२० दिवस. ताजेपणा बदलतो — तो दाखवायचा, लपवायचा नाही."
+      },
+      "reasoning": {
+        "agronomic_basis": "Revisit is 5-20 days depending on cloud. Freshness varies and must be shown, not hidden.",
+        "yield_impact": "Reputation and truthfulness protection.",
+        "confidence_score": 0.95,
+        "source_tier": "A",
+        "references": [
+          "RAW MASTER §3, §16.1"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "outgoing_message_contains_claim",
+        "claim_type"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Kannad ginger buyers and farmers alike remember overpromises. Every one of these prohibited claims is a claim we could technically make and would regret.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": true,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-DP-001",
+      "category": "DP",
+      "priority": 5,
+      "severity": "red",
+      "stage": "ALL",
+      "trigger": {
+        "english": "A satellite chip or image would show a plot other than the current viewer's own plot without aggregation",
+        "marathi": "current viewer च्या स्वतःच्या प्लॉट व्यतिरिक्त कोणत्याही प्लॉटचे उपग्रह चित्र / भाग aggregation शिवाय दाखवायचा प्रयत्न",
+        "expr": "sat_public_display_context IN ['third_party', 'cluster_aggregate'] AND third_party_share_consent_given IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Immutable DPDP guard. A satellite tile is public but a per-plot derivative linked to a specific farmer is personal data under the DPDP Act 2023. Blocking third-party display without consent.",
+        "golden_tests": [
+          {
+            "context": {
+              "sat_public_display_context": "third_party",
+              "third_party_share_consent_given": false
+            },
+            "expect": "TRUE",
+            "label": "block"
+          },
+          {
+            "context": {
+              "sat_public_display_context": "third_party",
+              "third_party_share_consent_given": true
+            },
+            "expect": "FALSE",
+            "label": "consent given"
+          },
+          {
+            "context": {
+              "sat_public_display_context": "own_plot",
+              "third_party_share_consent_given": false
+            },
+            "expect": "FALSE",
+            "label": "own plot — allowed"
+          }
+        ]
+      },
+      "action": {
+        "english": "Block the display. Aggregate to cluster mean if legitimate cluster context is needed. Log the block event with viewer identity, plot identity, and requested purpose.",
+        "marathi": "प्रदर्शन थांबवा. कायदेशीर cluster context आवश्यक असल्यास cluster mean वर aggregate करा. block घटना viewer, plot, हेतू यांच्यासह log करा."
+      },
+      "reasoning": {
+        "agronomic_basis": "DPDP Act 2023 personal data definition. See RAW MASTER §13.6.",
+        "yield_impact": "Regulatory and reputation protection.",
+        "confidence_score": 0.95,
+        "source_tier": "A",
+        "references": [
+          "DPDP Act 2023",
+          "RAW MASTER §13.6",
+          "Domain 12 DPDP rules"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "sat_public_display_context",
+        "third_party_share_consent_given"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Cluster displays are useful to farmers but must aggregate; showing a neighbour's plot NDVI curve without consent is a DPDP violation. This rule is immutable for the same reason D12-DPDP-* are.",
+      "decision_type": "SENSOR_ALERT",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": true,
+      "delivery": "SILENT_GUARD"
+    },
+    {
+      "rule_id": "D14-DP-002",
+      "category": "DP",
+      "priority": 3,
+      "severity": "info",
+      "stage": "ALL",
+      "trigger": {
+        "english": "A satellite product is being displayed to any user AND attribution has not yet been rendered on the current view",
+        "marathi": "उपग्रह उत्पादन कोणत्याही वापरकर्त्याला दाखवले जात आहे आणि श्रेय (attribution) रेंडर झालेले नाही",
+        "expr": "sat_source IS NOT NULL AND sat_attribution_shown IS FALSE",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Attribution enforcement. Every displayed satellite product must carry the source line — Copernicus, USGS, Bhuvan, Planet — per RAW MASTER §13.7. Silent guard reminds the UI layer.",
+        "golden_tests": [
+          {
+            "context": {
+              "sat_source": "sentinel-2",
+              "sat_attribution_shown": false
+            },
+            "expect": "TRUE",
+            "label": "attribution missing"
+          },
+          {
+            "context": {
+              "sat_source": "sentinel-2",
+              "sat_attribution_shown": true
+            },
+            "expect": "FALSE",
+            "label": "attribution present"
+          },
+          {
+            "context": {
+              "sat_source": null,
+              "sat_attribution_shown": false
+            },
+            "expect": "FALSE",
+            "label": "no product to attribute"
+          }
+        ]
+      },
+      "action": {
+        "english": "Ensure the UI renders the required attribution before the satellite product is shown. Block if the UI cannot render attribution.",
+        "marathi": "उपग्रह उत्पादन दाखवण्यापूर्वी UI ने आवश्यक श्रेय रेंडर करावे. UI ते रेंडर करू शकत नसल्यास प्रदर्शन थांबवा."
+      },
+      "reasoning": {
+        "agronomic_basis": "Every displayed satellite product carries a licence-compliance attribution requirement (Copernicus, USGS, Bhuvan, Planet). RAW MASTER Section 13.7 specifies the exact wording for each source. Silent guard enforces the UI-side template before the product renders to any user.",
+        "yield_impact": "None; regulatory.",
+        "confidence_score": 0.9,
+        "source_tier": "A",
+        "references": [
+          "RAW MASTER §13.7",
+          "Copernicus attribution requirement"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [
+          "domain_12_ai"
+        ],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "sat_source",
+        "sat_attribution_shown"
+      ],
+      "u_value": null,
+      "recoverability": "none",
+      "source_class": "SRC-Q",
+      "kannad_note": "Simple UI check; a template line satisfies the requirement, but the rule ensures the template is never omitted.",
+      "decision_type": "AUTO_DECISION",
+      "automation": "automatic",
+      "status": "AUTHOR_DRAFT",
+      "immutable": false,
+      "delivery": "SILENT_GUARD"
+    }
+  ],
+  "open_items": [
+    {
+      "id": "D14-OI-01",
+      "item": "Publish or acquire a Kannad-region ginger NDVI baseline (season 1 log will produce this)",
+      "owner": "season 1 field data",
+      "source_class": "EST",
+      "blocking": false,
+      "note": "The plot_ndvi_baseline_regional field is populated by an author estimate curve; season-1 empirical data replaces it and elevates NV-003 confidence from 0.55 to ~0.75."
+    },
+    {
+      "id": "D14-OI-02",
+      "item": "Confirm plot polygon capture UX in the farmer app",
+      "owner": "app team",
+      "source_class": "EST",
+      "blocking": true,
+      "note": "PL-001 blocks all D14 output for a plot without a polygon; the UX must produce clean polygons."
+    },
+    {
+      "id": "D14-OI-03",
+      "item": "Choose one primary processing platform between GEE and Sentinel Hub for production",
+      "owner": "engineering",
+      "source_class": "EST",
+      "blocking": false,
+      "note": "Both work for pilot; production commitment shapes cost line and SLA."
+    },
+    {
+      "id": "D14-OI-04",
+      "item": "Land calibrated CWSI wet/dry baselines for Kannad ginger",
+      "owner": "season 1 field data",
+      "source_class": "EST",
+      "blocking": false,
+      "note": "LT-002/003 use literature bands; local calibration bumps confidence from 0.72 to ~0.85."
+    },
+    {
+      "id": "D14-OI-05",
+      "item": "Register with Copernicus Data Space and confirm quota fits a 10-cluster pilot",
+      "owner": "operations",
+      "source_class": "EST",
+      "blocking": false,
+      "note": "Free tier is expected to fit; verify before scale."
+    },
+    {
+      "id": "D14-OI-06",
+      "item": "Assess FASAL / CHAMAN horticulture products for ginger coverage",
+      "owner": "kb_author",
+      "source_class": "EST",
+      "blocking": false,
+      "note": "May give a regional baseline for free; if it does, replaces the Phase-1 author-estimate model."
+    },
+    {
+      "id": "D14-OI-07",
+      "item": "Verify DPDP consent covers satellite-derived plot advisory display",
+      "owner": "legal",
+      "source_class": "EST",
+      "blocking": true,
+      "note": "DP-001 already blocks third-party display without consent; onboarding consent language must match."
+    },
+    {
+      "id": "D14-OI-08",
+      "item": "Coordinate with VNMKV Parbhani for phenology validation",
+      "owner": "kb_author",
+      "source_class": "EST",
+      "blocking": false,
+      "note": "PH-001/002 curve fitting uses published parameters; VNMKV local phenology sharpens them."
+    },
+    {
+      "id": "D14-OI-09",
+      "item": "Season 1 falsifiable test on satellite lead time for rhizome rot",
+      "owner": "field trial",
+      "source_class": "EST",
+      "blocking": false,
+      "note": "RAW MASTER §5.6 test. Result decides whether any D14 rule can ever be strengthened for rot detection or whether the blind spot is fundamental."
+    },
+    {
+      "id": "D14-OI-10",
+      "item": "Reconcile satellite-derived rainfall (GPM IMERG) with D07 rainfall",
+      "owner": "kb_author",
+      "source_class": "EST",
+      "blocking": false,
+      "note": "Sits between D07 and D14; assign owner and homing before adding IMERG rules."
+    }
+  ],
+  "summary": {
+    "total_rules": 47,
+    "by_category": {
+      "NV": 7,
+      "NR": 3,
+      "NM": 3,
+      "SR": 5,
+      "LT": 3,
+      "PH": 4,
+      "AN": 4,
+      "FU": 5,
+      "PL": 4,
+      "POS": 7,
+      "DP": 2
+    },
+    "by_priority": {
+      "4": 7,
+      "3": 22,
+      "5": 10,
+      "2": 8
+    },
+    "by_severity": {
+      "info": 28,
+      "yellow": 9,
+      "red": 10
+    },
+    "by_source_tier": {
+      "A": 26,
+      "B": 21
+    },
+    "by_source_class": {
+      "DERIVED": 31,
+      "EST": 7,
+      "SRC-Q": 9
+    },
+    "by_decision_type": {
+      "AUTO_DECISION": 21,
+      "SENSOR_ALERT": 26
+    },
+    "immutable_count": 8,
+    "rules_with_trigger_expr": 47,
+    "rules_with_delivery_class": 47,
+    "confidence_range": {
+      "min": 0.55,
+      "max": 0.95,
+      "mean": 0.81
+    }
+  },
+  "next_steps": [
+    "1. Tier-1 review of all 44 rules against RAW MASTER §16.1 prohibited claims and §1.4 cardinal principle",
+    "2. Season 1 field data collection (open items 01, 04, 09) to elevate SRC-EST rules to SRC-Q",
+    "3. Farmer-app plot polygon capture (open item 02) before any pilot activation",
+    "4. Copernicus and Sentinel Hub production accounts (open item 05)",
+    "5. Add precedence relations in Domain 11 for BUNDLES between D14-NM-003 and D03 irrigation rules, and between D14-LT-003 and D03 irrigation rules; see companion patch file"
+  ]
+}

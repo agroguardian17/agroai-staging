@@ -1939,3 +1939,46 @@ async def test_plot_status_derived_from_season_dates() -> None:
     # After actual harvest -> post_harvest
     harvested = dataclasses.replace(base, actual_harvest_date=date(2027, 1, 15))
     assert await _status(harvested, date(2027, 2, 1)) == "post_harvest"
+
+
+class _FakePlotStageRepo:
+    def __init__(self, previous: str | None = None) -> None:
+        self._prev = previous
+        self.recorded: list[tuple[str, date, str]] = []
+
+    async def previous_stage(self, plot_id: str, before: date) -> str | None:
+        return self._prev
+
+    async def record_stage(self, plot_id: str, run_date: date, stage: str) -> None:
+        self.recorded.append((plot_id, run_date, stage))
+
+
+@pytest.mark.asyncio
+async def test_previous_stage_populated_from_repo() -> None:
+    """previous_stage comes from the plot-stage history (D03-SB-003 guard)."""
+    declared = frozenset({"previous_stage", "current_stage"})
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(_sample_reading()),
+        plot_repo=_FakePlotRepo(_sample_plot()),
+        crop_season_repo=_FakeSeasonRepo(_sample_season()),
+        plot_stage_repo=_FakePlotStageRepo(previous="G1"),
+        declared_fields=declared,
+    )
+    s = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)).state
+    assert s["previous_stage"] == "G1"
+    assert s["current_stage"] == "vegetative"
+
+
+@pytest.mark.asyncio
+async def test_previous_stage_none_on_first_run() -> None:
+    """No earlier run -> previous_stage stays UNKNOWN and the rule is dormant."""
+    declared = frozenset({"previous_stage"})
+    deps = FarmBrainDeps(
+        reading_repo=_FakeReadingRepo(_sample_reading()),
+        plot_repo=_FakePlotRepo(_sample_plot()),
+        crop_season_repo=_FakeSeasonRepo(_sample_season()),
+        plot_stage_repo=_FakePlotStageRepo(previous=None),
+        declared_fields=declared,
+    )
+    s = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=date(2026, 8, 3), deps=deps)).state
+    assert s["previous_stage"] is None

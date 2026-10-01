@@ -21,7 +21,7 @@ gates pass (296 rules / 723 golden tests). Same FK-safe truncate-and-reload as
 0048/0059/0060. Forward-only; downgrade no-op.
 
 Revision ID: 0063
-Revises: 0061
+Revises: 0062
 Create Date: 2026-10-01
 """
 
@@ -34,7 +34,7 @@ from pathlib import Path
 from alembic import op
 
 revision: str = "0063"
-down_revision: str | None = "0061"
+down_revision: str | None = "0062"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

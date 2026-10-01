@@ -1,0 +1,4 @@
+variety,total_n_ceiling_kg_per_acre,total_n_baseline_kg_per_ha,basal_dap_0_kg_per_acre,top_dress_45_dap_kg_per_acre,top_dress_120_dap_kg_per_acre,late_stage_n_cutoff_dap,g3_g4_excess_pct_threshold,source_tier,notes
+IISR-Mahima,61,150,24,20,17,150,0.00,L3,"VNMKV Package of Practices baseline 150 kg/ha = 60.7 kg/acre (rounded 61). Ceiling = exact baseline conversion, NO safety margin. v1.1 correction: removed misleading '+10% safety margin' note from v1.0 that contradicted the integer value."
+IISR-Varada,55,135,22,18,15,150,0.00,L4,"VIRAAI-derived: Mahima baseline × 0.90 (matches Varada -10% water demand ratio). Shorter-duration variety, lower N requirement."
+Nadia-local,52,128,21,17,14,150,0.00,L4,"VIRAAI-derived: Mahima baseline × 0.85 (matches Nadia -15% water demand ratio). Drought-tolerant landrace, lower biomass, lower N pull."
