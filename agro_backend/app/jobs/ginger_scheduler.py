@@ -49,17 +49,11 @@ if TYPE_CHECKING:
 log = structlog.get_logger(__name__)
 
 
-async def build_and_start_scheduler(settings: Settings) -> AsyncIOScheduler | None:
-    """Return a running scheduler with the ginger daily job registered.
-
-    Returns ``None`` when ``GINGER_JOB_ENABLED`` is false.
-    """
-    if not settings.GINGER_JOB_ENABLED:
-        log.info("ginger_scheduler.disabled", reason="GINGER_JOB_ENABLED=false")
-        return None
-
+def build_ginger_daily_deps(settings: Settings) -> GingerDailyDeps:
+    """Construct the full GingerDailyDeps. Shared by the scheduler and the
+    manual ``python -m app.jobs.ginger_daily`` runner so both wire identically."""
     sessionmaker = _ensure_engine(settings)
-    deps = GingerDailyDeps(
+    return GingerDailyDeps(
         reading_repo=PgReadingRepo(sessionmaker),
         plot_repo=PgPlotRepo(sessionmaker),
         crop_season_repo=PgCropSeasonRepo(sessionmaker),
@@ -85,6 +79,17 @@ async def build_and_start_scheduler(settings: Settings) -> AsyncIOScheduler | No
         advisory_audit_repo=PgAdvisoryAuditRepo(sessionmaker),
     )
 
+
+async def build_and_start_scheduler(settings: Settings) -> AsyncIOScheduler | None:
+    """Return a running scheduler with the ginger daily job registered.
+
+    Returns ``None`` when ``GINGER_JOB_ENABLED`` is false.
+    """
+    if not settings.GINGER_JOB_ENABLED:
+        log.info("ginger_scheduler.disabled", reason="GINGER_JOB_ENABLED=false")
+        return None
+
+    deps = build_ginger_daily_deps(settings)
     scheduler = AsyncIOScheduler(timezone=settings.GINGER_JOB_TIMEZONE)
 
     async def _job_wrapper() -> None:
@@ -123,4 +128,4 @@ async def stop_scheduler(scheduler: AsyncIOScheduler) -> None:
     log.info("ginger_scheduler.stopped")
 
 
-__all__ = ["build_and_start_scheduler", "stop_scheduler"]
+__all__ = ["build_and_start_scheduler", "build_ginger_daily_deps", "stop_scheduler"]

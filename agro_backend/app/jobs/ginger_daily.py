@@ -387,3 +387,32 @@ __all__ = [
     "GingerDailyDeps",
     "run_daily",
 ]
+
+
+def _main() -> None:
+    """Manual runner: ``python -m app.jobs.ginger_daily [--date YYYY-MM-DD]``.
+
+    Builds the same deps the scheduler uses and runs the daily job once over all
+    active ginger seasons, so a failing 06:30 tick can be reproduced on demand
+    with a visible traceback.
+    """
+    import argparse
+
+    from app.config import get_settings
+    from app.jobs.ginger_scheduler import build_ginger_daily_deps
+    from app.lib.logging import configure_logging
+
+    parser = argparse.ArgumentParser(description="Run the ginger daily advisory job once.")
+    parser.add_argument("--date", help="Override 'today' as YYYY-MM-DD (default: now in job TZ).")
+    parser.add_argument("--plot", help="Ignored; kept for backwards-compat.")
+    args = parser.parse_args()
+
+    configure_logging()
+    override = date.fromisoformat(args.date) if args.date else None
+    deps = build_ginger_daily_deps(get_settings())
+    written = asyncio.run(run_daily(deps, override_today=override))
+    log.info("ginger_daily.manual_run_done", advisories_written=written)
+
+
+if __name__ == "__main__":
+    _main()

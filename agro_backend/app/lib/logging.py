@@ -83,12 +83,18 @@ def configure_logging() -> None:
     ]
 
     if settings.APP_ENV is AppEnv.DEVELOPMENT:
+        # ConsoleRenderer formats exc_info into a readable traceback itself.
         renderer: Processor = structlog.dev.ConsoleRenderer(colors=True)
+        exc_processors: list[Processor] = []
     else:
+        # JSONRenderer drops exc_info unless a traceback processor runs first,
+        # so every production error would otherwise log `"exc_info": true` with
+        # no stack. dict_tracebacks renders it into a structured `exception`.
         renderer = structlog.processors.JSONRenderer()
+        exc_processors = [structlog.processors.dict_tracebacks]
 
     structlog.configure(
-        processors=[*shared_processors, renderer],
+        processors=[*shared_processors, *exc_processors, renderer],
         wrapper_class=structlog.make_filtering_bound_logger(getattr(logging, settings.LOG_LEVEL)),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(file=sys.stdout),
