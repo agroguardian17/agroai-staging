@@ -56,14 +56,6 @@ WINDOW_OVERDUE_REMINDERS = 3
 
 
 DELIVERY = {
- # --- Batch 1 (firing-intent ready rules, 27 Sep) ---
- 'D01-PH-004': EVENT,               # flowering observed -> G4 rhizome-fill start
- 'D02-DR-004': WINDOW,              # poor drainage under broad-ridge, DAP 0-14
- 'D02-ST-002': ONCE_UNTIL_RESOLVED, # pre-plant percolation test prompt
- # --- Batch 1b (27 Sep) ---
- 'D02-LY-001': ONCE_UNTIL_RESOLVED, # vertisol flat/bad-layout BLOCKING gate
- 'D02-LY-004': ONCE_UNTIL_RESOLVED, # vertisol unset-layout prompt
- 'D03-SB-003': EVENT,               # stage-transition event
 
  # --- silent guards: no message unless the prohibited action is attempted --
  'D08-WD-001': SILENT_GUARD,   # herbicide after emergence
@@ -73,7 +65,6 @@ DELIVERY = {
  'D04-NS-003': SILENT_GUARD,   # nitrogen after 80 DAP
  'D05-CH-001': SILENT_GUARD,   # blocklisted molecule
  'D05-CH-003': SILENT_GUARD,   # PHI unknown
- 'D05-CH-008': ONCE_UNTIL_RESOLVED,  # blocklisted input recorded — standing alert until resolved
  'D06-CH-001': SILENT_GUARD,   # fungicide on bacterial wilt
  'D06-CH-003': SILENT_GUARD,
  'D09-SF-001': SILENT_GUARD,   # PPE absent
@@ -110,61 +101,7 @@ DELIVERY = {
  'D08-LY-001': ONCE_UNTIL_RESOLVED,
  'D07-RF-001': ONCE_UNTIL_RESOLVED,
  'D10-SUB-002': ONCE_UNTIL_RESOLVED,
- 'D01-PW-001': EVENT,               # v1.2: late-planting warning (was blocking unplanted-window)
- 'D06-BW-001': ONCE_UNTIL_RESOLVED, # v1.2: bacterial-wilt 5-yr rotation gate (dormant until years_since_last_wilt sourced)
- # --- Batch 2 (D06 disease guardrails, 28 Sep) ---
- 'D06-CH-002': SILENT_GUARD,        # fungicide pre-check
- 'D06-FH-001': EVENT,               # post-harvest disease-history capture
- 'D06-FH-002': WINDOW,              # cluster soft-rot preventive window
- 'D06-ST-001': WINDOW,              # pre-plant seed-treatment protocol
- 'D06-ST-002': WINDOW,              # bio/chemical seed-treatment sequencing
- # --- Batches 3-9 (firing-intent, 28 Sep) ---
- # --- Water Budget engine (wave 7) ---
- 'D03-WB-001': WINDOW,
- 'D03-WB-002': WINDOW,
- 'D03-WB-003': EVENT,
- 'D03-WB-004': EVENT,
- 'D03-WB-005': SILENT_GUARD,
- 'D03-WB-006': EVENT,
- 'D03-WB-007': ONCE_UNTIL_RESOLVED,
- 'D03-WB-008': ONCE_UNTIL_RESOLVED,
- 'D03-ST-001': SILENT_GUARD,
- 'D04-BI-002': WINDOW,
- 'D04-DG-002': WINDOW,
- 'D04-SN-001': ONCE_UNTIL_RESOLVED,
- 'D05-CH-002': SILENT_GUARD,
- 'D05-IP-001': SILENT_GUARD,
- 'D05-PC-001': WINDOW,
- 'D05-SC-002': WINDOW,
- 'D10-ACT-002': EVENT,
- 'D10-APP-001': SILENT_GUARD,
- 'D10-CROP-002': WINDOW,
- 'D10-REG-001': SILENT_GUARD,
- 'D11-GA-001': EVENT,
- 'D11-GA-002': WINDOW,
- 'D11-GA-003': ONCE_UNTIL_RESOLVED,
- 'D11-RC-002': EVENT,
- 'D11-RC-003': EVENT,
- 'D11-SC-001': WINDOW,
- 'D11-SC-002': EVENT,
- 'D11-SC-003': WINDOW,
- 'D09-DR-001': WINDOW,
- 'D09-DR-002': EVENT,
- 'D09-DR-003': EVENT,
- 'D09-PW-001': WINDOW,
- 'D09-SL-003': ONCE_UNTIL_RESOLVED,
- 'D09-ST-002': ONCE_UNTIL_RESOLVED,
- 'D09-YD-002': EVENT,
- 'D09-YD-003': WINDOW,
- 'D09-YD-004': EVENT,
- 'D12-AL-001': ONCE_UNTIL_RESOLVED,
- 'D12-AL-002': SILENT_GUARD,
- 'D12-IMG-001': EVENT,
- 'D12-LOG-002': EVENT,
- 'D12-VOC-002': EVENT,
- 'D01-PH-005': ONCE_UNTIL_RESOLVED,
- 'D03-SB-004': SILENT_GUARD,
- 'D03-WS-002': WINDOW,
+ 'D01-PW-001': ONCE_UNTIL_RESOLVED,
  'D09-GD-002': ONCE_UNTIL_RESOLVED,
 
  # --- transient events: rising edge only ----------------------------------
@@ -289,10 +226,6 @@ DELIVERY = {
  'D14-NV-006': EVENT, 'D14-NV-007': EVENT,
  'D14-SR-003': EVENT,
  'D14-FU-003': EVENT,
-
- # KB 7 Final Decisions (items 1 + 4): standing pre-planting prompts
- 'D04-MC-005': ONCE_UNTIL_RESOLVED,   # basal ZnSO4 zone default until applied
- 'D06-BW-004': ONCE_UNTIL_RESOLVED,   # wilt-history capture until recorded
 }
 
 DEFAULT_DELIVERY = WINDOW

@@ -1,0 +1,15 @@
+106a107,114
+>     try:
+>         from triggers_wave4_vpd import TRIGGERS_W4 as W4
+>     except ImportError:
+>         W4 = {}
+>     try:
+>         from triggers_wave5_d14 import TRIGGERS_W5 as W5
+>     except ImportError:
+>         W5 = {}
+108,109c116,117
+<     T = {**W1, **W2, **W3}
+<     files = ['Domain1_Rules_Ginger_v2.json'] + [f'Domain{i}_Rules_Ginger.json' for i in range(2, 14)]
+---
+>     T = {**W1, **W2, **W3, **W4, **W5}
+>     files = ['Domain1_Rules_Ginger_v2.json'] + [f'Domain{i}_Rules_Ginger.json' for i in range(2, 15)]

@@ -24,23 +24,12 @@
         "u_values_applied": "array of rule_id",
         "predicted_yield_quintal_per_acre": "number",
         "prediction_interval_pct": "number",
-        "prediction_stage": "enum:[G0, G1, G2, G3, G4, G5, pre_harvest_observation]",
+        "prediction_stage": "enum:[pre_season, g1_end, mid_season, pre_harvest_observation, pre_harvest_sampled]",
         "gap_attributed_pct": "number",
         "gap_unexplained_pct": "number",
         "season_record_complete": "boolean",
         "u_value_source_class": "enum:[SRC-Q, SRC-D, EST, FIELD]",
-        "interdependence_group": "string",
-        "actual_yield_recorded": "boolean",
-        "season_starting": "boolean",
-        "gap_attribution_complete": "boolean",
-        "saturation_event_occurred": "boolean",
-        "moisture_stress_period_started": "boolean",
-        "scheduled_operation_completed": "boolean",
-        "scheduled_operation_missed": "boolean",
-        "preseason_planning": "boolean",
-        "yield_expectation_requested": "boolean",
-        "season_omissions_recorded": "boolean",
-        "disease_event_recorded_in_season": "boolean"
+        "interdependence_group": "string"
       },
       "sub_additive_formula": {
         "expression": "total_loss = 1 - PRODUCT(1 - u_i)",
@@ -566,132 +555,6 @@
             "object": "D06-SW-003",
             "reason_en": "SAR-detected standing water after heavy rain triggers URGENT drainage advisory AND stages D06's post-monsoon saturation branch. The SR-002 alert acts immediately; D06-SW-003 handles the downstream rot-risk assessment.",
             "reason_mr": "SAR-वरून पाणी साचणे झपाट्याने URGENT निचरा सल्ला चालवते आणि D06 च्या post-monsoon saturation शाखेला क्रमाने तयार करते. SR-002 त्वरित कारवाई करते; D06-SW-003 पुढील कूज-जोखीम मूल्यांकन हाताळते."
-          },
-          {
-            "subject": "D02-LY-004",
-            "relation": "SEQUENCES",
-            "object": "D02-LY-001",
-            "reason_en": "The unset-layout prompt fires first (layout NULL); once the farmer records a non-compliant layout the blocking gate D02-LY-001 takes over. Ordering keeps the yellow prompt and the blocking gate from being conflated.",
-            "reason_mr": "आधी लागवड-पद्धत निवडण्याची सूचना (yellow); चुकीची पद्धत नोंदल्यास blocking gate D02-LY-001 लागू होतो."
-          },
-          {
-            "subject": "D02-ST-002",
-            "relation": "SEQUENCES",
-            "object": "D02-LY-001",
-            "reason_en": "The percolation-test result should inform the layout decision, so the pre-plant percolation prompt is sequenced before the layout gate.",
-            "reason_mr": "निचरा-चाचणीचा निकाल लागवड-पद्धतीच्या निर्णयासाठी वापरावा, म्हणून चाचणी-सूचना layout gate आधी."
-          },
-          {
-            "subject": "D06-FH-001",
-            "relation": "SEQUENCES",
-            "object": "D06-BW-001",
-            "reason_en": "This season's post-harvest disease log feeds next season's wilt-history gate (field_history_wilt / years_since_last_wilt).",
-            "reason_mr": "या हंगामाची disease नोंद पुढच्या हंगामाच्या wilt-gate ला feed होते."
-          },
-          {
-            "subject": "D06-FH-002",
-            "relation": "BUNDLES",
-            "object": "D06-CH-002",
-            "reason_en": "When the cluster soft-rot drench action proposes a fungicide, the silent guard checks FRAC rotation + PHI; deliver as one action message.",
-            "reason_mr": "cluster drenching fungicide सुचवताना silent guard FRAC + PHI तपासतो; एकत्र संदेश."
-          },
-          {
-            "subject": "D06-ST-001",
-            "relation": "SEQUENCES",
-            "object": "D06-ST-002",
-            "reason_en": "The seed-treatment protocol reminder fires first; the same-day bio+chemical sequencing warning follows.",
-            "reason_mr": "बेणे प्रक्रिया सूचना आधी; एकाच दिवशी bio+chemical चा warning नंतर."
-          },
-          {
-            "subject": "D04-SN-001",
-            "relation": "SEQUENCES",
-            "object": "D04-NS-003",
-            "reason_en": "Basal nutrient plan is set first; the late-N excess gate applies later.",
-            "reason_mr": "मूळ खत नियोजन आधी; उशिरा-N gate नंतर."
-          },
-          {
-            "subject": "D05-CH-002",
-            "relation": "SEQUENCES",
-            "object": "D10-REG-001",
-            "reason_en": "A chemical option triggers the CIB&RC regulatory verification gate before it can be shown.",
-            "reason_mr": "रासायनिक पर्याय → CIB&RC verification gate आधी."
-          },
-          {
-            "subject": "D08-WD-001",
-            "relation": "BUNDLES",
-            "object": "D10-REG-001",
-            "reason_en": "The herbicide gate and the CIB&RC verification gate resolve together as one pre-check.",
-            "reason_mr": "तणनाशक gate + CIB&RC gate एकत्र pre-check."
-          },
-          {
-            "subject": "D09-YD-002",
-            "relation": "SEQUENCES",
-            "object": "D11-GA-001",
-            "reason_en": "Actual-yield recording precedes the gap-attribution trigger.",
-            "reason_mr": "प्रत्यक्ष उत्पन्न नोंद → gap-attribution आधी."
-          },
-          {
-            "subject": "D09-YD-004",
-            "relation": "SEQUENCES",
-            "object": "D11-GA-001",
-            "reason_en": "Fresh-yield logging at harvest precedes gap-attribution.",
-            "reason_mr": "fresh-yield नोंद → gap-attribution आधी."
-          },
-          {
-            "subject": "D11-GA-001",
-            "relation": "SEQUENCES",
-            "object": "D11-GA-003",
-            "reason_en": "Gap-attribution runs before the unexplained-gap escalation check.",
-            "reason_mr": "gap-attribution आधी → unexplained escalation नंतर."
-          },
-          {
-            "subject": "D03-MN-002",
-            "relation": "SUPPRESSES",
-            "object": "D03-WB-001",
-            "reason_en": "VWC probe saturation vetoes the water-budget irrigation recommendation (probe > budget).",
-            "reason_mr": "VWC संपृक्त असल्यास water-budget सिंचन-सूचना रद्द (probe > budget)."
-          },
-          {
-            "subject": "D03-MN-002",
-            "relation": "SUPPRESSES",
-            "object": "D03-WB-002",
-            "reason_en": "VWC saturation vetoes even the red water-budget trigger.",
-            "reason_mr": "VWC संपृक्त असल्यास लाल water-budget सूचनाही रद्द."
-          },
-          {
-            "subject": "D03-MN-002",
-            "relation": "SUPPRESSES",
-            "object": "D03-WB-004",
-            "reason_en": "VWC saturation vetoes the supplementary-irrigation trigger.",
-            "reason_mr": "VWC संपृक्त असल्यास पुरवणी-सिंचन सूचना रद्द."
-          },
-          {
-            "subject": "D03-WB-002",
-            "relation": "ESCALATES",
-            "object": "D03-WB-001",
-            "reason_en": "Severe deficit overrides the moderate one — deliver a single red message, not both.",
-            "reason_mr": "गंभीर तूट सामान्य तुटीवर प्राधान्य — एकच लाल संदेश."
-          },
-          {
-            "subject": "D03-WB-001",
-            "relation": "BUNDLES",
-            "object": "D03-MN-004",
-            "reason_en": "Water-budget and VWC-low both point to irrigation - deliver one farmer message.",
-            "reason_mr": "water-budget व VWC-कमी दोन्ही सिंचन सुचवतात — एकच संदेश."
-          },
-          {
-            "subject": "D06-BW-004",
-            "relation": "SEQUENCES",
-            "object": "D06-BW-001",
-            "reason_en": "The wilt-history capture prompt must be answered before the rotation gate is evaluated; once history is recorded true with years<5, D06-BW-001 then fires.",
-            "reason_mr": "जिवाणू-मर इतिहास नोंदवण्याचा प्रश्न आधी सोडवावा; इतिहास true व वर्षे<5 नोंदल्यावर मग D06-BW-001 चालतो."
-          },
-          {
-            "subject": "D03-SB-004",
-            "relation": "SUPPRESSES",
-            "object": "D03-MN-002",
-            "reason_en": "During a sub-node hardware-upgrade window the VWC probe is unreliable, so the probe-driven saturation veto must not drive irrigation advisory.",
-            "reason_mr": "sub-node hardware अपग्रेड चालू असताना VWC probe विश्वासार्ह नसतो, म्हणून probe-आधारित संपृक्तता veto सिंचन सल्ला ठरवू नये."
           }
         ]
       },
@@ -1691,15 +1554,8 @@
       "kannad_note": "The additive error is easy to make and produces confident nonsense. With six moderate factors it would predict a negative harvest, which no farmer would believe and which would discredit everything else the engine says.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-FM-002",
@@ -1738,15 +1594,8 @@
       "kannad_note": "Both the broad ridge figure at 15 to 20 percent and the drip figures at 35 to 40 percent are reported as gains. Both needed conversion, and the drip figure was not used for planning anyway because it comes from an equipment supplier.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-FM-003",
@@ -1785,15 +1634,8 @@
       "kannad_note": "Worth stating explicitly because the two rules look contradictory unless the direction is clear. Read the source wording, not the number.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-CL-001",
@@ -1840,15 +1682,8 @@
       "kannad_note": "The single blocking open item in this domain, and it resolves with one question to Kasbe Digraj. There is weak indirect support for 113 — using it makes the scenario computation agree with the state average, while 94 agrees less well.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Confidence 0.70 — architectural intent OK, पण source / local validation पूर्ण होईपर्यंत CONDITIONAL. Season 1 data नंतर confidence upgrade करावी."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-CL-002",
@@ -1893,15 +1728,8 @@
       "kannad_note": "Reaching 90 is about 70 percent above the state average and 110 is more than double it. That is the honest framing of what good management is worth here, and it is more persuasive than a ceiling number.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-DC-001",
@@ -1944,15 +1772,8 @@
       "kannad_note": "This problem only became visible when the domains were audited against each other after being written. It is the strongest argument for keeping the rule base in one queryable store rather than in twelve separate files.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-DC-002",
@@ -1998,15 +1819,8 @@
       "kannad_note": "Scenario C follows this rule — rot and mulch are combined into a single 0.250 term rather than counted as two. Had they been multiplied separately the scenario would have predicted about 40 quintal instead of 50, and the agreement with the state average would have been lost.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-VL-001",
@@ -2050,15 +1864,8 @@
       "kannad_note": "The strongest internal check available without field data. It says the difference between 53 and 90 quintal is not climate or soil but timing, and timing is exactly what the engine addresses.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-VL-002",
@@ -2100,15 +1907,8 @@
       "kannad_note": "The validation is the most quotable result in the knowledge base, which is exactly why the caveat has to travel with it. A technical reviewer will ask how many points the check rests on.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-UV-001",
@@ -2151,15 +1951,8 @@
       "kannad_note": "The eleven estimated values are concentrated in the middle of the register. The largest factors — soft rot, wilt, mulch, broad ridge, variety, seed treatment, earthing up, micronutrients — are mostly sourced, which is the right way round.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-UV-002",
@@ -2202,15 +1995,8 @@
       "kannad_note": "This is where the product actually learns, and it is bookkeeping rather than machine learning. Three or four seasons of this produces a Kannad-specific register that exists in no publication.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-UV-003",
@@ -2252,49 +2038,22 @@
       "kannad_note": "This is why the false alarm rate has to be tolerated. Ten unnecessary drainage inspections cost ten walks; one missed saturation event costs most of the crop.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-SC-001",
       "category": "SC",
       "priority": 4,
-      "severity": "yellow",
+      "severity": "info",
       "stage": "G0",
       "trigger": {
         "english": "Pre-season planning AND a yield expectation is requested",
-        "marathi": "हंगामापूर्व नियोजन आणि उत्पादनाची अपेक्षा विचारली",
-        "expr": "preseason_planning IS TRUE AND yield_expectation_requested IS TRUE",
-        "expr_version": "dsl-1.0",
-        "golden_tests": [
-          {
-            "context": {
-              "preseason_planning": true,
-              "yield_expectation_requested": true
-            },
-            "expect": "TRUE",
-            "label": "yield expectation"
-          },
-          {
-            "context": {
-              "preseason_planning": true,
-              "yield_expectation_requested": false
-            },
-            "expect": "FALSE",
-            "label": "not requested"
-          }
-        ]
+        "marathi": "हंगामापूर्व नियोजन आणि उत्पादनाची अपेक्षा विचारली"
       },
       "action": {
-        "english": "Pre-season yield expectation = variety_potential x site_index (Kannad Western-Scarcity ~0.75-0.85); present as a range.",
-        "marathi": "यील्ड-अपेक्षा: variety potential x Kannad site-index (0.75-0.85) = अंदाजे range टन/एकर. वास्तविक weather/operations वर अवलंबून."
+        "english": "Present the scenarios rather than a single number. Excellent management gives about 102 quintal, good management with some slips about 86, typical management about 50, and a disease event on good management about 34.",
+        "marathi": "एक आकडा न देता परिस्थिती मांडा. उत्कृष्ट व्यवस्थापन सुमारे १०२ क्विंटल, चांगले व्यवस्थापन काही चुकांसह सुमारे ८६, सामान्य व्यवस्थापन सुमारे ५०, आणि चांगल्या व्यवस्थापनावर रोगाचा फटका बसल्यास सुमारे ३४."
       },
       "reasoning": {
         "agronomic_basis": "The scenarios make the consequences of specific omissions visible rather than abstract. The gap between B at 86 and C at 50 is five common management omissions, which is a concrete and actionable comparison.",
@@ -2312,8 +2071,9 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "preseason_planning",
-        "yield_expectation_requested"
+        "predicted_yield_quintal_per_acre",
+        "yield_target_quintal_per_acre",
+        "prediction_interval_pct"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2321,48 +2081,22 @@
       "kannad_note": "Scenario D is the one worth dwelling on. At 34 quintal and Rs 5,000 per quintal the net return is roughly zero, which shows that one disease event erases a season of otherwise good work.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      },
-      "delivery": "WINDOW"
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-SC-002",
       "category": "SC",
       "priority": 4,
-      "severity": "info",
+      "severity": "yellow",
       "stage": null,
       "trigger": {
         "english": "Recorded omissions during the season are being turned into a revised expectation",
-        "marathi": "हंगामातील नोंदवलेल्या चुकांवरून सुधारित अपेक्षा काढली जात आहे",
-        "expr": "season_omissions_recorded IS TRUE",
-        "expr_version": "dsl-1.0",
-        "golden_tests": [
-          {
-            "context": {
-              "season_omissions_recorded": true
-            },
-            "expect": "TRUE",
-            "label": "project omission loss"
-          },
-          {
-            "context": {
-              "season_omissions_recorded": false
-            },
-            "expect": "FALSE",
-            "label": "none"
-          }
-        ]
+        "marathi": "हंगामातील नोंदवलेल्या चुकांवरून सुधारित अपेक्षा काढली जात आहे"
       },
       "action": {
-        "english": "Project the yield impact of recorded season omissions via u-value x intensity.",
-        "marathi": "हंगामातील चुकां/omissions चा projected परिणाम — u-value x intensity ने अंदाजे कमी उत्पादनाची शक्यता."
+        "english": "Recompute the expectation from the ceiling and the recorded factors, applying the grouping rules. Show which factors caused which part of the reduction.",
+        "marathi": "कमाल मर्यादेपासून सुरुवात करून नोंदवलेल्या घटकांवरून अपेक्षा पुन्हा मोजा, गटबद्ध करण्याचे नियम पाळून. कोणत्या घटकामुळे किती घट झाली ते दाखवा."
       },
       "reasoning": {
         "agronomic_basis": "A revised expectation that shows its working is actionable in a way that a bare number is not. If earthing up was late and that accounts for 12.5 percent, the farmer learns something for next season even though this season cannot be recovered.",
@@ -2381,7 +2115,10 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "season_omissions_recorded"
+        "cumulative_loss_pct",
+        "u_values_applied",
+        "predicted_yield_quintal_per_acre",
+        "interdependence_group"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2389,16 +2126,8 @@
       "kannad_note": "Showing the working matters more than the number here. Most of these factors are irrecoverable, so the value of the revised estimate is what it teaches for the next season.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      },
-      "delivery": "EVENT"
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-PR-001",
@@ -2441,15 +2170,8 @@
       "kannad_note": "The intervals are estimates and will need correcting after a season. Stating them at all is more important than stating them precisely — a farmer who is told plus or minus 20 percent and gets a result inside it will trust the next prediction.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Fixed 25% yield penalty local validation शिवाय unsupported. Mechanism ठेवावा; numeric penalty काढून CONDITIONAL — Season 1 field data नंतर calibrate करावा."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-PR-002",
@@ -2496,15 +2218,8 @@
       "kannad_note": "Quantifying the benefit is what makes the instruction persuasive. Dig one plant is easy to ignore; it improves your forecast by a third is not.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Fixed 12% yield penalty local validation शिवाय unsupported. Mechanism ठेवावा; numeric penalty काढून CONDITIONAL — Season 1 field data नंतर calibrate करावा."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-PR-003",
@@ -2550,15 +2265,8 @@
       "kannad_note": "This is the point where an eight-month forecast first becomes grounded in something measured rather than assumed. It is also the earliest point at which a farmer can be told honestly that the season will be below target.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-PR-004",
@@ -2599,49 +2307,22 @@
       "kannad_note": "The honest position is also the more useful one. Prediction is a by-product of this domain; risk quantification before the event is the product.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-GA-001",
       "category": "GA",
       "priority": 5,
-      "severity": "info",
+      "severity": "yellow",
       "stage": "G5",
       "trigger": {
         "english": "Harvest complete AND actual yield recorded",
-        "marathi": "काढणी पूर्ण आणि प्रत्यक्ष उत्पादन नोंदवले",
-        "expr": "harvest_complete IS TRUE AND actual_yield_recorded IS TRUE",
-        "expr_version": "dsl-1.0",
-        "golden_tests": [
-          {
-            "context": {
-              "harvest_complete": true,
-              "actual_yield_recorded": true
-            },
-            "expect": "TRUE",
-            "label": "kick off gap-attribution"
-          },
-          {
-            "context": {
-              "harvest_complete": true,
-              "actual_yield_recorded": false
-            },
-            "expect": "FALSE",
-            "label": "yield not recorded"
-          }
-        ]
+        "marathi": "काढणी पूर्ण आणि प्रत्यक्ष उत्पादन नोंदवले"
       },
       "action": {
-        "english": "On harvest + actual yield recorded, start the gap-attribution pipeline (observed vs potential vs actual).",
-        "marathi": "काढणी + प्रत्यक्ष उत्पन्न नोंदवले — Gap-attribution विश्लेषण सुरू. उत्पादन-अपेक्षा vs प्रत्यक्ष चे कारण-विश्लेषण 24 तासांत."
+        "english": "Run the gap attribution. Start from the ceiling, apply the u-value of every recorded omission or event with grouping applied, compute the expected loss, compare against actual, and record the unexplained residual.",
+        "marathi": "दरी-विश्लेषण चालवा. कमाल मर्यादेपासून सुरुवात करा, नोंदवलेल्या प्रत्येक चुकीचे किंवा घटनेचे u मूल्य गटबद्ध करून लावा, अपेक्षित घट काढा, प्रत्यक्ष उत्पादनाशी तुलना करा, आणि न समजलेला उर्वरित भाग नोंदवा."
       },
       "reasoning": {
         "agronomic_basis": "The residual is the informative part. A large unexplained gap means either a factor is missing from the register or a u-value is wrong, and both are findings worth having.",
@@ -2662,8 +2343,11 @@
         ]
       },
       "farm_brain_schema": [
-        "harvest_complete",
-        "actual_yield_recorded"
+        "yield_quintal_per_acre_actual",
+        "gap_attributed_pct",
+        "gap_unexplained_pct",
+        "u_values_applied",
+        "ceiling_quintal_per_acre"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2671,16 +2355,8 @@
       "kannad_note": "This is the single step that makes the first season worth more than the advice it produced. Without it the season generates a harvest and no learning.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      },
-      "delivery": "EVENT"
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-GA-002",
@@ -2690,31 +2366,11 @@
       "stage": "G0",
       "trigger": {
         "english": "Season beginning AND season_record_complete is false",
-        "marathi": "हंगाम सुरू होत आहे आणि नोंदवही तयार नाही",
-        "expr": "season_starting IS TRUE AND season_record_complete IS FALSE",
-        "expr_version": "dsl-1.0",
-        "golden_tests": [
-          {
-            "context": {
-              "season_starting": true,
-              "season_record_complete": false
-            },
-            "expect": "TRUE",
-            "label": "prior season incomplete"
-          },
-          {
-            "context": {
-              "season_starting": true,
-              "season_record_complete": true
-            },
-            "expect": "FALSE",
-            "label": "prior season complete"
-          }
-        ]
+        "marathi": "हंगाम सुरू होत आहे आणि नोंदवही तयार नाही"
       },
       "action": {
-        "english": "New season starting while the prior season record is incomplete; prompt to fill the data gap before activating the new season.",
-        "marathi": "नवीन हंगाम सुरू — मागील हंगामाची नोंद अपूर्ण. डेटा गॅप भरा (उत्पादन, disease events, operations), नंतर नवीन हंगाम activate होईल."
+        "english": "Set up the twelve required records at the start. Without them the gap attribution at harvest cannot run, and the whole season produces advice but no learning.",
+        "marathi": "हंगामाच्या सुरुवातीलाच बारा आवश्यक नोंदी ठरवून घ्या. त्यांशिवाय काढणीच्या वेळी दरी-विश्लेषण चालवता येत नाही, आणि संपूर्ण हंगाम सल्ला देतो पण शिकवत काहीच नाही."
       },
       "reasoning": {
         "agronomic_basis": "Each required record maps to specific factors in the register. Missing records mean those factors cannot be attributed, and the residual absorbs them, which makes the residual uninformative.",
@@ -2733,8 +2389,9 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "season_starting",
-        "season_record_complete"
+        "season_record_complete",
+        "u_values_applied",
+        "gap_unexplained_pct"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2742,50 +2399,22 @@
       "kannad_note": "Records cannot be reconstructed after the season. A missed earthing-up date or an unrecorded saturation event is simply lost, and the residual grows for no informative reason.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      },
-      "delivery": "WINDOW"
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-GA-003",
       "category": "GA",
       "priority": 4,
-      "severity": "yellow",
+      "severity": "info",
       "stage": "G5",
       "trigger": {
         "english": "Gap attribution complete AND gap_unexplained_pct is large",
-        "marathi": "दरी-विश्लेषण झाले आणि न समजलेला भाग मोठा आहे",
-        "expr": "gap_attribution_complete IS TRUE AND gap_unexplained_pct > 25",
-        "expr_version": "dsl-1.0",
-        "golden_tests": [
-          {
-            "context": {
-              "gap_attribution_complete": true,
-              "gap_unexplained_pct": 30
-            },
-            "expect": "TRUE",
-            "label": ">25% unexplained - escalate"
-          },
-          {
-            "context": {
-              "gap_attribution_complete": true,
-              "gap_unexplained_pct": 15
-            },
-            "expect": "FALSE",
-            "label": "within tolerance"
-          }
-        ]
+        "marathi": "दरी-विश्लेषण झाले आणि न समजलेला भाग मोठा आहे"
       },
       "action": {
-        "english": "When >25% of the yield gap is unexplained after attribution, escalate for agronomist review (unlogged ops / sensor gaps / new factor).",
-        "marathi": "उत्पादन-गॅप विश्लेषणात 25% पेक्षा जास्त unexplained — agronomist review गरजेचे. App मध्ये review request करा."
+        "english": "Treat it as a finding, not a failure. Investigate whether a factor is missing from the register or whether one of the applied u-values is wrong. Record the hypothesis for the next season.",
+        "marathi": "हा अपयश नाही, निष्कर्ष आहे. नोंदवहीतून एखादा घटक सुटला आहे का, की लावलेले एखादे u मूल्य चुकीचे आहे — हे तपासा. पुढील हंगामासाठी गृहीतक नोंदवा."
       },
       "reasoning": {
         "agronomic_basis": "The register has thirty-five factors and twenty-two of them are estimates, so a large residual is expected in the first season. Its size and direction indicate where the register is weakest.",
@@ -2803,8 +2432,9 @@
         "depends_on": []
       },
       "farm_brain_schema": [
-        "gap_attribution_complete",
-        "gap_unexplained_pct"
+        "gap_unexplained_pct",
+        "gap_attributed_pct",
+        "u_value_source_class"
       ],
       "u_value": null,
       "recoverability": "full",
@@ -2812,16 +2442,8 @@
       "kannad_note": "A residual that is consistently in one direction across several plots would be the most interesting result of the first season, because it would point to a systematic gap rather than to noise.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      },
-      "delivery": "ONCE_UNTIL_RESOLVED"
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-EC-001",
@@ -2866,15 +2488,8 @@
       "kannad_note": "The Rs 2.85 lakh figure for the four zero-cost decisions assumes 113 quintal and Rs 4,000. At Rs 6,000 it would be over Rs 4 lakh, and at Rs 2,000 about Rs 1.4 lakh. The assumption has to travel with the number.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Universal claim — soil/variety/stage context शिवाय एकाच शिफारशीने सर्व farms साठी लागू केले जाऊ नये. Trigger मध्ये soil/variety/stage gate जोडून CONDITIONAL."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-EC-002",
@@ -2918,15 +2533,8 @@
       "kannad_note": "The machine does not make fertiliser, bring rain or kill pathogens. It reminds at the right time, and this is the number that says what that is worth.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-EC-003",
@@ -2973,15 +2581,8 @@
       "kannad_note": "Domains 1 to 8 all work on yield. Domain 9 found that grade matters more, and Domain 11 is where that has to be reconciled — otherwise the yield model and the economic model tell different stories.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-EC-004",
@@ -3027,15 +2628,8 @@
       "kannad_note": "The mulch line alone is about Rs 15,000 and it is absent from the standard published cost sheet. Presenting the ratio is what makes an unfamiliar budget line acceptable.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-AP-001",
@@ -3078,15 +2672,8 @@
       "kannad_note": "The multipliers are judgement rather than measurement. What matters is that the ordering is explicit and reviewable rather than emerging accidentally from the order the rules were written in.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-AP-002",
@@ -3130,15 +2717,8 @@
       "kannad_note": "The bundling rule and the prioritisation rule work together. Bundling decides what goes in one message; prioritisation decides the order within it.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-AP-003",
@@ -3184,15 +2764,8 @@
       "kannad_note": "This is the numerical justification for the G0 stage existing at all. Thirty-eight percent of controllable loss sits before day zero, which is why the advisory has to begin sixty days before planting.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-RC-001",
@@ -3237,48 +2810,22 @@
       "kannad_note": "One of the ten minimum records. It takes ten minutes with a measuring tape and it is the difference between a forecast built on assumptions and one built on a measurement.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-RC-002",
       "category": "RC",
       "priority": 5,
-      "severity": "info",
+      "severity": "yellow",
       "stage": null,
       "trigger": {
         "english": "A saturation event or moisture stress period occurs",
-        "marathi": "पाणी साचण्याची किंवा ओलाव्याच्या ताणाची घटना घडली",
-        "expr": "saturation_event_occurred IS TRUE OR moisture_stress_period_started IS TRUE",
-        "expr_version": "dsl-1.0",
-        "golden_tests": [
-          {
-            "context": {
-              "saturation_event_occurred": true
-            },
-            "expect": "TRUE",
-            "label": "log water event"
-          },
-          {
-            "context": {
-              "saturation_event_occurred": false,
-              "moisture_stress_period_started": false
-            },
-            "expect": "FALSE",
-            "label": "no event"
-          }
-        ]
+        "marathi": "पाणी साचण्याची किंवा ओलाव्याच्या ताणाची घटना घडली"
       },
       "action": {
-        "english": "Append a saturation/moisture-stress event to the season log; it feeds the D11 yield-model u-values.",
-        "marathi": "पाणी-event नोंदवली — season log update. यील्ड-मॉडेल correction साठी वापर होईल."
+        "english": "Record it in hours or days with the stage it occurred in. These events carry the largest u-values in the register and they leave no trace afterwards unless recorded at the time.",
+        "marathi": "ती घटना तासांत किंवा दिवसांत, कोणत्या अवस्थेत घडली यासह नोंदवा. या घटनांची u मूल्ये नोंदवहीतील सर्वात मोठी आहेत, आणि त्या वेळी नोंदवल्या नाहीत तर नंतर त्यांचा मागमूसही उरत नाही."
       },
       "reasoning": {
         "agronomic_basis": "Saturation at G2 or G3 carries 0.35, water exhaustion in G4 carries 0.30, and critical window stress carries 0.20. All three are sensor-detectable at the time and invisible afterwards, which makes them the events most likely to be lost from the attribution.",
@@ -3299,8 +2846,10 @@
         ]
       },
       "farm_brain_schema": [
-        "saturation_event_occurred",
-        "moisture_stress_period_started"
+        "saturation_hours",
+        "dry_spell_days",
+        "current_stage",
+        "u_values_applied"
       ],
       "u_value": null,
       "recoverability": "none",
@@ -3308,16 +2857,8 @@
       "kannad_note": "This is where the sub-node earns its place in the attribution. A farmer will not remember how many hours the field stood saturated in August; the sensor log will.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      },
-      "delivery": "EVENT"
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-RC-003",
@@ -3327,30 +2868,11 @@
       "stage": null,
       "trigger": {
         "english": "A scheduled operation is completed or missed",
-        "marathi": "ठरलेले काम झाले किंवा राहून गेले",
-        "expr": "scheduled_operation_completed IS TRUE OR scheduled_operation_missed IS TRUE",
-        "expr_version": "dsl-1.0",
-        "golden_tests": [
-          {
-            "context": {
-              "scheduled_operation_completed": true
-            },
-            "expect": "TRUE",
-            "label": "log op status"
-          },
-          {
-            "context": {
-              "scheduled_operation_completed": false,
-              "scheduled_operation_missed": false
-            },
-            "expect": "FALSE",
-            "label": "no status"
-          }
-        ]
+        "marathi": "ठरलेले काम झाले किंवा राहून गेले"
       },
       "action": {
-        "english": "Record a scheduled-operation completion/miss; update the compliance rate and feed the yield model.",
-        "marathi": "Operation status नोंदवला. Compliance-rate update; season-end review साठी संग्रहित."
+        "english": "Record the date if done and the reason if not. Seventeen of thirty-five factors are record-detectable rather than sensor or observation detectable, so the operation log is the largest single input to attribution.",
+        "marathi": "झाले असल्यास तारीख नोंदवा, नसल्यास कारण नोंदवा. पस्तीसपैकी सतरा घटक फक्त नोंदीवरून कळतात — sensor किंवा निरीक्षणावरून नाही. म्हणून कामाची नोंदवही हा दरी-विश्लेषणाचा सर्वात मोठा एकच स्रोत आहे."
       },
       "reasoning": {
         "agronomic_basis": "Mulch stages, earthing up, fertiliser splits, micronutrient sprays and layout choice are all invisible at harvest. Only the record shows whether they happened, and the reason for an omission is what reveals implementation barriers.",
@@ -3371,8 +2893,13 @@
         ]
       },
       "farm_brain_schema": [
-        "scheduled_operation_completed",
-        "scheduled_operation_missed"
+        "earthing_up_date",
+        "mulch_stage_1_done",
+        "mulch_stage_2_done",
+        "mulch_stage_3_done",
+        "micronutrient_spray_1_done",
+        "k_late_split_1_date",
+        "season_record_complete"
       ],
       "u_value": null,
       "recoverability": "partial",
@@ -3380,16 +2907,8 @@
       "kannad_note": "Seventeen of thirty-five factors detectable only by record is the strongest argument for the operation log being a first-class feature rather than an afterthought.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      },
-      "delivery": "EVENT"
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-UV-004",
@@ -3433,15 +2952,8 @@
       "kannad_note": "This also explains the contrast between Domain 5 and Domain 6. Pests are mostly below ground and invisible to sensors; disease triggers are moisture and weather driven and highly visible. The same hardware is weak in one domain and decisive in the other.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-SC-003",
@@ -3451,29 +2963,11 @@
       "stage": null,
       "trigger": {
         "english": "A disease event is recorded during the season",
-        "marathi": "हंगामात रोगाची घटना नोंदवली गेली",
-        "expr": "disease_event_recorded_in_season IS TRUE",
-        "expr_version": "dsl-1.0",
-        "golden_tests": [
-          {
-            "context": {
-              "disease_event_recorded_in_season": true
-            },
-            "expect": "TRUE",
-            "label": "update forecast"
-          },
-          {
-            "context": {
-              "disease_event_recorded_in_season": false
-            },
-            "expect": "FALSE",
-            "label": "none"
-          }
-        ]
+        "marathi": "हंगामात रोगाची घटना नोंदवली गेली"
       },
       "action": {
-        "english": "A recorded disease event updates the u-value yield forecast; adjusted expectation available next day.",
-        "marathi": "रोग event नोंदवला — u-value forecast update होत आहे. Adjusted yield expectation पुढील 24 तासांत app मध्ये."
+        "english": "Recompute immediately and show the economic consequence. Scenario D shows that a 60 percent rot event on otherwise good management leaves about 34 quintal, at which the net return is approximately zero.",
+        "marathi": "लगेच पुन्हा गणित करा आणि आर्थिक परिणाम दाखवा. परिस्थिती D नुसार चांगल्या व्यवस्थापनावर ६०% कूज आल्यास सुमारे ३४ क्विंटल उरतात, आणि त्यावर निव्वळ परतावा जवळपास शून्य होतो."
       },
       "reasoning": {
         "agronomic_basis": "Soft rot has by far the largest u-value in the register and it can occur on a well-managed crop. Showing the arithmetic makes the case for the prevention stack concrete rather than theoretical.",
@@ -3495,7 +2989,10 @@
         ]
       },
       "farm_brain_schema": [
-        "disease_event_recorded_in_season"
+        "rot_incidence_pct",
+        "predicted_yield_quintal_per_acre",
+        "cumulative_loss_pct",
+        "harvest_route"
       ],
       "u_value": null,
       "recoverability": "none",
@@ -3503,16 +3000,8 @@
       "kannad_note": "A crop at 34 quintal may still be worth processing rather than selling fresh, because the lower grade fraction loses less in the dried product. The recomputation should trigger that conversation rather than just report the loss.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      },
-      "delivery": "WINDOW"
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     },
     {
       "rule_id": "D11-FM-004",
@@ -3558,15 +3047,8 @@
       "kannad_note": "Building the full interdependence map is three or four seasons of work. Until then, grouping the known chains by hand is the practical approach and it is what Scenario C does.",
       "decision_type": "POLICY",
       "automation": "none",
-      "status": "AGRONOMIST_REVIEWED",
-      "immutable": false,
-      "review": {
-        "tier": "T1",
-        "reviewer": "Kuldip — Agronomy Compliance Owner",
-        "date": "2026-09-22",
-        "outcome": "conditional",
-        "comment_mr": "AGRO_GUARDIAN_CUSTOM (L4) threshold — architecture बरोबर आहे पण Season 1 field data / institutional (ICAR/VNMKV/IMD) source ने calibrate होणे आवश्यक. CONDITIONAL."
-      }
+      "status": "PHASE_1_RAW_UNVALIDATED",
+      "immutable": false
     }
   ],
   "open_items": [
@@ -3643,8 +3125,8 @@
       "3": 1
     },
     "by_severity": {
-      "info": 20,
-      "yellow": 12,
+      "info": 19,
+      "yellow": 13,
       "red": 2
     },
     "by_source_tier": {

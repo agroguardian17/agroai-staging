@@ -1916,6 +1916,31 @@ async def test_water_budget_geometry_complete_when_layout_captured() -> None:
     assert s["sensor_pipe_position"] == "middle"
 
 
+@pytest.mark.asyncio
+async def test_plot_status_derived_from_season_dates() -> None:
+    """plot_status feeds the pre-planting prompts D04-MC-005 / D06-BW-004."""
+    declared = frozenset({"plot_status"})
+
+    async def _status(season, today):
+        deps = FarmBrainDeps(
+            reading_repo=_FakeReadingRepo(_sample_reading()),
+            plot_repo=_FakePlotRepo(_sample_plot()),
+            crop_season_repo=_FakeSeasonRepo(season),
+            declared_fields=declared,
+        )
+        st = (await build_farm_brain(plot_id="PLOT_PILOT_001", today=today, deps=deps)).state
+        return st.get("plot_status")
+
+    base = _sample_season()  # sowing 2026-06-01, no actual harvest
+    # Before sowing -> pre_planting
+    assert await _status(base, date(2026, 5, 1)) == "pre_planting"
+    # After sowing, no harvest -> growing
+    assert await _status(base, date(2026, 8, 3)) == "growing"
+    # After actual harvest -> post_harvest
+    harvested = dataclasses.replace(base, actual_harvest_date=date(2027, 1, 15))
+    assert await _status(harvested, date(2027, 2, 1)) == "post_harvest"
+
+
 class _FakePlotStageRepo:
     def __init__(self, previous: str | None = None) -> None:
         self._prev = previous

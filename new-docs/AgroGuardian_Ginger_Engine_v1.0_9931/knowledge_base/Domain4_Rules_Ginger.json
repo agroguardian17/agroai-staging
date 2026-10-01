@@ -50,7 +50,9 @@
         "biological_input_date": "date",
         "chemical_input_date": "date",
         "scout_report_days_ago": "number",
-        "basal_planning_active": "boolean"
+        "basal_planning_active": "boolean",
+        "plot_status": "enum:[pre_planting, growing, post_harvest]",
+        "basal_znso4_applied_kg_acre": "number"
       },
       "constants": {
         "kg_per_ha_to_kg_per_acre": 0.4047,
@@ -169,7 +171,7 @@
     "status": "PHASE_1_RAW_UNVALIDATED",
     "agronomist_validated": false,
     "validation_note": "Dose figures are the Maharashtra institutional recommendation converted to per acre. They must be adjusted against an actual soil test, which does not yet exist for this plot. Micronutrient rules depend on free lime, zinc and iron values that are not in a standard soil report and must be requested separately.",
-    "total_rules": 34,
+    "total_rules": 35,
     "rule_count_note": "30 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count.",
     "review_by": null,
     "review_note": "Nutrition science is stable. Fertiliser product availability and prices change annually but those belong to Domain 13.",
@@ -2989,6 +2991,95 @@
         "outcome": "conditional",
         "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल."
       }
+    },
+    {
+      "rule_id": "D04-MC-005",
+      "category": "MC",
+      "priority": 3,
+      "severity": "info",
+      "stage": null,
+      "trigger": {
+        "english": "Pre-planting in the marathwada_central zone (Kannad) AND no basal zinc-sulphate dose recorded yet",
+        "marathi": "मराठवाडा-मध्य विभागात (कन्नड) लागवडीपूर्वी असून अद्याप बेसल झिंक सल्फेट नोंद नाही",
+        "expr": "plot_status == 'pre_planting' AND agro_climatic_zone == 'marathwada_central' AND basal_znso4_applied_kg_acre IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Zone-default Zn recommendation for Kannad; fires until a basal dose is recorded, silent once applied.",
+        "golden_tests": [
+          {
+            "context": {
+              "plot_status": "pre_planting",
+              "agro_climatic_zone": "marathwada_central"
+            },
+            "expect": "TRUE",
+            "label": "कन्नड लागवडीपूर्व — झिंक शिफारस"
+          },
+          {
+            "context": {
+              "plot_status": "pre_planting",
+              "agro_climatic_zone": "marathwada_central",
+              "basal_znso4_applied_kg_acre": 10
+            },
+            "expect": "FALSE",
+            "label": "झिंक दिले — शांत"
+          },
+          {
+            "context": {
+              "plot_status": "growing",
+              "agro_climatic_zone": "marathwada_central"
+            },
+            "expect": "FALSE",
+            "label": "लागवड झाली — वेळ गेली"
+          },
+          {
+            "context": {
+              "plot_status": "pre_planting",
+              "agro_climatic_zone": "marathwada_western"
+            },
+            "expect": "FALSE",
+            "label": "वेगळा विभाग — लागू नाही"
+          }
+        ]
+      },
+      "action": {
+        "english": "Apply 10 kg/acre zinc sulphate (ZnSO4) as a basal dose at planting. Kannad-zone soils are widely zinc-deficient, and basal zinc at planting is the cheapest way to prevent a season-long deficiency.",
+        "marathi": "लागवडीच्या वेळी बेसल डोस म्हणून एकरी १० किलो झिंक सल्फेट (ZnSO4) टाका. कन्नड विभागातील जमिनीत झिंकची कमतरता मोठ्या प्रमाणात आढळते; लागवडीच्या वेळी बेसल झिंक हा हंगामभराची कमतरता टाळण्याचा सर्वात स्वस्त उपाय आहे."
+      },
+      "reasoning": {
+        "agronomic_basis": "VNMKV Parbhani soil-survey data for the Kannad cluster records roughly 68% of plots zinc-deficient (below 0.6 ppm DTPA). A basal ZnSO4 dose of about 10 kg/acre (25 kg/ha) at planting is the standard corrective for this agro-climatic zone.",
+        "yield_impact": "Prevents a season-long micronutrient limitation on rhizome bulking at very low cost.",
+        "confidence_score": 0.75,
+        "source_tier": "B",
+        "references": [
+          "VNMKV Parbhani soil survey — Kannad cluster Zn deficiency",
+          "VNMKV compliance certificate 2026-09-24 §4"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "plot_status",
+        "agro_climatic_zone",
+        "basal_znso4_applied_kg_acre"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "Zone-default zinc recommendation grounded in Kannad-specific soil-survey data; deliberately not extended to other Marathwada zones without their own survey basis (Kuldip, 30 Sep).",
+      "decision_type": "PLANNING_GUIDANCE",
+      "automation": "advisory",
+      "status": "AGRONOMIST_REVIEWED",
+      "delivery": "ONCE_UNTIL_RESOLVED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-30",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल.",
+        "note": "Item 1 of KB 7 Final Decisions; marathwada_central only for Season 1."
+      }
     }
   ],
   "open_items": [
@@ -3044,14 +3135,14 @@
     }
   ],
   "summary": {
-    "total_rules": 34,
+    "total_rules": 35,
     "by_category": {
       "NU": 2,
       "NP": 3,
       "NS": 3,
       "PP": 2,
       "PK": 3,
-      "MC": 4,
+      "MC": 5,
       "SN": 2,
       "OR": 3,
       "BI": 2,
@@ -3066,7 +3157,7 @@
       "2": 1
     },
     "by_severity": {
-      "info": 9,
+      "info": 10,
       "yellow": 19,
       "red": 6
     },
@@ -3105,8 +3196,8 @@
       "DIAGNOSTIC": 1
     },
     "reviewed_t1": 4,
-    "rules_with_trigger_expr": 23,
-    "rules_with_delivery_class": 23,
+    "rules_with_trigger_expr": 24,
+    "rules_with_delivery_class": 24,
     "immutable_rules": 0
   },
   "next_steps": [

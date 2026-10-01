@@ -163,7 +163,7 @@
     "status": "PHASE_1_RAW_UNVALIDATED",
     "agronomist_validated": false,
     "validation_note": "Disease descriptions and control measures come from the same institutional centre as Domains 2, 4 and 5. The soft rot risk model thresholds are qualitative and must be replaced by measured values after one season. Bacterial wilt presence in the Kannad belt is unconfirmed.",
-    "total_rules": 28,
+    "total_rules": 29,
     "rule_count_note": "28 is the number of distinct, traceable rules the source document supports. No rules were generated to reach a target count.",
     "review_by": null,
     "review_note": "Disease biology is stable. CIB&RC status must be rechecked annually.",
@@ -2819,6 +2819,84 @@
         "comment_mr": "DPDP Act 2023 / privacy compliance — legal/privacy desk कडून consent wording, retention period व erasure statement verification झाल्यावर production release."
       },
       "delivery": "WINDOW"
+    },
+    {
+      "rule_id": "D06-BW-004",
+      "category": "BW",
+      "priority": 4,
+      "severity": "yellow",
+      "stage": null,
+      "trigger": {
+        "english": "Pre-planting AND bacterial-wilt field history has not been recorded",
+        "marathi": "लागवडीपूर्वी असून शेताची जिवाणू-मर (bacterial wilt) इतिहास नोंद नाही",
+        "expr": "plot_status == 'pre_planting' AND field_history_wilt IS NULL",
+        "expr_version": "dsl-1.0",
+        "expr_note": "Yellow prompt (not blocking) to capture the missing wilt history; resolves once field_history_wilt is recorded true or false.",
+        "golden_tests": [
+          {
+            "context": {
+              "plot_status": "pre_planting"
+            },
+            "expect": "TRUE",
+            "label": "इतिहास अज्ञात — विचारा"
+          },
+          {
+            "context": {
+              "plot_status": "pre_planting",
+              "field_history_wilt": true
+            },
+            "expect": "FALSE",
+            "label": "मर होती — BW-001 हाताळतो"
+          },
+          {
+            "context": {
+              "plot_status": "pre_planting",
+              "field_history_wilt": false
+            },
+            "expect": "FALSE",
+            "label": "मर नव्हती — निकाली"
+          }
+        ]
+      },
+      "action": {
+        "english": "Field wilt history is not recorded. Ask whether bacterial wilt (kand kuj) occurred in this plot in the last 5 years — the pathogen persists 5-7 years in soil, so this is needed before finalising planting recommendations.",
+        "marathi": "📋 शेताच्या इतिहासाची माहिती हवी — या शेतात मागील ५ वर्षांत जिवाणू-मर (bacterial wilt / कंद कूज) आली होती का? ही माहिती लागवडीच्या नियोजनासाठी महत्त्वाची — जिवाणू मातीत ५-७ वर्षे टिकतो. उत्तर दिल्याशिवाय पुढील शिफारसी अपूर्ण राहतील."
+      },
+      "reasoning": {
+        "agronomic_basis": "Ralstonia solanacearum persists 5-7 years in vertisol soils, so a plot's bacterial-wilt history is a first-order planting-risk input. A NULL history must be captured rather than silently treated as wilt-free, which would bypass the D06-BW-001 rotation gate.",
+        "yield_impact": "Closes the NULL-bypass on the wilt-history gate; a single unrecorded past incident can compound Season-1 disease risk.",
+        "confidence_score": 0.8,
+        "source_tier": "B",
+        "references": [
+          "VNMKV rotation-history requirement",
+          "KB 7 Final Decisions item 4"
+        ]
+      },
+      "cross_domain_dependencies": {
+        "feeds_into": [],
+        "depends_on": []
+      },
+      "farm_brain_schema": [
+        "plot_status",
+        "field_history_wilt"
+      ],
+      "u_value": null,
+      "recoverability": "partial",
+      "source_class": "SRC-D",
+      "kannad_note": "Vertisol persistence of Ralstonia makes wilt-history capture especially critical for Marathwada plots; yellow prompt keeps the planting flow moving while surfacing the data gap (Kuldip, 30 Sep).",
+      "decision_type": "DATA_CAPTURE",
+      "automation": "assisted",
+      "status": "AGRONOMIST_REVIEWED",
+      "immutable": false,
+      "review": {
+        "tier": "T1",
+        "reviewer": "Kuldip — Agronomy Compliance Owner",
+        "date": "2026-09-30",
+        "outcome": "conditional",
+        "comment_mr": "Rule intent agronomically sound. Source tier आणि local validation gap लक्षात घेता CONDITIONAL — Season 1 field observation आणि source_tier upgrade नंतर COMPLIANT ला elevate होईल.",
+        "note": "Item 4 of KB 7 Final Decisions; authored as D06-BW-004 (002/003 taken)."
+      },
+      "delivery": "ONCE_UNTIL_RESOLVED"
     }
   ],
   "open_items": [
@@ -2884,11 +2962,11 @@
     }
   ],
   "summary": {
-    "total_rules": 28,
+    "total_rules": 29,
     "by_category": {
       "DX": 5,
       "SR": 3,
-      "BW": 3,
+      "BW": 4,
       "LS": 3,
       "ST": 2,
       "MU": 1,
@@ -2905,7 +2983,7 @@
     "by_severity": {
       "red": 5,
       "blocking": 3,
-      "yellow": 14,
+      "yellow": 15,
       "info": 6
     },
     "by_source_tier": {
@@ -2946,8 +3024,8 @@
       "DATA_CAPTURE": 1
     },
     "reviewed_t1": 6,
-    "rules_with_trigger_expr": 18,
-    "rules_with_delivery_class": 18,
+    "rules_with_trigger_expr": 19,
+    "rules_with_delivery_class": 19,
     "immutable_rules": 3
   },
   "next_steps": [

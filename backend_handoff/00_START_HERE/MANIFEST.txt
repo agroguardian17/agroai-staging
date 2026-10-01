@@ -1,0 +1,68 @@
+VIRAAI Ginger KB — Backend Handoff Package v1.0
+Generated: 2026-09-23
+Total files: 54 across 7 folders
+
+
+=== FOLDER SUMMARY ===
+  00_START_HERE/                     3 files  36K
+  01_AGRONOMY_COMPLIANCE/            8 files  356K
+  02_VNMKV_INSTITUTIONAL/            3 files  68K
+  03_LEGAL_REGULATORY/               4 files  120K
+  04_KB_ARTIFACTS/                   9 files  608K
+  05_DATA_FILES/                     5 files  28K
+  06_ENGINE_INTEGRATION/            17 files  248K
+  07_SQL_DEPLOYMENT/                 3 files  1.3M
+
+=== FILE INVENTORY (sorted) ===
+  ./00_START_HERE/MANIFEST.txt                                           4.0K
+  ./00_START_HERE/MASTER_ACTION_LIST.md                                  12K
+  ./00_START_HERE/README.md                                              16K
+  ./01_AGRONOMY_COMPLIANCE/AGRONOMY_COMPLIANCE_v1.md                     16K
+  ./01_AGRONOMY_COMPLIANCE/AGRONOMY_RESPONSE_TO_BACKEND.md               16K
+  ./01_AGRONOMY_COMPLIANCE/AGRONOMY_SIGNOFF.md                           12K
+  ./01_AGRONOMY_COMPLIANCE/D11_YIELD_MODEL_v1.md                         24K
+  ./01_AGRONOMY_COMPLIANCE/D12_QA_WORKFLOW.md                            20K
+  ./01_AGRONOMY_COMPLIANCE/VIRAAI_JOINT_HANDOFF_TO_SOFTWARE_v1.0.md      28K
+  ./01_AGRONOMY_COMPLIANCE/firing_intent_diagnostic_rules.xlsx           16K
+  ./01_AGRONOMY_COMPLIANCE/review_tracker_ALL_completed_v1.xlsx          220K
+  ./02_VNMKV_INSTITUTIONAL/VNMKV_COMPLIANCE_CERTIFICATE.md               28K
+  ./02_VNMKV_INSTITUTIONAL/VNMKV_CONSULT_BRIEF.md                        8.0K
+  ./02_VNMKV_INSTITUTIONAL/VNMKV_RATIFICATION_RESPONSE.md                28K
+  ./03_LEGAL_REGULATORY/LEGAL_COMPLIANCE_CERTIFICATE.md                  56K
+  ./03_LEGAL_REGULATORY/LEGAL_DESK_HANDOFF_PACKET.md                     16K
+  ./03_LEGAL_REGULATORY/LEGAL_RESEARCH_REFERENCE.md                      24K
+  ./03_LEGAL_REGULATORY/LEGAL_TEAM_HANDOFF_PACKET_v2.md                  20K
+  ./04_KB_ARTIFACTS/D14_ENGINE_INTEGRATION_NOTES.md                      12K
+  ./04_KB_ARTIFACTS/D14_INTEGRATION_COMPLETE.md                          12K
+  ./04_KB_ARTIFACTS/D14_PATCH_NOTES.md                                   16K
+  ./04_KB_ARTIFACTS/D14_TEST_REPORT.md                                   8.0K
+  ./04_KB_ARTIFACTS/Domain11_Rules_Ginger.json                           148K
+  ./04_KB_ARTIFACTS/Domain14_Rules_Ginger.json                           184K
+  ./04_KB_ARTIFACTS/Domain14_Satellite_RemoteSensing_RAW_MASTER.docx     52K
+  ./04_KB_ARTIFACTS/Domain7_Rules_Ginger.json                            160K
+  ./04_KB_ARTIFACTS/VPD_RETROFIT_PATCH_NOTES.md                          12K
+  ./05_DATA_FILES/ginger_pesticide_registry_README.md                    4.0K
+  ./05_DATA_FILES/ginger_pesticide_registry_v1.1.csv                     8.0K
+  ./05_DATA_FILES/ginger_pesticide_registry_v1.1_CHANGES.md              4.0K
+  ./05_DATA_FILES/imd_district_normals_1991_2020.csv                     4.0K
+  ./05_DATA_FILES/imd_district_normals_README.md                         4.0K
+  ./06_ENGINE_INTEGRATION/apply_vpd_patch.py                             28K
+  ./06_ENGINE_INTEGRATION/expert_override.py                             24K
+  ./06_ENGINE_INTEGRATION/expert_override_D14.patch                      4.0K
+  ./06_ENGINE_INTEGRATION/json_to_sql_with_d14.py                        48K
+  ./06_ENGINE_INTEGRATION/notification_policy.py                         16K
+  ./06_ENGINE_INTEGRATION/notification_policy_D14.patch                  4.0K
+  ./06_ENGINE_INTEGRATION/precedence.py                                  32K
+  ./06_ENGINE_INTEGRATION/precedence_D14.patch                           4.0K
+  ./06_ENGINE_INTEGRATION/regression_gate.py                             8.0K
+  ./06_ENGINE_INTEGRATION/regression_gate_D14.patch                      4.0K
+  ./06_ENGINE_INTEGRATION/run_d14_trigger_tests.py                       8.0K
+  ./06_ENGINE_INTEGRATION/runtime_loader.py                              12K
+  ./06_ENGINE_INTEGRATION/runtime_loader_D14.patch                       4.0K
+  ./06_ENGINE_INTEGRATION/test_runtime_loader.py                         4.0K
+  ./06_ENGINE_INTEGRATION/test_runtime_loader_D14.patch                  4.0K
+  ./06_ENGINE_INTEGRATION/triggers_wave4_vpd.py                          8.0K
+  ./06_ENGINE_INTEGRATION/triggers_wave5_d14.py                          32K
+  ./07_SQL_DEPLOYMENT/SQL_DEPLOYMENT_README.md                           12K
+  ./07_SQL_DEPLOYMENT/kb_ginger_d14_updates_v1.0.sql                     4.0K
+  ./07_SQL_DEPLOYMENT/kb_ginger_d14_v1.0.sql                             1.3M
