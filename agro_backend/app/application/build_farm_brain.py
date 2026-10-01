@@ -58,6 +58,7 @@ from app.application.ports.farmer_repo import FarmerLocation, FarmerRepo
 from app.application.ports.farmer_schemes_repo import FarmerSchemesRepo
 from app.application.ports.lab_soil_test_repo import LabSoilTestRepo, LabSoilTestView
 from app.application.ports.plot_repo import PlotRepo
+from app.application.ports.plot_stage_repo import PlotStageRepo
 from app.application.ports.qa_counters_repo import QaCountersRepo
 from app.application.ports.reading_repo import ReadingRepo
 from app.application.ports.satellite_reading_repo import (
@@ -191,6 +192,10 @@ class FarmBrainDeps:
     # flow). When present the builder derives the D03-WB / D03-ST-001 fields;
     # None keeps them UNKNOWN and those rules stay dormant.
     water_budget_repo: WaterBudgetRepo | None = None
+    # Optional per-plot growth-stage history. When present the builder fills
+    # ``previous_stage`` from the most recent earlier run so D03-SB-003 can
+    # detect a phenological transition. None keeps it UNKNOWN (rule dormant).
+    plot_stage_repo: PlotStageRepo | None = None
     # The full ``kb_farm_brain_fields`` set. Injected so tests can pin a
     # subset; the daily job reads it from the database at startup.
     declared_fields: frozenset[str] = field(default_factory=frozenset)
@@ -394,6 +399,14 @@ async def build_farm_brain(
 
     # ---- Water-budget engine (D03-WB / D03-ST-001) ---------------------
     await _populate_water_budget(state, deps, plot_id, plot, season, reading, today)
+
+    # ---- Previous-run stage (D03-SB-003 transition guard) --------------
+    # The current stage is already in ``current_stage`` (from the season);
+    # ``previous_stage`` is the stage this plot was in on its last recorded
+    # run. Stays None until the plot has been seen on a second day, so the
+    # transition rule is dormant on a fresh plot rather than misfiring.
+    if deps.plot_stage_repo is not None:
+        _set(state, "previous_stage", await deps.plot_stage_repo.previous_stage(plot_id, today))
 
     # ---- Synthetic ------------------------------------------------------
     state["current_month"] = today.month
