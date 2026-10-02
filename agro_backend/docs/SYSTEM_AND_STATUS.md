@@ -1,7 +1,7 @@
 # AgroGuardian V2 — Full System & Current Status
 
 **Audience:** a new engineer/teammate joining the project. Read this top-to-bottom to understand the whole system, then use Part B for exactly what is live vs pending today.
-**Ground truth:** the code in `agro_backend/` + `firmware/`. This doc is a map, current as of 29 Sep 2026 (migration head **0058**). Where this doc and code disagree, code wins.
+**Ground truth:** the code in `agro_backend/` + `firmware/`. This doc is a map, current as of 2 Oct 2026 (migration head **0063**). Where this doc and code disagree, code wins.
 
 ---
 
@@ -88,11 +88,11 @@ By subsystem (representative):
 - **QA/clustering (D12):** clusters, cluster_config, plot_cluster, QA counters.
 - **KB (loaded from compiled SQL):** kb_rules, kb_rule_fields, kb_farm_brain_fields, kb_golden_tests, kb_precedence, kb_rule_categories, kb_rule_references, kb_rule_dependencies, kb_duplication_groups/members, kb_domains, kb_stages, kb_source_classes, kb_source_tiers, kb_open_items, kb_overrides, kb_override_audit.
 
-**Migrations 0001→0058** (reversible, transactional). Milestones since the pilot core (0001–0013): 0014/0016 advisory status+delivery · 0019 satellite D14 panel · 0021 lab soil tests · 0022–0026 crop-season agronomy plan / scouting / economics / operations · 0028/0033 forecast ET0-solar / wind-gust · 0030/0046/0047 consent / consent-capture / erasure · 0031/0038–0040 yield model + U-value register + prediction log · 0041/0042 D12 QA + cluster store · 0044/0045 advisory audit (columns + append-only table) · 0048–0049 VNMKV KB reload + Kannad site index · 0050–0053 variety water re-seed / N-ceiling / herbicide registry · 0054–0058 firing-intent KB batches (see §A6).
+**Migrations 0001→0063** (reversible, transactional). Milestones since the pilot core (0001–0013): 0014/0016 advisory status+delivery · 0019 satellite D14 panel · 0021 lab soil tests · 0022–0026 crop-season agronomy plan / scouting / economics / operations · 0028/0033 forecast ET0-solar / wind-gust · 0030/0046/0047 consent / consent-capture / erasure · 0031/0038–0040 yield model + U-value register + prediction log · 0041/0042 D12 QA + cluster store · 0044/0045 advisory audit (columns + append-only table) · 0048–0049 VNMKV KB reload + Kannad site index · 0050–0053 variety water re-seed / N-ceiling / herbicide registry · 0054–0059 firing-intent KB batches (see §A6) · **0060 water-budget KB rules (D03-WB-*/D03-ST-001)** · **0061 `crop_seasons.sensor_pipe_position`** · **0062 `plot_stage_log`** (D03-SB-003 previous-stage history) · **0063 final-decision KB rules (D04-MC-005 basal ZnSO₄, D06-BW-004 wilt-history prompt)**.
 
 ## 6. The Knowledge Base (Ginger Engine)
 
-- **484 rules across 14 domains** (D1 Lifecycle … D14 Satellite). **249 are machine-triggered** (have a `trigger.expr`); the other ~235 are knowledge/reference entries with no trigger. **24 immutable** (safety core).
+- **495 rules across 14 domains** (D1 Lifecycle … D14 Satellite). **296 are machine-triggered** (have a `trigger.expr`); the rest are knowledge/reference entries with no trigger. **24 immutable** (safety core).
 - **Rule anatomy** (`knowledge_base/DomainN_Rules_Ginger.json`): `rule_id`, `category`, `priority`, `stage`, `severity`, `trigger{english, marathi, expr, expr_version, golden_tests[]}`, `action{english, marathi}`, `reasoning{agronomic_basis, yield_impact, confidence_score, source_tier, references}`, `farm_brain_schema[]`, `u_value`, `recoverability`, `source_class`, `kannad_note`, `decision_type`, `automation`, `status`, `immutable`, `delivery`, `review{tier, reviewer, date, outcome, comment_mr}`. **No `compliance_tag`** — that lives in a separate tracker; the KB carries `review.outcome` + `status`.
 - **Controlled vocabularies:** `severity` = info/yellow/red/blocking (only). `delivery` = SILENT_GUARD/EVENT/ONCE_UNTIL_RESOLVED/WINDOW. `reasoning.source_tier` = **A/B/C** (evidence strength; not L1–L4). Two soil fields: `soil_type` (incl. `vertisol`) and `soil_texture_class` (heavy/medium/light) — both **derived by the mapper** from the DB `soil_type` column.
 - **Trigger DSL** (`engine/trigger_dsl.py`): three-valued (TRUE/FALSE/**UNKNOWN** — a missing field is UNKNOWN, never silently false). Supports AND/OR/NOT, comparisons, `IN`, `BETWEEN`, `IS NULL/NOT NULL/TRUE/FALSE`, `DURATION(...) > n HOURS|DAYS`, `WITHIN(date, n DAYS)`, `MONTH IN […]`, `STAGE IN […]`. **No** DATE literal, `||`, arithmetic, or functions. Every field named must be declared or it's a parse error (an undeclared bare word is silently treated as a string literal — a real footgun).
@@ -107,7 +107,7 @@ Turns everything in the DB into a per-plot, per-day **field dict** keyed on the 
 ## 8. The engines
 
 - **7 device-health rules** (`app/domain/rule_definitions.py` `PILOT_RULESET`): low_battery, battery_critical, low_water, dry_run, sensor_fault, frost, tamper — evaluated per-message on ingest, with per-`(plot,alert_type)` cooldowns; fire → `alerts_notifications` + NOTIFY.
-- **Ginger KB engine** (`ginger/engine/`, runs at 06:30 IST + inside build_farm_brain): loads rules from Postgres in production; evaluates the 249 triggers three-valued (only TRUE fires); resolves precedence; applies the delivery policy (SILENT_GUARD only speaks when the prohibited action is attempted; EVENT once on rising edge; ONCE_UNTIL_RESOLVED on a 0/7/21/45/90-day ladder raising severity; WINDOW dated with up to 3 overdue reminders); composes four-part Marathi messages; state persists per plot so a fresh run doesn't re-fire.
+- **Ginger KB engine** (`ginger/engine/`, runs at 06:30 IST + inside build_farm_brain): loads rules from Postgres in production; evaluates the 296 triggers three-valued (only TRUE fires); resolves precedence; applies the delivery policy (SILENT_GUARD only speaks when the prohibited action is attempted; EVENT once on rising edge; ONCE_UNTIL_RESOLVED on a 0/7/21/45/90-day ladder raising severity; WINDOW dated with up to 3 overdue reminders); composes four-part Marathi messages; state persists per plot so a fresh run doesn't re-fire.
 
 ## 9. Advisory pipeline & delivery
 
@@ -124,8 +124,12 @@ Runs inside build_farm_brain (`app/domain/yield_forecast.py`, v1). `Y_potential 
 
 - **Weather forecast (Open-Meteo)** — `app/infra/forecast/open_meteo.py` + `forecast_scheduler.py`, nightly **03:00**, no key needed, writes `weather_forecasts`; build_farm_brain reads the stored rows.
 - **Weather station** — Main Node BME280/INA219/rain/wind, MQTT → `weather_station_readings`.
-- **Satellite (Sentinel-2 optical + Sentinel-1 SAR via CDSE)** — `app/infra/satellite/cdse_provider.py` (real OAuth2 + Statistical API) + `satellite_scheduler.py` (02:30) → `satellite_data`. **Gated off** by `SATELLITE_JOB_ENABLED` + Copernicus creds.
-- **LST/thermal (Landsat 8/9 via USGS M2M)** — `app/infra/lst/usgs_m2m.py` + `landsat_scheduler.py` (04:30). **Gated off** by `LANDSAT_JOB_ENABLED` + USGS creds.
+- **Satellite (Sentinel-2 optical + Sentinel-1 SAR via CDSE)** — `app/infra/satellite/cdse_provider.py` (real OAuth2 + Statistical API) + `satellite_scheduler.py` (02:30) → `satellite_data`. **Enabled on staging** (`SATELLITE_JOB_ENABLED=true` + CDSE OAuth creds). Fetches scenes within a 20-day lookback for each active plot **that has a boundary polygon** (`plots.gps_boundary_geojson`); a plot without one is skipped (`skipped_no_polygon`). Note the cadence: Sentinel-2 ~5-day revisit (clouds filtered), Sentinel-1 ~6–12-day — so a new row appears every few days, not daily.
+- **LST/thermal (Landsat 8/9 via USGS M2M)** — `app/infra/lst/usgs_m2m.py` + `landsat_scheduler.py` (04:30). **Enabled on staging** (`LANDSAT_JOB_ENABLED=true` + USGS M2M creds); same boundary-polygon requirement.
+
+## 11a. Water-budget engine (D03-WB / D03-ST-001)
+
+Turns the single-pipe drip flow reading (`node_sensor_readings.water_flow_lpm`) into per-plant dose/deficit ratios the D03-WB rules read. Pure math in `app/domain/water_budget.py` (deficit ratio, VWC classification, per-plant cumulative, geometry completeness); `WaterBudgetRepo` + `PgWaterBudgetRepo` supply variety stage targets (`variety_stage_water_target`, by DAP window), lifecycle high-end, cumulative drip litres (`SUM(water_flow_lpm)×cadence`), last-irrigation and last-flow timestamps. `build_farm_brain._populate_water_budget` derives the ~11 D03-WB fields each run, degrading to UNKNOWN per missing input. **Geometry** (`planting_layout`/`dripper_spacing_cm`/`drippers_per_acre`/`rows_per_bed`/`plants_per_acre`, captured via the dashboard **Plot Geometry** page → `crop_seasons`) gates D03-WB-008 until complete; `plot_status` (pre_planting/growing/post_harvest) is derived in the mapper from season dates and gates the pre-planting prompts D04-MC-005 / D06-BW-004. Previous-run stage for the D03-SB-003 transition rule is persisted in `plot_stage_log` (written by `ginger_daily`, read by the mapper).
 
 ## 12. DPDP / consent / compliance
 
@@ -137,7 +141,7 @@ Lightsail Mumbai; `docker-compose.prod.yml` runs Caddy (custom `caddy-l4`) + Mos
 
 ---
 
-# PART B — CURRENT STATUS (live vs pending), 29 Sep 2026
+# PART B — CURRENT STATUS (live vs pending), 2 Oct 2026
 
 ## B1. Status at a glance
 
@@ -149,50 +153,55 @@ Lightsail Mumbai; `docker-compose.prod.yml` runs Caddy (custom `caddy-l4`) + Mos
 | Device-health rules (7) | 🟢 **LIVE** | Per-message on ingest → alerts + NOTIFY. |
 | Weather forecast (Open-Meteo) | 🟢 **LIVE** | Nightly 03:00, on by default. |
 | Weather station (Main Node) | 🟢 **LIVE** | MQTT-populated. |
-| Ginger KB engine (06:30 daily) | 🟢 **LIVE** | 484 rules / 249 triggered; writes ai_suggestions. |
-| Advisory compose subscriber | 🟢 **LIVE** | LISTEN agro_events → compose_advisory (Claude). Log-only if ANTHROPIC key empty. |
-| Advisory delivery subscriber | 🟢 **LIVE (log-only)** | Runs end-to-end; **sends to WhatsApp only when Meta token+phone-id set** — else logs. |
+| Ginger KB engine (06:30 daily) | 🟢 **LIVE** | 495 rules / 296 triggered; writes ai_suggestions (verified: 19 advisories in a staging run). |
+| **Water-budget engine (D03-WB)** | 🟢 **LIVE** | Compute layer derives deficit/dose ratios from `water_flow_lpm`; runs in build_farm_brain. Accurate once plot geometry is captured. |
+| **Plot-geometry capture** | 🟢 **LIVE (dashboard)** | Streamlit **Plot Geometry** page writes `crop_seasons`; clears the D03-WB-008 gate. |
+| **previous_stage (D03-SB-003)** | 🟢 **LIVE** | `plot_stage_log` written each run; transition rule fires once a plot is seen on a 2nd day. |
+| Advisory compose subscriber | 🟢 **LIVE** | LISTEN agro_events → compose_advisory (Claude). Event-driven (fires on alerts), not scheduled. |
+| Advisory delivery subscriber | 🟡 **off (by choice)** | `ADVISORY_DELIVERY_ENABLED=false` on staging while WhatsApp creds are pending — advisories compose + store, don't deliver. |
 | Disclaimer + advisory_audit | 🟢 **LIVE** | Appended/recorded on every advisory. |
 | Yield model (D11) | 🟢 **LIVE** | Runs in build_farm_brain (L4/EST placeholder calibration). |
 | Consent / erasure / retention | 🟢 **LIVE** | Jobs + append-only tables. |
 | Learning / QA-digest / retention jobs | 🟢 **LIVE** | 04:00 / 18:00 / 02:30. |
-| WhatsApp send (Meta Cloud) | 🟡 **BUILT, not live** | Needs `META_WHATSAPP_TOKEN` + `META_WHATSAPP_PHONE_NUMBER_ID` (+ Live app). Template + webhook ready. |
-| Claude advisory text | 🟡 **gated on key** | Needs `ANTHROPIC_API_KEY`, else log-only placeholder. |
-| **Satellite (Sentinel optical+SAR)** | 🔴 **OFF** | Full adapter+scheduler, but `SATELLITE_JOB_ENABLED=false` + blank Copernicus creds → `satellite_data` empty. |
-| **LST/thermal (Landsat)** | 🔴 **OFF** | Same: `LANDSAT_JOB_ENABLED=false` + blank USGS creds. |
-| PLOT_PILOT_002 (satellite-only) | 🔴 **no data** | No sub-node + satellite off ⇒ receiving nothing until satellite is enabled. |
+| **Satellite (Sentinel optical+SAR)** | 🟢 **LIVE (staging)** | `SATELLITE_JOB_ENABLED=true` + CDSE creds; fetching for PLOT_PILOT_001. New scenes every few days (revisit cadence), not daily. |
+| **LST/thermal (Landsat)** | 🟢 **LIVE (staging)** | `LANDSAT_JOB_ENABLED=true` + USGS M2M creds. Runs 04:30. |
+| Claude advisory text | 🟡 **key-gated** | Set `ANTHROPIC_API_KEY` (set on staging); verify the model id resolves (connectivity test). |
+| WhatsApp send (Meta Cloud) | 🔴 **off (pending creds)** | Needs `META_WHATSAPP_TOKEN` + `META_WHATSAPP_PHONE_NUMBER_ID` (+ Live app). Template + webhook ready. |
+| PLOT_PILOT_002 (satellite-only) | 🟡 **needs boundary** | Satellite is on, but this plot has no `gps_boundary_geojson` → `skipped_no_polygon`. Add its polygon to get data. |
 | Farmer app | 🔴 **not built** | Several new KB fields need farmer-app capture surfaces. |
 | OTA / object storage / prod backups | 🔴 **not built** | Roadmap. |
-| VPS full deploy | 🟡 **partial** | Only TLS/MQTT edge on VPS; app/DB local. |
+| VPS full deploy | 🟢 **deployed (staging)** | App/DB/schedulers running on the Lightsail box (`~/agri-AI-live`); migrations at head 0063. |
 
 Legend: 🟢 live · 🟡 built but gated/config-needed · 🔴 off / not built.
 
 ## B2. Firing-intent KB rules — where each stands (this workstream)
 - **Batch 1 (5 ready rules)** live: D01-PH-004, D02-DR-004, D02-ST-002, D02-LY-001 (blocking flat-layout gate), D02-LY-004 (layout prompt).
-- **v1.2 cluster-2** live: D01-PW-001 (late-planting warning, `planting_doy>158` — functional), D06-BW-001 (wilt gate), D03-SB-003 (stage transition), source_tier vocab fix.
-- **Batch 2 (D06 disease)** live: D06-CH-002/FH-001/FH-002/ST-001/ST-002.
-- **Dormant** (wired, correct, but never fire until a data source exists): every rule whose fields have no source yet — e.g. `years_since_last_wilt`, `harvest_complete`, `soft_rot_confirmed_in_cluster`, `seed_treatment_planned`, `previous_stage`, `fungicide_option_about_to_be_shown`. These need **farmer-app / ops / engine-composer** sources.
-- **Held on agronomy decisions:** D04-MC-005 (ZnSO₄ — needs the `agro_climatic_zone` zone-vocab map: mapper emits `marathwada_central/western/eastern`, not `western_scarcity`); D04-NS-003 & D08-WD-001 keep their deployed triggers until N-ledger / `proposed_herbicide_input` sources exist (swapping now would regress live coverage).
-- **Batch 3+ (D04/D05, D09/D11/D12 …)** pending agronomy authoring.
+- **v1.2 cluster-2** live: D01-PW-001 (late-planting warning, `planting_doy>158`), D06-BW-001 (wilt gate), D03-SB-003 (stage transition — **now firing**: `previous_stage` is persisted in `plot_stage_log`), source_tier vocab fix.
+- **Batch 2 (D06 disease)** live: D06-CH-002/FH-001/FH-002/ST-001/ST-002. **Batches 3–9** (36 firing-intent rules, D04/D05/D09/D10/D11/D12) live/dormant-safe.
+- **Water-budget suite** live (0060): D03-WB-001..008 + D03-ST-001, fed by the compute engine (§11a). D03-WB-008 (geometry gate) clears once the Plot Geometry form is filled.
+- **Final-decision rules (Kuldip, 0063)** live: **D04-MC-005** basal ZnSO₄ (`plot_status='pre_planting' AND agro_climatic_zone='marathwada_central'`), **D06-BW-004** wilt-history capture prompt, **D03-SB-004 SUPPRESSES D03-MN-002** (low-battery VWC veto; D03-MN-004 deliberately left live — it's rain-gap, not VWC).
+- **Dormant** (wired, correct, fire only when a source exists): rules whose fields have no source yet — e.g. `years_since_last_wilt`, `harvest_complete`, `soft_rot_confirmed_in_cluster`, `seed_treatment_planned`, `fungicide_option_about_to_be_shown`. Need **farmer-app / ops / engine-composer** sources.
+- **Agronomy decisions RESOLVED** (Kuldip, 30 Sep–1 Oct): soil vocab stays Season-1; D04-MC-005 fires `marathwada_central` only; D04-NS-003 & D08-WD-001 keep deployed triggers (Season-2 specs reserved as D04-NS-003-ledger / **D08-WD-002**); ZnSO₄ partial-dose tier reserved as **D04-MC-006**; D03-WL-004 reserved for a probe-driven waterlog companion. **KB closed for Season 1 on the buildable side.**
 
 ## B3. What's left (concrete)
 
-**Config to flip on (no code):**
-1. `META_WHATSAPP_TOKEN` + `META_WHATSAPP_PHONE_NUMBER_ID` (+ Meta app Live + verified WABA) → WhatsApp advisories actually send.
-2. `ANTHROPIC_API_KEY` → real Claude advisory text (else log-only).
-3. `SATELLITE_JOB_ENABLED=true` + Copernicus/CDSE OAuth client → satellite NDVI/SAR for PLOT_PILOT_002.
-4. `LANDSAT_JOB_ENABLED=true` + USGS ERS token → LST/thermal.
+**Config (staging):** satellite (`SATELLITE_JOB_ENABLED=true` + CDSE), Landsat (`LANDSAT_JOB_ENABLED=true` + USGS M2M), and `ANTHROPIC_API_KEY` are **set**; `ADVISORY_DELIVERY_ENABLED=false` by choice. Still pending:
+1. **WhatsApp** — `META_WHATSAPP_TOKEN` + `META_WHATSAPP_PHONE_NUMBER_ID` (+ Meta app Live + verified WABA), then flip `ADVISORY_DELIVERY_ENABLED=true`.
+2. **PLOT_PILOT_002 boundary** — set `gps_boundary_geojson` so satellite/Landsat stop skipping it.
+3. **Verify the Claude model id** resolves (a stale `ANTHROPIC_MODEL_*` alias would fail composition silently) — connectivity test on the box.
 
-**Now-unblocked build work (flow is live):**
-5. Author the **8 D03-WB water-budget rules + D03-ST-001** against `water_flow_lpm` (they were held on exactly this). Note: the old spec's `flow_telemetry_present` gate maps to `water_flow_lpm IS NOT NULL`; use confidence handling via three-valued logic + the `<0.72` guidance note (no confidence-gate DSL).
-6. Wire the `compute_water_budget()` / dose engine per the water-budget v1.3 spec, now that flow lands.
+**Done this cycle (0060–0063 + follow-ups):** water-budget rules + compute engine; plot-geometry capture (Streamlit); `previous_stage` persistence (D03-SB-003); the 3 final-decision KB rules; prod-log tracebacks + `ginger_daily` runner; the `k_source` pipeline hotfix.
 
-**Product/data sources (unblock the dormant rules):**
-7. Farmer-app capture screens for the new fields (wilt years, harvest_complete, seed-treatment dates, emergence, processing route, etc.); ops flags (soft_rot_confirmed_in_cluster, cibrc_verified, mandi price); engine composer flags (fungicide/chemical about-to-show); a per-plot `previous_stage` persistence in the mapper.
-8. Agronomy decisions still open: D04-MC-005 zone-vocab map; N-events ledger model for D04-NS-003; `proposed_herbicide_input` channel for D08-WD-001.
+**Product/data sources (unblock remaining dormant rules):**
+4. Farmer-app capture screens for the new fields (wilt years, harvest_complete, seed-treatment dates, emergence, processing route, etc.); ops flags (soft_rot_confirmed_in_cluster, cibrc_verified, mandi price); engine-composer flags (fungicide/chemical about-to-show).
+5. Season-2 KB activations when their sources land: D04-NS-003 cumulative-N ledger, D08-WD-002 herbicide registry gate, D03-WL-004 probe-driven waterlog, D04-MC-006 ZnSO₄ partial-dose.
 
 **Platform hardening / roadmap:**
-9. Full VPS deploy of app+DB (not just the edge); object storage (R2/B2); nightly pg_dump backups; production Sentry alerting + Grafana; modem TLS `authmode=0→2` + secret rotation; OTA; farmer app; LoRa 433 MHz regulatory clearance for scale-up.
+6. Object storage (R2/B2); nightly pg_dump backups; production Sentry alerting + Grafana; modem TLS `authmode=0→2` + secret rotation; OTA; farmer app; LoRa 433 MHz regulatory clearance for scale-up.
+
+## B4. Operational lesson (1 Oct 2026) — the k_source outage
+
+The daily pipeline (satellite / Landsat / ginger / forecast) was silently failing for ~2.5 weeks: `PgCropSeasonRepo._row_to_view` read `r.k_source` but `_SELECT_COLS` never selected it (added to the view in 0029, omitted from the SELECT), so every `list_active_by_crop` raised `NoSuchColumnError`. It was invisible because **prod/staging logging used `JSONRenderer` with no traceback processor** — `log.exception` emitted `"exc_info": true` and dropped the stack. Fixes: `dict_tracebacks` in the JSON logger (errors now carry the stack), a no-DB static test asserting `_SELECT_COLS` covers every column `_row_to_view` reads, and the `k_source` SELECT. **Lesson:** never ship JSON logging without a traceback processor; a repo whose mapper reads a column must select it (now guarded by a test).
 
 ---
 

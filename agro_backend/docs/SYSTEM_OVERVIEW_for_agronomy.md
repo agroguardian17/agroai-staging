@@ -12,7 +12,7 @@
 
 ## 1. Architecture at a glance
 
-- **Stack:** FastAPI + SQLAlchemy 2.0 (async, asyncpg) + PostgreSQL/PostGIS. Migrations via Alembic (currently at head **0053**).
+- **Stack:** FastAPI + SQLAlchemy 2.0 (async, asyncpg) + PostgreSQL/PostGIS. Migrations via Alembic (currently at head **0063**).
 - **Shape (hexagonal):** `app/domain` (pure logic, no framework imports), `app/application` (use-cases + `ports/` interfaces), `app/infra` (adapters: persistence, mqtt, whatsapp, satellite, forecast, llm, …). Purity is enforced by AST gates (e.g. `structlog` is forbidden in `app/application`).
 - **The KB is a separate authored package**, not hand-written Python rules: `new-docs/AgroGuardian_Ginger_Engine_v1.0_9931/` holds the rule JSON, a Python authoring surface, the DSL engine, and tests. A build step compiles JSON → SQL, and a migration loads it into `kb_*` tables.
 - **End-to-end flow:**
@@ -59,14 +59,14 @@ The schema is ~67 application tables + 17 `kb_*` tables. Grouped by purpose (rep
 
 **KB tables (loaded from compiled SQL):** `kb_rules`, `kb_rule_fields`, `kb_farm_brain_fields`, `kb_golden_tests`, `kb_rule_references`, `kb_rule_dependencies`, `kb_rule_categories`, `kb_precedence`, `kb_duplication_groups`/`kb_duplication_members`, `kb_domains`, `kb_stages`, `kb_source_classes`, `kb_source_tiers`, `kb_open_items`, `kb_overrides`, `kb_override_audit`. Two runtime tables FK to `kb_rules(rule_id)`: `advisory_log` and `kb_overrides` (these FKs are dropped/re-added around every KB reload — see §3.5).
 
-Migrations run 0001 → 0053; each is transactional and reversible. Recent additions: 0044 (`ai_suggestions.confidence`+`rule_version`), 0045 `advisory_audit`, 0046 consent, 0047 erasure, 0048–0049 KB reload (VNMKV B1), 0050–0051 variety water, 0052 N-ceiling, 0053 herbicide registry.
+Migrations run 0001 → 0063; each is transactional and reversible. Recent additions: 0044 (`ai_suggestions.confidence`+`rule_version`), 0045 `advisory_audit`, 0046 consent, 0047 erasure, 0048–0049 KB reload (VNMKV B1), 0050–0051 variety water, 0052 N-ceiling, 0053 herbicide registry, 0054–0059 firing-intent KB batches, 0060 water-budget KB rules, 0061 `sensor_pipe_position`, 0062 `plot_stage_log`, 0063 final-decision KB rules (D04-MC-005 ZnSO₄, D06-BW-004 wilt-history).
 
 ---
 
 ## 3. The Knowledge Base
 
 ### 3.1 Scale
-- **483 rules** across **14 domains**. Of these, **237 have a machine trigger** (`trigger.expr`) and are evaluated by the engine; the other **246 are knowledge entries** (reference/context/manual) with no trigger.
+- **495 rules** across **14 domains**. Of these, **296 have a machine trigger** (`trigger.expr`) and are evaluated by the engine; the rest are knowledge entries (reference/context/manual) with no trigger. Includes the water-budget suite (D03-WB-001..008 + D03-ST-001) and the final-decision rules (D04-MC-005 basal ZnSO₄ → `marathwada_central`, D06-BW-004 wilt-history prompt, D03-SB-004 SUPPRESSES D03-MN-002).
 - **365 farm-brain fields** declared across the domain schemas.
 - **24 immutable** rules (safety-critical core that overrides cannot disable).
 
@@ -292,7 +292,7 @@ The yield model runs **inside the daily farm-brain build** (not a separate servi
 All factors are currently `L4 / EST_phase_1` with placeholder `confidence=0.50`, to be recalibrated after Season 1. **Interdependence clusters** (e.g. `soft_rot_cluster={1,2,11}`) prevent double-counting a causal chain: only the max-loss member of a cluster enters the survival product.
 
 ### 7.3 "Factor-7" and D03-ST-001 (directly relevant to the water-budget bundle)
-Factor-7 = **drought during rhizome fill**. Its intensity is computed **directly from the `dry_spell_days` field**: `I₇ = clamp01(dry_spell_days / 30)`, loss `= Y_potential × 0.20 × I₇`. `D03-ST-001` is its `representative_rule_id` — i.e. **the attribution label**, appended to `u_values_applied` so a loss traces back to that rule. **Important:** `D03-ST-001` is *referenced by the register but not yet deployed as a KB rule* — it's gated on `flow_telemetry_present` (Water-Budget v1.3 §9). The yield model still works today because factor-7 reads `dry_spell_days` directly, independent of the rule firing. So the bundle's plan to have D03-ST-001 "feed factor-7" is partly already true (the register points at it) and partly blocked (the rule body awaits hardware).
+Factor-7 = **drought during rhizome fill**. Its intensity is computed **directly from the `dry_spell_days` field**: `I₇ = clamp01(dry_spell_days / 30)`, loss `= Y_potential × 0.20 × I₇`. `D03-ST-001` is its `representative_rule_id` — i.e. **the attribution label**, appended to `u_values_applied` so a loss traces back to that rule. **Update (Oct 2026):** `D03-ST-001` is **now deployed** (migration 0060) alongside the water-budget suite, and the compute engine (`app/domain/water_budget.py` + `PgWaterBudgetRepo`) feeds its derived fields from live single-pipe flow (`node_sensor_readings.water_flow_lpm`). The yield-model factor-7 continues to read `dry_spell_days` directly, so attribution works independently of the rule firing; the rule now also fires on real data.
 
 ---
 
