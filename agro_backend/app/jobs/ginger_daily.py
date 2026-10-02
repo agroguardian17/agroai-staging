@@ -217,6 +217,7 @@ async def _run_one_plot(
         plot_stage_repo=deps.plot_stage_repo,
         cluster_repo=deps.cluster_repo,
         qa_counters_repo=deps.qa_counters_repo,
+        timezone=deps.timezone,
         declared_fields=declared_fields,
     )
     state = await build_farm_brain(plot_id=season.plot_id, today=today, deps=fb_deps)
@@ -402,9 +403,10 @@ def _main() -> None:
     from app.jobs.ginger_scheduler import build_ginger_daily_deps
     from app.lib.logging import configure_logging
 
-    parser = argparse.ArgumentParser(description="Run the ginger daily advisory job once.")
+    parser = argparse.ArgumentParser(
+        description="Run the ginger daily advisory job once over ALL active ginger seasons."
+    )
     parser.add_argument("--date", help="Override 'today' as YYYY-MM-DD (default: now in job TZ).")
-    parser.add_argument("--plot", help="Ignored; kept for backwards-compat.")
     args = parser.parse_args()
 
     configure_logging()

@@ -62,6 +62,15 @@ _LAST_IRRIG_SQL = text(
     """
 )
 
+_LAST_FLOW_SQL = text(
+    """
+    SELECT MAX(recorded_at) AS last_at
+    FROM node_sensor_readings
+    WHERE plot_id = :plot_id
+      AND water_flow_lpm IS NOT NULL
+    """
+)
+
 
 def _dec(v: object) -> Decimal | None:
     if v is None:
@@ -109,4 +118,9 @@ class PgWaterBudgetRepo:
     async def last_irrigation_at(self, plot_id: str) -> datetime | None:
         async with self._sm() as session:
             row = (await session.execute(_LAST_IRRIG_SQL, {"plot_id": plot_id})).one_or_none()
+        return row.last_at if row is not None else None
+
+    async def last_flow_at(self, plot_id: str) -> datetime | None:
+        async with self._sm() as session:
+            row = (await session.execute(_LAST_FLOW_SQL, {"plot_id": plot_id})).one_or_none()
         return row.last_at if row is not None else None
