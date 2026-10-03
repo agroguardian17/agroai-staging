@@ -73,24 +73,14 @@ def _text_num(label: str, col: str, *, help: str | None = None) -> None:
     st.text_input(label, value="" if current is None else str(current), key=col, help=help)
 
 
-# --- Live completeness banner (reads the current widget state) ---------------
-def _effective(col: str):
-    """Value that WOULD be stored: the widget entry if set, else the DB value."""
-    if col in st.session_state:
-        v = st.session_state[col]
-        if col == "planting_layout":
-            return None if v == "(keep)" else v
-        try:
-            return _num(v) if isinstance(v, str) else v
-        except ValueError:
-            return None
-    return row.get(col)
-
-
-missing_now = [c for c in _GATE_FIELDS if _effective(c) in (None, "")]
+# --- Completeness banner (reflects STORED state; refreshes after each save) ---
+# `row` is re-read from the DB on every rerun, so this updates the moment a save
+# commits. It is deliberately not keystroke-live: Streamlit forms defer widget
+# values until submit, so an in-form edit only counts once you press Save.
+missing_now = [c for c in _GATE_FIELDS if row.get(c) in (None, "")]
 if missing_now:
     st.error(
-        "**Geometry incomplete** — D03-WB-008 will keep prompting. Still needed: "
+        "**Geometry incomplete** (as saved) — D03-WB-008 will keep prompting. Still needed: "
         + ", ".join(f"`{c}`" for c in missing_now)
     )
 else:
@@ -184,4 +174,4 @@ if submitted:
         updates,
     )
     st.success(f"Saved {len(updates)} field(s) to the active season ({n} row).")
-    st.caption("Reload the page to re-read stored values and refresh the completeness banner.")
+    st.caption("The completeness banner above reflects the newly-saved values.")

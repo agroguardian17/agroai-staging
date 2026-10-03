@@ -1793,11 +1793,14 @@ from app.domain.water_budget import VarietyStageTargets  # noqa: E402
 
 
 class _FakeWaterBudgetRepo:
-    def __init__(self, *, targets=None, lifecycle=None, flow=None, last_irr=None) -> None:
+    def __init__(
+        self, *, targets=None, lifecycle=None, flow=None, last_irr=None, last_flow=None
+    ) -> None:
         self._t = targets
         self._l = lifecycle
         self._f = flow
         self._li = last_irr
+        self._lf = last_flow
 
     async def targets_for_dap(self, variety, dap):
         return self._t
@@ -1810,6 +1813,9 @@ class _FakeWaterBudgetRepo:
 
     async def last_irrigation_at(self, plot_id):
         return self._li
+
+    async def last_flow_at(self, plot_id):
+        return self._lf
 
 
 @pytest.mark.asyncio
@@ -1858,6 +1864,7 @@ async def test_water_budget_fields_computed() -> None:
             lifecycle=Decimal("250"),
             flow=Decimal("1020600"),  # /24300 plants = 42.0 L/plant
             last_irr=datetime(2026, 7, 31, 6, 0, tzinfo=UTC),
+            last_flow=datetime(2026, 8, 3, 6, 0, tzinfo=UTC),  # same day -> 0
         ),
         declared_fields=declared,
     )

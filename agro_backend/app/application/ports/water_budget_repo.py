@@ -53,3 +53,14 @@ class WaterBudgetRepo(Protocol):
         never recorded flow.
         """
         ...
+
+    async def last_flow_at(self, plot_id: str) -> datetime | None:
+        """Timestamp of the most recent reading that CARRIED flow telemetry.
+
+        ``MAX(recorded_at) WHERE water_flow_lpm IS NOT NULL`` (includes a 0-flow
+        reading). This is the correct basis for the D03-WB-006 'flow sensor
+        silent' gap: a null flow value on the latest reading is exactly the
+        silence we must detect, so it cannot be read off that reading. ``None``
+        if the plot has never carried flow telemetry.
+        """
+        ...

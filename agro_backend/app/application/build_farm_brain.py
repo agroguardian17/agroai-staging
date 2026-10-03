@@ -44,7 +44,7 @@ from __future__ import annotations
 import calendar
 from contextlib import suppress
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta, tzinfo
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
@@ -196,6 +196,10 @@ class FarmBrainDeps:
     # ``previous_stage`` from the most recent earlier run so D03-SB-003 can
     # detect a phenological transition. None keeps it UNKNOWN (rule dormant).
     plot_stage_repo: PlotStageRepo | None = None
+    # Timezone that ``today`` was computed in (the farmer's day boundary, IST for
+    # the pilot). Used to convert UTC reading timestamps to the same frame before
+    # taking a day difference, so days_since_* don't skew by one at midnight.
+    timezone: tzinfo = UTC
     # The full ``kb_farm_brain_fields`` set. Injected so tests can pin a
     # subset; the daily job reads it from the database at startup.
     declared_fields: frozenset[str] = field(default_factory=frozenset)
@@ -437,6 +441,16 @@ def _wb_dt(d: date) -> datetime:
     return datetime(d.year, d.month, d.day, tzinfo=UTC)
 
 
+def _days_since(today: date, ts: datetime, tz: tzinfo) -> int:
+    """Whole days from ``ts`` to ``today``, with ``ts`` read in ``today``'s frame.
+
+    ``today`` is a date in the farmer tz; ``ts`` is a UTC timestamptz. Converting
+    ``ts`` to ``tz`` before taking its date keeps the difference from skewing by
+    a day across the UTC/IST midnight boundary.
+    """
+    return (today - ts.astimezone(tz).date()).days
+
+
 async def _populate_water_budget(
     state: dict[str, Any],
     deps: FarmBrainDeps,
@@ -482,13 +496,19 @@ async def _populate_water_budget(
             ),
         )
 
-    if reading is not None and reading.water_flow_lpm is not None:
-        _set(state, "flow_telemetry_field_exists", True)
-        _set(state, "days_since_last_flow_reading", (today - reading.recorded_at.date()).days)
-
     repo = deps.water_budget_repo
     if repo is None or season is None:
         return
+
+    # Flow-gap detection keys off the most recent reading that CARRIED flow
+    # telemetry, not whichever reading is newest: a null flow value on the latest
+    # reading is exactly the 'flow sensor silent' state D03-WB-006 must catch, so
+    # it cannot be inferred from that reading.
+    last_flow = await repo.last_flow_at(plot_id)
+    if last_flow is not None:
+        _set(state, "flow_telemetry_field_exists", True)
+        _set(state, "days_since_last_flow_reading", _days_since(today, last_flow, deps.timezone))
+
     dap = state.get("dap")
     variety = season.crop_variety
     sowing = season.sowing_date
@@ -497,7 +517,7 @@ async def _populate_water_budget(
 
     last_irr = await repo.last_irrigation_at(plot_id)
     if last_irr is not None:
-        _set(state, "days_since_last_irrigation", (today - last_irr.date()).days)
+        _set(state, "days_since_last_irrigation", _days_since(today, last_irr, deps.timezone))
 
     targets = await repo.targets_for_dap(variety, dap)
     if targets is not None:
