@@ -197,7 +197,7 @@ Established during onboarding, updated rarely.
 | `crop_current_season_id` FK | UUID | SYS | Points to active `crop_seasons` row. |
 | `irrigation_valve_id` | TEXT | TECH | Physical valve identifier. |
 | `drip_line_count` | INT | TECH | |
-| `plot_status` | TEXT | OPS or FO | `active`/`fallow`/`harvested`. |
+| `plot_status` | TEXT | OPS or FO | `active`/`fallow`/`harvested`. **Not** the KB farm-brain field of the same name (that is a mapper-derived crop-cycle phase — see the note under §3.5). |
 | `created_at` | TIMESTAMPTZ | SYS | Auto. |
 
 The **`data_tier`** column (0004) records `hardware` vs `satellite_only` for each plot. Trigger keeps it consistent with `node_id IS NULL`.
@@ -226,6 +226,11 @@ The **`data_tier`** column (0004) records `hardware` vs `satellite_only` for eac
 | `season_status` | TEXT | OPS or DERIVED | `active`/`completed`/`abandoned`. |
 | `notes` | TEXT | OPS | |
 | `created_at` | TIMESTAMPTZ | SYS | |
+| `k_source` | TEXT | FI or OPS | K-fertiliser source (MOP/SOP/mixed), migration 0029. **Read by the Farm-Brain mapper — it MUST appear in `pg_crop_season_repo._SELECT_COLS`** (its omission caused the 1-Oct pipeline outage; now guarded by `test_pg_crop_season_repo_select.py`). |
+| agronomy-plan columns | mixed | FI or OPS | Land-prep, bed/drip geometry, nutrient plan, VWC thresholds, etc. (migrations 0022 / 0024). The Farm-Brain mapper copies many by name. |
+| water-budget geometry | mixed | FI or OPS (dashboard) | The D03-WB geometry set — `planting_layout`, `dripper_spacing_cm`, `drippers_per_acre`, `rows_per_bed`, `plants_per_acre`, bed dims — plus **`sensor_pipe_position`** (TEXT `first`/`middle`/`last`/`representative`, migration 0061: which drip pipe the flow sensor sits on). Captured via the dashboard **Plot Geometry** page; feeds `build_farm_brain._populate_water_budget`. |
+
+> **Derived KB field `plot_status`** — the Farm-Brain field named `plot_status` (enum `pre_planting`/`growing`/`post_harvest`) is **derived by the mapper from the season's sowing/harvest dates** and gates the pre-planting prompts D04-MC-005 / D06-BW-004. It is **distinct from the `plots.plot_status` column** (`active`/`fallow`/`harvested`, §3.4) — same name, different vocabulary. The mapper does **not** read the column into the field; do not wire it in (it would clobber the derived value and silently break those rules).
 
 ---
 
@@ -603,6 +608,17 @@ Where sensor data meets crop science and Claude.
 | `soil_type`, `crop_stage`, `weather_pattern` | mixed | DERIVED | Feature snapshot. |
 | `water_coefficient_adjusted` | FLOAT | DERIVED | Learning update to the model. |
 | `notes`, `learning_applied_at` | mixed | SYS | |
+
+### 3.22a `plot_stage_log` (per-plot growth-stage history — migration 0062)
+
+One row per `(plot_id, run_date)`. The daily ginger job records each run's `current_growth_stage`; the Farm-Brain mapper reads the most recent **earlier** row to fill the KB field `previous_stage`, which powers the D03-SB-003 phenological-transition rule. Separate from the engine's own `engine_state` store (which holds only notifier/override bookkeeping, not stage).
+
+| Field | Type | Source | Notes |
+|---|---|---|---|
+| `plot_id` PK | TEXT | SYS | Part of the composite PK. |
+| `run_date` PK | DATE | SYS | The job's "today" (farmer tz). |
+| `stage` | TEXT | DERIVED | `crop_seasons.current_growth_stage` at that run. |
+| `recorded_at` | TIMESTAMPTZ | SYS | Upsert timestamp. |
 
 ---
 

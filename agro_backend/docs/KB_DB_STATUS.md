@@ -1,5 +1,7 @@
 # Ginger KB + Database — status for the agronomy team
 
+> **⚠️ Freshness (2026-10-02).** This is a point-in-time snapshot from 21 Sep (the agronomy team's 481-rule view). The deployed KB has since been integrated and extended — current head is migration **0063**, **495 rules / 296 triggered**, with the water-budget engine and the final-decision rules live. For current state see **`SYSTEM_AND_STATUS.md`** (full live-vs-pending) and **`SYSTEM_OVERVIEW_for_agronomy.md`** (agronomy-facing). Where those disagree with the numbers below, they win.
+
 **Date:** 2026-09-21 · **Audience:** agronomy team · **Owner:** backend
 
 This is a plain-language status of the Ginger knowledge base (KB) and the
