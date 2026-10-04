@@ -77,15 +77,16 @@ async def test_purge_older_than(sessionmaker: async_sessionmaker[AsyncSession]) 
         removed = await repo.purge_older_than(now - timedelta(days=30))
         assert removed >= 1
         async with sessionmaker() as s:
-            remaining = (
-                (
+            remaining = {
+                str(x)
+                for x in (
                     await s.execute(
                         text("SELECT trace_id FROM pipeline_trace WHERE node_id = 'PURGE_TEST'")
                     )
                 )
                 .scalars()
                 .all()
-            )
+            }
         assert old_id not in remaining
         assert new_id in remaining
     finally:
