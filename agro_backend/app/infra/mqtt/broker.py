@@ -48,8 +48,10 @@ import paho.mqtt.client as mqtt
 import structlog
 from pydantic import ValidationError
 
+from app.application.build_pipeline_trace import build_drop_trace, build_ingest_trace
 from app.application.ports.device_calibration_repo import DeviceCalibrationRepo
 from app.application.ports.main_node_reading_repo import MainNodeReadingRepo
+from app.application.ports.pipeline_trace_repo import PipelineTrace, PipelineTraceRepo
 from app.application.ports.weather_station_reading_repo import (
     WeatherStationReadingRepo,
 )
@@ -156,6 +158,12 @@ class IngestBroker:
         # (master_node_id, recorded_at). Idempotent — the same second seen
         # via both paths lands once. Optional for back-compat with tests.
         weather_station_reading_repo: WeatherStationReadingRepo | None = None,
+        # Pipeline observability (Phase 1): when injected (the
+        # ``PIPELINE_TRACE_ENABLED`` flag), the broker records one
+        # ``pipeline_trace`` row per v2-raw message / drop so ops can inspect the
+        # raw-vs-calibrated values and the per-stage checklist. Observability
+        # only — every trace write is best-effort and can never affect ingest.
+        pipeline_trace_repo: PipelineTraceRepo | None = None,
         # Test seam: allow callers to inject a fake parser/processor for
         # unit tests. Production callers always use the module defaults.
         # ``ingest_fn`` keeps its historical name (Round 7) for backward
@@ -173,6 +181,7 @@ class IngestBroker:
         self._calibration_repo = calibration_repo
         self._main_node_reading_repo = main_node_reading_repo
         self._weather_station_reading_repo = weather_station_reading_repo
+        self._trace_repo = pipeline_trace_repo
         self._parse_fn = parse_fn
         self._ingest_fn = ingest_fn
         self._max_queue = max_queue
@@ -365,6 +374,40 @@ class IngestBroker:
             log.warning("ingest_broker.queue_full", topic=topic)
 
     # ------------------------------------------------------------------
+    # Pipeline observability (Phase 1) — best-effort, never affects ingest
+    # ------------------------------------------------------------------
+    async def _write_trace(self, trace: PipelineTrace) -> None:
+        if self._trace_repo is None:
+            return
+        try:
+            await self._trace_repo.record(trace)
+        except Exception:
+            # A trace failure must never surface to ingest.
+            log.warning("ingest_broker.trace_failed", topic=trace.topic, exc_info=True)
+
+    async def _trace_ingest(
+        self, topic: str, model: object, reading: object, result: object, calibration: object
+    ) -> None:
+        if self._trace_repo is None:
+            return
+        try:
+            trace = build_ingest_trace(
+                topic=topic, model=model, reading=reading, result=result, calibration=calibration
+            )
+        except Exception:
+            log.warning("ingest_broker.trace_build_failed", topic=topic, exc_info=True)
+            return
+        await self._write_trace(trace)
+
+    async def _trace_drop(self, topic: str, reason: str, stage: str) -> None:
+        if self._trace_repo is None:
+            return
+        try:
+            await self._write_trace(build_drop_trace(topic=topic, reason=reason, stage=stage))
+        except Exception:
+            log.warning("ingest_broker.trace_drop_failed", topic=topic, exc_info=True)
+
+    # ------------------------------------------------------------------
     # Drain loop
     # ------------------------------------------------------------------
     async def _drain(self) -> None:
@@ -453,6 +496,7 @@ class IngestBroker:
                             topic=topic,
                             node_id=model.node_id,
                         )
+                        await self._trace_drop(topic, "raw_no_calibration_repo", "s4_calibrate")
                         continue
                     calibration = await self._calibration_repo.get_by_device(
                         str(model.tenant_id), model.node_id
@@ -465,6 +509,7 @@ class IngestBroker:
                             node_id=model.node_id,
                             tenant_id=str(model.tenant_id),
                         )
+                        await self._trace_drop(topic, "missing_calibration", "s4_calibrate")
                         continue
                     reading = model.to_domain(calibration)
                     # Round 17 (2026-09-05): the v2-raw payload carries
@@ -501,12 +546,18 @@ class IngestBroker:
                             metrics.alerts_created_total.inc(rules.created)
                         if rules.cooldown_suppressed:
                             metrics.alerts_cooldown_suppressed_total.inc(rules.cooldown_suppressed)
+                # Pipeline observability (best-effort; v2-raw path only, where a
+                # raw block + calibration exist to compare).
+                if isinstance(model, TelemetryInRaw):
+                    await self._trace_ingest(topic, model, reading, result, calibration)
             except TopicParseError:
                 metrics.ingest_dropped_total.labels(reason="topic_parse").inc()
                 log.warning("ingest_broker.topic_parse_error", topic=topic)
+                await self._trace_drop(topic, "topic_parse", "s1_receive")
             except UnknownTopicKindError:
                 metrics.ingest_dropped_total.labels(reason="unknown_topic_kind").inc()
                 log.info("ingest_broker.unknown_topic_kind", topic=topic)
+                await self._trace_drop(topic, "unknown_topic_kind", "s1_receive")
             except ValidationError as exc:
                 metrics.ingest_dropped_total.labels(reason="validation").inc()
                 log.warning(
@@ -514,16 +565,19 @@ class IngestBroker:
                     topic=topic,
                     errors=exc.error_count(),
                 )
+                await self._trace_drop(topic, "validation", "s2_validate")
             except (ValueError, KeyError) as exc:
                 # parse_inbound -> json.JSONDecodeError (a ValueError subclass)
                 # or our own ValueErrors from the SafeDecimal coercer.
                 metrics.ingest_dropped_total.labels(reason="parse_error").inc()
                 log.warning("ingest_broker.parse_error", topic=topic, exc=str(exc))
+                await self._trace_drop(topic, "parse_error", "s2_validate")
             except Exception as exc:
                 # Catch-all so the drain loop never dies. Re-raise inside
                 # CancelledError so :meth:`stop` can still cancel us.
                 metrics.ingest_dropped_total.labels(reason="unexpected").inc()
                 log.exception("ingest_broker.unexpected_error", topic=topic, exc=str(exc))
+                await self._trace_drop(topic, "unexpected", "unknown")
 
 
 def _topic_template(topic: str) -> str:

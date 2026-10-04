@@ -41,6 +41,7 @@ from app.infra.mqtt.broker import BrokerSettings, IngestBroker
 from app.infra.persistence.pg_alert_repo import PgAlertRepo
 from app.infra.persistence.pg_device_calibration_repo import PgDeviceCalibrationRepo
 from app.infra.persistence.pg_main_node_reading_repo import PgMainNodeReadingRepo
+from app.infra.persistence.pg_pipeline_trace_repo import PgPipelineTraceRepo
 from app.infra.persistence.pg_reading_repo import PgReadingRepo
 from app.infra.persistence.pg_weather_station_reading_repo import (
     PgWeatherStationReadingRepo,
@@ -76,6 +77,11 @@ async def build_and_start_ingest(settings: Settings) -> IngestBroker | None:
     # Idempotent on (master_node_id, recorded_at) — the two paths landing
     # the same second collapse into one row.
     weather_station_reading_repo = PgWeatherStationReadingRepo(sessionmaker)
+    # Pipeline observability (Phase 1) — only when PIPELINE_TRACE_ENABLED. Off =
+    # None = the broker records nothing (zero hot-path cost). Best-effort writes.
+    pipeline_trace_repo = (
+        PgPipelineTraceRepo(sessionmaker) if settings.PIPELINE_TRACE_ENABLED else None
+    )
 
     ingest_deps = IngestDeps(reading_repo=reading_repo, event_bus=event_bus)
     evaluate_deps = EvaluateRulesDeps(
@@ -106,6 +112,7 @@ async def build_and_start_ingest(settings: Settings) -> IngestBroker | None:
         calibration_repo=calibration_repo,
         main_node_reading_repo=main_node_reading_repo,
         weather_station_reading_repo=weather_station_reading_repo,
+        pipeline_trace_repo=pipeline_trace_repo,
         max_queue=settings.MQTT_QUEUE_MAXSIZE,
     )
     await broker.start()

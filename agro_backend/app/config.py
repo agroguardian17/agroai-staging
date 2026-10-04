@@ -101,6 +101,14 @@ class Settings(BaseSettings):
     MQTT_USE_TLS: bool = False
     MQTT_QUEUE_MAXSIZE: int = 5000
 
+    # ---- Pipeline observability (Pipeline Inspector) ------------------------
+    # When True the ingest broker records one `pipeline_trace` row per v2-raw
+    # message / drop (raw-vs-calibrated values + per-stage checklist) for the
+    # dashboard's Pipeline Inspector. Observability only, best-effort — can
+    # never affect ingest. Off = zero hot-path cost. Set True in staging/prod.
+    PIPELINE_TRACE_ENABLED: bool = False
+    PIPELINE_TRACE_RETENTION_DAYS: int = 30
+
     # ---- Hardware bench flags -----------------------------------------------
     # When True, evaluate_rules.execute short-circuits (no alerts fire, no
     # events publish). Use during initial sensor calibration so unrealistic
