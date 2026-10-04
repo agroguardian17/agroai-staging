@@ -7,6 +7,7 @@ calls. Skipped when ``RETENTION_JOB_ENABLED`` is false (tests/CI).
 
 from __future__ import annotations
 
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
 import structlog
@@ -17,6 +18,7 @@ from app.application.fulfil_erasures import fulfil_erasures
 from app.infra.http.deps import _ensure_engine
 from app.infra.persistence.pg_erasure_request_repo import PgErasureRequestRepo
 from app.infra.persistence.pg_farmer_repo import PgFarmerRepo
+from app.infra.persistence.pg_pipeline_trace_repo import PgPipelineTraceRepo
 from app.lib.time import now_utc
 
 if TYPE_CHECKING:
@@ -33,6 +35,7 @@ async def build_and_start_retention_scheduler(settings: Settings) -> AsyncIOSche
     sm = _ensure_engine(settings)
     erasure_repo = PgErasureRequestRepo(sm)
     farmer_repo = PgFarmerRepo(sm)
+    trace_repo = PgPipelineTraceRepo(sm)
     scheduler = AsyncIOScheduler(timezone=settings.GINGER_JOB_TIMEZONE)
 
     async def _job() -> None:
@@ -48,6 +51,14 @@ async def build_and_start_retention_scheduler(settings: Settings) -> AsyncIOSche
             )
         except Exception:
             log.exception("retention_scheduler.tick_failed")
+        # Bound the observability table (best-effort, independent of erasure).
+        try:
+            cutoff = now_utc() - timedelta(days=settings.PIPELINE_TRACE_RETENTION_DAYS)
+            purged = await trace_repo.purge_older_than(cutoff)
+            if purged:
+                log.info("retention_scheduler.pipeline_trace_purged", rows=purged)
+        except Exception:
+            log.exception("retention_scheduler.pipeline_trace_purge_failed")
 
     scheduler.add_job(
         _job,

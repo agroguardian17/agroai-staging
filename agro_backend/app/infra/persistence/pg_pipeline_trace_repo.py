@@ -7,6 +7,7 @@ broker calls this best-effort, so a failure here must never surface to ingest.
 
 from __future__ import annotations
 
+import datetime as _dt
 import json
 
 from sqlalchemy import text
@@ -52,3 +53,15 @@ class PgPipelineTraceRepo:
         }
         async with self._sm() as session, session.begin():
             await session.execute(_INSERT, params)
+
+    async def purge_older_than(self, cutoff: _dt.datetime) -> int:
+        """Delete trace rows older than ``cutoff``. Returns rows removed.
+
+        Bounds the table's growth; called nightly from the retention worker.
+        """
+        async with self._sm() as session, session.begin():
+            result = await session.execute(
+                text("DELETE FROM pipeline_trace WHERE created_at < :cutoff"),
+                {"cutoff": cutoff},
+            )
+        return int(getattr(result, "rowcount", 0) or 0)
