@@ -63,15 +63,16 @@ async def test_record_and_purge(sessionmaker: async_sessionmaker[AsyncSession]) 
         removed = await repo.purge_older_than(now - timedelta(days=30))
         assert removed >= 1
         async with sessionmaker() as s:
-            remaining = (
-                (
+            remaining = {
+                str(x)
+                for x in (
                     await s.execute(
                         text("SELECT trace_id FROM plot_run_trace WHERE plot_id = :p"), {"p": _PLOT}
                     )
                 )
                 .scalars()
                 .all()
-            )
+            }
         assert old_id not in remaining and new_id in remaining
     finally:
         async with sessionmaker() as s, s.begin():
