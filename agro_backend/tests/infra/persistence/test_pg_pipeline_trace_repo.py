@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import text
@@ -59,3 +59,35 @@ async def test_record_round_trips(sessionmaker: async_sessionmaker[AsyncSession]
     finally:
         async with sessionmaker() as s, s.begin():
             await s.execute(text("DELETE FROM pipeline_trace WHERE trace_id = :t"), {"t": tid})
+
+
+async def test_purge_older_than(sessionmaker: async_sessionmaker[AsyncSession]) -> None:
+    repo = PgPipelineTraceRepo(sessionmaker)
+    old_id, new_id = str(uuid.uuid4()), str(uuid.uuid4())
+    now = datetime.now(UTC)
+
+    def _trace(tid: str, created: datetime) -> PipelineTrace:
+        return PipelineTrace(
+            trace_id=tid, topic="t", overall="ok", created_at=created, node_id="PURGE_TEST"
+        )
+
+    await repo.record(_trace(old_id, now - timedelta(days=40)))
+    await repo.record(_trace(new_id, now))
+    try:
+        removed = await repo.purge_older_than(now - timedelta(days=30))
+        assert removed >= 1
+        async with sessionmaker() as s:
+            remaining = (
+                (
+                    await s.execute(
+                        text("SELECT trace_id FROM pipeline_trace WHERE node_id = 'PURGE_TEST'")
+                    )
+                )
+                .scalars()
+                .all()
+            )
+        assert old_id not in remaining
+        assert new_id in remaining
+    finally:
+        async with sessionmaker() as s, s.begin():
+            await s.execute(text("DELETE FROM pipeline_trace WHERE node_id = 'PURGE_TEST'"))
