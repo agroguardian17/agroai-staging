@@ -143,6 +143,28 @@ def validate_recorded_at(recorded_at: datetime | None, now: datetime) -> list[Fi
     return []
 
 
+def validate_run(
+    *, coverage_pct: float | None, advisories_written: int, error: str | None
+) -> list[Finding]:
+    """Run-level checks for the daily plot pipeline (farm-brain → KB → advisory)."""
+    out: list[Finding] = []
+    if error:
+        out.append(Finding("run", "error", error, "no error", FAIL, f"run raised: {error}"))
+        return out
+    if coverage_pct is not None and coverage_pct < 0.30:
+        out.append(
+            Finding(
+                "farm_brain",
+                "coverage_pct",
+                round(coverage_pct, 3),
+                ">= 0.30",
+                WARN,
+                f"low farm-brain coverage ({coverage_pct:.0%}) — many fields UNKNOWN",
+            )
+        )
+    return out
+
+
 def worst_level(findings: list[Finding]) -> str:
     """Roll a list of findings up to a single overall level."""
     if any(f.level == FAIL for f in findings):

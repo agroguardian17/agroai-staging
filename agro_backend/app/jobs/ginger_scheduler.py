@@ -31,6 +31,7 @@ from app.infra.persistence.pg_farmer_repo import PgFarmerRepo
 from app.infra.persistence.pg_farmer_schemes_repo import PgFarmerSchemesRepo
 from app.infra.persistence.pg_lab_soil_test_repo import PgLabSoilTestRepo
 from app.infra.persistence.pg_plot_repo import PgPlotRepo
+from app.infra.persistence.pg_plot_run_trace_repo import PgPlotRunTraceRepo
 from app.infra.persistence.pg_plot_stage_repo import PgPlotStageRepo
 from app.infra.persistence.pg_qa_counters_repo import PgQaCountersRepo
 from app.infra.persistence.pg_reading_repo import PgReadingRepo
@@ -74,6 +75,9 @@ def build_ginger_daily_deps(settings: Settings) -> GingerDailyDeps:
         yield_model_repo=PgYieldModelRepo(sessionmaker),
         water_budget_repo=PgWaterBudgetRepo(sessionmaker),
         plot_stage_repo=PgPlotStageRepo(sessionmaker),
+        plot_run_trace_repo=(
+            PgPlotRunTraceRepo(sessionmaker) if settings.PIPELINE_TRACE_ENABLED else None
+        ),
         cluster_repo=PgClusterRepo(sessionmaker),
         qa_counters_repo=PgQaCountersRepo(sessionmaker),
         advisory_audit_repo=PgAdvisoryAuditRepo(sessionmaker),
