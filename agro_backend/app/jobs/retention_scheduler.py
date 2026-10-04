@@ -19,6 +19,7 @@ from app.infra.http.deps import _ensure_engine
 from app.infra.persistence.pg_erasure_request_repo import PgErasureRequestRepo
 from app.infra.persistence.pg_farmer_repo import PgFarmerRepo
 from app.infra.persistence.pg_pipeline_trace_repo import PgPipelineTraceRepo
+from app.infra.persistence.pg_plot_run_trace_repo import PgPlotRunTraceRepo
 from app.lib.time import now_utc
 
 if TYPE_CHECKING:
@@ -36,6 +37,7 @@ async def build_and_start_retention_scheduler(settings: Settings) -> AsyncIOSche
     erasure_repo = PgErasureRequestRepo(sm)
     farmer_repo = PgFarmerRepo(sm)
     trace_repo = PgPipelineTraceRepo(sm)
+    run_trace_repo = PgPlotRunTraceRepo(sm)
     scheduler = AsyncIOScheduler(timezone=settings.GINGER_JOB_TIMEZONE)
 
     async def _job() -> None:
@@ -55,8 +57,13 @@ async def build_and_start_retention_scheduler(settings: Settings) -> AsyncIOSche
         try:
             cutoff = now_utc() - timedelta(days=settings.PIPELINE_TRACE_RETENTION_DAYS)
             purged = await trace_repo.purge_older_than(cutoff)
-            if purged:
-                log.info("retention_scheduler.pipeline_trace_purged", rows=purged)
+            run_purged = await run_trace_repo.purge_older_than(cutoff)
+            if purged or run_purged:
+                log.info(
+                    "retention_scheduler.pipeline_trace_purged",
+                    rows=purged,
+                    run_rows=run_purged,
+                )
         except Exception:
             log.exception("retention_scheduler.pipeline_trace_purge_failed")
 

@@ -55,6 +55,7 @@ from app.application.build_farm_brain import (
     FarmBrainDeps,
     build_farm_brain,
 )
+from app.application.build_plot_run_trace import build_plot_run_trace
 from app.application.ports.advisory_audit_repo import AdvisoryAuditRepo, AdvisoryAuditRow
 from app.application.ports.advisory_metrics_repo import AdvisoryMetricsRepo
 from app.application.ports.ai_suggestion_repo import AiSuggestion, AiSuggestionRepo
@@ -67,6 +68,7 @@ from app.application.ports.farmer_repo import FarmerRepo
 from app.application.ports.farmer_schemes_repo import FarmerSchemesRepo
 from app.application.ports.lab_soil_test_repo import LabSoilTestRepo
 from app.application.ports.plot_repo import PlotRepo
+from app.application.ports.plot_run_trace_repo import PlotRunTraceRepo
 from app.application.ports.plot_stage_repo import PlotStageRepo
 from app.application.ports.qa_counters_repo import QaCountersRepo
 from app.application.ports.reading_repo import ReadingRepo
@@ -138,6 +140,10 @@ class GingerDailyDeps:
     # ``previous_stage`` from it and this job records each run's stage into it,
     # so D03-SB-003 can detect a phenological transition on the next run.
     plot_stage_repo: PlotStageRepo | None = None
+    # Optional downstream observability (Phase 3). When present the daily job
+    # records one plot_run_trace per plot per run (farm-brain coverage, rules
+    # fired, advisories written). Best-effort — never affects the run.
+    plot_run_trace_repo: PlotRunTraceRepo | None = None
     # Optional D12 peer-cluster source (fills the farm-brain ``cluster_id``).
     cluster_repo: ClusterRepo | None = None
     # Optional D12 QA-counter source (true/false-alarm + photo counts).
@@ -176,10 +182,11 @@ async def run_daily(deps: GingerDailyDeps, *, override_today: date | None = None
         try:
             n = await _run_one_plot(season, deps, today, declared_fields)
             total_written += n
-        except Exception:
+        except Exception as exc:
             # One plot's failure must not stop the others.
             log.exception("ginger_daily.plot_failed", plot_id=season.plot_id)
             metrics.ginger_engine_errors_total.labels(reason="plot_run").inc()
+            await _safe_record_run_trace(season=season, deps=deps, today=today, error=str(exc))
 
     log.info(
         "ginger_daily.completed",
@@ -187,6 +194,35 @@ async def run_daily(deps: GingerDailyDeps, *, override_today: date | None = None
         advisories_written=total_written,
     )
     return total_written
+
+
+async def _safe_record_run_trace(
+    deps: GingerDailyDeps,
+    season: CropSeasonView,
+    today: date,
+    *,
+    state: Any = None,
+    engine_result: dict[str, Any] | None = None,
+    rows: int = 0,
+    error: str | None = None,
+) -> None:
+    """Record a downstream run trace (Phase 3). Best-effort — never raises."""
+    repo = deps.plot_run_trace_repo
+    if repo is None:
+        return
+    try:
+        trace = build_plot_run_trace(
+            plot_id=season.plot_id,
+            season=season,
+            run_date=today,
+            state=state,
+            engine_result=engine_result,
+            advisories_written=rows,
+            error=error,
+        )
+        await repo.record(trace)
+    except Exception:
+        log.warning("ginger_daily.run_trace_failed", plot_id=season.plot_id, exc_info=True)
 
 
 async def _run_one_plot(
@@ -245,6 +281,9 @@ async def _run_one_plot(
     farmer_id = await deps.farmer_repo.owner_of_farm(season.farm_id)
     if farmer_id is None:
         log.warning("ginger_daily.no_owner", plot_id=season.plot_id, farm_id=str(season.farm_id))
+        await _safe_record_run_trace(
+            deps, season, today, state=state, engine_result=engine_result, rows=0
+        )
         return 0
 
     rows = 0
@@ -269,6 +308,9 @@ async def _run_one_plot(
             else "unknown"
         )
         metrics.ginger_messages_total.labels(delivery_class=delivery_class).inc()
+    await _safe_record_run_trace(
+        deps, season, today, state=state, engine_result=engine_result, rows=rows
+    )
     return rows
 
 
