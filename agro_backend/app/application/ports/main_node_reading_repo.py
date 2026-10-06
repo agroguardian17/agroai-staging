@@ -45,5 +45,14 @@ class MainNodeReadingRepo(Protocol):
         """Convenience: the single latest heartbeat, or ``None`` if never seen."""
         ...
 
+    async def latest_per_node(self) -> list[MainNodeReading]:
+        """The single most-recent heartbeat for every Main Node seen so far.
+
+        Powers the device-liveness watchdog, which compares each node's latest
+        heartbeat (its age + the reported sub-node silence) against the alert
+        thresholds. A node that has never sent a heartbeat does not appear.
+        """
+        ...
+
 
 __all__ = ["MainNodeReadingRepo"]
