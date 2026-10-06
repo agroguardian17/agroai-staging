@@ -34,6 +34,10 @@ class CropSeasonView:
     sowing_date: datetime.date
     expected_harvest_date: datetime.date
     current_growth_stage: str | None
+    # DEPRECATED as a crop-age source: this is a static snapshot written once at
+    # seed time and NEVER recomputed, so it freezes (the pilot seed set it to
+    # 50). Use ``days_after_planting(today)`` for the real crop age. Kept on the
+    # view only so existing SELECTs/readers don't break.
     crop_age_days_today: int | None
     # Extra season facts consumed by the ginger KB (Phase-1 field wiring).
     # Nullable: back-fill / farmer-declared, absent on many rows.
@@ -133,6 +137,16 @@ class CropSeasonView:
     water_withdrawal_started: bool | None = None
     # Water-budget flow-sensor pipe location (migration 0061).
     sensor_pipe_position: str | None = None
+
+    def days_after_planting(self, today: datetime.date) -> int | None:
+        """Crop age in days as of ``today`` (``today - sowing_date``).
+
+        The authoritative crop age, recomputed fresh every call — unlike the
+        stale ``crop_age_days_today`` snapshot column. Mirrors the ``dap`` the
+        Farm Brain mapper derives (build_farm_brain). Returns None when the
+        sowing date is unknown.
+        """
+        return (today - self.sowing_date).days if self.sowing_date else None
 
 
 @runtime_checkable

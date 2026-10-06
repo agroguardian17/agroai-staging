@@ -292,7 +292,7 @@ async def _run_one_plot(
         "phi_days_remaining": state.state.get("phi_days_remaining"),
     }
     for msg in engine_result.get("messages", []):
-        await _persist_message(
+        written = await _persist_message(
             deps.ai_suggestion_repo,
             season,
             farmer_id,
@@ -301,6 +301,10 @@ async def _run_one_plot(
             audit_repo=deps.advisory_audit_repo,
             gate_snapshot=gate_snapshot,
         )
+        if not written:
+            # Idempotent duplicate for (plot, day, rule) — a re-run or a
+            # KB-version-reset replay. Don't count it or re-meter it.
+            continue
         rows += 1
         delivery_class = (
             engine_result.get("delivery", {}).get(msg.rule_id, "unknown")
@@ -368,12 +372,21 @@ async def _persist_message(
     today: date,
     audit_repo: AdvisoryAuditRepo | None = None,
     gate_snapshot: dict[str, Any] | None = None,
-) -> None:
-    """Write one engine message as an ``ai_suggestions`` row (+ audit trail)."""
+) -> bool:
+    """Write one engine message as an ``ai_suggestions`` row (+ audit trail).
+
+    Returns True if a new row was inserted, False if it was an idempotent
+    duplicate skipped by the daily-unique index (0066) — on a skip we also skip
+    the advisory_audit write, since that row's FK would point at a suggestion_id
+    we never actually inserted (advisory_audit is append-only, not back-fillable).
+    """
     body = append_disclaimer(msg.render() if hasattr(msg, "render") else str(msg))
     suggestion_id = uuid.uuid4()
     rule_id = getattr(msg, "rule_id", None)
     confidence = getattr(msg, "confidence", None)
+    # Authoritative crop age, recomputed from sowing_date — NOT the stale
+    # crop_seasons.crop_age_days_today snapshot (frozen at its seed value).
+    dap = season.days_after_planting(today)
     suggestion = AiSuggestion(
         suggestion_id=suggestion_id,
         tenant_id=season.tenant_id,
@@ -387,13 +400,15 @@ async def _persist_message(
         ai_model_version=GINGER_MODEL_TAG,
         tokens_used=None,  # deterministic engine, no LLM tokens
         generation_time_ms=None,
-        crop_age_days=season.crop_age_days_today,
+        crop_age_days=dap,
         crop_stage=season.current_growth_stage,
         rule_id=rule_id,  # links the advisory to its KB rule (D12 QA)
         confidence=confidence,  # audit trail §7.3
         rule_version=GINGER_KB_VERSION,
     )
-    await repo.create(suggestion)
+    inserted_id = await repo.create(suggestion)
+    if inserted_id is None:
+        return False
     # Immutable generation-audit row (A4.2, §7.3). Delivery facts stay on
     # ai_suggestions; this captures the immutable rule/model/gate facts.
     if audit_repo is not None:
@@ -406,12 +421,13 @@ async def _persist_message(
                 confidence=confidence,
                 gate_results=gate_snapshot or {},
                 inputs={
-                    "dap": season.crop_age_days_today,
+                    "dap": dap,
                     "stage": season.current_growth_stage,
                     "as_of": today.isoformat(),
                 },
             )
         )
+    return True
 
 
 def _today_in(tz: ZoneInfo) -> date:

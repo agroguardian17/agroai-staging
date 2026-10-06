@@ -23,7 +23,8 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
 
 from app.application.ports.advisory_audit_repo import AdvisoryAuditRepo, AdvisoryAuditRow
 from app.application.ports.ai_suggestion_repo import AiSuggestion, AiSuggestionRepo
@@ -35,6 +36,9 @@ from app.application.ports.reading_repo import ReadingRepo
 from app.domain.disclaimer import append_disclaimer
 from app.domain.plot import Plot
 from app.domain.sensor import Reading
+
+# The pilot's crop-age day boundary is IST (same convention as ginger_daily).
+_IST = ZoneInfo("Asia/Kolkata")
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,14 +83,15 @@ def _user_prompt(
     season: CropSeasonView,
     latest_reading: Reading | None,
     plot: Plot,
+    dap: int | None,
 ) -> str:
     """Build the user-facing prompt with all the context the model needs."""
     lines: list[str] = []
     lines.append(f"पीक: {season.crop_name_marathi} ({season.crop_variety})")
     if season.current_growth_stage:
         lines.append(f"पीकाचा टप्पा: {season.current_growth_stage}")
-    if season.crop_age_days_today is not None:
-        lines.append(f"पीकाचे वय: {season.crop_age_days_today} दिवस")
+    if dap is not None:
+        lines.append(f"पीकाचे वय: {dap} दिवस")
     lines.append(f"शेतपटी क्षेत्र: {plot.area_acre} एकर")
     lines.append("")
     lines.append(f"अलर्ट प्रकार: {alert.alert_type.value}")
@@ -144,9 +149,14 @@ async def execute(
     latest_readings = await deps.reading_repo.latest_for_plot(plot.plot_id, limit=1)
     latest_reading = latest_readings[0] if latest_readings else None
 
+    # Authoritative crop age, recomputed from sowing_date in IST — NOT the stale
+    # crop_seasons.crop_age_days_today snapshot (frozen at its seed value).
+    now_utc = now if now.tzinfo else now.replace(tzinfo=UTC)
+    dap = season.days_after_planting(now_utc.astimezone(_IST).date())
+
     request = ChatRequest(
         system=SYSTEM_PROMPT_MARATHI,
-        user=_user_prompt(alert, season, latest_reading, plot),
+        user=_user_prompt(alert, season, latest_reading, plot, dap),
         model=deps.chat_model_name,
         max_tokens=deps.max_tokens,
     )
@@ -165,10 +175,15 @@ async def execute(
         ai_model_version=response.model,
         tokens_used=response.input_tokens + response.output_tokens,
         generation_time_ms=response.latency_ms,
-        crop_age_days=season.crop_age_days_today,
+        crop_age_days=dap,
         crop_stage=season.current_growth_stage,
     )
     persisted_id = await deps.ai_suggestion_repo.create(suggestion)
+    if persisted_id is None:
+        # Alert advisories never match the daily-unique index, so a skip here is
+        # unexpected; treat it as already-recorded rather than FK-violating the
+        # append-only audit row against an id we didn't insert.
+        return ComposeAdvisoryResult(suggestion=None, skip_reason="duplicate_suggestion")
     # Immutable generation-audit row (A4.2, §7.3). The LLM alert path has no KB
     # rule or gate evaluation, so those fields are null; the model version and
     # link to the advisory are still recorded.
