@@ -49,8 +49,16 @@ class AiSuggestion:
 class AiSuggestionRepo(Protocol):
     """CRUD against ``ai_suggestions``."""
 
-    async def create(self, suggestion: AiSuggestion) -> uuid.UUID:
-        """Insert a row; return the (server-side) suggestion_id."""
+    async def create(self, suggestion: AiSuggestion) -> uuid.UUID | None:
+        """Insert a row; return its suggestion_id.
+
+        Returns ``None`` when the insert was an idempotent no-op — a row for the
+        same (plot, run-day, rule) daily advisory already exists and was skipped
+        by the daily-unique index (migration 0066). Callers that write a child
+        row keyed on the new suggestion_id (e.g. the immutable advisory_audit)
+        MUST skip that write when ``None`` is returned. The alert path never
+        collides with that index, so it always gets an id back.
+        """
         ...
 
     async def find_by_id(self, suggestion_id: uuid.UUID) -> AiSuggestion | None: ...

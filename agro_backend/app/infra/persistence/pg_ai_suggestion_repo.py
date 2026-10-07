@@ -46,7 +46,13 @@ class PgAiSuggestionRepo:
     def __init__(self, sessionmaker: async_sessionmaker[AsyncSession]) -> None:
         self._sm = sessionmaker
 
-    async def create(self, s: AiSuggestion) -> uuid.UUID:
+    async def create(self, s: AiSuggestion) -> uuid.UUID | None:
+        # ON CONFLICT DO NOTHING makes the daily write idempotent: a re-run or a
+        # KB-version-reset replay that re-emits the same (plot, run-day, rule)
+        # advisory is silently skipped by the partial unique index (0066).
+        # RETURNING yields no row on a skip, which we surface as None. Alert rows
+        # (a different ai_model_version) never match that partial index, so they
+        # always insert and return their id.
         stmt = text(
             """
             INSERT INTO ai_suggestions (
@@ -62,6 +68,7 @@ class PgAiSuggestionRepo:
                 :ms, :age, :stage, :rule_id,
                 :confidence, :rule_version
             )
+            ON CONFLICT DO NOTHING
             RETURNING suggestion_id
             """
         )
@@ -89,7 +96,8 @@ class PgAiSuggestionRepo:
             row = res.first()
             await session.commit()
         if row is None:
-            raise RuntimeError("ai_suggestions INSERT did not RETURN a row")
+            # Conflict → the row already existed; idempotent skip (not an error).
+            return None
         r: Any = row
         return cast(uuid.UUID, r.suggestion_id)
 

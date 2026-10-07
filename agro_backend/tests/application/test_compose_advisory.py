@@ -243,7 +243,9 @@ async def test_compose_persists_suggestion_with_claude_response() -> None:
     assert "बॅटरी" in s.full_message_marathi
     assert s.season_id == SEASON
     assert s.crop_stage == "vegetative"
-    assert s.crop_age_days == 20
+    # Crop age is now recomputed from sowing_date (2026-06-01) at NOW's IST date
+    # (2026-06-20), i.e. dap=19 — NOT the stale crop_age_days_today snapshot (20).
+    assert s.crop_age_days == 19
     assert s.tokens_used == 160  # 120 in + 40 out
     assert s.generation_time_ms == 850
     assert len(repo.created) == 1
