@@ -5,8 +5,8 @@ These require a reachable Postgres with all migrations applied
 reachable (e.g. on the Windows dev box without Docker) and run on the Mac dev
 stack. See ``TRANSFER_ROUND_2/MACBOOK_SETUP.md``.
 
-Covered: pilot tenant seed, extensions, partition count (=13), RLS tenant
-isolation + farmer ownership, and the audit-log trigger.
+Covered: pilot tenant seed, extensions, monthly partitions + DEFAULT catch-all
+(0067), RLS tenant isolation + farmer ownership, and the audit-log trigger.
 """
 
 from __future__ import annotations
@@ -119,7 +119,8 @@ def test_core_extensions_present(engine: Engine) -> None:
     assert {"uuid-ossp", "postgis", "pgcrypto"}.issubset(names)
 
 
-def test_node_readings_has_13_partitions(engine: Engine) -> None:
+def test_node_readings_partitions_and_default(engine: Engine) -> None:
+    """13 monthly partitions (0005) + a DEFAULT catch-all (0067)."""
     with engine.connect() as conn:
         count = conn.execute(
             text(
@@ -127,7 +128,13 @@ def test_node_readings_has_13_partitions(engine: Engine) -> None:
                 "WHERE inhparent = 'node_sensor_readings'::regclass"
             )
         ).scalar_one()
-    assert count == 13
+        has_default = conn.execute(
+            text("SELECT to_regclass('node_sensor_readings_pdefault')")
+        ).scalar_one()
+    # 13 monthly children from 0005 + the DEFAULT partition from 0067. The
+    # maintenance job (not run under migrations) may add further months later.
+    assert has_default is not None, "0067 DEFAULT partition missing"
+    assert count >= 14
 
 
 def test_plots_data_tier_trigger(engine: Engine) -> None:
