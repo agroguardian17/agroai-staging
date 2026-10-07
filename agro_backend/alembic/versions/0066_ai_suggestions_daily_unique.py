@@ -44,9 +44,12 @@ DO $$
 DECLARE
     cutoff timestamptz := date_trunc('day', now()) + interval '1 day';
 BEGIN
+    -- (generated_at AT TIME ZONE 'UTC')::date is IMMUTABLE (fixed zone), unlike
+    -- the bare generated_at::date cast which depends on the session TimeZone and
+    -- is only STABLE — Postgres rejects non-immutable functions in index keys.
     EXECUTE format(
         'CREATE UNIQUE INDEX IF NOT EXISTS ai_suggestions_ginger_daily_uniq '
-        'ON ai_suggestions (plot_id, (generated_at::date), rule_id) '
+        'ON ai_suggestions (plot_id, ((generated_at AT TIME ZONE ''UTC'')::date), rule_id) '
         'WHERE ai_model_version = %L AND rule_id IS NOT NULL AND generated_at >= %L',
         'ginger-engine/v1.0', cutoff
     );
