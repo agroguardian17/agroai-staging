@@ -57,6 +57,10 @@ from app.jobs.learning_scheduler import (
     build_and_start_learning_scheduler,
     stop_learning_scheduler,
 )
+from app.jobs.partition_maintenance import (
+    build_and_start_partition_maintenance,
+    stop_partition_maintenance,
+)
 from app.jobs.qa_digest_scheduler import (
     build_and_start_qa_digest_scheduler,
     stop_qa_digest_scheduler,
@@ -116,6 +120,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     learning: AsyncIOScheduler | None = None
     qa_digest: AsyncIOScheduler | None = None
     retention: AsyncIOScheduler | None = None
+    partition: AsyncIOScheduler | None = None
     try:
         broker = await build_and_start_ingest(settings)
         scheduler = await build_and_start_scheduler(settings)
@@ -127,8 +132,11 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         learning = await build_and_start_learning_scheduler(settings)
         qa_digest = await build_and_start_qa_digest_scheduler(settings)
         retention = await build_and_start_retention_scheduler(settings)
+        partition = await build_and_start_partition_maintenance(settings)
         yield
     finally:
+        if partition is not None:
+            await stop_partition_maintenance(partition)
         if retention is not None:
             await stop_retention_scheduler(retention)
         if qa_digest is not None:

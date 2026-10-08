@@ -165,6 +165,17 @@ class Settings(BaseSettings):
     RETENTION_JOB_HOUR: int = 2
     RETENTION_JOB_MINUTE: int = 30
 
+    # ---- Partition maintenance ---------------------------------------------
+    # The monthly range partitions (node_sensor_readings / weather_station_readings
+    # / weather_forecasts, migration 0005) were pre-created for a fixed window and
+    # nothing extends them. This nightly job ensures the current + N months-ahead
+    # partitions always exist so inserts never miss a partition. A DEFAULT
+    # partition (migration 0067) is the belt-and-braces catch-all. Off in tests/CI.
+    PARTITION_MAINTENANCE_ENABLED: bool = True
+    PARTITION_MONTHS_AHEAD: int = 6
+    PARTITION_JOB_HOUR: int = 1
+    PARTITION_JOB_MINUTE: int = 15
+
     # ---- Advisory subscriber (Round 13) -------------------------------------
     # Master switch for the alert->advisory subscriber (LISTEN agro_events ->
     # compose_advisory -> ai_suggestions). Off in tests/CI so no background
