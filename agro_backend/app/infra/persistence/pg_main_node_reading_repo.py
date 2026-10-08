@@ -143,5 +143,15 @@ class PgMainNodeReadingRepo:
         rows = await self.latest_for_node(main_node_id, limit=1)
         return rows[0] if rows else None
 
+    async def latest_per_node(self) -> list[MainNodeReading]:
+        stmt = text(
+            f"SELECT DISTINCT ON (main_node_id) {_SELECT_COLUMNS} "
+            "FROM main_node_readings "
+            "ORDER BY main_node_id, recorded_at DESC"
+        )
+        async with self._sm() as session:
+            res = await session.execute(stmt)
+            return [_row_to_reading(r) for r in res.all()]
+
 
 __all__ = ["PgMainNodeReadingRepo"]

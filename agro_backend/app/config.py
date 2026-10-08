@@ -176,6 +176,18 @@ class Settings(BaseSettings):
     PARTITION_JOB_HOUR: int = 1
     PARTITION_JOB_MINUTE: int = 15
 
+    # ---- Device-liveness watchdog ------------------------------------------
+    # Nothing acted on the Main Node heartbeat's sub_node_online / silence_ms,
+    # so a dead Sub Node (or a down Main Node) was never surfaced. This sweep
+    # raises a DEVICE_OFFLINE alert when a node's latest heartbeat is stale or
+    # reports the Sub Node silent, firing once per episode (cooldown). Off in
+    # tests/CI. Delivery is still gated on WhatsApp creds like other alerts.
+    DEVICE_WATCHDOG_ENABLED: bool = True
+    DEVICE_WATCHDOG_INTERVAL_MINUTES: int = 15
+    SUB_NODE_SILENCE_WARN_MINUTES: int = 15
+    SUB_NODE_SILENCE_CRITICAL_MINUTES: int = 60
+    DEVICE_OFFLINE_COOLDOWN_MINUTES: int = 360
+
     # ---- Advisory subscriber (Round 13) -------------------------------------
     # Master switch for the alert->advisory subscriber (LISTEN agro_events ->
     # compose_advisory -> ai_suggestions). Off in tests/CI so no background
