@@ -18,6 +18,7 @@ from app.application import write_learnings
 from app.application.write_learnings import WriteLearningsDeps
 from app.infra.http.deps import _ensure_engine
 from app.infra.persistence.pg_learning_repo import PgLearningRepo
+from app.jobs._instrument import instrument_job
 
 if TYPE_CHECKING:
     from app.config import Settings
@@ -37,11 +38,9 @@ async def build_and_start_learning_scheduler(settings: Settings) -> AsyncIOSched
     scheduler = AsyncIOScheduler(timezone=settings.GINGER_JOB_TIMEZONE)
 
     async def _job() -> None:
-        try:
+        async with instrument_job(settings, "ai_learning_writer") as rec:
             res = await write_learnings.execute(deps=deps, now=datetime.now(UTC))
-            log.info("learning_scheduler.tick_ok", written=res.written)
-        except Exception:
-            log.exception("learning_scheduler.tick_failed")
+            rec.ok(written=res.written)
 
     scheduler.add_job(
         _job,

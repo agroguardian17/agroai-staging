@@ -18,6 +18,7 @@ from app.application.build_qa_digest import build_weekly_digest
 from app.infra.http.deps import _ensure_engine
 from app.infra.persistence.pg_qa_digest_repo import PgQaDigestRepo
 from app.infra.qa_digest_writer import write_digest_docs
+from app.jobs._instrument import instrument_job
 from app.lib.time import now_ist
 
 if TYPE_CHECKING:
@@ -38,17 +39,14 @@ async def build_and_start_qa_digest_scheduler(settings: Settings) -> AsyncIOSche
     scheduler = AsyncIOScheduler(timezone=settings.GINGER_JOB_TIMEZONE)
 
     async def _job() -> None:
-        try:
+        async with instrument_job(settings, "qa_weekly_digest") as rec:
             digest = await build_weekly_digest(repo=repo, now=now_ist(), top_fp_rules=top_fp)
             paths = write_digest_docs(out_dir, [digest.weekly_report, digest.bias_digest])
-            log.info(
-                "qa_digest_scheduler.tick_ok",
+            rec.ok(
                 week_start=digest.data.week_start.isoformat(),
                 files=[str(p) for p in paths],
                 classified=digest.data.classified_count,
             )
-        except Exception:
-            log.exception("qa_digest_scheduler.tick_failed")
 
     scheduler.add_job(
         _job,

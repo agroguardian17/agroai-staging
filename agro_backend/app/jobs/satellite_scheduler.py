@@ -25,6 +25,7 @@ from app.infra.persistence.pg_crop_season_repo import PgCropSeasonRepo
 from app.infra.persistence.pg_plot_repo import PgPlotRepo
 from app.infra.persistence.pg_satellite_reading_repo import PgSatelliteReadingRepo
 from app.infra.satellite.cdse_provider import CdseSentinelHubProvider, CdseSettings
+from app.jobs._instrument import instrument_job
 
 if TYPE_CHECKING:
     from app.config import Settings
@@ -78,18 +79,15 @@ async def build_and_start_satellite_scheduler(
     scheduler = AsyncIOScheduler(timezone=settings.GINGER_JOB_TIMEZONE)
 
     async def _job() -> None:
-        try:
+        async with instrument_job(settings, "satellite_fetch") as rec:
             res = await refresh_satellite.execute(deps=deps, today=datetime.now(UTC).date())
-            log.info(
-                "satellite_scheduler.tick_ok",
+            rec.ok(
                 plots=res.plots,
                 skipped_no_polygon=res.skipped_no_polygon,
                 optical_scenes=res.optical_scenes,
                 sar_scenes=res.sar_scenes,
                 failed_plots=res.failed_plots,
             )
-        except Exception:
-            log.exception("satellite_scheduler.tick_failed")
 
     scheduler.add_job(
         _job,

@@ -109,6 +109,25 @@ class Settings(BaseSettings):
     PIPELINE_TRACE_ENABLED: bool = False
     PIPELINE_TRACE_RETENTION_DAYS: int = 30
 
+    # ---- Debug / observability hardening (Round 1) --------------------------
+    # Job-run ledger: every scheduler tick records a `job_run` row
+    # (start/end/status/summary/error) plus Prometheus job metrics, so a
+    # silently-failing nightly job shows up on the Scheduler Health dashboard
+    # the next morning instead of only in the logs. Best-effort + additive — it
+    # never affects the job it wraps. Bounded by the retention sweep below.
+    JOB_RUN_LEDGER_ENABLED: bool = True
+    # Nightly diagnostics battery: freshness + invariant checks over the DB,
+    # written to `diagnostics_result` for the System Diagnostics dashboard.
+    # Read-only + best-effort. Runs after the ginger job so it sees today's rows.
+    DIAGNOSTICS_ENABLED: bool = True
+    DIAGNOSTICS_JOB_HOUR: int = 7
+    DIAGNOSTICS_JOB_MINUTE: int = 15
+    # Freshness thresholds the checks compare against.
+    DIAGNOSTICS_READINGS_MAX_AGE_HOURS: int = 6
+    DIAGNOSTICS_SATELLITE_MAX_AGE_DAYS: int = 14
+    # Retention window (days) for the job_run + diagnostics_result tables.
+    OBSERVABILITY_RETENTION_DAYS: int = 30
+
     # ---- Hardware bench flags -----------------------------------------------
     # When True, evaluate_rules.execute short-circuits (no alerts fire, no
     # events publish). Use during initial sensor calibration so unrealistic

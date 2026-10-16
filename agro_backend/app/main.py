@@ -47,6 +47,10 @@ from app.jobs.device_watchdog import (
     build_and_start_device_watchdog,
     stop_device_watchdog,
 )
+from app.jobs.diagnostics_scheduler import (
+    build_and_start_diagnostics_scheduler,
+    stop_diagnostics_scheduler,
+)
 from app.jobs.forecast_scheduler import (
     build_and_start_forecast_scheduler,
     stop_forecast_scheduler,
@@ -126,6 +130,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     retention: AsyncIOScheduler | None = None
     partition: AsyncIOScheduler | None = None
     watchdog: AsyncIOScheduler | None = None
+    diagnostics_sched: AsyncIOScheduler | None = None
     try:
         broker = await build_and_start_ingest(settings)
         scheduler = await build_and_start_scheduler(settings)
@@ -139,8 +144,11 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         retention = await build_and_start_retention_scheduler(settings)
         partition = await build_and_start_partition_maintenance(settings)
         watchdog = await build_and_start_device_watchdog(settings)
+        diagnostics_sched = await build_and_start_diagnostics_scheduler(settings)
         yield
     finally:
+        if diagnostics_sched is not None:
+            await stop_diagnostics_scheduler(diagnostics_sched)
         if watchdog is not None:
             await stop_device_watchdog(watchdog)
         if partition is not None:
