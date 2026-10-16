@@ -1,6 +1,6 @@
 # Debugging & Observability Hardening — Plan
 
-**Status:** being executed in **2 rounds** — **Round 1 BUILT** (branch `feat/debug-hardening-round1`), Round 2 next.
+**Status:** executed in **2 rounds** — **Round 1 BUILT** (PR #114), **Round 2 BUILT** (branch `feat/debug-hardening-round2`, stacked on Round 1).
 **Author:** engineering
 **Date:** 2026-10-15
 **Scope:** server-side only (`agro_backend/`). Firmware is out of scope; this starts where data arrives on the server.
@@ -9,7 +9,9 @@
 ## Execution — 2 rounds (condensed from the 5 phases below)
 
 - **Round 1 — Detection core (BUILT):** the job-run ledger + `instrument_job` on all 9 cron schedulers + job metrics (Phase 1); the diagnostics battery with **freshness + invariant** checks, the `diagnostics_result` table and the nightly `diagnostics_scheduler` (Phases 2–3, DB-only so it runs in CI); the **Scheduler Health** and **System Diagnostics** dashboard pages. Migrations **0068** (`job_run`) + **0069** (`diagnostics_result`); retention wired. Flags `JOB_RUN_LEDGER_ENABLED`, `DIAGNOSTICS_ENABLED` (default on). All additive, best-effort, behaviour-preserving.
-- **Round 2 — Tooling, external deps & coverage (next):** the external **dependency self-tests** (CDSE/USGS/Anthropic/Meta) added to the battery; the `make diagnose` / `python -m app.ops.diagnose` one-command red/green report (Phase 4); **generalise** the SELECT-vs-`_row_to_view` guard to every `Pg*Repo`; add the pipeline self-test + repo guard to CI; the advisory compose/deliver trace + a unified **Daily Health** pane (Phase 5).
+- **Round 2 — Tooling, external deps & coverage (BUILT):** external **dependency self-tests** (`app/infra/diagnostics/dependency_checks.py` — CDSE token, USGS M2M login, Meta Graph reachability, Anthropic config) added to the nightly battery; the **`make diagnose`** / `python -m app.ops.diagnose` one-command red/green report (freshness + invariants + deps + pipeline self-test, non-zero exit on fail); the SELECT-vs-`_row_to_view` guard **generalised to every `Pg*Repo`** (`tests/infra/persistence/test_pg_repo_select_cols.py`); the pipeline self-test added to CI as a gate (`make selftest`); a unified **Daily Health** dashboard pane (`20_Daily_Health.py`).
+
+**Advisory-path trace — deliberate non-goal (documented):** the compose/deliver `LISTEN/NOTIFY` path already persists its state durably (`ai_suggestions`, append-only `advisory_audit`, `notification_dispatch_log`/`dlq`, delivery_status) plus the `advisory_composed_total` / `advisory_delivered_total` metrics — richer than the ingest/daily paths had before trace. A dedicated per-advisory trace table would be redundant for the pilot, so Round 2 covers that path's *health* via the Anthropic + Meta dependency checks and the advisory freshness/counters instead. Revisit if a concrete debugging gap appears.
 
 The per-phase detail below is retained as the design reference; the two rounds are just how it ships.
 
