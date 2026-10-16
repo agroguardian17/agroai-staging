@@ -187,6 +187,41 @@ advisory_delivered_total = Counter(
 )
 
 
+# ----- Scheduler / job-run ledger (debug hardening, Round 1) -------------
+job_runs_total = Counter(
+    "agro_job_runs_total",
+    "Scheduler job ticks by job name and terminal status (ok|failed|skipped).",
+    ["job", "status"],
+    registry=REGISTRY,
+)
+
+
+job_last_success_timestamp = Gauge(
+    "agro_job_last_success_timestamp_seconds",
+    "Unix timestamp of the last successful run of each scheduler job.",
+    ["job"],
+    registry=REGISTRY,
+)
+
+
+job_run_duration_seconds = Histogram(
+    "agro_job_run_duration_seconds",
+    "Wall-clock duration of a scheduler job tick, by job name.",
+    ["job"],
+    buckets=(0.05, 0.25, 1.0, 5.0, 15.0, 60.0, 300.0, 900.0),
+    registry=REGISTRY,
+)
+
+
+# ----- Diagnostics battery (debug hardening, Round 1) --------------------
+diagnostics_checks = Gauge(
+    "agro_diagnostics_checks",
+    "Most-recent diagnostics battery result count, by status (ok|warn|fail|skip).",
+    ["status"],
+    registry=REGISTRY,
+)
+
+
 __all__ = [
     "REGISTRY",
     "advisory_composed_total",
@@ -194,6 +229,7 @@ __all__ = [
     "alerts_cooldown_suppressed_total",
     "alerts_created_total",
     "auth_otp_total",
+    "diagnostics_checks",
     "dispatch_total",
     "ginger_engine_errors_total",
     "ginger_engine_run_seconds",
@@ -203,6 +239,9 @@ __all__ = [
     "ingest_dropped_total",
     "ingest_queue_depth",
     "ingest_received_total",
+    "job_last_success_timestamp",
+    "job_run_duration_seconds",
+    "job_runs_total",
     "llm_calls_total",
     "llm_cost_inr_total",
     "llm_tokens_total",

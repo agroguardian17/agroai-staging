@@ -25,6 +25,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.infra.http.deps import _ensure_engine
+from app.jobs._instrument import instrument_job
 
 if TYPE_CHECKING:
     from app.config import Settings
@@ -101,11 +102,9 @@ async def build_and_start_partition_maintenance(
     scheduler = AsyncIOScheduler(timezone=settings.GINGER_JOB_TIMEZONE)
 
     async def _job() -> None:
-        try:
+        async with instrument_job(settings, "partition_maintenance") as rec:
             await ensure_partitions(sm, months)
-            log.info("partition_maintenance.tick_ok", months_ahead=months)
-        except Exception:
-            log.exception("partition_maintenance.tick_failed")
+            rec.ok(months_ahead=months)
 
     scheduler.add_job(
         _job,

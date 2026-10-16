@@ -16,10 +16,13 @@ from apscheduler.triggers.cron import CronTrigger
 
 from app.application.fulfil_erasures import fulfil_erasures
 from app.infra.http.deps import _ensure_engine
+from app.infra.persistence.pg_diagnostics_repo import PgDiagnosticsRepo
 from app.infra.persistence.pg_erasure_request_repo import PgErasureRequestRepo
 from app.infra.persistence.pg_farmer_repo import PgFarmerRepo
+from app.infra.persistence.pg_job_run_repo import PgJobRunRepo
 from app.infra.persistence.pg_pipeline_trace_repo import PgPipelineTraceRepo
 from app.infra.persistence.pg_plot_run_trace_repo import PgPlotRunTraceRepo
+from app.jobs._instrument import instrument_job
 from app.lib.time import now_utc
 
 if TYPE_CHECKING:
@@ -38,34 +41,34 @@ async def build_and_start_retention_scheduler(settings: Settings) -> AsyncIOSche
     farmer_repo = PgFarmerRepo(sm)
     trace_repo = PgPipelineTraceRepo(sm)
     run_trace_repo = PgPlotRunTraceRepo(sm)
+    job_run_repo = PgJobRunRepo(sm)
+    diagnostics_repo = PgDiagnosticsRepo(sm)
     scheduler = AsyncIOScheduler(timezone=settings.GINGER_JOB_TIMEZONE)
 
     async def _job() -> None:
-        try:
+        async with instrument_job(settings, "dpdp_retention_worker") as rec:
             res = await fulfil_erasures(
                 erasure_repo=erasure_repo, farmer_repo=farmer_repo, now=now_utc()
             )
-            log.info(
-                "retention_scheduler.tick_ok",
-                processed=res.processed,
-                anonymised=res.anonymised,
-                missing=res.missing,
-            )
-        except Exception:
-            log.exception("retention_scheduler.tick_failed")
-        # Bound the observability table (best-effort, independent of erasure).
+            rec.ok(processed=res.processed, anonymised=res.anonymised, missing=res.missing)
+        # Bound the observability tables (best-effort, independent of erasure).
         try:
             cutoff = now_utc() - timedelta(days=settings.PIPELINE_TRACE_RETENTION_DAYS)
             purged = await trace_repo.purge_older_than(cutoff)
             run_purged = await run_trace_repo.purge_older_than(cutoff)
-            if purged or run_purged:
+            obs_cutoff = now_utc() - timedelta(days=settings.OBSERVABILITY_RETENTION_DAYS)
+            job_purged = await job_run_repo.purge_older_than(obs_cutoff)
+            diag_purged = await diagnostics_repo.purge_older_than(obs_cutoff)
+            if purged or run_purged or job_purged or diag_purged:
                 log.info(
-                    "retention_scheduler.pipeline_trace_purged",
+                    "retention_scheduler.observability_purged",
                     rows=purged,
                     run_rows=run_purged,
+                    job_runs=job_purged,
+                    diagnostics=diag_purged,
                 )
         except Exception:
-            log.exception("retention_scheduler.pipeline_trace_purge_failed")
+            log.exception("retention_scheduler.observability_purge_failed")
 
     scheduler.add_job(
         _job,

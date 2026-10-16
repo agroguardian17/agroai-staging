@@ -22,6 +22,7 @@ from app.infra.forecast.open_meteo import OpenMeteoForecastProvider, OpenMeteoSe
 from app.infra.http.deps import _ensure_engine
 from app.infra.persistence.pg_farm_repo import PgFarmRepo
 from app.infra.persistence.pg_weather_forecast_repo import PgWeatherForecastRepo
+from app.jobs._instrument import instrument_job
 
 if TYPE_CHECKING:
     from app.config import Settings
@@ -59,16 +60,13 @@ async def build_and_start_forecast_scheduler(
     scheduler = AsyncIOScheduler(timezone=settings.GINGER_JOB_TIMEZONE)
 
     async def _job() -> None:
-        try:
+        async with instrument_job(settings, "weather_forecast") as rec:
             res = await refresh_forecasts.execute(deps=deps, now=datetime.now(UTC))
-            log.info(
-                "forecast_scheduler.tick_ok",
+            rec.ok(
                 farms=res.farms,
                 rows_written=res.rows_written,
                 failed_farms=res.failed_farms,
             )
-        except Exception:
-            log.exception("forecast_scheduler.tick_failed")
 
     scheduler.add_job(
         _job,

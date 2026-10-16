@@ -42,6 +42,7 @@ from app.infra.persistence.pg_water_budget_repo import PgWaterBudgetRepo
 from app.infra.persistence.pg_weather_forecast_repo import PgWeatherForecastRepo
 from app.infra.persistence.pg_weather_station_reading_repo import PgWeatherStationReadingRepo
 from app.infra.persistence.pg_yield_model_repo import PgYieldModelRepo
+from app.jobs._instrument import instrument_job
 from app.jobs.ginger_daily import GingerDailyDeps, run_daily
 
 if TYPE_CHECKING:
@@ -97,11 +98,9 @@ async def build_and_start_scheduler(settings: Settings) -> AsyncIOScheduler | No
     scheduler = AsyncIOScheduler(timezone=settings.GINGER_JOB_TIMEZONE)
 
     async def _job_wrapper() -> None:
-        try:
+        async with instrument_job(settings, "ginger_daily") as rec:
             written = await run_daily(deps)
-            log.info("ginger_scheduler.tick_ok", advisories_written=written)
-        except Exception:
-            log.exception("ginger_scheduler.tick_failed")
+            rec.ok(advisories_written=written)
 
     scheduler.add_job(
         _job_wrapper,

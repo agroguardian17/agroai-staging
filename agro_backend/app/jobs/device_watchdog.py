@@ -23,6 +23,7 @@ from app.infra.persistence.pg_alert_repo import PgAlertRepo
 from app.infra.persistence.pg_farmer_repo import PgFarmerRepo
 from app.infra.persistence.pg_main_node_reading_repo import PgMainNodeReadingRepo
 from app.infra.persistence.pg_plot_repo import PgPlotRepo
+from app.jobs._instrument import instrument_job
 from app.lib.time import now_utc
 
 if TYPE_CHECKING:
@@ -51,11 +52,9 @@ async def build_and_start_device_watchdog(settings: Settings) -> AsyncIOSchedule
     scheduler = AsyncIOScheduler(timezone=settings.GINGER_JOB_TIMEZONE)
 
     async def _job() -> None:
-        try:
+        async with instrument_job(settings, "device_watchdog") as rec:
             raised = await check_device_liveness(deps, now=now_utc())
-            log.info("device_watchdog.tick_ok", alerts_raised=raised)
-        except Exception:
-            log.exception("device_watchdog.tick_failed")
+            rec.ok(alerts_raised=raised)
 
     scheduler.add_job(
         _job,
