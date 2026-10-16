@@ -19,6 +19,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from app.application.run_diagnostics import run_diagnostics
 from app.domain import diagnostics
+from app.infra.diagnostics.dependency_checks import run_dependency_checks
 from app.infra.diagnostics.pg_collector import PgDiagnosticsCollector
 from app.infra.http.deps import _ensure_engine
 from app.infra.persistence.pg_diagnostics_repo import PgDiagnosticsRepo
@@ -52,6 +53,7 @@ async def build_and_start_diagnostics_scheduler(settings: Settings) -> AsyncIOSc
                 satellite_enabled=settings.SATELLITE_JOB_ENABLED,
                 satellite_max_age_days=settings.DIAGNOSTICS_SATELLITE_MAX_AGE_DAYS,
             )
+            results += await run_dependency_checks(settings)
             run_id = str(uuid4())
             await repo.record_run(run_id, now, results)
             counts = diagnostics.summarize(results)

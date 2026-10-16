@@ -113,6 +113,9 @@ jobs:
       - name: Run migrations
         run: alembic upgrade head
 
+      - name: Pipeline self-test (golden payloads)
+        run: python -m app.infra.pipeline_selftest
+
       - name: Pytest with coverage gate
         run: pytest -q --cov=app --cov-report=xml --cov-fail-under=80
 

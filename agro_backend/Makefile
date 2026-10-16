@@ -16,6 +16,7 @@ CADDY_PROD = deploy/caddy/Caddyfile.prod
 .PHONY: help install lint format typecheck test test-cov \
         up up-deps down logs build build-multiarch \
         migrate migrate-down migrate-new \
+        diagnose selftest \
         caddyfile-prod clean
 
 help:
@@ -63,6 +64,16 @@ test:
 
 test-cov:
 	pytest -q --cov=app --cov-report=term-missing --cov-fail-under=80
+
+# One-command diagnosis: freshness + invariants (DB) + dependency self-tests +
+# pipeline self-test. Exits non-zero on any failure. Needs DB env for the DB
+# checks (run against the dev stack or on the box).
+diagnose:
+	$(PYTHON) -m app.ops.diagnose
+
+# Pipeline self-test only (pure, no DB/network). Used as a CI gate.
+selftest:
+	$(PYTHON) -m app.infra.pipeline_selftest
 
 up:
 	$(COMPOSE_DEV) up -d --build
