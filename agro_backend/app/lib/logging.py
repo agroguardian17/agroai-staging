@@ -12,6 +12,7 @@ import sys
 from typing import Any
 
 import structlog
+from structlog.tracebacks import ExceptionDictTransformer
 from structlog.types import EventDict, Processor
 
 from app.config import AppEnv, get_settings
@@ -68,6 +69,18 @@ def _add_logger_name(logger: object, _name: str, event_dict: EventDict) -> Event
     return event_dict
 
 
+def _exception_transformer() -> ExceptionDictTransformer:
+    """Render exceptions as a structured dict WITHOUT frame locals (fix A4).
+
+    The bare ``structlog.processors.dict_tracebacks`` defaults to
+    ``show_locals=True``, which dumps every frame's locals — including the whole
+    ``Settings`` repr — into each error line (multi-KB, noisy, leaks non-secret
+    config). We keep the full stack (the k_source lesson: never ship JSON logging
+    without a traceback processor) but turn locals off.
+    """
+    return ExceptionDictTransformer(show_locals=False)
+
+
 def configure_logging() -> None:
     """Configure structlog + stdlib logging once at process startup."""
     settings = get_settings()
@@ -89,9 +102,10 @@ def configure_logging() -> None:
     else:
         # JSONRenderer drops exc_info unless a traceback processor runs first,
         # so every production error would otherwise log `"exc_info": true` with
-        # no stack. dict_tracebacks renders it into a structured `exception`.
+        # no stack. ExceptionRenderer renders it into a structured `exception`
+        # (full stack, no frame locals — see _exception_transformer / A4).
         renderer = structlog.processors.JSONRenderer()
-        exc_processors = [structlog.processors.dict_tracebacks]
+        exc_processors = [structlog.processors.ExceptionRenderer(_exception_transformer())]
 
     structlog.configure(
         processors=[*shared_processors, *exc_processors, renderer],
