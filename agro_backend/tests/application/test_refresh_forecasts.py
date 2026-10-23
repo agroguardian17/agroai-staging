@@ -69,6 +69,24 @@ class _FakeForecastRepo:
         return len(rows)
 
 
+class _FlakyProvider:
+    """Fails the first ``fail_times`` attempts (across calls), then succeeds."""
+
+    def __init__(self, days: int = 2, fail_times: int = 1) -> None:
+        self._days = days
+        self._remaining = fail_times
+        self.calls = 0
+
+    async def daily_forecast(
+        self, *, lat: float, lng: float, days: int, past_days: int = 0
+    ) -> list[DailyForecast]:
+        self.calls += 1
+        if self._remaining > 0:
+            self._remaining -= 1
+            raise ForecastError("transient")
+        return [_day(i) for i in range(self._days)]
+
+
 def _deps(farm_repo: Any, provider: Any, repo: Any, *, days: int = 3) -> RefreshForecastsDeps:
     return RefreshForecastsDeps(
         farm_repo=cast(Any, farm_repo),
@@ -76,6 +94,7 @@ def _deps(farm_repo: Any, provider: Any, repo: Any, *, days: int = 3) -> Refresh
         forecast_repo=cast(Any, repo),
         source_api="open-meteo",
         days=days,
+        retry_backoff_s=0.0,  # don't actually sleep in tests
     )
 
 
@@ -111,3 +130,26 @@ async def test_no_farms_is_a_clean_noop() -> None:
     out = await execute(deps=_deps(_FakeFarmRepo([]), _FakeProvider(), repo), now=NOW)
     assert out == type(out)(farms=0, rows_written=0, failed_farms=0)
     assert repo.saved == []
+
+
+async def test_retry_recovers_from_a_transient_failure() -> None:
+    # A3: the 1st attempt fails, the retry succeeds → no failure, rows written.
+    provider = _FlakyProvider(days=2, fail_times=1)
+    repo = _FakeForecastRepo()
+    out = await execute(deps=_deps(_FakeFarmRepo([_farm(1)]), provider, repo, days=2), now=NOW)
+    assert out.failed_farms == 0
+    assert out.rows_written == 2
+    assert out.errors == []
+    assert provider.calls == 2  # retried once
+
+
+async def test_permanent_failure_records_error_detail() -> None:
+    # A3: a farm that always fails is counted AND its reason is captured.
+    provider = _FakeProvider(days=2, fail_for={_farm(2).farm_id})
+    repo = _FakeForecastRepo()
+    out = await execute(deps=_deps(_FakeFarmRepo([_farm(2)]), provider, repo, days=2), now=NOW)
+    assert out.failed_farms == 1
+    assert out.rows_written == 0
+    assert len(out.errors) == 1
+    assert str(_farm(2).farm_id) in out.errors[0]
+    assert "ForecastError" in out.errors[0]

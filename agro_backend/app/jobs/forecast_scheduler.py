@@ -62,10 +62,13 @@ async def build_and_start_forecast_scheduler(
     async def _job() -> None:
         async with instrument_job(settings, "weather_forecast") as rec:
             res = await refresh_forecasts.execute(deps=deps, now=datetime.now(UTC))
+            if res.errors:
+                log.warning("forecast_scheduler.farm_failures", errors=res.errors)
             rec.ok(
                 farms=res.farms,
                 rows_written=res.rows_written,
                 failed_farms=res.failed_farms,
+                errors=res.errors,
             )
 
     scheduler.add_job(
