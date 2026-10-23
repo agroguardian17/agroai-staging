@@ -14,7 +14,7 @@ import structlog
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-from app.application.build_qa_digest import build_weekly_digest
+from app.application.build_qa_digest import DigestDoc, build_weekly_digest
 from app.infra.http.deps import _ensure_engine
 from app.infra.persistence.pg_qa_digest_repo import PgQaDigestRepo
 from app.infra.qa_digest_writer import write_digest_docs
@@ -25,6 +25,19 @@ if TYPE_CHECKING:
     from app.config import Settings
 
 log = structlog.get_logger(__name__)
+
+
+def _best_effort_write(out_dir: str, docs: list[DigestDoc]) -> list[str]:
+    """Write the digest .md files; return paths, or [] if the dir isn't writable.
+
+    The DB is the durable sink (``save_digest``); this filesystem drop is a dev
+    convenience and must never fail the job (fix A2).
+    """
+    try:
+        return [str(p) for p in write_digest_docs(out_dir, docs)]
+    except OSError as exc:
+        log.warning("qa_weekly_digest.fs_write_skipped", out_dir=out_dir, error=str(exc))
+        return []
 
 
 async def build_and_start_qa_digest_scheduler(settings: Settings) -> AsyncIOScheduler | None:
@@ -41,10 +54,24 @@ async def build_and_start_qa_digest_scheduler(settings: Settings) -> AsyncIOSche
     async def _job() -> None:
         async with instrument_job(settings, "qa_weekly_digest") as rec:
             digest = await build_weekly_digest(repo=repo, now=now_ist(), top_fp_rules=top_fp)
-            paths = write_digest_docs(out_dir, [digest.weekly_report, digest.bias_digest])
+            week_start = digest.data.week_start
+            # Durable sink: persist both docs to the DB (survives redeploy, viewable
+            # on the QA Digests dashboard). This is the primary, must-run sink.
+            await repo.save_digest(
+                week_start,
+                "weekly_report",
+                digest.weekly_report.filename,
+                digest.weekly_report.content,
+            )
+            await repo.save_digest(
+                week_start, "bias_digest", digest.bias_digest.filename, digest.bias_digest.content
+            )
+            # Best-effort filesystem sink (dev convenience). A non-writable dir in
+            # the prod image must NOT fail the job (fix A2).
+            files = _best_effort_write(out_dir, [digest.weekly_report, digest.bias_digest])
             rec.ok(
-                week_start=digest.data.week_start.isoformat(),
-                files=[str(p) for p in paths],
+                week_start=week_start.isoformat(),
+                files=files,
                 classified=digest.data.classified_count,
             )
 

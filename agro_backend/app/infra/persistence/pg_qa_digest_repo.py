@@ -12,6 +12,7 @@ session timezone does not shift the week boundary.
 from __future__ import annotations
 
 from datetime import date, datetime, time
+from uuid import uuid4
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -155,6 +156,29 @@ class PgQaDigestRepo:
             unread_bias_total=unread_bias_total,
             photo_backlog=photo_backlog,
         )
+
+    async def save_digest(self, week_start: date, kind: str, filename: str, content: str) -> None:
+        params = {
+            "id": str(uuid4()),
+            "week_start": week_start,
+            "kind": kind,
+            "filename": filename,
+            "content": content,
+        }
+        async with self._sm() as session, session.begin():
+            await session.execute(_SAVE_DIGEST_SQL, params)
+
+
+_SAVE_DIGEST_SQL = text(
+    """
+    INSERT INTO qa_digest (id, week_start, kind, filename, content)
+    VALUES (:id, :week_start, :kind, :filename, :content)
+    ON CONFLICT (week_start, kind) DO UPDATE
+      SET filename = EXCLUDED.filename,
+          content = EXCLUDED.content,
+          generated_at = now()
+    """
+)
 
 
 __all__ = ["PgQaDigestRepo"]
