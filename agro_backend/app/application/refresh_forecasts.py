@@ -9,11 +9,12 @@ PURE w.r.t. imports: stdlib + ports only. No infra.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import asyncio
+from dataclasses import dataclass, field
 from datetime import datetime
 
 from app.application.ports.farm_repo import FarmRepo
-from app.application.ports.forecast_provider import ForecastError, ForecastProvider
+from app.application.ports.forecast_provider import ForecastProvider
 from app.application.ports.weather_forecast_repo import ForecastRow, WeatherForecastRepo
 
 
@@ -27,6 +28,10 @@ class RefreshForecastsDeps:
     # Days of past actuals to fetch alongside the forecast — feeds the KB's
     # rain-window fields (rain_gap_days, dry_spell_days, effective rainfall).
     past_days: int = 21
+    # Retry a transient provider failure (timeout / 5xx) once before giving up
+    # on a farm — Open-Meteo blips were silently dropping a night's forecast.
+    max_attempts: int = 2
+    retry_backoff_s: float = 2.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,23 +39,34 @@ class RefreshForecastsResult:
     farms: int
     rows_written: int
     failed_farms: int
+    # Per-farm failure reasons ("farm <id>: <ErrorType>: <msg>") so the job
+    # ledger/log shows WHY a farm failed instead of only a count.
+    errors: list[str] = field(default_factory=list)
 
 
 async def execute(*, deps: RefreshForecastsDeps, now: datetime) -> RefreshForecastsResult:
     farms = await deps.farm_repo.list_with_location()
     rows_written = 0
     failed = 0
+    errors: list[str] = []
     for farm in farms:
-        try:
-            daily = await deps.forecast_provider.daily_forecast(
-                lat=farm.lat, lng=farm.lng, days=deps.days, past_days=deps.past_days
-            )
-        except ForecastError:
+        daily = None
+        last_err: str | None = None
+        for attempt in range(1, deps.max_attempts + 1):
+            try:
+                daily = await deps.forecast_provider.daily_forecast(
+                    lat=farm.lat, lng=farm.lng, days=deps.days, past_days=deps.past_days
+                )
+                last_err = None
+                break
+            except Exception as exc:  # ForecastError or any provider surprise
+                # One farm's failure (even repeated) never aborts the sweep.
+                last_err = f"{type(exc).__name__}: {exc}"[:200]
+                if attempt < deps.max_attempts:
+                    await asyncio.sleep(deps.retry_backoff_s)
+        if daily is None:
             failed += 1
-            continue
-        except Exception:
-            # Defensive: any provider surprise skips one farm, not the sweep.
-            failed += 1
+            errors.append(f"farm {farm.farm_id}: {last_err}")
             continue
 
         rows = [
@@ -76,7 +92,9 @@ async def execute(*, deps: RefreshForecastsDeps, now: datetime) -> RefreshForeca
         if rows:
             rows_written += await deps.forecast_repo.save_daily(rows)
 
-    return RefreshForecastsResult(farms=len(farms), rows_written=rows_written, failed_farms=failed)
+    return RefreshForecastsResult(
+        farms=len(farms), rows_written=rows_written, failed_farms=failed, errors=errors
+    )
 
 
 __all__ = ["RefreshForecastsDeps", "RefreshForecastsResult", "execute"]
