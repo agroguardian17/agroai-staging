@@ -62,6 +62,14 @@ class QaDigestRepo(Protocol):
         """All digest inputs for the review window ``[week_start, week_end)``."""
         ...
 
+    async def save_digest(self, week_start: date, kind: str, filename: str, content: str) -> None:
+        """Persist one rendered digest doc (upsert on ``(week_start, kind)``).
+
+        ``kind`` is ``'weekly_report'`` or ``'bias_digest'``. Makes the digest
+        durable (survives redeploy) and dashboard-viewable; best-effort caller.
+        """
+        ...
+
 
 __all__ = [
     "BiasObservationSummary",
