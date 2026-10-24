@@ -222,7 +222,13 @@ Everything open, in one place, to tackle one by one. Status: 🔴 not started ·
   job_run, diagnostics_result, anomaly_finding) — no `event_log` table, no hot-path writes. Dashboard page 24
   "Event Timeline" (filter by kind/entity/time, each row drills into its source). DB-gated test validates all
   branches in CI; box-preflighted against the live schema.
-- R3.3 Advisory Journey · R3.5 event stream — 🔴.
+- **R3.3 Advisory Journey — 🟢 done-pending-verify.** Dashboard page 25 "Advisory Journey": one advisory's
+  full lifecycle (trigger rule + crop/soil context → compose model/tokens/latency/cost/log-only → Marathi
+  message + disclaimer check → the migration-0016 `delivery_*` state machine) — all from the single durable
+  `ai_suggestions` row, no new table, no fuzzy joins. The spec's `advisory_audit` table doesn't exist; the
+  lifecycle is fully captured on `ai_suggestions`. DB-gated column-projection test. (Box-verified: 129 alert
+  advisories `pending` delivery — WhatsApp off — vs 9 historical `sent`.)
+- R3.5 event stream — 🔴.
 
 ### E3. External / go-live (on-hold, not code)
 | item | status | note |
