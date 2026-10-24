@@ -131,6 +131,10 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*" = ["B011", "N802", "N803", "N806"]
 "alembic/env.py" = ["E402"]
+# Dashboard view modules are former standalone pages wrapped in a render()
+# function; their UPPERCASE module-style constants now live inside render(),
+# which is an intentional convention, not the N806 "local should be lowercase".
+"dashboard/views/*" = ["N806"]
 
 [tool.mypy]
 python_version = "3.12"

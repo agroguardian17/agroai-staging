@@ -73,15 +73,16 @@ g[3].metric("KB rules", _count("kb_rules"))
 st.divider()
 st.markdown(
     """
-    ### Pages
-    - **System Health** — ingest freshness, device online/offline, dead-letter queue.
-    - **Data Explorer** — browse *any* of the tables, with row counts and recent rows.
-    - **Telemetry** — Sub-Node + Main-Node + weather readings, charted.
-    - **Advisory Pipeline** — alert → compose → WhatsApp delivery → farmer reply, end to end.
-    - **Devices & Calibration** — registry, calibration, installs, maintenance.
-    - **Ginger Knowledge Base** — the loaded rule engine (rules, fields, golden tests).
-    - **Farmers & Farms** — tenants, farmers, farms, plots, seasons, billing.
-    - **Live Events** — the `agro_events` bus, live.
+    ### Pages (grouped — pick a view inside each)
+    - **Health & Alerts** — System Health · Daily Health · System Diagnostics · Scheduler Health ·
+      Anomalies · Errors & Warnings. *Start here for "is the system OK right now?"*
+    - **Pipeline & Traces** — Reading Journey · Event Timeline · Pipeline Inspector · Stage Health ·
+      Daily Run Inspector · Pipeline Self-Test. *Trace what happened to a message or a daily run.*
+    - **Advisory** — Advisory Pipeline · Advisory Journey · QA Digests.
+    - **Telemetry & Devices** — Telemetry · Devices & Calibration · Live Events.
+    - **Records & KB** — Farmers & Farms · Season & Scheme Records · Plot Geometry · Ginger Knowledge Base.
+    - **Data Entry** — Data Entry · Lab Soil Test · Crop Scouting.
+    - **Data Explorer** — browse *any* table, with row counts and recent rows.
 
     ### Data flow
     Sub Node → LoRa → Main Node → MQTT → ingest → `node_sensor_readings` → rule engine →
