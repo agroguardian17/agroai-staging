@@ -39,6 +39,7 @@ from app.infra.events.pg_notify_bus import PgNotifyEventBus
 from app.infra.http.deps import _ensure_engine
 from app.infra.mqtt.broker import BrokerSettings, IngestBroker
 from app.infra.persistence.pg_alert_repo import PgAlertRepo
+from app.infra.persistence.pg_app_event_repo import PgAppEventRepo
 from app.infra.persistence.pg_device_calibration_repo import PgDeviceCalibrationRepo
 from app.infra.persistence.pg_main_node_reading_repo import PgMainNodeReadingRepo
 from app.infra.persistence.pg_pipeline_trace_repo import PgPipelineTraceRepo
@@ -82,6 +83,9 @@ async def build_and_start_ingest(settings: Settings) -> IngestBroker | None:
     pipeline_trace_repo = (
         PgPipelineTraceRepo(sessionmaker) if settings.PIPELINE_TRACE_ENABLED else None
     )
+    # Notable-events stream (R3.5) — best-effort capture of the drain loop's
+    # unexpected-error branch. Off = None = no write.
+    app_event_repo = PgAppEventRepo(sessionmaker) if settings.APP_EVENT_ENABLED else None
 
     ingest_deps = IngestDeps(reading_repo=reading_repo, event_bus=event_bus)
     evaluate_deps = EvaluateRulesDeps(
@@ -113,6 +117,7 @@ async def build_and_start_ingest(settings: Settings) -> IngestBroker | None:
         main_node_reading_repo=main_node_reading_repo,
         weather_station_reading_repo=weather_station_reading_repo,
         pipeline_trace_repo=pipeline_trace_repo,
+        app_event_repo=app_event_repo,
         max_queue=settings.MQTT_QUEUE_MAXSIZE,
     )
     await broker.start()

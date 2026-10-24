@@ -49,6 +49,7 @@ import structlog
 from pydantic import ValidationError
 
 from app.application.build_pipeline_trace import build_drop_trace, build_ingest_trace
+from app.application.ports.app_event_repo import AppEvent, AppEventRepo
 from app.application.ports.device_calibration_repo import DeviceCalibrationRepo
 from app.application.ports.main_node_reading_repo import MainNodeReadingRepo
 from app.application.ports.pipeline_trace_repo import PipelineTrace, PipelineTraceRepo
@@ -164,6 +165,11 @@ class IngestBroker:
         # raw-vs-calibrated values and the per-stage checklist. Observability
         # only — every trace write is best-effort and can never affect ingest.
         pipeline_trace_repo: PipelineTraceRepo | None = None,
+        # Notable-events stream (R3.5): when injected, the drain loop's
+        # unexpected-error branch also records a best-effort ``app_event`` row so
+        # that otherwise log-only failure is queryable on the dashboard. Never
+        # affects ingest — the write is guarded like the trace writes.
+        app_event_repo: AppEventRepo | None = None,
         # Test seam: allow callers to inject a fake parser/processor for
         # unit tests. Production callers always use the module defaults.
         # ``ingest_fn`` keeps its historical name (Round 7) for backward
@@ -182,6 +188,7 @@ class IngestBroker:
         self._main_node_reading_repo = main_node_reading_repo
         self._weather_station_reading_repo = weather_station_reading_repo
         self._trace_repo = pipeline_trace_repo
+        self._app_event_repo = app_event_repo
         self._parse_fn = parse_fn
         self._ingest_fn = ingest_fn
         self._max_queue = max_queue
@@ -407,6 +414,23 @@ class IngestBroker:
         except Exception:
             log.warning("ingest_broker.trace_drop_failed", topic=topic, exc_info=True)
 
+    async def _record_app_event(self, *, event: str, topic: str, detail: dict[str, Any]) -> None:
+        """Best-effort notable-event write (R3.5). Never surfaces to ingest."""
+        if self._app_event_repo is None:
+            return
+        try:
+            await self._app_event_repo.record(
+                AppEvent(
+                    level="error",
+                    source="ingest_broker",
+                    event=event,
+                    entity=topic,
+                    detail=detail,
+                )
+            )
+        except Exception:
+            log.warning("ingest_broker.app_event_failed", topic=topic, exc_info=True)
+
     # ------------------------------------------------------------------
     # Drain loop
     # ------------------------------------------------------------------
@@ -578,6 +602,13 @@ class IngestBroker:
                 metrics.ingest_dropped_total.labels(reason="unexpected").inc()
                 log.exception("ingest_broker.unexpected_error", topic=topic, exc=str(exc))
                 await self._trace_drop(topic, "unexpected", "unknown")
+                # R3.5: this branch is otherwise log-only — persist it so it's
+                # queryable on the Recent Errors & Warnings page.
+                await self._record_app_event(
+                    event="unexpected_error",
+                    topic=topic,
+                    detail={"error_type": type(exc).__name__, "error": str(exc)[:300]},
+                )
 
 
 def _topic_template(topic: str) -> str:

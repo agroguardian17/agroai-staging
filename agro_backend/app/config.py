@@ -150,6 +150,12 @@ class Settings(BaseSettings):
     # Trailing window (days) of pipeline traces used for the rule fire-rate signal.
     ANOMALY_TRACE_WINDOW_DAYS: int = 7
 
+    # Notable-events stream (R3.5): best-effort capture of a few otherwise
+    # log-only failures (e.g. the ingest drain loop's unexpected-error branch)
+    # into `app_event` for the dashboard's Recent Errors & Warnings page. Not a
+    # log-to-DB sink. Purged on the OBSERVABILITY_RETENTION_DAYS window.
+    APP_EVENT_ENABLED: bool = True
+
     # ---- Hardware bench flags -----------------------------------------------
     # When True, evaluate_rules.execute short-circuits (no alerts fire, no
     # events publish). Use during initial sensor calibration so unrealistic
