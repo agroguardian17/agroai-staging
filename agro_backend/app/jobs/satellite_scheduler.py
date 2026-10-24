@@ -81,12 +81,15 @@ async def build_and_start_satellite_scheduler(
     async def _job() -> None:
         async with instrument_job(settings, "satellite_fetch") as rec:
             res = await refresh_satellite.execute(deps=deps, today=datetime.now(UTC).date())
+            if res.errors:
+                log.warning("satellite_scheduler.plot_failures", errors=res.errors)
             rec.ok(
                 plots=res.plots,
                 skipped_no_polygon=res.skipped_no_polygon,
                 optical_scenes=res.optical_scenes,
                 sar_scenes=res.sar_scenes,
                 failed_plots=res.failed_plots,
+                errors=res.errors,
             )
 
     scheduler.add_job(

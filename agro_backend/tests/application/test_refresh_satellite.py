@@ -128,3 +128,33 @@ async def test_skips_plot_without_polygon() -> None:
     assert res.skipped_no_polygon == 1
     assert res.optical_scenes == 0
     assert repo.saved == []
+
+
+class _FailingProvider:
+    async def optical(self, *, geometry, date_from, date_to):
+        raise RuntimeError("cdse 503")
+
+    async def sar(self, *, geometry, date_from, date_to):  # pragma: no cover
+        return []
+
+
+@pytest.mark.asyncio
+async def test_plot_failure_records_error_detail() -> None:
+    # A12: a plot that fails is counted AND its reason is captured (not silently swallowed).
+    geom = {
+        "type": "Polygon",
+        "coordinates": [[[75.2, 20.1], [75.21, 20.1], [75.21, 20.11], [75.2, 20.1]]],
+    }
+    repo = _FakeSatRepo()
+    deps = RefreshSatelliteDeps(
+        crop_season_repo=_FakeSeasonRepo(["PLOT_PILOT_001"]),
+        plot_repo=_FakePlotRepo({"PLOT_PILOT_001": _plot("PLOT_PILOT_001", boundary=geom)}),
+        satellite_provider=_FailingProvider(),
+        satellite_reading_repo=repo,
+    )
+    res = await refresh_satellite.execute(deps=deps, today=_TODAY)
+    assert res.failed_plots == 1
+    assert res.optical_scenes == 0
+    assert len(res.errors) == 1
+    assert "PLOT_PILOT_001" in res.errors[0]
+    assert "RuntimeError" in res.errors[0]

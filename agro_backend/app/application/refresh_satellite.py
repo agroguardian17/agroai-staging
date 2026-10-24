@@ -11,7 +11,7 @@ PURE w.r.t. imports: stdlib + ports only. No infra.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -50,6 +50,11 @@ class RefreshSatelliteResult:
     optical_scenes: int
     sar_scenes: int
     failed_plots: int
+    # Per-plot failure reasons ("plot <id>: <ErrorType>: <msg>") so the job
+    # ledger/log shows WHY a plot failed, not only a count (fix A12 — the same
+    # silent-swallow class as the forecast A3 fix). No retry: Sentinel's revisit
+    # cadence means a transient miss self-heals on the next pass.
+    errors: list[str] = field(default_factory=list)
 
 
 def _dec(v: float | None) -> Decimal | None:
@@ -87,6 +92,7 @@ async def execute(*, deps: RefreshSatelliteDeps, today: date) -> RefreshSatellit
     seasons = await deps.crop_season_repo.list_active_by_crop(deps.crop_name)
     date_from = today - timedelta(days=deps.lookback_days)
     plots = skipped = optical_n = sar_n = failed = 0
+    errors: list[str] = []
 
     for season in seasons:
         plots += 1
@@ -102,8 +108,10 @@ async def execute(*, deps: RefreshSatelliteDeps, today: date) -> RefreshSatellit
             sar = await deps.satellite_provider.sar(
                 geometry=geometry, date_from=date_from, date_to=today
             )
-        except Exception:
+        except Exception as exc:
+            # One plot's failure never aborts the sweep; capture the reason.
             failed += 1
+            errors.append(f"plot {season.plot_id}: {type(exc).__name__}: {exc}"[:200])
             continue
 
         for o in optical:
@@ -129,6 +137,7 @@ async def execute(*, deps: RefreshSatelliteDeps, today: date) -> RefreshSatellit
         optical_scenes=optical_n,
         sar_scenes=sar_n,
         failed_plots=failed,
+        errors=errors,
     )
 
 
