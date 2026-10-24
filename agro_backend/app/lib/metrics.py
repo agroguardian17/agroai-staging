@@ -221,6 +221,14 @@ diagnostics_checks = Gauge(
     registry=REGISTRY,
 )
 
+# ----- Anomaly engine (Round-3 observability, R3.4) ----------------------
+anomaly_findings = Gauge(
+    "agro_anomaly_findings",
+    "Most-recent anomaly-engine finding count, by severity (info|warn|critical).",
+    ["severity"],
+    registry=REGISTRY,
+)
+
 
 __all__ = [
     "REGISTRY",
@@ -228,6 +236,7 @@ __all__ = [
     "advisory_delivered_total",
     "alerts_cooldown_suppressed_total",
     "alerts_created_total",
+    "anomaly_findings",
     "auth_otp_total",
     "diagnostics_checks",
     "dispatch_total",
