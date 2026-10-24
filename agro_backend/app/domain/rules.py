@@ -122,9 +122,54 @@ class RuleHit:
             return self.rule.message_template_marathi
 
 
+@dataclass(frozen=True, slots=True)
+class RuleEvaluation:
+    """One rule's verdict against a reading — fired or not.
+
+    ``evaluate_to_hits`` returns only the rules that matched; the Reading
+    Journey (Round-3 observability) needs to show *every* rule that was
+    checked, including the ones that didn't fire, so :func:`evaluate_all`
+    emits one of these per rule in ruleset order. Observability only — the
+    hot alert path still consumes :class:`RuleHit` via ``evaluate_to_hits``.
+    """
+
+    rule: Rule
+    fired: bool
+    substitutions: dict[str, object] = field(default_factory=dict)
+
+    def as_hit(self) -> RuleHit:
+        """View a fired evaluation as a RuleHit (undefined if not fired)."""
+        return RuleHit(rule=self.rule, substitutions=self.substitutions)
+
+
 # ---------------------------------------------------------------------------
 # Evaluation
 # ---------------------------------------------------------------------------
+
+
+def evaluate_all(
+    reading: Reading,
+    metrics: DerivedMetrics,
+    ruleset: RuleSet,
+) -> list[RuleEvaluation]:
+    """Run every rule, returning one :class:`RuleEvaluation` per rule.
+
+    A rule "fires" only when its predicate returns ``True`` or a ``dict`` of
+    substitutions — exactly the condition :func:`evaluate_to_hits` uses. Any
+    other result (``False``, ``None``, or some other truthy value) is a
+    non-fire. Keeping this the single place that decides "fired" means
+    ``evaluate_to_hits`` can't drift from the Journey's per-rule view.
+    """
+    evaluations: list[RuleEvaluation] = []
+    for rule in ruleset.rules:
+        result = rule.predicate(reading, metrics)
+        if isinstance(result, dict):
+            evaluations.append(RuleEvaluation(rule=rule, fired=True, substitutions=result))
+        elif result is True:
+            evaluations.append(RuleEvaluation(rule=rule, fired=True, substitutions={}))
+        else:
+            evaluations.append(RuleEvaluation(rule=rule, fired=False, substitutions={}))
+    return evaluations
 
 
 def evaluate_to_hits(
@@ -133,20 +178,7 @@ def evaluate_to_hits(
     ruleset: RuleSet,
 ) -> list[RuleHit]:
     """Run the ruleset, return the rules that fired (no AlertCandidates yet)."""
-    hits: list[RuleHit] = []
-    for rule in ruleset.rules:
-        result = rule.predicate(reading, metrics)
-        if result is False or result is None:
-            continue
-        substitutions: dict[str, object]
-        if isinstance(result, dict):
-            substitutions = result
-        elif result is True:
-            substitutions = {}
-        else:
-            continue
-        hits.append(RuleHit(rule=rule, substitutions=substitutions))
-    return hits
+    return [ev.as_hit() for ev in evaluate_all(reading, metrics, ruleset) if ev.fired]
 
 
 def evaluate(
@@ -224,10 +256,12 @@ def _uuid_namespace() -> uuid.UUID:
 __all__ = [
     "PredicateResult",
     "Rule",
+    "RuleEvaluation",
     "RuleHit",
     "RulePredicate",
     "RuleSet",
     "alert_id_for",
     "evaluate",
+    "evaluate_all",
     "evaluate_to_hits",
 ]

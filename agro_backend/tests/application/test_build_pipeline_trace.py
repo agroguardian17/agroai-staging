@@ -129,3 +129,57 @@ def test_drop_trace() -> None:
     t = build_drop_trace(topic="agro/v2/x", reason="validation", stage="s2_validate")
     assert t.overall == "fail" and t.drop_reason == "validation"
     assert t.stages["s2_validate"]["status"] == "fail"
+
+
+@dataclass
+class _Rec:
+    rule_id: str
+    alert_type: str
+    severity: str
+    fired: bool
+    cooldown_suppressed: bool
+    alert_id: int | None
+    value: str | None
+    threshold: str | None
+
+
+@dataclass
+class _RulesVerbose:
+    hits: int
+    created: int
+    cooldown_suppressed: int
+    evaluations: list[_Rec]
+
+
+def test_s7_rules_carries_per_rule_journey_and_events() -> None:
+    # R3.1: the rule step records every rule's verdict plus the alert.created
+    # events it emitted, and the persist step notes telemetry.ingested.
+    now = datetime(2026, 10, 4, 6, 0, tzinfo=UTC)
+    model = _model(now, {"soil_adc": 412, "window_s": 300, "npk_ok": True})
+    reading = _Reading(recorded_at=now, soil_moisture_1_pct=Decimal("42.0"))
+    evaluations = [
+        _Rec("low_battery", "low_battery", "warning", True, False, 7, "3.10", "3.30"),
+        _Rec("low_water", "low_water", "warning", True, True, None, "1.0", "2.0"),  # suppressed
+        _Rec("frost", "frost", "critical", False, False, None, None, None),  # didn't fire
+    ]
+    result = _Result(
+        reading_id=5,
+        rules=_RulesVerbose(hits=2, created=1, cooldown_suppressed=1, evaluations=evaluations),
+    )
+    t = build_ingest_trace(
+        topic="agro/v2/t/f/n/telemetry",
+        model=model,
+        reading=reading,
+        result=result,
+        calibration=_Cal(7),
+        now=now,
+    )
+    s7 = t.stages["s7_rules"]
+    assert [e["rule_id"] for e in s7["evaluations"]] == ["low_battery", "low_water", "frost"]
+    assert s7["evaluations"][0]["alert_id"] == 7
+    assert s7["evaluations"][1]["cooldown_suppressed"] is True
+    assert s7["evaluations"][2]["fired"] is False
+    # Exactly one alert.created event — the fired, non-suppressed rule.
+    assert s7["events"] == [{"event": "alert.created", "alert_id": 7, "alert_type": "low_battery"}]
+    # A fresh insert publishes telemetry.ingested.
+    assert t.stages["s6_persist"]["events"] == ["telemetry.ingested"]

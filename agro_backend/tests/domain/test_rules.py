@@ -15,6 +15,7 @@ from app.domain.rules import (
     RuleSet,
     alert_id_for,
     evaluate,
+    evaluate_all,
     evaluate_to_hits,
 )
 from app.domain.sensor import Reading, TransmissionType
@@ -191,6 +192,46 @@ def test_evaluate_handles_non_bool_non_dict_predicate_result_as_no_hit() -> None
         predicate=lambda _r, _m: 0,  # type: ignore[return-value]
     )
     assert evaluate(_reading(), _metrics(), RuleSet(rules=(rule,)), now=NOW) == []
+
+
+# ===========================================================================
+# evaluate_all (R3.1 — the Reading Journey's per-rule view)
+# ===========================================================================
+def test_evaluate_all_records_every_rule_in_order() -> None:
+    fires = Rule(
+        rule_id="fires",
+        alert_type=AlertType.LOW_BATTERY,
+        severity=Severity.WARNING,
+        message_template_marathi="x",
+        predicate=lambda _r, _m: {"value": "1", "threshold": "2"},
+    )
+    quiet = Rule(
+        rule_id="quiet",
+        alert_type=AlertType.FROST,
+        severity=Severity.CRITICAL,
+        message_template_marathi="y",
+        predicate=lambda _r, _m: False,
+    )
+    evs = evaluate_all(_reading(), _metrics(), RuleSet(rules=(fires, quiet)))
+    assert [e.rule.rule_id for e in evs] == ["fires", "quiet"]
+    assert evs[0].fired is True and evs[0].substitutions == {"value": "1", "threshold": "2"}
+    assert evs[1].fired is False and evs[1].substitutions == {}
+
+
+def test_evaluate_all_and_to_hits_agree_on_fired() -> None:
+    # evaluate_to_hits is defined in terms of evaluate_all; the fired subset
+    # must match exactly (same rules, same order, same substitutions).
+    truthy_nondict = Rule(
+        rule_id="truthy",
+        alert_type=AlertType.LOW_BATTERY,
+        severity=Severity.INFO,
+        message_template_marathi="z",
+        predicate=lambda _r, _m: 0,  # type: ignore[return-value]  # not True/dict -> not fired
+    )
+    rs = RuleSet(rules=(_always_true_rule("a"), truthy_nondict))
+    hits = evaluate_to_hits(_reading(), _metrics(), rs)
+    fired = [e.as_hit() for e in evaluate_all(_reading(), _metrics(), rs) if e.fired]
+    assert [h.rule.rule_id for h in hits] == [h.rule.rule_id for h in fired] == ["a"]
 
 
 # ===========================================================================

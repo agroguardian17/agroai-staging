@@ -75,14 +75,26 @@ def build_ingest_trace(
             "calibration_version": getattr(calibration, "calibration_version", None),
         },
         "s5_clock_skew": {"status": "ok", "applied": bool(skew_applied)},
-        "s6_persist": {"status": "inserted" if reading_id is not None else "duplicate"},
+        "s6_persist": {
+            "status": "inserted" if reading_id is not None else "duplicate",
+            # ingest publishes telemetry.ingested on a fresh row only.
+            "events": ["telemetry.ingested"] if reading_id is not None else [],
+        },
     }
     if rules is not None:
+        # R3.1 Reading Journey: carry the per-rule verdicts and the events the
+        # rule step emitted so the dashboard can show WHY each alert did or
+        # didn't fire, not just the counts. `evaluations` is best-effort — an
+        # older EvaluateRulesResult without it just yields an empty list.
+        evaluations = [_evaluation_dict(e) for e in getattr(rules, "evaluations", [])]
+        events = _reading_events(reading_id=reading_id, evaluations=evaluations)
         stages["s7_rules"] = {
             "status": "ok",
             "hits": getattr(rules, "hits", 0),
             "created": getattr(rules, "created", 0),
             "cooldown_suppressed": getattr(rules, "cooldown_suppressed", 0),
+            "evaluations": evaluations,
+            "events": events,
         }
     else:
         stages["s7_rules"] = {"status": "skipped", "reason": "duplicate row"}
@@ -110,6 +122,35 @@ def build_ingest_trace(
         validations=validations,
         drop_reason=None,
     )
+
+
+def _evaluation_dict(ev: Any) -> dict[str, Any]:
+    """Flatten a RuleEvaluationRecord (or any shaped-alike) to JSON scalars."""
+    return {
+        "rule_id": getattr(ev, "rule_id", None),
+        "alert_type": getattr(ev, "alert_type", None),
+        "severity": getattr(ev, "severity", None),
+        "fired": bool(getattr(ev, "fired", False)),
+        "cooldown_suppressed": bool(getattr(ev, "cooldown_suppressed", False)),
+        "alert_id": getattr(ev, "alert_id", None),
+        "value": getattr(ev, "value", None),
+        "threshold": getattr(ev, "threshold", None),
+    }
+
+
+def _reading_events(*, reading_id: Any, evaluations: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Reconstruct the alert.created events the rule step emitted.
+
+    evaluate_rules publishes exactly one ``alert.created`` per rule that fired
+    and wasn't cooldown-suppressed (i.e. every record with an ``alert_id``), so
+    we derive the event list from the records rather than threading the bus
+    through the tracer.
+    """
+    return [
+        {"event": "alert.created", "alert_id": e["alert_id"], "alert_type": e["alert_type"]}
+        for e in evaluations
+        if e.get("alert_id") is not None
+    ]
 
 
 def build_drop_trace(

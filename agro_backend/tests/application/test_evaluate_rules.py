@@ -162,9 +162,16 @@ async def test_clean_reading_creates_no_alerts() -> None:
         deps,
         now=NOW,
     )
-    assert result == EvaluateRulesResult(hits=0, created=0, cooldown_suppressed=0)
+    assert result.hits == 0
+    assert result.created == 0
+    assert result.cooldown_suppressed == 0
     assert repo.created == []
     assert bus.published == []
+    # R3.1: a clean reading still records every rule's (non-firing) verdict so
+    # the Reading Journey can show the rules were checked.
+    assert result.evaluations, "every rule should be recorded, even when none fire"
+    assert all(not ev.fired for ev in result.evaluations)
+    assert all(ev.alert_id is None for ev in result.evaluations)
 
 
 # ===========================================================================

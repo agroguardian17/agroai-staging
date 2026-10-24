@@ -205,10 +205,13 @@ Everything open, in one place, to tackle one by one. Status: 🔴 not started ·
 | A9 | test-doc wrong commands/columns | P3 | 🟢 fixed (Part C, merged #118) |
 | A10 | `except Exception` audit pass | P3 | 🟢 done — 34/35 sound; surfaced A12 |
 | A11 | enum values stored lowercase — query/doc footgun | P3 | 🟢 noted at AlertType + test doc Part 9 |
-| A12 | refresh_satellite swallows per-plot errors to a count (no reason) — same class as A3 | P2 | 🔴 |
+| A12 | refresh_satellite swallows per-plot errors to a count (no reason) — same class as A3 | P2 | 🟢 merged #122 + deployed |
 
 ### E2. Observability upgrade (Part B)
-R3.1 Reading Journey · R3.2 Event Timeline · R3.3 Advisory Journey · R3.4 Anomaly engine · R3.5 event stream — all 🔴.
+- **R3.1 Reading Journey — 🟢 done-pending-verify.** Per-rule evaluations + emitted events now captured in the
+  `pipeline_trace` `s7_rules`/`s6_persist` stages (no migration — JSONB enrichment), surfaced on the new
+  **"Reading Journey"** dashboard page (22). Flag: existing `PIPELINE_TRACE_ENABLED`.
+- R3.2 Event Timeline · R3.3 Advisory Journey · R3.4 Anomaly engine · R3.5 event stream — 🔴.
 
 ### E3. External / go-live (on-hold, not code)
 | item | status | note |
