@@ -45,7 +45,7 @@ from app.application.ports.event_bus import EVENT_ALERT_CREATED, EventBus
 from app.domain.alert import AlertCandidate
 from app.domain.metrics import MetricsContext, compute
 from app.domain.rule_definitions import PILOT_RULESET
-from app.domain.rules import Rule, RuleHit, RuleSet, evaluate_to_hits
+from app.domain.rules import Rule, RuleHit, RuleSet, evaluate_all
 from app.domain.sensor import Reading
 
 
@@ -72,12 +72,38 @@ class EvaluateRulesDeps:
 
 
 @dataclass(frozen=True, slots=True)
+class RuleEvaluationRecord:
+    """Per-rule outcome for one reading — the Reading Journey's rule step.
+
+    Observability only (Round-3 R3.1). Carries JSON-friendly scalars so the
+    broker can drop it straight into a ``pipeline_trace`` stage without
+    re-touching the domain objects. ``alert_id`` is set only when the rule
+    fired AND wasn't cooldown-suppressed AND a row was created.
+    """
+
+    rule_id: str
+    alert_type: str
+    severity: str
+    fired: bool
+    cooldown_suppressed: bool
+    alert_id: int | None
+    value: str | None
+    threshold: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class EvaluateRulesResult:
-    """Counts surfaced as Prometheus deltas by the caller."""
+    """Counts surfaced as Prometheus deltas by the caller.
+
+    ``evaluations`` is the per-rule journey (one record per rule in ruleset
+    order), added for R3.1. It is additive and defaults empty, so the
+    calibration-mode short-circuit and existing callers are unaffected.
+    """
 
     hits: int
     created: int
     cooldown_suppressed: int
+    evaluations: list[RuleEvaluationRecord] = field(default_factory=list)
 
 
 async def execute(
@@ -93,14 +119,24 @@ async def execute(
         return EvaluateRulesResult(hits=0, created=0, cooldown_suppressed=0)
 
     metrics = compute(reading, deps.metrics_context)
-    hits = evaluate_to_hits(reading, metrics, deps.ruleset)
+    evaluations = evaluate_all(reading, metrics, deps.ruleset)
 
+    hits = 0
     created = 0
     suppressed = 0
-    for hit in hits:
+    records: list[RuleEvaluationRecord] = []
+    for ev in evaluations:
+        if not ev.fired:
+            records.append(_record(ev.rule, fired=False, cooldown=False, alert_id=None, hit=None))
+            continue
+
+        hits += 1
+        hit = ev.as_hit()
         if await _is_in_cooldown(hit.rule, reading.plot_id, now, deps.alert_repo):
             suppressed += 1
+            records.append(_record(hit.rule, fired=True, cooldown=True, alert_id=None, hit=hit))
             continue
+
         candidate = _build_candidate(hit, reading, now)
         alert_id = await deps.alert_repo.create(candidate)
         await _publish_alert_created(
@@ -110,11 +146,13 @@ async def execute(
             reading=reading,
         )
         created += 1
+        records.append(_record(hit.rule, fired=True, cooldown=False, alert_id=alert_id, hit=hit))
 
     return EvaluateRulesResult(
-        hits=len(hits),
+        hits=hits,
         created=created,
         cooldown_suppressed=suppressed,
+        evaluations=records,
     )
 
 
@@ -144,6 +182,33 @@ async def _is_in_cooldown(
         return False
     elapsed_minutes = (now - last_at).total_seconds() / 60.0
     return elapsed_minutes < rule.cooldown_minutes
+
+
+def _record(
+    rule: Rule,
+    *,
+    fired: bool,
+    cooldown: bool,
+    alert_id: int | None,
+    hit: RuleHit | None,
+) -> RuleEvaluationRecord:
+    """Build one per-rule journey record (JSON-friendly scalars)."""
+    value = _str_or_none(hit.substitutions.get("value")) if hit is not None else None
+    threshold = _str_or_none(hit.substitutions.get("threshold")) if hit is not None else None
+    return RuleEvaluationRecord(
+        rule_id=rule.rule_id,
+        alert_type=rule.alert_type.value,
+        severity=rule.severity.value,
+        fired=fired,
+        cooldown_suppressed=cooldown,
+        alert_id=alert_id,
+        value=value,
+        threshold=threshold,
+    )
+
+
+def _str_or_none(v: object) -> str | None:
+    return None if v is None else str(v)
 
 
 def _build_candidate(hit: RuleHit, reading: Reading, now: datetime) -> AlertCandidate:
@@ -201,4 +266,9 @@ def _decimal_or_none(v: object) -> Decimal | None:
     return None
 
 
-__all__ = ["EvaluateRulesDeps", "EvaluateRulesResult", "execute"]
+__all__ = [
+    "EvaluateRulesDeps",
+    "EvaluateRulesResult",
+    "RuleEvaluationRecord",
+    "execute",
+]
