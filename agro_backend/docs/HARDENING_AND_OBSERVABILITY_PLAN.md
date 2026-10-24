@@ -217,7 +217,12 @@ Everything open, in one place, to tackle one by one. Status: 🔴 not started ·
   `rule_fire_rate` (reuses the R3.1 trace `s7_rules.evaluations`), `advisory_volume` spike/drop. New dashboard
   page 23 "Anomalies" (clean runs read from the `job_run` ledger since they write no rows). crop_age_drift +
   duplicate/staleness roll-in deferred (duplicate/staleness already covered by the diagnostics battery).
-- R3.2 Event Timeline · R3.3 Advisory Journey · R3.5 event stream — 🔴.
+- **R3.2 Event Timeline — 🟢 done-pending-verify.** Read-only `event_timeline` UNION view (migration **0072**)
+  over 7 durable tables (pipeline_trace, alerts_notifications, ai_suggestions, notification_dispatch_log,
+  job_run, diagnostics_result, anomaly_finding) — no `event_log` table, no hot-path writes. Dashboard page 24
+  "Event Timeline" (filter by kind/entity/time, each row drills into its source). DB-gated test validates all
+  branches in CI; box-preflighted against the live schema.
+- R3.3 Advisory Journey · R3.5 event stream — 🔴.
 
 ### E3. External / go-live (on-hold, not code)
 | item | status | note |
