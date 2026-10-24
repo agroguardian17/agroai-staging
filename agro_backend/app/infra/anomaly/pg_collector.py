@@ -36,9 +36,16 @@ _STUCK_FIELDS: tuple[str, ...] = (
     "water_flow_lpm",
 )
 
+# NB: every ``:now`` is wrapped in ``CAST(:now AS timestamptz)``. asyncpg sends a
+# bare bind param as unknown-typed, and in ``:now - make_interval(...)`` Postgres
+# then infers ``:now`` as an *interval* (interval - interval), so a later
+# ``timestamptz > :now - interval`` fails with "operator does not exist:
+# timestamp with time zone > interval". The explicit cast pins the type.
+#
 # Minutes since each device's last reading. Only devices that have ever reported.
 _DEVICE_GAP_SQL = """
-SELECT node_id, EXTRACT(EPOCH FROM (:now - max(recorded_at))) / 60.0 AS mins
+SELECT node_id,
+       EXTRACT(EPOCH FROM (CAST(:now AS timestamptz) - max(recorded_at))) / 60.0 AS mins
 FROM node_sensor_readings
 GROUP BY node_id
 """
@@ -51,7 +58,7 @@ WITH ev AS (
          LATERAL jsonb_array_elements(
              COALESCE(t.stages->'s7_rules'->'evaluations', '[]'::jsonb)
          ) AS e
-    WHERE t.created_at > :now - make_interval(days => :win)
+    WHERE t.created_at > CAST(:now AS timestamptz) - make_interval(days => :win)
       AND t.drop_reason IS NULL
 )
 SELECT rule_id, count(*) AS samples, count(*) FILTER (WHERE fired) AS fires
@@ -63,7 +70,8 @@ GROUP BY rule_id
 _ADVISORY_TODAY_SQL = """
 SELECT count(*) FROM ai_suggestions
 WHERE ai_model_version = 'ginger-engine/v1.0'
-  AND (generated_at AT TIME ZONE 'UTC')::date = (:now AT TIME ZONE 'UTC')::date
+  AND (generated_at AT TIME ZONE 'UTC')::date
+      = (CAST(:now AS timestamptz) AT TIME ZONE 'UTC')::date
 """
 
 # Mean advisories/day over the trailing window, excluding today.
@@ -72,11 +80,36 @@ SELECT avg(c)::float FROM (
     SELECT (generated_at AT TIME ZONE 'UTC')::date AS d, count(*) AS c
     FROM ai_suggestions
     WHERE ai_model_version = 'ginger-engine/v1.0'
-      AND generated_at >= :now - make_interval(days => :win)
-      AND (generated_at AT TIME ZONE 'UTC')::date < (:now AT TIME ZONE 'UTC')::date
+      AND generated_at >= CAST(:now AS timestamptz) - make_interval(days => :win)
+      AND (generated_at AT TIME ZONE 'UTC')::date
+          < (CAST(:now AS timestamptz) AT TIME ZONE 'UTC')::date
     GROUP BY 1
 ) q
 """
+
+
+def _stuck_sql(field: str) -> str:
+    """Last-N-identical-readings probe for one numeric column.
+
+    ``field`` is interpolated from a fixed allow-list (:data:`_STUCK_FIELDS`),
+    never user input. Exposed at module level so the integration test can run
+    the exact SQL against the real schema rather than through the best-effort
+    swallow in :meth:`PgAnomalyCollector._stuck_for_field`.
+    """
+    return f"""
+    WITH recent AS (
+        SELECT node_id, {field} AS v,
+               row_number() OVER (PARTITION BY node_id ORDER BY recorded_at DESC) AS rn
+        FROM node_sensor_readings
+        WHERE recorded_at > CAST(:now AS timestamptz) - make_interval(days => 2)
+          AND {field} IS NOT NULL
+    )
+    SELECT node_id, count(*) AS n, max(v) AS val
+    FROM recent
+    WHERE rn <= :n
+    GROUP BY node_id
+    HAVING count(*) >= :n AND count(DISTINCT v) = 1
+    """
 
 
 class PgAnomalyCollector:
@@ -103,21 +136,7 @@ class PgAnomalyCollector:
 
     async def _stuck_for_field(self, field: str, *, now: _dt.datetime, n: int) -> list[StuckSensor]:
         # Last `n` non-null readings per device; stuck iff they're all identical.
-        # The column is interpolated from a fixed allow-list (never user input).
-        sql = f"""
-        WITH recent AS (
-            SELECT node_id, {field} AS v,
-                   row_number() OVER (PARTITION BY node_id ORDER BY recorded_at DESC) AS rn
-            FROM node_sensor_readings
-            WHERE recorded_at > :now - make_interval(days => 2) AND {field} IS NOT NULL
-        )
-        SELECT node_id, count(*) AS n, max(v) AS val
-        FROM recent
-        WHERE rn <= :n
-        GROUP BY node_id
-        HAVING count(*) >= :n AND count(DISTINCT v) = 1
-        """
-        rows = await self._rows(sql, {"now": now, "n": n})
+        rows = await self._rows(_stuck_sql(field), {"now": now, "n": n})
         return [
             StuckSensor(device_id=r.node_id, field=field, value=str(r.val), n_readings=int(r.n))
             for r in rows
