@@ -75,6 +75,10 @@ class PgDiagnosticsCollector:
         )
         has_default_partition = await self._scalar(_DEFAULT_PARTITION_SQL)
         dup_groups = await self._scalar(_DUPLICATE_ADVISORY_SQL)
+        last_forecast_job = await self._scalar(
+            "SELECT max(started_at) FROM job_run "
+            "WHERE job_name = 'weather_forecast' AND status = 'ok'"
+        )
 
         return DiagnosticsInputs(
             now=now,
@@ -88,4 +92,5 @@ class PgDiagnosticsCollector:
                 bool(has_default_partition) if has_default_partition is not None else None
             ),
             duplicate_advisory_groups=(int(dup_groups) if dup_groups is not None else None),
+            last_forecast_job_ok_at=last_forecast_job,
         )

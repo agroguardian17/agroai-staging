@@ -52,6 +52,11 @@ class DiagnosticsInputs:
     latest_satellite_image_date: _dt.date | None = None
     has_default_partition: bool | None = None
     duplicate_advisory_groups: int | None = None
+    # Last SUCCESSFUL weather_forecast job run (from the job_run ledger). Lets us
+    # catch a dead forecast job even while old-but-future-dated rows still make
+    # forecast_coverage look fine (fix A6).
+    last_forecast_job_ok_at: _dt.datetime | None = None
+    forecast_job_max_age_hours: int = 26
 
 
 def _age_hours(now: _dt.datetime, ts: _dt.datetime) -> float:
@@ -106,6 +111,30 @@ def evaluate(inp: DiagnosticsInputs) -> list[CheckResult]:
                 "ok" if inp.latest_forecast_for_date >= today else "fail",
                 observed=str(inp.latest_forecast_for_date),
                 expected=f">= {today}",
+            )
+        )
+
+    # --- freshness: the forecast JOB actually ran recently (A6) ------------
+    # forecast_coverage alone can pass on stale data (a past run's +7d rows
+    # still cover today while the job has been failing); require a recent OK run.
+    if inp.last_forecast_job_ok_at is None:
+        results.append(
+            CheckResult(
+                "forecast_job_recent",
+                CATEGORY_FRESHNESS,
+                "skip",
+                detail="no successful weather_forecast run in the job ledger yet",
+            )
+        )
+    else:
+        age = _age_hours(inp.now, inp.last_forecast_job_ok_at)
+        results.append(
+            CheckResult(
+                "forecast_job_recent",
+                CATEGORY_FRESHNESS,
+                "ok" if age <= inp.forecast_job_max_age_hours else "fail",
+                observed=f"{age:.1f}h since last OK run",
+                expected=f"<= {inp.forecast_job_max_age_hours}h",
             )
         )
 

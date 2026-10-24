@@ -64,17 +64,10 @@ COPY --chown=agro:agro ginger ./ginger
 COPY --chown=agro:agro alembic ./alembic
 COPY --chown=agro:agro alembic.ini ./
 COPY --chown=agro:agro rules ./rules
-# Keep the idempotent pilot seeder available in the staging image.
-COPY --chown=agro:agro scripts/dev/seed_pilot.py ./scripts/dev/seed_pilot.py
-# Keep the exact pilot-scope cleanup available for VPSes seeded before the
-# 2026-08-26 two-plot pilot cutover.
-COPY --chown=agro:agro scripts/dev/cleanup_stale_pilot_data.py ./scripts/dev/cleanup_stale_pilot_data.py
-# One-time loader for the pilot intake-sheet values (sources FI/FO/TECH/OPS/DEALER).
-COPY --chown=agro:agro scripts/dev/load_pilot_sheet.py ./scripts/dev/load_pilot_sheet.py
-# Credential-gated live check for the USGS M2M LST adapter (run with USGS_M2M_* set).
-COPY --chown=agro:agro scripts/dev/lst_smoke.py ./scripts/dev/lst_smoke.py
-# Credential-gated live check for the WhatsApp advisory template (run with META_WHATSAPP_* set).
-COPY --chown=agro:agro scripts/dev/whatsapp_smoke.py ./scripts/dev/whatsapp_smoke.py
+# Ship the whole dev/ops script set so on-box smoke tests work (seed, cleanup,
+# lst/whatsapp smoke, fake_main_node, inject_test_reading, fetch_satellite_once,
+# probe_cdse_raw, tail_ingest, …) — fix A5. They are dev tools, not an entrypoint.
+COPY --chown=agro:agro scripts/dev ./scripts/dev
 COPY --chown=agro:agro pyproject.toml ./
 
 USER agro
