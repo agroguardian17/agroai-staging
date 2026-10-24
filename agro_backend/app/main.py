@@ -39,6 +39,10 @@ from app.jobs.advisory_subscriber import (
     build_and_start_advisory_subscriber,
     stop_advisory_subscriber,
 )
+from app.jobs.anomaly_scheduler import (
+    build_and_start_anomaly_scheduler,
+    stop_anomaly_scheduler,
+)
 from app.jobs.delivery_subscriber import (
     build_and_start_delivery_subscriber,
     stop_delivery_subscriber,
@@ -131,6 +135,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     partition: AsyncIOScheduler | None = None
     watchdog: AsyncIOScheduler | None = None
     diagnostics_sched: AsyncIOScheduler | None = None
+    anomaly_sched: AsyncIOScheduler | None = None
     try:
         broker = await build_and_start_ingest(settings)
         scheduler = await build_and_start_scheduler(settings)
@@ -145,8 +150,11 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         partition = await build_and_start_partition_maintenance(settings)
         watchdog = await build_and_start_device_watchdog(settings)
         diagnostics_sched = await build_and_start_diagnostics_scheduler(settings)
+        anomaly_sched = await build_and_start_anomaly_scheduler(settings)
         yield
     finally:
+        if anomaly_sched is not None:
+            await stop_anomaly_scheduler(anomaly_sched)
         if diagnostics_sched is not None:
             await stop_diagnostics_scheduler(diagnostics_sched)
         if watchdog is not None:

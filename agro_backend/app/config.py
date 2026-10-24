@@ -128,6 +128,28 @@ class Settings(BaseSettings):
     # Retention window (days) for the job_run + diagnostics_result tables.
     OBSERVABILITY_RETENTION_DAYS: int = 30
 
+    # Nightly anomaly engine (R3.4): "the system points out issues itself" —
+    # data gaps, stuck sensors, run-away rule fire-rates, advisory-volume
+    # spikes/drops → `anomaly_finding` for the Anomalies dashboard + Daily
+    # Health. Read-only + best-effort. Runs just after the diagnostics battery.
+    ANOMALY_DETECTION_ENABLED: bool = True
+    ANOMALY_JOB_HOUR: int = 7
+    ANOMALY_JOB_MINUTE: int = 25
+    # A device silent longer than this many minutes is a data_gap (the 18-Oct
+    # outage would have tripped this). Default 3h ~ 2.5x the ~72s cadence slack.
+    ANOMALY_DATA_GAP_MINUTES: int = 180
+    # Stuck sensor: this many consecutive identical non-null readings of a field.
+    ANOMALY_STUCK_MIN_READINGS: int = 12
+    # Rule fire-rate anomaly: a rule firing on >= this fraction of >= min-samples
+    # readings (usually a mis-set threshold).
+    ANOMALY_RULE_ALWAYS_RATE: float = 0.95
+    ANOMALY_RULE_MIN_SAMPLES: int = 20
+    # Advisory-volume spike: today > baseline-avg * this factor.
+    ANOMALY_ADVISORY_SPIKE_FACTOR: float = 3.0
+    ANOMALY_ADVISORY_BASELINE_DAYS: int = 14
+    # Trailing window (days) of pipeline traces used for the rule fire-rate signal.
+    ANOMALY_TRACE_WINDOW_DAYS: int = 7
+
     # ---- Hardware bench flags -----------------------------------------------
     # When True, evaluate_rules.execute short-circuits (no alerts fire, no
     # events publish). Use during initial sensor calibration so unrealistic

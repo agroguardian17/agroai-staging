@@ -211,7 +211,13 @@ Everything open, in one place, to tackle one by one. Status: 🔴 not started ·
 - **R3.1 Reading Journey — 🟢 done-pending-verify.** Per-rule evaluations + emitted events now captured in the
   `pipeline_trace` `s7_rules`/`s6_persist` stages (no migration — JSONB enrichment), surfaced on the new
   **"Reading Journey"** dashboard page (22). Flag: existing `PIPELINE_TRACE_ENABLED`.
-- R3.2 Event Timeline · R3.3 Advisory Journey · R3.4 Anomaly engine · R3.5 event stream — 🔴.
+- **R3.4 Anomaly engine — 🟢 done-pending-verify.** Pure detector (`app/domain/anomalies.py`) + nightly
+  scheduler (`anomaly_engine`, flag `ANOMALY_DETECTION_ENABLED`) writing typed findings to a new
+  `anomaly_finding` table (migration **0071**): `data_gap` (the 18-Oct outage class), `stuck_sensor`,
+  `rule_fire_rate` (reuses the R3.1 trace `s7_rules.evaluations`), `advisory_volume` spike/drop. New dashboard
+  page 23 "Anomalies" (clean runs read from the `job_run` ledger since they write no rows). crop_age_drift +
+  duplicate/staleness roll-in deferred (duplicate/staleness already covered by the diagnostics battery).
+- R3.2 Event Timeline · R3.3 Advisory Journey · R3.5 event stream — 🔴.
 
 ### E3. External / go-live (on-hold, not code)
 | item | status | note |
