@@ -228,7 +228,14 @@ Everything open, in one place, to tackle one by one. Status: 🔴 not started ·
   `ai_suggestions` row, no new table, no fuzzy joins. The spec's `advisory_audit` table doesn't exist; the
   lifecycle is fully captured on `ai_suggestions`. DB-gated column-projection test. (Box-verified: 129 alert
   advisories `pending` delivery — WhatsApp off — vs 9 historical `sent`.)
-- R3.5 event stream — 🔴.
+- **R3.5 Notable-events & error stream — 🟢 done-pending-verify.** Lightweight additive `app_event` table
+  (migration **0073**) + best-effort writer wired at the ingest drain loop's unexpected-error branch (otherwise
+  log-only); flag `APP_EVENT_ENABLED`. Dashboard page 26 "Recent Errors & Warnings" UNIONs failed `job_run`
+  ticks + `app_event` + ingest `pipeline_trace` drops/fails into one queryable stream (no more log-diving).
+  Deliberately NOT a log-to-DB sink. Retention purge + DB-gated repo test + broker isolation tests.
+
+**Part B (observability upgrade) COMPLETE** — R3.1–R3.5 all shipped. The five pages (22 Reading Journey · 23
+Anomalies · 24 Event Timeline · 25 Advisory Journey · 26 Errors & Warnings) make the pipeline self-surfacing.
 
 ### E3. External / go-live (on-hold, not code)
 | item | status | note |

@@ -15,6 +15,7 @@ from unittest.mock import MagicMock
 
 from app.application.evaluate_rules import EvaluateRulesDeps, EvaluateRulesResult
 from app.application.ingest_telemetry import IngestDeps, IngestResult
+from app.application.ports.app_event_repo import AppEvent
 from app.application.ports.pipeline_trace_repo import PipelineTrace
 from app.application.process_reading import ProcessReadingDeps, ProcessReadingResult
 from app.infra.mqtt.broker import BrokerSettings, IngestBroker
@@ -102,3 +103,42 @@ async def test_trace_ingest_records_and_never_raises() -> None:
     assert len(rec.traces) == 1 and rec.traces[0].node_id == "AGR-SN-0001"
     # Failing repo on the same path must stay quiet.
     await _broker(_FailingTraceRepo())._trace_ingest("agro/v2/x", model, reading, result, cal)
+
+
+# --- R3.5 app_event (notable-events stream) ---------------------------------
+class _RecordingAppEventRepo:
+    def __init__(self) -> None:
+        self.events: list[AppEvent] = []
+
+    async def record(self, event: AppEvent) -> None:
+        self.events.append(event)
+
+
+class _FailingAppEventRepo:
+    async def record(self, event: AppEvent) -> None:
+        raise RuntimeError("app_event backend down")
+
+
+def _broker_ev(app_event_repo: Any) -> IngestBroker:
+    return IngestBroker(
+        BrokerSettings(host="localhost", port=1883), _deps(), app_event_repo=app_event_repo
+    )
+
+
+async def test_record_app_event_captures_and_tags() -> None:
+    rec = _RecordingAppEventRepo()
+    await _broker_ev(rec)._record_app_event(
+        event="unexpected_error", topic="agro/v2/x", detail={"error_type": "RuntimeError"}
+    )
+    assert len(rec.events) == 1
+    ev = rec.events[0]
+    assert ev.level == "error" and ev.source == "ingest_broker"
+    assert ev.event == "unexpected_error" and ev.entity == "agro/v2/x"
+    assert ev.detail["error_type"] == "RuntimeError"
+
+
+async def test_record_app_event_noop_without_repo_and_swallows_errors() -> None:
+    # No repo: silent no-op.
+    await _broker_ev(None)._record_app_event(event="x", topic="t", detail={})
+    # Failing repo: guarded, never raises.
+    await _broker_ev(_FailingAppEventRepo())._record_app_event(event="x", topic="t", detail={})
