@@ -47,6 +47,11 @@ class AlertType(StrEnum):
     exactly the categories the dispatcher and dashboard know how to
     surface. New alert types require both a migration (extend the CHECK)
     and a routing entry in the dispatcher (Phase 7).
+
+    NOTE (A11): the stored value is the **lowercase** member value (e.g.
+    ``'device_offline'``, not ``'DEVICE_OFFLINE'``). Ad-hoc SQL and dashboard
+    filters must use ``AlertType.X.value`` / the lowercase string, or they
+    silently match nothing.
     """
 
     DRY_RUN = "dry_run"

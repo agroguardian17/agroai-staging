@@ -125,3 +125,33 @@ def test_summarize_and_worst_status() -> None:
 
     failing = diagnostics.evaluate(DiagnosticsInputs(now=NOW, latest_reading_at=None))
     assert diagnostics.worst_status(failing) == "fail"
+
+
+def test_forecast_job_recent() -> None:
+    # A6: catch a dead forecast job even when coverage would still pass.
+    none = _by_id(diagnostics.evaluate(DiagnosticsInputs(now=NOW, last_forecast_job_ok_at=None)))
+    assert none["forecast_job_recent"].status == "skip"
+
+    recent = _by_id(
+        diagnostics.evaluate(
+            DiagnosticsInputs(
+                now=NOW,
+                last_forecast_job_ok_at=NOW - timedelta(hours=2),
+                forecast_job_max_age_hours=26,
+            )
+        )
+    )
+    assert recent["forecast_job_recent"].status == "ok"
+
+    stale = _by_id(
+        diagnostics.evaluate(
+            DiagnosticsInputs(
+                now=NOW,
+                # a run 2 days ago while forecast_coverage would still be green
+                latest_forecast_for_date=date(2026, 10, 18),
+                last_forecast_job_ok_at=NOW - timedelta(hours=48),
+                forecast_job_max_age_hours=26,
+            )
+        )
+    )
+    assert stale["forecast_job_recent"].status == "fail"

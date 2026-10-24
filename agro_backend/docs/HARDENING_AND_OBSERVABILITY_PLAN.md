@@ -196,15 +196,16 @@ Everything open, in one place, to tackle one by one. Status: 🔴 not started ·
 | id | item | sev | status |
 |---|---|---|---|
 | ~~A1~~ | ~~DEVICE_OFFLINE watchdog not firing~~ — **WITHDRAWN**, watchdog works (47 alerts); my query-case error | — | ✅ not a bug |
-| A1′ | alerts fire but are invisible (no delivery, no dashboard surfacing) | P1 | 🔴 |
-| A2 | qa_weekly_digest PermissionError / ephemeral FS | P1 | 🔴 |
-| A3 | weather_forecast intermittent 0-rows, no detail/retry | P1 | 🔴 |
-| A4 | failure logs dump full Settings (locals) | P1 | 🔴 |
-| A5 | dev smoke scripts not in prod image | P2 | 🔴 |
-| A6 | forecast_coverage can mask a dead job | P2 | 🔴 |
-| A9 | test-doc wrong commands/columns | P3 | 🟢 fixed (Part C) |
-| A10 | `except Exception` audit pass | P3 | 🔴 |
-| A11 | enum values stored lowercase — query/doc footgun | P3 | 🔴 |
+| A1′ | alerts fire but are invisible (no delivery, no dashboard surfacing) | P1 | 🔴 (Part B / R3.2) |
+| A2 | qa_weekly_digest PermissionError / ephemeral FS | P1 | 🟢 merged #117 + deployed+verified |
+| A3 | weather_forecast intermittent 0-rows, no detail/retry | P1 | 🟢 merged #119 + deployed |
+| A4 | failure logs dump full Settings (locals) | P1 | 🟢 merged #120 + deployed |
+| A5 | dev smoke scripts not in prod image | P2 | 🟢 fixed (Dockerfile ships scripts/dev) |
+| A6 | forecast_coverage can mask a dead job | P2 | 🟢 fixed (new `forecast_job_recent` check) |
+| A9 | test-doc wrong commands/columns | P3 | 🟢 fixed (Part C, merged #118) |
+| A10 | `except Exception` audit pass | P3 | 🟢 done — 34/35 sound; surfaced A12 |
+| A11 | enum values stored lowercase — query/doc footgun | P3 | 🟢 noted at AlertType + test doc Part 9 |
+| A12 | refresh_satellite swallows per-plot errors to a count (no reason) — same class as A3 | P2 | 🔴 |
 
 ### E2. Observability upgrade (Part B)
 R3.1 Reading Journey · R3.2 Event Timeline · R3.3 Advisory Journey · R3.4 Anomaly engine · R3.5 event stream — all 🔴.
