@@ -11,12 +11,12 @@ PURE w.r.t. imports: stdlib + ports only.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, timedelta
 from decimal import Decimal
 
 from app.application.ports.crop_season_repo import CropSeasonRepo
-from app.application.ports.lst_provider import LstError, LstProvider
+from app.application.ports.lst_provider import LstProvider
 from app.application.ports.plot_repo import PlotRepo
 from app.application.ports.satellite_reading_repo import (
     SOURCE_THERMAL,
@@ -44,6 +44,10 @@ class RefreshLandsatResult:
     skipped_no_polygon: int
     scenes: int
     failed_plots: int
+    # Per-plot failure reasons ("plot <id>: <ErrorType>: <msg>") so the job
+    # ledger/log shows WHY a plot failed, not just a count — the silent swallow
+    # here is what hid the ST_B10-resolution bug for weeks (same class as A3/A12).
+    errors: list[str] = field(default_factory=list)
 
 
 def _dec(v: float | None) -> Decimal | None:
@@ -54,6 +58,7 @@ async def execute(*, deps: RefreshLandsatDeps, today: date) -> RefreshLandsatRes
     seasons = await deps.crop_season_repo.list_active_by_crop(deps.crop_name)
     date_from = today - timedelta(days=deps.lookback_days)
     plots = skipped = scenes = failed = 0
+    errors: list[str] = []
     seen_plots: set[str] = set()
     for season in seasons:
         if season.plot_id in seen_plots:
@@ -69,8 +74,10 @@ async def execute(*, deps: RefreshLandsatDeps, today: date) -> RefreshLandsatRes
             observations = await deps.lst_provider.lst_for_polygon(
                 geometry=boundary, date_from=date_from, date_to=today
             )
-        except (LstError, Exception):
+        except Exception as exc:
+            # One plot's failure never aborts the sweep; capture the reason.
             failed += 1
+            errors.append(f"plot {season.plot_id}: {type(exc).__name__}: {exc}"[:200])
             continue
         for obs in observations:
             if obs.lst_c is None:
@@ -89,7 +96,11 @@ async def execute(*, deps: RefreshLandsatDeps, today: date) -> RefreshLandsatRes
             )
             scenes += 1
     return RefreshLandsatResult(
-        plots=plots, skipped_no_polygon=skipped, scenes=scenes, failed_plots=failed
+        plots=plots,
+        skipped_no_polygon=skipped,
+        scenes=scenes,
+        failed_plots=failed,
+        errors=errors,
     )
 
 

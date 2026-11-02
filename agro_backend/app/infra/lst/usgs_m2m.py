@@ -42,6 +42,17 @@ def st_dn_to_celsius(dn: float) -> float:
     return dn * _ST_SCALE + _ST_OFFSET - _KELVIN
 
 
+def _is_st_b10(entry: dict[str, Any]) -> bool:
+    """True if a download-options entry is the ST_B10 surface-temperature band.
+
+    The live API names its top-level products generically ("Band File",
+    "Product Bundle"); the band identity lives in the per-band ``displayId``
+    (e.g. ``..._ST_B10.TIF``). ``ST_B10`` is unique to the surface-temp band
+    (``ST_QA``/``ST_TRAD``/etc. don't contain it), so a substring test is safe.
+    """
+    return "ST_B10" in f"{entry.get('displayId', '')}{entry.get('productName', '')}"
+
+
 @dataclass(frozen=True, slots=True)
 class UsgsM2mSettings:
     username: str
@@ -84,18 +95,23 @@ def _mean_lst(src_path: str, geometry: dict[str, Any]) -> float | None:
     """Open a ST_B10 raster, mask it to the polygon, return the mean LST in C.
 
     ``src_path`` is any rasterio-openable path: ``/vsicurl/<https url>`` for the
-    remote COG in production, a local GeoTIFF in tests. Returns None when no
-    valid pixels fall inside the polygon; raises :class:`LstError` on a read or
-    missing-dependency failure.
+    remote COG in production, a local GeoTIFF in tests. ``geometry`` is a GeoJSON
+    polygon in **EPSG:4326** (how plot boundaries are stored); it is reprojected
+    into the raster's CRS before masking, because Landsat COGs are UTM (e.g.
+    EPSG:32643) and an unprojected lon/lat mask does not overlap a metre-grid
+    raster. Returns None when no valid pixels fall inside the polygon; raises
+    :class:`LstError` on a read or missing-dependency failure.
     """
     try:
         import rasterio
         from rasterio.mask import mask as rio_mask
+        from rasterio.warp import transform_geom
     except ImportError as exc:  # pragma: no cover
         raise LstError(f"raster_deps_missing: {exc}") from exc
     try:
         with rasterio.open(src_path) as src:
-            arr, _ = rio_mask(src, [geometry], crop=True, filled=False)
+            mask_geom = transform_geom("EPSG:4326", src.crs, geometry) if src.crs else geometry
+            arr, _ = rio_mask(src, [mask_geom], crop=True, filled=False)
     except Exception as exc:
         raise LstError(f"raster_read_failed: {exc}") from exc
     return _reduce_lst_band(arr)
@@ -209,7 +225,14 @@ class UsgsM2mLstProvider:
     async def _resolve_st_url(self, entity_id: str, api_key: str) -> str | None:
         """Find the ST_B10 GeoTIFF download URL for a scene (secondary download).
 
-        Returns None when the product is still staging (a later sweep retries).
+        USGS C2L2 ``download-options`` returns a few generically-named products
+        ("Product Bundle", "Band File"); the individual band files — including
+        ST_B10 — live in each product's ``secondaryDownloads`` list, each with
+        its own ``entityId`` + ``id`` and a ``displayId`` like
+        ``..._ST_B10.TIF``. We find the available ST_B10 secondary file and
+        ``download-request`` it by that file's own ids. (A top-level product is
+        still accepted as a fallback for older/variant responses.) Returns None
+        when the band isn't available yet, so a later sweep retries.
         """
         opts = await self._post(
             "download-options",
@@ -217,20 +240,22 @@ class UsgsM2mLstProvider:
             api_key=api_key,
         )
         products = opts if isinstance(opts, list) else []
-        st = next(
-            (
-                p
-                for p in products
-                if p.get("available")
-                and "ST_B10" in (str(p.get("productName", "")) + str(p.get("displayId", "")))
-            ),
-            None,
-        )
+        st: dict[str, Any] | None = None
+        for product in products:
+            secondaries = product.get("secondaryDownloads")
+            if not isinstance(secondaries, list):
+                continue
+            st = next((sd for sd in secondaries if sd.get("available") and _is_st_b10(sd)), None)
+            if st is not None:
+                break
+        # Fallback: a response that exposes the band as a top-level product.
+        if st is None:
+            st = next((p for p in products if p.get("available") and _is_st_b10(p)), None)
         if st is None:
             return None
         req = await self._post(
             "download-request",
-            {"downloads": [{"entityId": entity_id, "productId": st.get("id")}]},
+            {"downloads": [{"entityId": st.get("entityId", entity_id), "productId": st.get("id")}]},
             api_key=api_key,
         )
         avail = (req or {}).get("availableDownloads", []) if isinstance(req, dict) else []
