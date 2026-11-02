@@ -151,6 +151,51 @@ def test_mean_lst_reads_local_geotiff(tmp_path: Path) -> None:
     assert abs(out - (300.0 - 273.15)) < 0.5
 
 
+def test_mean_lst_reprojects_latlon_polygon_onto_utm_raster(tmp_path: Path) -> None:
+    """Regression: a lon/lat (EPSG:4326) polygon must be reprojected onto a UTM
+    Landsat raster before masking. Without the reprojection rasterio raises
+    'Input shapes do not overlap raster' and LST is silently lost."""
+    rasterio = pytest.importorskip("rasterio")
+    from rasterio.transform import from_bounds
+    from rasterio.warp import transform_bounds
+
+    # A lon/lat plot near Kannad, Marathwada (UTM zone 43N / EPSG:32643).
+    lonlat = {
+        "type": "Polygon",
+        "coordinates": [
+            [
+                [75.083, 20.140],
+                [75.085, 20.140],
+                [75.085, 20.142],
+                [75.083, 20.142],
+                [75.083, 20.140],
+            ]
+        ],
+    }
+    # Build a UTM raster whose extent covers that polygon (bounds in metres).
+    minx, miny, maxx, maxy = transform_bounds(
+        "EPSG:4326", "EPSG:32643", 75.082, 20.139, 75.086, 20.143
+    )
+    data = np.full((8, 8), _DN_300K, dtype="float32")
+    path = tmp_path / "ST_B10_utm.tif"
+    with rasterio.open(
+        path,
+        "w",
+        driver="GTiff",
+        height=8,
+        width=8,
+        count=1,
+        dtype="float32",
+        crs="EPSG:32643",
+        transform=from_bounds(minx, miny, maxx, maxy, 8, 8),
+    ) as dst:
+        dst.write(data, 1)
+
+    out = _mean_lst(str(path), lonlat)  # lon/lat polygon vs UTM raster
+    assert out is not None
+    assert abs(out - (300.0 - 273.15)) < 0.5
+
+
 def test_mean_lst_raises_on_unreadable_source() -> None:
     pytest.importorskip("rasterio")
     with pytest.raises(LstError, match="raster_read_failed"):
@@ -214,6 +259,75 @@ async def test_resolve_st_url_none_when_product_staging() -> None:
     key = await prov._login()
     assert await prov._resolve_st_url("E1", key) is None
     await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_resolve_st_url_uses_secondary_st_b10_download() -> None:
+    """Real USGS shape: products are generic; ST_B10 lives in secondaryDownloads.
+
+    This is the regression guard for the bug where the resolver only matched the
+    top-level product name (always generic) and so never found the band —
+    silently yielding zero LST. We also assert the download-request targets the
+    *secondary* file's own entityId + id, and that a non-B10 band is ignored.
+    """
+    captured: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        ep = request.url.path.rsplit("/", 1)[-1]
+        if ep == "login-token":
+            return httpx.Response(200, json={"data": "K", "errorCode": None})
+        if ep == "download-options":
+            return httpx.Response(
+                200,
+                json={
+                    "data": [
+                        {
+                            "id": "BUNDLE",
+                            "available": False,
+                            "productName": "Landsat Collection 2 Level-2 Product Bundle",
+                            "displayId": "LC09_..._02_T1",
+                            "secondaryDownloads": [
+                                {
+                                    "id": "QA_ID",
+                                    "available": True,
+                                    "productName": "Landsat Collection 2 Level-2 Band File",
+                                    "displayId": "LC09_..._02_T1_ST_QA.TIF",
+                                    "entityId": "L2ST_..._ST_QA_TIF",
+                                },
+                                {
+                                    "id": "B10_ID",
+                                    "available": True,
+                                    "productName": "Landsat Collection 2 Level-2 Band File",
+                                    "displayId": "LC09_..._02_T1_ST_B10.TIF",
+                                    "entityId": "L2ST_..._ST_B10_TIF",
+                                },
+                            ],
+                        }
+                    ],
+                    "errorCode": None,
+                },
+            )
+        if ep == "download-request":
+            captured["body"] = request.read().decode()
+            return httpx.Response(
+                200,
+                json={
+                    "data": {"availableDownloads": [{"url": "https://dds/ST_B10.TIF"}]},
+                    "errorCode": None,
+                },
+            )
+        return httpx.Response(404, json={"errorCode": "x", "errorMessage": ep})
+
+    client = _client(handler)
+    prov = UsgsM2mLstProvider(UsgsM2mSettings(username="u", token="t"), client=client)
+    key = await prov._login()
+    url = await prov._resolve_st_url("SCENE1", key)
+    await client.aclose()
+    assert url == "https://dds/ST_B10.TIF"
+    # download-request must target the ST_B10 secondary file's own ids, not QA / the scene.
+    assert '"productId": "B10_ID"' in str(captured["body"])
+    assert "L2ST_..._ST_B10_TIF" in str(captured["body"])
+    assert "QA_ID" not in str(captured["body"])
 
 
 @pytest.mark.asyncio

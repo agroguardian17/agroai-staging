@@ -66,11 +66,14 @@ async def build_and_start_landsat_scheduler(settings: Settings) -> LandsatSchedu
     async def _job() -> None:
         async with instrument_job(settings, "landsat_lst_fetch") as rec:
             res = await refresh_landsat_lst.execute(deps=deps, today=datetime.now(UTC).date())
+            if res.errors:
+                log.warning("landsat_scheduler.plot_failures", errors=res.errors)
             rec.ok(
                 plots=res.plots,
                 skipped_no_polygon=res.skipped_no_polygon,
                 scenes=res.scenes,
                 failed_plots=res.failed_plots,
+                errors=res.errors,
             )
 
     scheduler.add_job(
